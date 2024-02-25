@@ -43,6 +43,12 @@ type NonodoOpts struct {
 	// If set, start echo dapp.
 	EnableEcho bool
 
+	// If set, disables devnet.
+	DisableDevnet bool
+
+	// If set, disables advances.
+	DisableAdvance bool
+
 	// If set, start application.
 	ApplicationArgs []string
 }
@@ -59,6 +65,8 @@ func NewNonodoOpts() NonodoOpts {
 		ApplicationAddress: devnet.ApplicationAddress,
 		RpcUrl:             "",
 		EnableEcho:         false,
+		DisableDevnet:      false,
+		DisableAdvance:     false,
 		ApplicationArgs:    nil,
 	}
 }
@@ -79,20 +87,22 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	inspect.Register(e, model)
 	reader.Register(e, model)
 
-	if opts.RpcUrl == "" {
+	if opts.RpcUrl == "" && !opts.DisableDevnet {
 		w.Workers = append(w.Workers, devnet.AnvilWorker{
 			Port:    opts.AnvilPort,
 			Verbose: opts.AnvilVerbose,
 		})
 		opts.RpcUrl = fmt.Sprintf("ws://127.0.0.1:%v", opts.AnvilPort)
 	}
-	w.Workers = append(w.Workers, inputter.InputterWorker{
-		Model:              model,
-		Provider:           opts.RpcUrl,
-		InputBoxAddress:    common.HexToAddress(opts.InputBoxAddress),
-		InputBoxBlock:      opts.InputBoxBlock,
-		ApplicationAddress: common.HexToAddress(opts.ApplicationAddress),
-	})
+	if !opts.DisableAdvance {
+		w.Workers = append(w.Workers, inputter.InputterWorker{
+			Model:              model,
+			Provider:           opts.RpcUrl,
+			InputBoxAddress:    common.HexToAddress(opts.InputBoxAddress),
+			InputBoxBlock:      opts.InputBoxBlock,
+			ApplicationAddress: common.HexToAddress(opts.ApplicationAddress),
+		})
+	}
 	w.Workers = append(w.Workers, supervisor.HttpWorker{
 		Address: fmt.Sprintf("%v:%v", opts.HttpAddress, opts.HttpPort),
 		Handler: e,

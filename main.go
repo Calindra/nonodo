@@ -53,6 +53,12 @@ func init() {
 	cmd.Flags().BoolVar(&opts.EnableEcho, "enable-echo", opts.EnableEcho,
 		"If set, nonodo starts a built-in echo application")
 
+	// disable-*
+	cmd.Flags().BoolVar(&opts.DisableDevnet, "disable-devnet", opts.DisableDevnet,
+		"If set, nonodo won't start a local devnet")
+	cmd.Flags().BoolVar(&opts.DisableAdvance, "disable-advance", opts.DisableAdvance,
+		"If set, nonodo won't start the inputter to get inputs from the local chain")
+
 	// http-*
 	cmd.Flags().StringVar(&opts.HttpAddress, "http-address", opts.HttpAddress,
 		"HTTP address used by nonodo to serve its APIs")
