@@ -14,10 +14,10 @@ import (
 	"time"
 
 	"github.com/Khan/genqlient/graphql"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/calindra/nonodo/internal/inspect"
 	"github.com/calindra/nonodo/internal/readerclient"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -99,7 +99,7 @@ func (s *NonodoSuite) TestItWorksWithExternalApplication() {
 		"run",
 		"github.com/calindra/nonodo/internal/echoapp/echoapp",
 		"--endpoint",
-		fmt.Sprintf("http://%v:%v/rollup", opts.HttpAddress, opts.HttpPort),
+		fmt.Sprintf("http://%v:%v", opts.HttpAddress, opts.HttpRollupsPort),
 	}
 	s.SetupTest(opts)
 

@@ -31,8 +31,9 @@ type NonodoOpts struct {
 	AnvilPort    int
 	AnvilVerbose bool
 
-	HttpAddress string
-	HttpPort    int
+	HttpAddress     string
+	HttpPort        int
+	HttpRollupsPort int
 
 	InputBoxAddress    string
 	InputBoxBlock      uint64
@@ -55,6 +56,7 @@ func NewNonodoOpts() NonodoOpts {
 		AnvilVerbose:       false,
 		HttpAddress:        "127.0.0.1",
 		HttpPort:           DefaultHttpPort,
+		HttpRollupsPort:    DefaultRollupsPort,
 		InputBoxAddress:    devnet.InputBoxAddress,
 		InputBoxBlock:      0,
 		ApplicationAddress: devnet.ApplicationAddress,
@@ -111,7 +113,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	w.Workers = append(w.Workers, supervisor.HttpWorker{
 		Address:    fmt.Sprintf("%v:%v", opts.HttpAddress, opts.HttpPort),
 		Handler:    e,
-		DevMessage: "GraphQL running at http://localhost:8080/graphql\nInspect running at http://localhost:8080/inspect/\nPress Ctrl+C to stop the node\n",
+		DevMessage: "\nGraphQL running at http://localhost:8080/graphql\nInspect running at http://localhost:8080/inspect/\nPress Ctrl+C to stop the node\n",
 	})
 	if len(opts.ApplicationArgs) > 0 {
 		fmt.Println("Starting app with supervisor")
@@ -123,7 +125,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	} else if opts.EnableEcho {
 		fmt.Println("Starting echo app")
 		w.Workers = append(w.Workers, echoapp.EchoAppWorker{
-			RollupEndpoint: fmt.Sprintf("http://127.0.0.1:%v/rollup", opts.HttpPort),
+			RollupEndpoint: fmt.Sprintf("http://127.0.0.1:%v", DefaultRollupsPort),
 		})
 	}
 
