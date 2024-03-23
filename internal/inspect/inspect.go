@@ -10,8 +10,8 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/calindra/nonodo/internal/model"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/labstack/echo/v4"
 )
 

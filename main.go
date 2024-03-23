@@ -12,10 +12,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/calindra/nonodo/internal/nonodo"
 	"github.com/carlmjohnson/versioninfo"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/calindra/nonodo/internal/nonodo"
 	"github.com/lmittmann/tint"
 	"github.com/mattn/go-isatty"
 	"github.com/spf13/cobra"

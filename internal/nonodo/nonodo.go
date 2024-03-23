@@ -111,9 +111,12 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		DevMessage: "Http Rollups for development started at http://localhost:5004",
 	})
 	w.Workers = append(w.Workers, supervisor.HttpWorker{
-		Address:    fmt.Sprintf("%v:%v", opts.HttpAddress, opts.HttpPort),
-		Handler:    e,
-		DevMessage: "\nGraphQL running at http://localhost:8080/graphql\nInspect running at http://localhost:8080/inspect/\nPress Ctrl+C to stop the node\n",
+		Address: fmt.Sprintf("%v:%v", opts.HttpAddress, opts.HttpPort),
+		Handler: e,
+		DevMessage: `GraphQL running at http://localhost:8080/graphql
+Inspect running at http://localhost:8080/inspect/
+Press Ctrl+C to stop the node
+`,
 	})
 	if len(opts.ApplicationArgs) > 0 {
 		fmt.Println("Starting app with supervisor")

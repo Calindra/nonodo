@@ -6,8 +6,8 @@ package model
 import (
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/calindra/nonodo/internal/model"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
 //
