@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/calindra/nonodo/internal/echoapp"
 	"github.com/calindra/nonodo/internal/inputter"
@@ -18,11 +17,13 @@ import (
 	"github.com/calindra/nonodo/internal/reader"
 	"github.com/calindra/nonodo/internal/rollup"
 	"github.com/calindra/nonodo/internal/supervisor"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
 
 const DefaultHttpPort = 8080
+const DefaultRollupsPort = 5004
 const HttpTimeout = 10 * time.Second
 
 // Options to nonodo.
@@ -75,9 +76,18 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		ErrorMessage: "Request timed out",
 		Timeout:      HttpTimeout,
 	}))
-	rollup.Register(e, model)
 	inspect.Register(e, model)
 	reader.Register(e, model)
+
+	// Start the "internal" http rollup server
+	re := echo.New()
+	re.Use(middleware.CORS())
+	re.Use(middleware.Recover())
+	re.Use(middleware.TimeoutWithConfig(middleware.TimeoutConfig{
+		ErrorMessage: "Request timed out",
+		Timeout:      HttpTimeout,
+	}))
+	rollup.Register(re, model)
 
 	if opts.RpcUrl == "" {
 		w.Workers = append(w.Workers, devnet.AnvilWorker{
@@ -94,16 +104,24 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		ApplicationAddress: common.HexToAddress(opts.ApplicationAddress),
 	})
 	w.Workers = append(w.Workers, supervisor.HttpWorker{
-		Address: fmt.Sprintf("%v:%v", opts.HttpAddress, opts.HttpPort),
-		Handler: e,
+		Address:    fmt.Sprintf("%v:%v", opts.HttpAddress, DefaultRollupsPort),
+		Handler:    re,
+		DevMessage: "Http Rollups for development started at http://localhost:5004",
+	})
+	w.Workers = append(w.Workers, supervisor.HttpWorker{
+		Address:    fmt.Sprintf("%v:%v", opts.HttpAddress, opts.HttpPort),
+		Handler:    e,
+		DevMessage: "GraphQL running at http://localhost:8080/graphql\nInspect running at http://localhost:8080/inspect/\nPress Ctrl+C to stop the node\n",
 	})
 	if len(opts.ApplicationArgs) > 0 {
+		fmt.Println("Starting app with supervisor")
 		w.Workers = append(w.Workers, supervisor.CommandWorker{
 			Name:    "app",
 			Command: opts.ApplicationArgs[0],
 			Args:    opts.ApplicationArgs[1:],
 		})
 	} else if opts.EnableEcho {
+		fmt.Println("Starting echo app")
 		w.Workers = append(w.Workers, echoapp.EchoAppWorker{
 			RollupEndpoint: fmt.Sprintf("http://127.0.0.1:%v/rollup", opts.HttpPort),
 		})

@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/calindra/nonodo/internal/model"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/calindra/nonodo/internal/model"
 	"github.com/labstack/echo/v4"
 )
 
@@ -23,7 +23,7 @@ const FinishPollInterval = time.Millisecond * 100
 // Register the rollup API to echo
 func Register(e *echo.Echo, model *model.NonodoModel) {
 	rollupAPI := &rollupAPI{model}
-	RegisterHandlersWithBaseURL(e, rollupAPI, "rollup")
+	RegisterHandlersWithBaseURL(e, rollupAPI, "")
 }
 
 // Shared struct for request handlers.

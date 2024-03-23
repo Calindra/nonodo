@@ -13,8 +13,9 @@ import (
 
 // The HTTP worker starts and manage an HTTP server.
 type HttpWorker struct {
-	Address string
-	Handler http.Handler
+	Address    string
+	Handler    http.Handler
+	DevMessage string
 }
 
 func (w HttpWorker) String() string {
@@ -31,7 +32,7 @@ func (w HttpWorker) Start(ctx context.Context, ready chan<- struct{}) error {
 	if err != nil {
 		return err
 	}
-	slog.Info("http: server is ready", "address", ln.Addr())
+	slog.Info(w.DevMessage, "address", ln.Addr())
 	ready <- struct{}{}
 
 	// create the goroutine to shutdown server
