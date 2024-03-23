@@ -22,7 +22,7 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 )
 
-const DefaultHttpPort = 8080
+const DefaultHttpPort = 5004
 const HttpTimeout = 10 * time.Second
 
 // Options to nonodo.
@@ -105,7 +105,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		})
 	} else if opts.EnableEcho {
 		w.Workers = append(w.Workers, echoapp.EchoAppWorker{
-			RollupEndpoint: fmt.Sprintf("http://127.0.0.1:%v/rollup", opts.HttpPort),
+			RollupEndpoint: fmt.Sprintf("http://127.0.0.1:%v", opts.HttpPort),
 		})
 	}
 
