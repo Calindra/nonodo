@@ -15,7 +15,7 @@ import (
 	"github.com/carlmjohnson/versioninfo"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/gligneul/nonodo/internal/nonodo"
+	"github.com/calindra/nonodo/internal/nonodo"
 	"github.com/lmittmann/tint"
 	"github.com/mattn/go-isatty"
 	"github.com/spf13/cobra"

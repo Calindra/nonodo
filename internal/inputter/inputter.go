@@ -12,7 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/gligneul/nonodo/internal/contracts"
+	"github.com/calindra/nonodo/internal/contracts"
 )
 
 type Model interface {

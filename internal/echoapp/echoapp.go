@@ -10,7 +10,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/gligneul/nonodo/internal/rollup"
+	"github.com/calindra/nonodo/internal/rollup"
 )
 
 // This worker uses the rollup API to implement an echo application.

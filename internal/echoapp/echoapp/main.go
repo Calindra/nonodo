@@ -14,7 +14,7 @@ import (
 	"syscall"
 
 	"github.com/carlmjohnson/versioninfo"
-	"github.com/gligneul/nonodo/internal/echoapp"
+	"github.com/calindra/nonodo/internal/echoapp"
 	"github.com/spf13/cobra"
 )
 

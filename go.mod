@@ -1,4 +1,4 @@
-module github.com/gligneul/nonodo
+module github.com/calindra/nonodo
 
 go 1.21.1
 

@@ -8,7 +8,7 @@ package model
 import (
 	"fmt"
 
-	"github.com/gligneul/nonodo/internal/model"
+	"github.com/calindra/nonodo/internal/model"
 )
 
 // Nonodo model wrapper that convert types to GraphQL types.

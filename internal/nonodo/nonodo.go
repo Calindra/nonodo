@@ -10,19 +10,19 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/gligneul/nonodo/internal/devnet"
-	"github.com/gligneul/nonodo/internal/echoapp"
-	"github.com/gligneul/nonodo/internal/inputter"
-	"github.com/gligneul/nonodo/internal/inspect"
-	"github.com/gligneul/nonodo/internal/model"
-	"github.com/gligneul/nonodo/internal/reader"
-	"github.com/gligneul/nonodo/internal/rollup"
-	"github.com/gligneul/nonodo/internal/supervisor"
+	"github.com/calindra/nonodo/internal/devnet"
+	"github.com/calindra/nonodo/internal/echoapp"
+	"github.com/calindra/nonodo/internal/inputter"
+	"github.com/calindra/nonodo/internal/inspect"
+	"github.com/calindra/nonodo/internal/model"
+	"github.com/calindra/nonodo/internal/reader"
+	"github.com/calindra/nonodo/internal/rollup"
+	"github.com/calindra/nonodo/internal/supervisor"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
 
-const DefaultHttpPort = 5004
+const DefaultHttpPort = 8080
 const HttpTimeout = 10 * time.Second
 
 // Options to nonodo.
@@ -105,7 +105,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		})
 	} else if opts.EnableEcho {
 		w.Workers = append(w.Workers, echoapp.EchoAppWorker{
-			RollupEndpoint: fmt.Sprintf("http://127.0.0.1:%v", opts.HttpPort),
+			RollupEndpoint: fmt.Sprintf("http://127.0.0.1:%v/rollup", opts.HttpPort),
 		})
 	}
 

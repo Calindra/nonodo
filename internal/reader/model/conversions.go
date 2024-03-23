@@ -7,7 +7,7 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/gligneul/nonodo/internal/model"
+	"github.com/calindra/nonodo/internal/model"
 )
 
 //
