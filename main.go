@@ -111,6 +111,15 @@ func run(cmd *cobra.Command, args []string) {
 }
 
 func main() {
+	var addressBookCmd = &cobra.Command{
+        Use:   "address-book",
+        Short: "A subcommand example",
+        Long:  "This is a subcommand example",
+        Run: func(cmd *cobra.Command, args []string) {
+            fmt.Println("Read json and print address...")
+        },
+    }
+    cmd.AddCommand(addressBookCmd)
 	cobra.CheckErr(cmd.Execute())
 }
 
