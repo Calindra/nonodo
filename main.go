@@ -21,6 +21,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var startupMessage = `
+Http Rollups for development started at http://localhost:5004
+GraphQL running at http://localhost:8080/graphql
+Inspect running at http://localhost:8080/inspect/
+Press Ctrl+C to stop the node
+`
 var cmd = &cobra.Command{
 	Use:     "nonodo [flags] [-- application [args]...]",
 	Short:   "nonodo is a development node for Cartesi Rollups",
@@ -124,6 +130,7 @@ func run(cmd *cobra.Command, args []string) {
 	go func() {
 		select {
 		case <-ready:
+			fmt.Println(startupMessage)
 			slog.Info("nonodo: ready", "after", time.Since(startTime))
 		case <-ctx.Done():
 		}
