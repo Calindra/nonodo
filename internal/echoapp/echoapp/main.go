@@ -13,8 +13,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/calindra/nonodo/internal/echoapp"
 	"github.com/carlmjohnson/versioninfo"
-	"github.com/gligneul/nonodo/internal/echoapp"
 	"github.com/spf13/cobra"
 )
 

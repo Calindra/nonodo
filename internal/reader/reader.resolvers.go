@@ -7,8 +7,8 @@ package reader
 import (
 	"context"
 
-	"github.com/gligneul/nonodo/internal/reader/graph"
-	"github.com/gligneul/nonodo/internal/reader/model"
+	"github.com/calindra/nonodo/internal/reader/graph"
+	"github.com/calindra/nonodo/internal/reader/model"
 )
 
 // Voucher is the resolver for the voucher field.

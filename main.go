@@ -12,10 +12,10 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/calindra/nonodo/internal/nonodo"
 	"github.com/carlmjohnson/versioninfo"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/gligneul/nonodo/internal/nonodo"
 	"github.com/lmittmann/tint"
 	"github.com/mattn/go-isatty"
 	"github.com/spf13/cobra"
@@ -28,9 +28,23 @@ var cmd = &cobra.Command{
 	Version: versioninfo.Short(),
 }
 
-var debug bool
-var color bool
-var opts = nonodo.NewNonodoOpts()
+var addressBookCmd = &cobra.Command{
+	Use:   "address-book",
+	Short: "Show address book",
+	Run: func(cmd *cobra.Command, args []string) {
+		fmt.Println("Read json and print address...")
+		x := nonodo.NewNonodoOpts().InputBoxAddress
+		fmt.Println("InputBoxAddress", x)
+		y := opts.InputBoxAddress
+		fmt.Println("InputBoxAddress", y)
+	},
+}
+
+var (
+	debug bool
+	color bool
+	opts  = nonodo.NewNonodoOpts()
+)
 
 func init() {
 	// anvil-*
@@ -73,7 +87,7 @@ func init() {
 }
 
 func run(cmd *cobra.Command, args []string) {
-	var startTime = time.Now()
+	startTime := time.Now()
 
 	// setup log
 	logOpts := new(tint.Options)
@@ -119,6 +133,7 @@ func run(cmd *cobra.Command, args []string) {
 }
 
 func main() {
+	cmd.AddCommand(addressBookCmd)
 	cobra.CheckErr(cmd.Execute())
 }
 

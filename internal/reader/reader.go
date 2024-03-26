@@ -9,9 +9,9 @@ package reader
 import (
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
-	nonodomodel "github.com/gligneul/nonodo/internal/model"
-	"github.com/gligneul/nonodo/internal/reader/graph"
-	"github.com/gligneul/nonodo/internal/reader/model"
+	nonodomodel "github.com/calindra/nonodo/internal/model"
+	"github.com/calindra/nonodo/internal/reader/graph"
+	"github.com/calindra/nonodo/internal/reader/model"
 	"github.com/labstack/echo/v4"
 )
 

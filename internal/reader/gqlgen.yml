@@ -21,37 +21,37 @@ models:
       - github.com/99designs/gqlgen/graphql.ID
   Input:
     model:
-      - github.com/gligneul/nonodo/internal/reader/model.Input
+      - github.com/calindra/nonodo/internal/reader/model.Input
   Voucher:
     model:
-      - github.com/gligneul/nonodo/internal/reader/model.Voucher
+      - github.com/calindra/nonodo/internal/reader/model.Voucher
   Notice:
     model:
-      - github.com/gligneul/nonodo/internal/reader/model.Notice
+      - github.com/calindra/nonodo/internal/reader/model.Notice
   Report:
     model:
-      - github.com/gligneul/nonodo/internal/reader/model.Report
+      - github.com/calindra/nonodo/internal/reader/model.Report
   InputConnection:
     model:
-      - github.com/gligneul/nonodo/internal/reader/model.InputConnection
+      - github.com/calindra/nonodo/internal/reader/model.InputConnection
   InputEdge:
     model:
-      - github.com/gligneul/nonodo/internal/reader/model.InputEdge
+      - github.com/calindra/nonodo/internal/reader/model.InputEdge
   VoucherConnection:
     model:
-      - github.com/gligneul/nonodo/internal/reader/model.VoucherConnection
+      - github.com/calindra/nonodo/internal/reader/model.VoucherConnection
   VoucherEdge:
     model:
-      - github.com/gligneul/nonodo/internal/reader/model.VoucherEdge
+      - github.com/calindra/nonodo/internal/reader/model.VoucherEdge
   NoticeConnection:
     model:
-      - github.com/gligneul/nonodo/internal/reader/model.NoticeConnection
+      - github.com/calindra/nonodo/internal/reader/model.NoticeConnection
   NoticeEdge:
     model:
-      - github.com/gligneul/nonodo/internal/reader/model.NoticeEdge
+      - github.com/calindra/nonodo/internal/reader/model.NoticeEdge
   ReportConnection:
     model:
-      - github.com/gligneul/nonodo/internal/reader/model.ReportConnection
+      - github.com/calindra/nonodo/internal/reader/model.ReportConnection
   ReportEdge:
     model:
-      - github.com/gligneul/nonodo/internal/reader/model.ReportEdge
+      - github.com/calindra/nonodo/internal/reader/model.ReportEdge

@@ -1,6 +1,6 @@
 package reader
 
-import "github.com/gligneul/nonodo/internal/reader/model"
+import "github.com/calindra/nonodo/internal/reader/model"
 
 // This file will not be regenerated automatically.
 //

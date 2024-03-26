@@ -11,7 +11,7 @@ import (
 	"os"
 	"path"
 
-	"github.com/gligneul/nonodo/internal/supervisor"
+	"github.com/calindra/nonodo/internal/supervisor"
 )
 
 // Default port for the Ethereum node.

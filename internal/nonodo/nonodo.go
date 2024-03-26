@@ -9,20 +9,21 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/calindra/nonodo/internal/devnet"
+	"github.com/calindra/nonodo/internal/echoapp"
+	"github.com/calindra/nonodo/internal/inputter"
+	"github.com/calindra/nonodo/internal/inspect"
+	"github.com/calindra/nonodo/internal/model"
+	"github.com/calindra/nonodo/internal/reader"
+	"github.com/calindra/nonodo/internal/rollup"
+	"github.com/calindra/nonodo/internal/supervisor"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/gligneul/nonodo/internal/devnet"
-	"github.com/gligneul/nonodo/internal/echoapp"
-	"github.com/gligneul/nonodo/internal/inputter"
-	"github.com/gligneul/nonodo/internal/inspect"
-	"github.com/gligneul/nonodo/internal/model"
-	"github.com/gligneul/nonodo/internal/reader"
-	"github.com/gligneul/nonodo/internal/rollup"
-	"github.com/gligneul/nonodo/internal/supervisor"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
 
 const DefaultHttpPort = 8080
+const DefaultRollupsPort = 5004
 const HttpTimeout = 10 * time.Second
 
 // Options to nonodo.
@@ -31,8 +32,9 @@ type NonodoOpts struct {
 	AnvilPort    int
 	AnvilVerbose bool
 
-	HttpAddress string
-	HttpPort    int
+	HttpAddress     string
+	HttpPort        int
+	HttpRollupsPort int
 
 	InputBoxAddress    string
 	InputBoxBlock      uint64
@@ -62,6 +64,7 @@ func NewNonodoOpts() NonodoOpts {
 		AnvilVerbose:       false,
 		HttpAddress:        "127.0.0.1",
 		HttpPort:           DefaultHttpPort,
+		HttpRollupsPort:    DefaultRollupsPort,
 		InputBoxAddress:    devnet.InputBoxAddress,
 		InputBoxBlock:      0,
 		ApplicationAddress: devnet.ApplicationAddress,
@@ -85,9 +88,18 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		ErrorMessage: "Request timed out",
 		Timeout:      HttpTimeout,
 	}))
-	rollup.Register(e, model)
 	inspect.Register(e, model)
 	reader.Register(e, model)
+
+	// Start the "internal" http rollup server
+	re := echo.New()
+	re.Use(middleware.CORS())
+	re.Use(middleware.Recover())
+	re.Use(middleware.TimeoutWithConfig(middleware.TimeoutConfig{
+		ErrorMessage: "Request timed out",
+		Timeout:      HttpTimeout,
+	}))
+	rollup.Register(re, model)
 
 	if opts.RpcUrl == "" && !opts.DisableDevnet {
 		w.Workers = append(w.Workers, devnet.AnvilWorker{
@@ -107,10 +119,20 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		})
 	}
 	w.Workers = append(w.Workers, supervisor.HttpWorker{
+		Address:    fmt.Sprintf("%v:%v", opts.HttpAddress, DefaultRollupsPort),
+		Handler:    re,
+		DevMessage: "Http Rollups for development started at http://localhost:5004",
+	})
+	w.Workers = append(w.Workers, supervisor.HttpWorker{
 		Address: fmt.Sprintf("%v:%v", opts.HttpAddress, opts.HttpPort),
 		Handler: e,
+		DevMessage: `GraphQL running at http://localhost:8080/graphql
+Inspect running at http://localhost:8080/inspect/
+Press Ctrl+C to stop the node
+`,
 	})
 	if len(opts.ApplicationArgs) > 0 {
+		fmt.Println("Starting app with supervisor")
 		w.Workers = append(w.Workers, supervisor.CommandWorker{
 			Name:    "app",
 			Command: opts.ApplicationArgs[0],
@@ -119,9 +141,9 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 				opts.HttpAddress, opts.HttpPort)},
 		})
 	} else if opts.EnableEcho {
+		fmt.Println("Starting echo app")
 		w.Workers = append(w.Workers, echoapp.EchoAppWorker{
-			RollupEndpoint: fmt.Sprintf("http://%s:%v/rollup",
-				opts.HttpAddress, opts.HttpPort),
+			RollupEndpoint: fmt.Sprintf("http://127.0.0.1:%v", DefaultRollupsPort),
 		})
 	}
 

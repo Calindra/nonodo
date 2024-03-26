@@ -23,4 +23,4 @@ check-gen: gen
 
 .PHONY: run
 run:
-	go run github.com/gligneul/nonodo
+	go run github.com/calindra/nonodo
