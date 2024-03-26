@@ -11,6 +11,7 @@ import (
 	"log/slog"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/calindra/nonodo/internal/supervisor"
 )
@@ -48,14 +49,16 @@ func (w AnvilWorker) String() string {
 	return anvilCommand
 }
 
-func (w AnvilWorker) ShowAddresses() {
+func ShowAddresses() {
 	var contracts ContractInfo
 	if err := json.Unmarshal(localhost, &contracts); err != nil {
 		slog.Warn("anvil: failed to unmarshal localhost.json", "error", err)
 		return
 	}
+	fmt.Printf("%-20s %s\n", "Contract", "Address")
+	fmt.Printf("%-20s %s\n", strings.Repeat("─", 20), strings.Repeat("─", 42))
 	for name, contract := range contracts.Contracts {
-		slog.Info("anvil: contract", "name", name, "address", contract.Address)
+		fmt.Printf("%-20s %s\n", name, contract.Address)
 	}
 }
 

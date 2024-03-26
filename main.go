@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/calindra/nonodo/internal/nonodo"
 	"github.com/carlmjohnson/versioninfo"
 	"github.com/ethereum/go-ethereum/common"
@@ -32,11 +33,8 @@ var addressBookCmd = &cobra.Command{
 	Use:   "address-book",
 	Short: "Show address book",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("Read json and print address...")
-		x := nonodo.NewNonodoOpts().InputBoxAddress
-		fmt.Println("InputBoxAddress", x)
-		y := opts.InputBoxAddress
-		fmt.Println("InputBoxAddress", y)
+		slog.Debug("Read json and print address...")
+		devnet.ShowAddresses()
 	},
 }
 
