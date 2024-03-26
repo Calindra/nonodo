@@ -15,6 +15,7 @@ import (
 )
 
 // Default port for the Ethereum node.
+const AnvilDefaultAddress = "127.0.0.1"
 const AnvilDefaultPort = 8545
 
 // Generate the devnet state and embed it in the Go binary.
@@ -29,6 +30,7 @@ const anvilCommand = "anvil"
 
 // Start the anvil process in the host machine.
 type AnvilWorker struct {
+	Address string
 	Port    int
 	Verbose bool
 }
@@ -49,6 +51,7 @@ func (w AnvilWorker) Start(ctx context.Context, ready chan<- struct{}) error {
 	server.Name = anvilCommand
 	server.Command = anvilCommand
 	server.Port = w.Port
+	server.Args = append(server.Args, "--host", fmt.Sprint(w.Address))
 	server.Args = append(server.Args, "--port", fmt.Sprint(w.Port))
 	server.Args = append(server.Args, "--load-state", path.Join(dir, stateFileName))
 	if !w.Verbose {

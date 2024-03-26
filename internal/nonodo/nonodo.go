@@ -28,6 +28,7 @@ const HttpTimeout = 10 * time.Second
 
 // Options to nonodo.
 type NonodoOpts struct {
+	AnvilAddress string
 	AnvilPort    int
 	AnvilVerbose bool
 
@@ -45,6 +46,12 @@ type NonodoOpts struct {
 	// If set, start echo dapp.
 	EnableEcho bool
 
+	// If set, disables devnet.
+	DisableDevnet bool
+
+	// If set, disables advances.
+	DisableAdvance bool
+
 	// If set, start application.
 	ApplicationArgs []string
 }
@@ -52,6 +59,7 @@ type NonodoOpts struct {
 // Create the options struct with default values.
 func NewNonodoOpts() NonodoOpts {
 	return NonodoOpts{
+		AnvilAddress:       devnet.AnvilDefaultAddress,
 		AnvilPort:          devnet.AnvilDefaultPort,
 		AnvilVerbose:       false,
 		HttpAddress:        "127.0.0.1",
@@ -62,6 +70,8 @@ func NewNonodoOpts() NonodoOpts {
 		ApplicationAddress: devnet.ApplicationAddress,
 		RpcUrl:             "",
 		EnableEcho:         false,
+		DisableDevnet:      false,
+		DisableAdvance:     false,
 		ApplicationArgs:    nil,
 	}
 }
@@ -91,20 +101,23 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	}))
 	rollup.Register(re, model)
 
-	if opts.RpcUrl == "" {
+	if opts.RpcUrl == "" && !opts.DisableDevnet {
 		w.Workers = append(w.Workers, devnet.AnvilWorker{
+			Address: opts.AnvilAddress,
 			Port:    opts.AnvilPort,
 			Verbose: opts.AnvilVerbose,
 		})
-		opts.RpcUrl = fmt.Sprintf("ws://127.0.0.1:%v", opts.AnvilPort)
+		opts.RpcUrl = fmt.Sprintf("ws://%s:%v", opts.AnvilAddress, opts.AnvilPort)
 	}
-	w.Workers = append(w.Workers, inputter.InputterWorker{
-		Model:              model,
-		Provider:           opts.RpcUrl,
-		InputBoxAddress:    common.HexToAddress(opts.InputBoxAddress),
-		InputBoxBlock:      opts.InputBoxBlock,
-		ApplicationAddress: common.HexToAddress(opts.ApplicationAddress),
-	})
+	if !opts.DisableAdvance {
+		w.Workers = append(w.Workers, inputter.InputterWorker{
+			Model:              model,
+			Provider:           opts.RpcUrl,
+			InputBoxAddress:    common.HexToAddress(opts.InputBoxAddress),
+			InputBoxBlock:      opts.InputBoxBlock,
+			ApplicationAddress: common.HexToAddress(opts.ApplicationAddress),
+		})
+	}
 	w.Workers = append(w.Workers, supervisor.HttpWorker{
 		Address:    fmt.Sprintf("%v:%v", opts.HttpAddress, DefaultRollupsPort),
 		Handler:    re,
@@ -124,6 +137,8 @@ Press Ctrl+C to stop the node
 			Name:    "app",
 			Command: opts.ApplicationArgs[0],
 			Args:    opts.ApplicationArgs[1:],
+			Env: []string{fmt.Sprintf("ROLLUP_HTTP_SERVER_URL=http://%s:%v/rollup",
+				opts.HttpAddress, opts.HttpPort)},
 		})
 	} else if opts.EnableEcho {
 		fmt.Println("Starting echo app")

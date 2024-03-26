@@ -8,6 +8,7 @@ package supervisor
 import (
 	"context"
 	"log/slog"
+	"os"
 	"os/exec"
 )
 
@@ -25,7 +26,8 @@ func (w CommandWorker) String() string {
 
 func (w CommandWorker) Start(ctx context.Context, ready chan<- struct{}) error {
 	cmd := exec.CommandContext(ctx, w.Command, w.Args...)
-	cmd.Env = w.Env
+	cmd.Env = os.Environ()
+	cmd.Env = append(cmd.Env, w.Env...)
 	cmd.Stderr = &commandLogger{buffName: "stdout", name: w.Name}
 	cmd.Stdout = &commandLogger{buffName: "stderr", name: w.Name}
 	cmd.Cancel = func() error {
