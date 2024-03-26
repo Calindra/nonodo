@@ -6,6 +6,7 @@ package devnet
 import (
 	"context"
 	_ "embed"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
@@ -23,6 +24,9 @@ const AnvilDefaultPort = 8545
 //go:embed anvil_state.json
 var devnetState []byte
 
+//go:embed localhost.json
+var localhost []byte
+
 const stateFileName = "anvil_state.json"
 
 const anvilCommand = "anvil"
@@ -33,8 +37,26 @@ type AnvilWorker struct {
 	Verbose bool
 }
 
+// Define a struct to represent the structure of your JSON data
+type ContractInfo struct {
+	Contracts map[string]struct {
+		Address string `json:"address"`
+	} `json:"contracts"`
+}
+
 func (w AnvilWorker) String() string {
 	return anvilCommand
+}
+
+func (w AnvilWorker) ShowAddresses() {
+	var contracts ContractInfo
+	if err := json.Unmarshal(localhost, &contracts); err != nil {
+		slog.Warn("anvil: failed to unmarshal localhost.json", "error", err)
+		return
+	}
+	for name, contract := range contracts.Contracts {
+		slog.Info("anvil: contract", "name", name, "address", contract.Address)
+	}
 }
 
 func (w AnvilWorker) Start(ctx context.Context, ready chan<- struct{}) error {
