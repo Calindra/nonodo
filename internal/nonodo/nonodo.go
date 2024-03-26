@@ -128,7 +128,7 @@ Press Ctrl+C to stop the node
 	} else if opts.EnableEcho {
 		fmt.Println("Starting echo app")
 		w.Workers = append(w.Workers, echoapp.EchoAppWorker{
-			RollupEndpoint: fmt.Sprintf("http://127.0.0.1:%v", DefaultRollupsPort),
+			RollupEndpoint: fmt.Sprintf("http://127.0.0.1:%v", opts.HttpRollupsPort),
 		})
 	}
 
