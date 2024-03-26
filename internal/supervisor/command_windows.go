@@ -8,8 +8,8 @@ package supervisor
 import (
 	"context"
 	"log/slog"
-	"os/exec"
 	"os"
+	"os/exec"
 )
 
 // This worker is responsible for a shell command that runs endlessly.

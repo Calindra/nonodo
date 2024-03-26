@@ -8,9 +8,9 @@ package supervisor
 import (
 	"context"
 	"log/slog"
+	"os"
 	"os/exec"
 	"syscall"
-	"os"
 )
 
 // This worker is responsible for a shell command that runs endlessly.
