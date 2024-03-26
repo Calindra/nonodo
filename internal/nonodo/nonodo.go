@@ -27,6 +27,7 @@ const HttpTimeout = 10 * time.Second
 
 // Options to nonodo.
 type NonodoOpts struct {
+	AnvilAddress string
 	AnvilPort    int
 	AnvilVerbose bool
 
@@ -56,6 +57,7 @@ type NonodoOpts struct {
 // Create the options struct with default values.
 func NewNonodoOpts() NonodoOpts {
 	return NonodoOpts{
+		AnvilAddress:       devnet.AnvilDefaultAddress,
 		AnvilPort:          devnet.AnvilDefaultPort,
 		AnvilVerbose:       false,
 		HttpAddress:        "127.0.0.1",
@@ -89,10 +91,11 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 
 	if opts.RpcUrl == "" && !opts.DisableDevnet {
 		w.Workers = append(w.Workers, devnet.AnvilWorker{
+			Address: opts.AnvilAddress,
 			Port:    opts.AnvilPort,
 			Verbose: opts.AnvilVerbose,
 		})
-		opts.RpcUrl = fmt.Sprintf("ws://127.0.0.1:%v", opts.AnvilPort)
+		opts.RpcUrl = fmt.Sprintf("ws://%s:%v", opts.AnvilAddress, opts.AnvilPort)
 	}
 	if !opts.DisableAdvance {
 		w.Workers = append(w.Workers, inputter.InputterWorker{
@@ -112,10 +115,11 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 			Name:    "app",
 			Command: opts.ApplicationArgs[0],
 			Args:    opts.ApplicationArgs[1:],
+			Env:     []string{fmt.Sprintf("ROLLUP_HTTP_SERVER_URL=http://%s:%v/rollup", opts.HttpAddress, opts.HttpPort)},
 		})
 	} else if opts.EnableEcho {
 		w.Workers = append(w.Workers, echoapp.EchoAppWorker{
-			RollupEndpoint: fmt.Sprintf("http://127.0.0.1:%v/rollup", opts.HttpPort),
+			RollupEndpoint: fmt.Sprintf("http://%s:%v/rollup", opts.HttpAddress, opts.HttpPort),
 		})
 	}
 

@@ -99,7 +99,7 @@ func (s *NonodoSuite) TestItWorksWithExternalApplication() {
 		"run",
 		"github.com/gligneul/nonodo/internal/echoapp/echoapp",
 		"--endpoint",
-		fmt.Sprintf("http://%v:%v/rollup", opts.HttpAddress, opts.HttpPort),
+		fmt.Sprintf("http://%s:%v/rollup", opts.HttpAddress, opts.HttpPort),
 	}
 	s.SetupTest(opts)
 
@@ -142,10 +142,10 @@ func (s *NonodoSuite) SetupTest(opts NonodoOpts) {
 
 	s.rpcUrl = fmt.Sprintf("http://127.0.0.1:%v", opts.AnvilPort)
 
-	graphqlEndpoint := fmt.Sprintf("http://%v:%v/graphql", opts.HttpAddress, opts.HttpPort)
+	graphqlEndpoint := fmt.Sprintf("http://%s:%v/graphql", opts.HttpAddress, opts.HttpPort)
 	s.graphqlClient = graphql.NewClient(graphqlEndpoint, nil)
 
-	inspectEndpoint := fmt.Sprintf("http://%v:%v/", opts.HttpAddress, opts.HttpPort)
+	inspectEndpoint := fmt.Sprintf("http://%s:%v/", opts.HttpAddress, opts.HttpPort)
 	var err error
 	s.inspectClient, err = inspect.NewClientWithResponses(inspectEndpoint)
 	s.Nil(err)

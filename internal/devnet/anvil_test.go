@@ -20,6 +20,7 @@ func TestAnvilWorker(t *testing.T) {
 	defer timeoutCancel()
 
 	w := AnvilWorker{
+		Address: AnvilDefaultAddress,
 		Port:    AnvilDefaultPort,
 		Verbose: true,
 	}

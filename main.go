@@ -34,6 +34,8 @@ var opts = nonodo.NewNonodoOpts()
 
 func init() {
 	// anvil-*
+	cmd.Flags().StringVar(&opts.AnvilAddress, "anvil-address", opts.AnvilAddress,
+		"HTTP address used by Anvil")
 	cmd.Flags().IntVar(&opts.AnvilPort, "anvil-port", opts.AnvilPort,
 		"HTTP port used by Anvil")
 	cmd.Flags().BoolVar(&opts.AnvilVerbose, "anvil-verbose", opts.AnvilVerbose,

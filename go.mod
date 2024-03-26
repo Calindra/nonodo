@@ -2,10 +2,6 @@ module github.com/gligneul/nonodo
 
 go 1.21.1
 
-replace github.com/gligneul/nonodo => ./
-
-require github.com/gligneul/nonodo v0.0.0
-
 require (
 	github.com/99designs/gqlgen v0.17.41
 	github.com/Khan/genqlient v0.6.0
