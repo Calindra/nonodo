@@ -27,9 +27,15 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 )
 
-const rollupsContractsUrl = "https://registry.npmjs.org/@cartesi/rollups/-/rollups-1.1.0.tgz"
-const baseContractsPath = "package/export/artifacts/contracts/"
-const bindingPkg = "contracts"
+// const rollupsContractsUrl
+// = "https://github.com/cartesi/rollups-contracts/archive/refs/tags/v1.2.0.tar.gz"
+// const baseContractsPath = "onchain/rollups/contracts/"
+
+const (
+	rollupsContractsUrl = "https://registry.npmjs.org/@cartesi/rollups/-/rollups-1.1.0.tgz"
+	baseContractsPath   = "package/export/artifacts/contracts/"
+	bindingPkg          = "contracts"
+)
 
 type contractBinding struct {
 	jsonPath string
