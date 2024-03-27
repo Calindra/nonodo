@@ -6,10 +6,12 @@ package devnet
 import (
 	"context"
 	_ "embed"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
 	"path"
+	"strings"
 
 	"github.com/calindra/nonodo/internal/supervisor"
 )
@@ -24,6 +26,9 @@ const AnvilDefaultPort = 8545
 //go:embed anvil_state.json
 var devnetState []byte
 
+//go:embed localhost.json
+var localhost []byte
+
 const stateFileName = "anvil_state.json"
 
 const anvilCommand = "anvil"
@@ -35,8 +40,30 @@ type AnvilWorker struct {
 	Verbose bool
 }
 
+// Define a struct to represent the structure of your JSON data
+type ContractInfo struct {
+	Contracts map[string]struct {
+		Address string `json:"address"`
+	} `json:"contracts"`
+}
+
 func (w AnvilWorker) String() string {
 	return anvilCommand
+}
+
+func ShowAddresses() {
+	var contracts ContractInfo
+	if err := json.Unmarshal(localhost, &contracts); err != nil {
+		slog.Warn("anvil: failed to unmarshal localhost.json", "error", err)
+		return
+	}
+	space := 20
+	adddressSpace := 42
+	fmt.Printf("%-20s %s\n", "Contract", "Address")
+	fmt.Printf("%-20s %s\n", strings.Repeat("─", space), strings.Repeat("─", adddressSpace))
+	for name, contract := range contracts.Contracts {
+		fmt.Printf("%-20s %s\n", name, contract.Address)
+	}
 }
 
 func (w AnvilWorker) Start(ctx context.Context, ready chan<- struct{}) error {
