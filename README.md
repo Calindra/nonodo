@@ -50,9 +50,19 @@ With the default configuration, NoNodo starts an Anvil node with the Cartesi Rol
 NoNodo uses the same deployment used by [sunodo](https://docs.sunodo.io/), so the contract addresses are the same.
 NoNodo offers some flags to configure Anvil, starting with `--anvil-*`.
 
-NoNodo exposes the Cartesi Rollups GraphQL (`/graphql`) and Inspect (`/inspect`) APIs for the application front-end, and the Rollup (`/rollup`) API for the application back-end.
+NoNodo exposes the Cartesi Rollups GraphQL (`/graphql`) and Inspect (`/inspect`) APIs for the application front-end, and the Rollup (`http://127.0.0.1:5004/finish`) API for the application back-end.
 NoNodo uses the HTTP address and port set by the `--http-address` and `--http-port` flags.
 By default, NoNodo binds to the `http://127.0.0.1:8080/` address.
+
+### Address Book
+
+To display the contract addresses, run:
+
+```sh
+nonodo address-book
+```
+
+## Architecture
 
 ![NoNodo Architecture](./docs/nonodo.svg)
 
