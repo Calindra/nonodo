@@ -55,8 +55,10 @@ func ShowAddresses() {
 		slog.Warn("anvil: failed to unmarshal localhost.json", "error", err)
 		return
 	}
+	space := 20
+	adddressSpace := 42
 	fmt.Printf("%-20s %s\n", "Contract", "Address")
-	fmt.Printf("%-20s %s\n", strings.Repeat("─", 20), strings.Repeat("─", 42))
+	fmt.Printf("%-20s %s\n", strings.Repeat("─", space), strings.Repeat("─", adddressSpace))
 	for name, contract := range contracts.Contracts {
 		fmt.Printf("%-20s %s\n", name, contract.Address)
 	}
