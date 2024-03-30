@@ -86,6 +86,11 @@ func (r *queryResolver) Reports(ctx context.Context, first *int, last *int, afte
 	return r.model.GetReports(first, last, after, before, nil)
 }
 
+// VouchersMetadata is the resolver for the vouchersMetadata field.
+func (r *queryResolver) VouchersMetadata(ctx context.Context, filter []*model.VoucherMetadataFilter) ([]*model.VoucherMetadata, error) {
+	return r.model.GetVouchersMetadata(filter)
+}
+
 // Input is the resolver for the input field.
 func (r *reportResolver) Input(ctx context.Context, obj *model.Report) (*model.Input, error) {
 	return r.model.GetInput(obj.InputIndex)

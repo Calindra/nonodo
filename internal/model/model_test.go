@@ -4,7 +4,9 @@
 package model
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -1122,4 +1124,40 @@ func (s *ModelSuite) TestItGetsNoReportsWhenOffsetIsGreaterThanInputs() {
 
 	reports := s.m.GetReports(OutputFilter{}, 0, 0)
 	s.Empty(reports)
+}
+
+func (s *ModelSuite) TestItAddsVoucherMetadataAndFind() {
+	{
+		voucherMetadata1 := VoucherMetadata{
+			Beneficiary: common.HexToAddress("0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"),
+			Contract:    common.HexToAddress("0xc6e7DF5E7b4f2A278906862b61205850344D4e7d"),
+		}
+		s.m.AddVoucherMetadata(&voucherMetadata1)
+		voucherMetadata2 := VoucherMetadata{
+			Beneficiary: common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
+			Contract:    common.HexToAddress("0xc6e7DF5E7b4f2A278906862b61205850344D4e7d"),
+		}
+		s.m.AddVoucherMetadata(&voucherMetadata2)
+		voucherMetadata3 := VoucherMetadata{
+			Beneficiary: common.HexToAddress("0x70997970C51812dc3A010C7d01b50e0d17dc79C8"),
+			Contract:    common.HexToAddress("0xc6e7DF5E7b4f2A278906862b61205850344D4e7d"),
+		}
+		s.m.AddVoucherMetadata(&voucherMetadata3)
+	}
+	filters := CreateFilterList(`[{"field": "Beneficiary", "eq": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"}]`)
+	results, err := s.m.GetVouchersMetadata(filters)
+	if err != nil {
+		s.Fail("Unexpected error")
+	}
+	s.Equal(1, len(results))
+	s.Equal("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", results[0].Beneficiary.String())
+}
+
+func CreateFilterList(content string) []*MetadataFilter {
+	filterList := []*MetadataFilter{}
+	// Parse the JSON string into a slice of FilterInput objects
+	if err := json.Unmarshal([]byte(content), &filterList); err != nil {
+		panic(fmt.Errorf("Error parsing JSON: %v", err))
+	}
+	return filterList
 }

@@ -56,6 +56,38 @@ type Proof struct {
 	Context string `json:"context"`
 }
 
+type VoucherExecutionEvent struct {
+	InputIndex    string `json:"inputIndex"`
+	OutputIndex   string `json:"outputIndex"`
+	ExecutedAt    string `json:"executedAt"`
+	ExecutedBlock string `json:"executedBlock"`
+}
+
+type VoucherMetadata struct {
+	Label         string `json:"label"`
+	Beneficiary   string `json:"beneficiary"`
+	Contract      string `json:"contract"`
+	Amount        string `json:"amount"`
+	ExecutedAt    string `json:"executedAt"`
+	ExecutedBlock string `json:"executedBlock"`
+	InputIndex    int    `json:"inputIndex"`
+	OutputIndex   int    `json:"outputIndex"`
+}
+
+type VoucherMetadataFilter struct {
+	Field string                   `json:"field"`
+	Eq    *string                  `json:"eq,omitempty"`
+	Ne    *string                  `json:"ne,omitempty"`
+	Gt    *string                  `json:"gt,omitempty"`
+	Gte   *string                  `json:"gte,omitempty"`
+	Lt    *string                  `json:"lt,omitempty"`
+	Lte   *string                  `json:"lte,omitempty"`
+	In    []*string                `json:"in,omitempty"`
+	Nin   []*string                `json:"nin,omitempty"`
+	And   []*VoucherMetadataFilter `json:"and,omitempty"`
+	Or    []*VoucherMetadataFilter `json:"or,omitempty"`
+}
+
 type CompletionStatus string
 
 const (

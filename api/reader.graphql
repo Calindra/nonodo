@@ -97,6 +97,8 @@ type Query {
   notices(first: Int, last: Int, after: String, before: String): NoticeConnection!
   "Get reports with support for pagination"
   reports(first: Int, last: Int, after: String, before: String): ReportConnection!
+
+  vouchersMetadata(filter: [VoucherMetadataFilter]): [VoucherMetadata]
 }
 
 "Pagination entry"
@@ -217,4 +219,53 @@ type VoucherEdge {
 
 schema {
   query: Query
+}
+
+
+#--------------------#
+#  Voucher Metadata  #
+#--------------------#
+
+type VoucherMetadata {
+  label: String!
+  beneficiary: String!
+  contract: String!
+  amount: BigInt!
+
+  # we handle that status outside the CM
+  executedAt: BigInt!
+  executedBlock: BigInt!
+
+  inputIndex: Int!
+  outputIndex: Int!
+}
+
+input VoucherExecutionEvent {
+  inputIndex: BigInt!
+  outputIndex: BigInt!
+
+  # we handle that status outside the CM
+  executedAt: BigInt!
+  executedBlock: BigInt!
+}
+
+input VoucherMetadataFilter {
+  # The field to apply the comparison operation on
+  field: String!
+
+  # Basic comparison operators
+  eq: String
+  ne: String
+  gt: String
+  gte: String
+  lt: String
+  lte: String
+
+  # Inclusion/exclusion operators
+  in: [String]
+  nin: [String]
+
+  # Logical operators
+  and: [VoucherMetadataFilter]
+  or: [VoucherMetadataFilter]
 }

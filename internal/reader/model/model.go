@@ -119,3 +119,10 @@ func (m *ModelWrapper) GetReports(
 	}
 	return newConnection(offset, total, convNodes), nil
 }
+
+func (m *ModelWrapper) GetVouchersMetadata(
+	filter []*VoucherMetadataFilter,
+) ([]*VoucherMetadata, error) {
+	result := []*VoucherMetadata{}
+	return result, nil
+}

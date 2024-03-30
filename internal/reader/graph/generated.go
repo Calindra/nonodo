@@ -117,14 +117,15 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		Input    func(childComplexity int, index int) int
-		Inputs   func(childComplexity int, first *int, last *int, after *string, before *string, where *model.InputFilter) int
-		Notice   func(childComplexity int, noticeIndex int, inputIndex int) int
-		Notices  func(childComplexity int, first *int, last *int, after *string, before *string) int
-		Report   func(childComplexity int, reportIndex int, inputIndex int) int
-		Reports  func(childComplexity int, first *int, last *int, after *string, before *string) int
-		Voucher  func(childComplexity int, voucherIndex int, inputIndex int) int
-		Vouchers func(childComplexity int, first *int, last *int, after *string, before *string) int
+		Input            func(childComplexity int, index int) int
+		Inputs           func(childComplexity int, first *int, last *int, after *string, before *string, where *model.InputFilter) int
+		Notice           func(childComplexity int, noticeIndex int, inputIndex int) int
+		Notices          func(childComplexity int, first *int, last *int, after *string, before *string) int
+		Report           func(childComplexity int, reportIndex int, inputIndex int) int
+		Reports          func(childComplexity int, first *int, last *int, after *string, before *string) int
+		Voucher          func(childComplexity int, voucherIndex int, inputIndex int) int
+		Vouchers         func(childComplexity int, first *int, last *int, after *string, before *string) int
+		VouchersMetadata func(childComplexity int, filter []*model.VoucherMetadataFilter) int
 	}
 
 	Report struct {
@@ -162,6 +163,17 @@ type ComplexityRoot struct {
 		Cursor func(childComplexity int) int
 		Node   func(childComplexity int) int
 	}
+
+	VoucherMetadata struct {
+		Amount        func(childComplexity int) int
+		Beneficiary   func(childComplexity int) int
+		Contract      func(childComplexity int) int
+		ExecutedAt    func(childComplexity int) int
+		ExecutedBlock func(childComplexity int) int
+		InputIndex    func(childComplexity int) int
+		Label         func(childComplexity int) int
+		OutputIndex   func(childComplexity int) int
+	}
 }
 
 type InputResolver interface {
@@ -184,6 +196,7 @@ type QueryResolver interface {
 	Vouchers(ctx context.Context, first *int, last *int, after *string, before *string) (*model.Connection[*model.Voucher], error)
 	Notices(ctx context.Context, first *int, last *int, after *string, before *string) (*model.Connection[*model.Notice], error)
 	Reports(ctx context.Context, first *int, last *int, after *string, before *string) (*model.Connection[*model.Report], error)
+	VouchersMetadata(ctx context.Context, filter []*model.VoucherMetadataFilter) ([]*model.VoucherMetadata, error)
 }
 type ReportResolver interface {
 	Input(ctx context.Context, obj *model.Report) (*model.Input, error)
@@ -617,6 +630,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.Vouchers(childComplexity, args["first"].(*int), args["last"].(*int), args["after"].(*string), args["before"].(*string)), true
 
+	case "Query.vouchersMetadata":
+		if e.complexity.Query.VouchersMetadata == nil {
+			break
+		}
+
+		args, err := ec.field_Query_vouchersMetadata_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.VouchersMetadata(childComplexity, args["filter"].([]*model.VoucherMetadataFilter)), true
+
 	case "Report.index":
 		if e.complexity.Report.Index == nil {
 			break
@@ -743,6 +768,62 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.VoucherEdge.Node(childComplexity), true
 
+	case "VoucherMetadata.amount":
+		if e.complexity.VoucherMetadata.Amount == nil {
+			break
+		}
+
+		return e.complexity.VoucherMetadata.Amount(childComplexity), true
+
+	case "VoucherMetadata.beneficiary":
+		if e.complexity.VoucherMetadata.Beneficiary == nil {
+			break
+		}
+
+		return e.complexity.VoucherMetadata.Beneficiary(childComplexity), true
+
+	case "VoucherMetadata.contract":
+		if e.complexity.VoucherMetadata.Contract == nil {
+			break
+		}
+
+		return e.complexity.VoucherMetadata.Contract(childComplexity), true
+
+	case "VoucherMetadata.executedAt":
+		if e.complexity.VoucherMetadata.ExecutedAt == nil {
+			break
+		}
+
+		return e.complexity.VoucherMetadata.ExecutedAt(childComplexity), true
+
+	case "VoucherMetadata.executedBlock":
+		if e.complexity.VoucherMetadata.ExecutedBlock == nil {
+			break
+		}
+
+		return e.complexity.VoucherMetadata.ExecutedBlock(childComplexity), true
+
+	case "VoucherMetadata.inputIndex":
+		if e.complexity.VoucherMetadata.InputIndex == nil {
+			break
+		}
+
+		return e.complexity.VoucherMetadata.InputIndex(childComplexity), true
+
+	case "VoucherMetadata.label":
+		if e.complexity.VoucherMetadata.Label == nil {
+			break
+		}
+
+		return e.complexity.VoucherMetadata.Label(childComplexity), true
+
+	case "VoucherMetadata.outputIndex":
+		if e.complexity.VoucherMetadata.OutputIndex == nil {
+			break
+		}
+
+		return e.complexity.VoucherMetadata.OutputIndex(childComplexity), true
+
 	}
 	return 0, false
 }
@@ -752,6 +833,8 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	ec := executionContext{rc, e, 0, 0, make(chan graphql.DeferredResult)}
 	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
 		ec.unmarshalInputInputFilter,
+		ec.unmarshalInputVoucherExecutionEvent,
+		ec.unmarshalInputVoucherMetadataFilter,
 	)
 	first := true
 
@@ -933,6 +1016,8 @@ type Query {
   notices(first: Int, last: Int, after: String, before: String): NoticeConnection!
   "Get reports with support for pagination"
   reports(first: Int, last: Int, after: String, before: String): ReportConnection!
+
+  vouchersMetadata(filter: [VoucherMetadataFilter]): [VoucherMetadata]
 }
 
 "Pagination entry"
@@ -1053,6 +1138,50 @@ type VoucherEdge {
 
 schema {
   query: Query
+}
+
+type VoucherMetadata {
+  label: String!
+  beneficiary: String!
+  contract: String!
+  amount: BigInt!
+
+  # we handle that status outside the CM
+  executedAt: BigInt!
+  executedBlock: BigInt!
+
+  inputIndex: Int!
+  outputIndex: Int!
+}
+
+input VoucherExecutionEvent {
+  inputIndex: BigInt!
+  outputIndex: BigInt!
+
+  # we handle that status outside the CM
+  executedAt: BigInt!
+  executedBlock: BigInt!
+}
+
+input VoucherMetadataFilter {
+  # The field to apply the comparison operation on
+  field: String!
+
+  # Basic comparison operators
+  eq: String
+  ne: String
+  gt: String
+  gte: String
+  lt: String
+  lte: String
+
+  # Inclusion/exclusion operators
+  in: [String]
+  nin: [String]
+
+  # Logical operators
+  and: [VoucherMetadataFilter]
+  or: [VoucherMetadataFilter]
 }
 `, BuiltIn: false},
 }
@@ -1467,6 +1596,21 @@ func (ec *executionContext) field_Query_voucher_args(ctx context.Context, rawArg
 		}
 	}
 	args["inputIndex"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_vouchersMetadata_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 []*model.VoucherMetadataFilter
+	if tmp, ok := rawArgs["filter"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("filter"))
+		arg0, err = ec.unmarshalOVoucherMetadataFilter2ᚕᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐVoucherMetadataFilter(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["filter"] = arg0
 	return args, nil
 }
 
@@ -4067,6 +4211,76 @@ func (ec *executionContext) fieldContext_Query_reports(ctx context.Context, fiel
 	return fc, nil
 }
 
+func (ec *executionContext) _Query_vouchersMetadata(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_vouchersMetadata(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().VouchersMetadata(rctx, fc.Args["filter"].([]*model.VoucherMetadataFilter))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.([]*model.VoucherMetadata)
+	fc.Result = res
+	return ec.marshalOVoucherMetadata2ᚕᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐVoucherMetadata(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_vouchersMetadata(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "label":
+				return ec.fieldContext_VoucherMetadata_label(ctx, field)
+			case "beneficiary":
+				return ec.fieldContext_VoucherMetadata_beneficiary(ctx, field)
+			case "contract":
+				return ec.fieldContext_VoucherMetadata_contract(ctx, field)
+			case "amount":
+				return ec.fieldContext_VoucherMetadata_amount(ctx, field)
+			case "executedAt":
+				return ec.fieldContext_VoucherMetadata_executedAt(ctx, field)
+			case "executedBlock":
+				return ec.fieldContext_VoucherMetadata_executedBlock(ctx, field)
+			case "inputIndex":
+				return ec.fieldContext_VoucherMetadata_inputIndex(ctx, field)
+			case "outputIndex":
+				return ec.fieldContext_VoucherMetadata_outputIndex(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type VoucherMetadata", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_vouchersMetadata_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Query___type(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Query___type(ctx, field)
 	if err != nil {
@@ -5090,6 +5304,358 @@ func (ec *executionContext) fieldContext_VoucherEdge_cursor(ctx context.Context,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _VoucherMetadata_label(ctx context.Context, field graphql.CollectedField, obj *model.VoucherMetadata) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_VoucherMetadata_label(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Label, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_VoucherMetadata_label(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "VoucherMetadata",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _VoucherMetadata_beneficiary(ctx context.Context, field graphql.CollectedField, obj *model.VoucherMetadata) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_VoucherMetadata_beneficiary(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Beneficiary, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_VoucherMetadata_beneficiary(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "VoucherMetadata",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _VoucherMetadata_contract(ctx context.Context, field graphql.CollectedField, obj *model.VoucherMetadata) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_VoucherMetadata_contract(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Contract, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_VoucherMetadata_contract(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "VoucherMetadata",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _VoucherMetadata_amount(ctx context.Context, field graphql.CollectedField, obj *model.VoucherMetadata) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_VoucherMetadata_amount(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Amount, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNBigInt2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_VoucherMetadata_amount(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "VoucherMetadata",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type BigInt does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _VoucherMetadata_executedAt(ctx context.Context, field graphql.CollectedField, obj *model.VoucherMetadata) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_VoucherMetadata_executedAt(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ExecutedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNBigInt2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_VoucherMetadata_executedAt(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "VoucherMetadata",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type BigInt does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _VoucherMetadata_executedBlock(ctx context.Context, field graphql.CollectedField, obj *model.VoucherMetadata) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_VoucherMetadata_executedBlock(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ExecutedBlock, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNBigInt2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_VoucherMetadata_executedBlock(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "VoucherMetadata",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type BigInt does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _VoucherMetadata_inputIndex(ctx context.Context, field graphql.CollectedField, obj *model.VoucherMetadata) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_VoucherMetadata_inputIndex(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.InputIndex, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_VoucherMetadata_inputIndex(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "VoucherMetadata",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _VoucherMetadata_outputIndex(ctx context.Context, field graphql.CollectedField, obj *model.VoucherMetadata) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_VoucherMetadata_outputIndex(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.OutputIndex, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_VoucherMetadata_outputIndex(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "VoucherMetadata",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
 		},
 	}
 	return fc, nil
@@ -6902,6 +7468,151 @@ func (ec *executionContext) unmarshalInputInputFilter(ctx context.Context, obj i
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputVoucherExecutionEvent(ctx context.Context, obj interface{}) (model.VoucherExecutionEvent, error) {
+	var it model.VoucherExecutionEvent
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"inputIndex", "outputIndex", "executedAt", "executedBlock"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "inputIndex":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("inputIndex"))
+			data, err := ec.unmarshalNBigInt2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.InputIndex = data
+		case "outputIndex":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("outputIndex"))
+			data, err := ec.unmarshalNBigInt2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.OutputIndex = data
+		case "executedAt":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("executedAt"))
+			data, err := ec.unmarshalNBigInt2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ExecutedAt = data
+		case "executedBlock":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("executedBlock"))
+			data, err := ec.unmarshalNBigInt2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ExecutedBlock = data
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputVoucherMetadataFilter(ctx context.Context, obj interface{}) (model.VoucherMetadataFilter, error) {
+	var it model.VoucherMetadataFilter
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"field", "eq", "ne", "gt", "gte", "lt", "lte", "in", "nin", "and", "or"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "field":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("field"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Field = data
+		case "eq":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("eq"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Eq = data
+		case "ne":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("ne"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Ne = data
+		case "gt":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("gt"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Gt = data
+		case "gte":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("gte"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Gte = data
+		case "lt":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("lt"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Lt = data
+		case "lte":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("lte"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Lte = data
+		case "in":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("in"))
+			data, err := ec.unmarshalOString2ᚕᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.In = data
+		case "nin":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("nin"))
+			data, err := ec.unmarshalOString2ᚕᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Nin = data
+		case "and":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("and"))
+			data, err := ec.unmarshalOVoucherMetadataFilter2ᚕᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐVoucherMetadataFilter(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.And = data
+		case "or":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("or"))
+			data, err := ec.unmarshalOVoucherMetadataFilter2ᚕᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐVoucherMetadataFilter(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Or = data
+		}
+	}
+
+	return it, nil
+}
+
 // endregion **************************** input.gotpl *****************************
 
 // region    ************************** interface.gotpl ***************************
@@ -7819,6 +8530,25 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "vouchersMetadata":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_vouchersMetadata(ctx, field)
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "__type":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Query___type(ctx, field)
@@ -8177,6 +8907,80 @@ func (ec *executionContext) _VoucherEdge(ctx context.Context, sel ast.SelectionS
 			}
 		case "cursor":
 			out.Values[i] = ec._VoucherEdge_cursor(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var voucherMetadataImplementors = []string{"VoucherMetadata"}
+
+func (ec *executionContext) _VoucherMetadata(ctx context.Context, sel ast.SelectionSet, obj *model.VoucherMetadata) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, voucherMetadataImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("VoucherMetadata")
+		case "label":
+			out.Values[i] = ec._VoucherMetadata_label(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "beneficiary":
+			out.Values[i] = ec._VoucherMetadata_beneficiary(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "contract":
+			out.Values[i] = ec._VoucherMetadata_contract(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "amount":
+			out.Values[i] = ec._VoucherMetadata_amount(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "executedAt":
+			out.Values[i] = ec._VoucherMetadata_executedAt(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "executedBlock":
+			out.Values[i] = ec._VoucherMetadata_executedBlock(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "inputIndex":
+			out.Values[i] = ec._VoucherMetadata_inputIndex(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "outputIndex":
+			out.Values[i] = ec._VoucherMetadata_outputIndex(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -9289,6 +10093,38 @@ func (ec *executionContext) marshalOProof2ᚖgithubᚗcomᚋcalindraᚋnonodoᚋ
 	return ec._Proof(ctx, sel, v)
 }
 
+func (ec *executionContext) unmarshalOString2ᚕᚖstring(ctx context.Context, v interface{}) ([]*string, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var vSlice []interface{}
+	if v != nil {
+		vSlice = graphql.CoerceList(v)
+	}
+	var err error
+	res := make([]*string, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalOString2ᚖstring(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalOString2ᚕᚖstring(ctx context.Context, sel ast.SelectionSet, v []*string) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalOString2ᚖstring(ctx, sel, v[i])
+	}
+
+	return ret
+}
+
 func (ec *executionContext) unmarshalOString2ᚖstring(ctx context.Context, v interface{}) (*string, error) {
 	if v == nil {
 		return nil, nil
@@ -9303,6 +10139,82 @@ func (ec *executionContext) marshalOString2ᚖstring(ctx context.Context, sel as
 	}
 	res := graphql.MarshalString(*v)
 	return res
+}
+
+func (ec *executionContext) marshalOVoucherMetadata2ᚕᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐVoucherMetadata(ctx context.Context, sel ast.SelectionSet, v []*model.VoucherMetadata) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalOVoucherMetadata2ᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐVoucherMetadata(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	return ret
+}
+
+func (ec *executionContext) marshalOVoucherMetadata2ᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐVoucherMetadata(ctx context.Context, sel ast.SelectionSet, v *model.VoucherMetadata) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._VoucherMetadata(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalOVoucherMetadataFilter2ᚕᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐVoucherMetadataFilter(ctx context.Context, v interface{}) ([]*model.VoucherMetadataFilter, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var vSlice []interface{}
+	if v != nil {
+		vSlice = graphql.CoerceList(v)
+	}
+	var err error
+	res := make([]*model.VoucherMetadataFilter, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalOVoucherMetadataFilter2ᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐVoucherMetadataFilter(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) unmarshalOVoucherMetadataFilter2ᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐVoucherMetadataFilter(ctx context.Context, v interface{}) (*model.VoucherMetadataFilter, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputVoucherMetadataFilter(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) marshalO__EnumValue2ᚕgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐEnumValueᚄ(ctx context.Context, sel ast.SelectionSet, v []introspection.EnumValue) graphql.Marshaler {
