@@ -5,6 +5,7 @@
 package model
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"reflect"
@@ -428,8 +429,6 @@ func isIntegerType(t reflect.Type) bool {
 
 func fieldValueMatches(data interface{}, fieldName string, compareValue interface{}) bool {
 	value := reflect.ValueOf(data).Elem()
-
-	// Get the field by name
 	field := value.FieldByName(capitalizeFirstLetter(fieldName))
 	if !field.IsValid() {
 		slog.Warn(fmt.Sprintf("Field with the given name does not exist: %s", fieldName))
@@ -437,47 +436,27 @@ func fieldValueMatches(data interface{}, fieldName string, compareValue interfac
 	}
 	fieldType := field.Type()
 	if isIntegerType(fieldType) {
-		strValue, ok := compareValue.(string)
-		if !ok {
-			slog.Warn("to string fail")
-			return false
-		}
-		// Convert the string value to an integer
-		intValue, err := strconv.Atoi(strValue)
+		intValue, err := toInt64(compareValue)
 		if err != nil {
-			slog.Warn("to int fail")
+			slog.Error(err.Error())
 			return false
 		}
-		resp := int(intValue) == int(field.Int())
-		return resp
+		return intValue == field.Int()
 	} else if address, ok := field.Interface().(common.Address); ok {
 		return address.String() == compareValue
 	} else if fieldType.Kind() == reflect.Uint64 {
-		strValue, ok := compareValue.(string)
-		if !ok {
-			slog.Warn("to string fail")
-			return false
-		}
-		num, err := strconv.ParseUint(strValue, 10, 64)
+		num, err := toUint64(compareValue)
 		if err != nil {
-			slog.Warn("to uint64 fail")
+			slog.Error(err.Error())
 			return false
 		}
-		fieldValue := field.Interface()
-		fieldValueUint64 := fieldValue.(uint64)
-		return fieldValueUint64 == num
+		return num == field.Interface().(uint64)
 	}
-
-	fmt.Printf("Type of %s: %s\n", fieldName, fieldType)
-
-	// Compare the field value with the compareValue
 	return reflect.DeepEqual(field.Interface(), compareValue)
 }
 
 func fieldValueGt(data interface{}, fieldName string, compareValue interface{}) bool {
 	value := reflect.ValueOf(data).Elem()
-	slog.Warn(fmt.Sprintf("Checking %s \n", fieldName))
-	// Get the field by name
 	field := value.FieldByName(capitalizeFirstLetter(fieldName))
 	if !field.IsValid() {
 		slog.Warn(fmt.Sprintf("Field with the given name does not exist: %s", fieldName))
@@ -485,37 +464,47 @@ func fieldValueGt(data interface{}, fieldName string, compareValue interface{}) 
 	}
 	fieldType := field.Type()
 	if isIntegerType(fieldType) {
-		strValue, ok := compareValue.(string)
-		if !ok {
-			slog.Warn("to string fail")
-			return false
-		}
-		intValue, err := strconv.Atoi(strValue)
+		intValue, err := toInt64(compareValue)
 		if err != nil {
-			slog.Warn("to int fail")
+			slog.Error(err.Error())
 			return false
 		}
-		resp := int(intValue) > int(field.Int())
-		slog.Warn(fmt.Sprintf("%t \n", resp))
-		return resp
+		return intValue > field.Int()
 	} else if fieldType.Kind() == reflect.Uint64 {
-		strValue, ok := compareValue.(string)
-		if !ok {
-			slog.Warn("to string fail")
-			return false
-		}
-		num, err := strconv.ParseUint(strValue, 10, 64)
+		num, err := toUint64(compareValue)
 		if err != nil {
-			slog.Warn("to uint64 fail")
+			slog.Error(err.Error())
 			return false
 		}
-		fieldValue := field.Interface()
-		fieldValueUint64 := fieldValue.(uint64)
-		return fieldValueUint64 > num
+		return num < field.Interface().(uint64)
 	} else {
 		slog.Warn(fmt.Sprintf("Checking %s not a integer type\n", fieldName))
 	}
 	return false
+}
+
+func toInt64(compareValue interface{}) (int64, error) {
+	strValue, ok := compareValue.(string)
+	if !ok {
+		return 0, errors.New("conversion to string failed")
+	}
+	intValue, err := strconv.ParseInt(strValue, 10, 64)
+	if err != nil {
+		return 0, errors.New("conversion to int64 failed")
+	}
+	return intValue, nil
+}
+
+func toUint64(compareValue interface{}) (uint64, error) {
+	strValue, ok := compareValue.(string)
+	if !ok {
+		return 0, errors.New("conversion to string failed")
+	}
+	num, err := strconv.ParseUint(strValue, 10, 64)
+	if err != nil {
+		return 0, errors.New("conversion to uint64 failed")
+	}
+	return num, nil
 }
 
 func capitalizeFirstLetter(s string) string {
