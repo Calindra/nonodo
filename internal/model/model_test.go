@@ -1126,25 +1126,30 @@ func (s *ModelSuite) TestItGetsNoReportsWhenOffsetIsGreaterThanInputs() {
 	s.Empty(reports)
 }
 
+var Bob = common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
+var Bruno = common.HexToAddress("0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC")
+var Alice = common.HexToAddress("0x70997970C51812dc3A010C7d01b50e0d17dc79C8")
+var Token = common.HexToAddress("0xc6e7DF5E7b4f2A278906862b61205850344D4e7d")
+
 func (s *ModelSuite) TestItAddsVoucherMetadataAndFindByAddress() {
 	{
-		voucherMetadata1 := VoucherMetadata{
-			Beneficiary: common.HexToAddress("0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"),
-			Contract:    common.HexToAddress("0xc6e7DF5E7b4f2A278906862b61205850344D4e7d"),
-		}
-		s.m.AddVoucherMetadata(&voucherMetadata1)
-		voucherMetadata2 := VoucherMetadata{
-			Beneficiary: common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
-			Contract:    common.HexToAddress("0xc6e7DF5E7b4f2A278906862b61205850344D4e7d"),
-		}
-		s.m.AddVoucherMetadata(&voucherMetadata2)
-		voucherMetadata3 := VoucherMetadata{
-			Beneficiary: common.HexToAddress("0x70997970C51812dc3A010C7d01b50e0d17dc79C8"),
-			Contract:    common.HexToAddress("0xc6e7DF5E7b4f2A278906862b61205850344D4e7d"),
-		}
-		s.m.AddVoucherMetadata(&voucherMetadata3)
+		createVoucherMetadataOrFail(s, VoucherMetadata{
+			Beneficiary: Bruno,
+			Contract:    Token,
+		})
+		createVoucherMetadataOrFail(s, VoucherMetadata{
+			Beneficiary: Bob,
+			Contract:    Token,
+		})
+		createVoucherMetadataOrFail(s, VoucherMetadata{
+			Beneficiary: Alice,
+			Contract:    Token,
+		})
 	}
-	filters := CreateFilterList(`[{"field": "Beneficiary", "eq": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"}]`)
+	filters := CreateFilterList(`[{
+		"field": "Beneficiary",
+		"eq": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+	}]`)
 	results, err := s.m.GetVouchersMetadata(filters)
 	if err != nil {
 		s.Fail("Unexpected error")
@@ -1155,27 +1160,24 @@ func (s *ModelSuite) TestItAddsVoucherMetadataAndFindByAddress() {
 
 func (s *ModelSuite) TestItAddsVoucherMetadataAndFindByInputIndex() {
 	{
-		voucherMetadata1 := VoucherMetadata{
-			Beneficiary: common.HexToAddress("0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"),
-			Contract:    common.HexToAddress("0xc6e7DF5E7b4f2A278906862b61205850344D4e7d"),
+		createVoucherMetadataOrFail(s, VoucherMetadata{
+			Beneficiary: Bruno,
+			Contract:    Token,
 			InputIndex:  1,
 			OutputIndex: 0,
-		}
-		s.m.AddVoucherMetadata(&voucherMetadata1)
-		voucherMetadata2 := VoucherMetadata{
-			Beneficiary: common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
-			Contract:    common.HexToAddress("0xc6e7DF5E7b4f2A278906862b61205850344D4e7d"),
+		})
+		createVoucherMetadataOrFail(s, VoucherMetadata{
+			Beneficiary: Bob,
+			Contract:    Token,
 			InputIndex:  2,
 			OutputIndex: 0,
-		}
-		s.m.AddVoucherMetadata(&voucherMetadata2)
-		voucherMetadata3 := VoucherMetadata{
-			Beneficiary: common.HexToAddress("0x70997970C51812dc3A010C7d01b50e0d17dc79C8"),
-			Contract:    common.HexToAddress("0xc6e7DF5E7b4f2A278906862b61205850344D4e7d"),
+		})
+		createVoucherMetadataOrFail(s, VoucherMetadata{
+			Beneficiary: Alice,
+			Contract:    Token,
 			InputIndex:  3,
 			OutputIndex: 0,
-		}
-		s.m.AddVoucherMetadata(&voucherMetadata3)
+		})
 	}
 	filters := CreateFilterList(`[{"field": "InputIndex", "eq": "2"}]`)
 	results, err := s.m.GetVouchersMetadata(filters)
@@ -1189,30 +1191,27 @@ func (s *ModelSuite) TestItAddsVoucherMetadataAndFindByInputIndex() {
 
 func (s *ModelSuite) TestItAddsVoucherMetadataAndFindByExecutedAt() {
 	{
-		voucherMetadata1 := VoucherMetadata{
-			Beneficiary: common.HexToAddress("0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"),
-			Contract:    common.HexToAddress("0xc6e7DF5E7b4f2A278906862b61205850344D4e7d"),
+		createVoucherMetadataOrFail(s, VoucherMetadata{
+			Beneficiary: Bruno,
+			Contract:    Token,
 			InputIndex:  1,
 			OutputIndex: 0,
 			ExecutedAt:  0,
-		}
-		s.m.AddVoucherMetadata(&voucherMetadata1)
-		voucherMetadata2 := VoucherMetadata{
-			Beneficiary: common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
-			Contract:    common.HexToAddress("0xc6e7DF5E7b4f2A278906862b61205850344D4e7d"),
+		})
+		createVoucherMetadataOrFail(s, VoucherMetadata{
+			Beneficiary: Bob,
+			Contract:    Token,
 			InputIndex:  2,
 			OutputIndex: 0,
 			ExecutedAt:  1234,
-		}
-		s.m.AddVoucherMetadata(&voucherMetadata2)
-		voucherMetadata3 := VoucherMetadata{
-			Beneficiary: common.HexToAddress("0x70997970C51812dc3A010C7d01b50e0d17dc79C8"),
-			Contract:    common.HexToAddress("0xc6e7DF5E7b4f2A278906862b61205850344D4e7d"),
+		})
+		createVoucherMetadataOrFail(s, VoucherMetadata{
+			Beneficiary: Alice,
+			Contract:    Token,
 			InputIndex:  3,
 			OutputIndex: 0,
 			ExecutedAt:  0,
-		}
-		s.m.AddVoucherMetadata(&voucherMetadata3)
+		})
 	}
 	filters := CreateFilterList(`[{"field": "ExecutedAt", "gt": "0"}]`)
 	results, err := s.m.GetVouchersMetadata(filters)
@@ -1226,30 +1225,27 @@ func (s *ModelSuite) TestItAddsVoucherMetadataAndFindByExecutedAt() {
 
 func (s *ModelSuite) TestItAddsVoucherMetadataAndFindNeverExecuted() {
 	{
-		voucherMetadata1 := VoucherMetadata{
-			Beneficiary: common.HexToAddress("0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC"),
-			Contract:    common.HexToAddress("0xc6e7DF5E7b4f2A278906862b61205850344D4e7d"),
+		createVoucherMetadataOrFail(s, VoucherMetadata{
+			Beneficiary: Bruno,
+			Contract:    Token,
 			InputIndex:  1,
 			OutputIndex: 0,
 			ExecutedAt:  123,
-		}
-		s.m.AddVoucherMetadata(&voucherMetadata1)
-		voucherMetadata2 := VoucherMetadata{
-			Beneficiary: common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
-			Contract:    common.HexToAddress("0xc6e7DF5E7b4f2A278906862b61205850344D4e7d"),
+		})
+		createVoucherMetadataOrFail(s, VoucherMetadata{
+			Beneficiary: Bob,
+			Contract:    Token,
 			InputIndex:  2,
 			OutputIndex: 0,
 			ExecutedAt:  0,
-		}
-		s.m.AddVoucherMetadata(&voucherMetadata2)
-		voucherMetadata3 := VoucherMetadata{
-			Beneficiary: common.HexToAddress("0x70997970C51812dc3A010C7d01b50e0d17dc79C8"),
-			Contract:    common.HexToAddress("0xc6e7DF5E7b4f2A278906862b61205850344D4e7d"),
+		})
+		createVoucherMetadataOrFail(s, VoucherMetadata{
+			Beneficiary: Alice,
+			Contract:    Token,
 			InputIndex:  3,
 			OutputIndex: 0,
 			ExecutedAt:  123,
-		}
-		s.m.AddVoucherMetadata(&voucherMetadata3)
+		})
 	}
 	filters := CreateFilterList(`[{"field": "executedAt", "eq": "0"}]`)
 	results, err := s.m.GetVouchersMetadata(filters)
@@ -1267,4 +1263,10 @@ func CreateFilterList(content string) []*MetadataFilter {
 		panic(fmt.Errorf("Error parsing JSON: %v", err))
 	}
 	return filterList
+}
+
+func createVoucherMetadataOrFail(s *ModelSuite, voucherMetadata VoucherMetadata) {
+	if err := s.m.AddVoucherMetadata(&voucherMetadata); err != nil {
+		s.Fail(err.Error())
+	}
 }

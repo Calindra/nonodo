@@ -410,9 +410,11 @@ func paginate[T any](slice []T, offset int, limit int) []T {
 
 func passFilters(voucherMetadata *VoucherMetadata, filterList []*MetadataFilter) bool {
 	for _, filter := range filterList {
-		if filter.Eq != nil && !fieldValueMatches(voucherMetadata, filter.Field, *filter.Eq) {
+		if filter.Eq != nil && !fieldValueMatches(voucherMetadata,
+			filter.Field, *filter.Eq) {
 			return false
-		} else if filter.Gt != nil && !fieldValueGt(voucherMetadata, filter.Field, *filter.Gt) {
+		} else if filter.Gt != nil &&
+			!fieldValueGt(voucherMetadata, filter.Field, *filter.Gt) {
 			return false
 		}
 	}
