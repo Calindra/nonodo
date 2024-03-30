@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"reflect"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -410,6 +411,8 @@ func passFilters(voucherMetadata *VoucherMetadata, filterList []*MetadataFilter)
 	for _, filter := range filterList {
 		if filter.Eq != nil && !fieldValueMatches(voucherMetadata, filter.Field, *filter.Eq) {
 			return false
+		} else if filter.Gt != nil && !fieldValueGt(voucherMetadata, filter.Field, *filter.Gt) {
+			return false
 		}
 	}
 	return true
@@ -427,7 +430,7 @@ func fieldValueMatches(data interface{}, fieldName string, compareValue interfac
 	value := reflect.ValueOf(data).Elem()
 
 	// Get the field by name
-	field := value.FieldByName(fieldName)
+	field := value.FieldByName(capitalizeFirstLetter(fieldName))
 	if !field.IsValid() {
 		slog.Warn(fmt.Sprintf("Field with the given name does not exist: %s", fieldName))
 		return false
@@ -449,10 +452,76 @@ func fieldValueMatches(data interface{}, fieldName string, compareValue interfac
 		return resp
 	} else if address, ok := field.Interface().(common.Address); ok {
 		return address.String() == compareValue
+	} else if fieldType.Kind() == reflect.Uint64 {
+		strValue, ok := compareValue.(string)
+		if !ok {
+			slog.Warn("to string fail")
+			return false
+		}
+		num, err := strconv.ParseUint(strValue, 10, 64)
+		if err != nil {
+			slog.Warn("to uint64 fail")
+			return false
+		}
+		fieldValue := field.Interface()
+		fieldValueUint64 := fieldValue.(uint64)
+		return fieldValueUint64 == num
 	}
 
 	fmt.Printf("Type of %s: %s\n", fieldName, fieldType)
 
 	// Compare the field value with the compareValue
 	return reflect.DeepEqual(field.Interface(), compareValue)
+}
+
+func fieldValueGt(data interface{}, fieldName string, compareValue interface{}) bool {
+	value := reflect.ValueOf(data).Elem()
+	slog.Warn(fmt.Sprintf("Checking %s \n", fieldName))
+	// Get the field by name
+	field := value.FieldByName(capitalizeFirstLetter(fieldName))
+	if !field.IsValid() {
+		slog.Warn(fmt.Sprintf("Field with the given name does not exist: %s", fieldName))
+		return false
+	}
+	fieldType := field.Type()
+	if isIntegerType(fieldType) {
+		strValue, ok := compareValue.(string)
+		if !ok {
+			slog.Warn("to string fail")
+			return false
+		}
+		intValue, err := strconv.Atoi(strValue)
+		if err != nil {
+			slog.Warn("to int fail")
+			return false
+		}
+		resp := int(intValue) > int(field.Int())
+		slog.Warn(fmt.Sprintf("%t \n", resp))
+		return resp
+	} else if fieldType.Kind() == reflect.Uint64 {
+		strValue, ok := compareValue.(string)
+		if !ok {
+			slog.Warn("to string fail")
+			return false
+		}
+		num, err := strconv.ParseUint(strValue, 10, 64)
+		if err != nil {
+			slog.Warn("to uint64 fail")
+			return false
+		}
+		fieldValue := field.Interface()
+		fieldValueUint64 := fieldValue.(uint64)
+		return fieldValueUint64 > num
+	} else {
+		slog.Warn(fmt.Sprintf("Checking %s not a integer type\n", fieldName))
+	}
+	return false
+}
+
+func capitalizeFirstLetter(s string) string {
+	if len(s) == 0 {
+		return s
+	}
+	firstChar := strings.ToUpper(s[:1])
+	return firstChar + s[1:]
 }
