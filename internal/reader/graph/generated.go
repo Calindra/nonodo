@@ -1140,6 +1140,11 @@ schema {
   query: Query
 }
 
+
+#--------------------#
+#  Voucher Metadata  #
+#--------------------#
+
 type VoucherMetadata {
   label: String!
   beneficiary: String!
