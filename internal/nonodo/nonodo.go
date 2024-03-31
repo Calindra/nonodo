@@ -88,12 +88,10 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	model := model.NewNonodoModel()
 	if opts.OnlyExecListener {
 		opts.RpcUrl = fmt.Sprintf("ws://%s:%v", opts.AnvilAddress, opts.AnvilPort)
-		// opts.HttpPort = 8181
-		w.Workers = append(w.Workers, execlistener.ExecListener{
-			Model:              model,
-			Provider:           opts.RpcUrl,
-			ApplicationAddress: common.HexToAddress(opts.ApplicationAddress),
-		})
+		voucherListener := execlistener.NewExecListener(
+			model, opts.RpcUrl, common.HexToAddress(opts.ApplicationAddress),
+		)
+		w.Workers = append(w.Workers, voucherListener)
 		e := echo.New()
 		e.Use(middleware.CORS())
 		e.Use(middleware.Recover())
