@@ -7,6 +7,7 @@ package nonodo
 
 import (
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/calindra/nonodo/internal/devnet"
@@ -85,14 +86,31 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	var w supervisor.SupervisorWorker
 
 	model := model.NewNonodoModel()
-	w.Workers = append(w.Workers, execlistener.ExecListener{
-		Model:              model,
-		Provider:           opts.RpcUrl,
-		ApplicationAddress: common.HexToAddress(opts.ApplicationAddress),
-	})
 	if opts.OnlyExecListener {
+		opts.RpcUrl = fmt.Sprintf("ws://%s:%v", opts.AnvilAddress, opts.AnvilPort)
+		// opts.HttpPort = 8181
+		w.Workers = append(w.Workers, execlistener.ExecListener{
+			Model:              model,
+			Provider:           opts.RpcUrl,
+			ApplicationAddress: common.HexToAddress(opts.ApplicationAddress),
+		})
+		e := echo.New()
+		e.Use(middleware.CORS())
+		e.Use(middleware.Recover())
+		e.Use(middleware.TimeoutWithConfig(middleware.TimeoutConfig{
+			ErrorMessage: "Request timed out",
+			Timeout:      HttpTimeout,
+		}))
+		inspect.Register(e, model)
+		reader.Register(e, model)
+		w.Workers = append(w.Workers, supervisor.HttpWorker{
+			Address: fmt.Sprintf("%v:%v", opts.HttpAddress, opts.HttpPort),
+			Handler: e,
+		})
+		slog.Info("Listening", "port", opts.HttpPort)
 		return w
 	}
+
 	e := echo.New()
 	e.Use(middleware.CORS())
 	e.Use(middleware.Recover())

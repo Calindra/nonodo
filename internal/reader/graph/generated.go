@@ -39,6 +39,7 @@ type Config struct {
 
 type ResolverRoot interface {
 	Input() InputResolver
+	Mutation() MutationResolver
 	Notice() NoticeResolver
 	Query() QueryResolver
 	Report() ReportResolver
@@ -73,6 +74,10 @@ type ComplexityRoot struct {
 	InputEdge struct {
 		Cursor func(childComplexity int) int
 		Node   func(childComplexity int) int
+	}
+
+	Mutation struct {
+		CreateVoucherMetadata func(childComplexity int, input model.NewVoucherMetadata) int
 	}
 
 	Notice struct {
@@ -183,6 +188,9 @@ type InputResolver interface {
 	Vouchers(ctx context.Context, obj *model.Input, first *int, last *int, after *string, before *string) (*model.Connection[*model.Voucher], error)
 	Notices(ctx context.Context, obj *model.Input, first *int, last *int, after *string, before *string) (*model.Connection[*model.Notice], error)
 	Reports(ctx context.Context, obj *model.Input, first *int, last *int, after *string, before *string) (*model.Connection[*model.Report], error)
+}
+type MutationResolver interface {
+	CreateVoucherMetadata(ctx context.Context, input model.NewVoucherMetadata) (*model.VoucherMetadata, error)
 }
 type NoticeResolver interface {
 	Input(ctx context.Context, obj *model.Notice) (*model.Input, error)
@@ -372,6 +380,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.InputEdge.Node(childComplexity), true
+
+	case "Mutation.createVoucherMetadata":
+		if e.complexity.Mutation.CreateVoucherMetadata == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_createVoucherMetadata_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.CreateVoucherMetadata(childComplexity, args["input"].(model.NewVoucherMetadata)), true
 
 	case "Notice.index":
 		if e.complexity.Notice.Index == nil {
@@ -833,6 +853,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	ec := executionContext{rc, e, 0, 0, make(chan graphql.DeferredResult)}
 	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
 		ec.unmarshalInputInputFilter,
+		ec.unmarshalInputNewVoucherMetadata,
 		ec.unmarshalInputVoucherExecutionEvent,
 		ec.unmarshalInputVoucherMetadataFilter,
 	)
@@ -868,6 +889,21 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 			}
 
 			return &response
+		}
+	case ast.Mutation:
+		return func(ctx context.Context) *graphql.Response {
+			if !first {
+				return nil
+			}
+			first = false
+			ctx = graphql.WithUnmarshalerMap(ctx, inputUnmarshalMap)
+			data := ec._Mutation(ctx, rc.Operation.SelectionSet)
+			var buf bytes.Buffer
+			data.MarshalGQL(&buf)
+
+			return &graphql.Response{
+				Data: buf.Bytes(),
+			}
 		}
 
 	default:
@@ -1138,12 +1174,26 @@ type VoucherEdge {
 
 schema {
   query: Query
+  mutation: Mutation
 }
 
 
 #--------------------#
 #  Voucher Metadata  #
 #--------------------#
+
+type Mutation {
+  createVoucherMetadata(input: NewVoucherMetadata!): VoucherMetadata!
+}
+
+input NewVoucherMetadata {
+  label: String!
+  beneficiary: String!
+  contract: String!
+  amount: BigInt!
+  inputIndex: Int!
+  outputIndex: Int!
+}
 
 type VoucherMetadata {
   label: String!
@@ -1364,6 +1414,21 @@ func (ec *executionContext) field_Input_vouchers_args(ctx context.Context, rawAr
 		}
 	}
 	args["before"] = arg3
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_createVoucherMetadata_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 model.NewVoucherMetadata
+	if tmp, ok := rawArgs["input"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("input"))
+		arg0, err = ec.unmarshalNNewVoucherMetadata2githubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐNewVoucherMetadata(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["input"] = arg0
 	return args, nil
 }
 
@@ -2605,6 +2670,79 @@ func (ec *executionContext) fieldContext_InputEdge_cursor(ctx context.Context, f
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
 		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_createVoucherMetadata(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_createVoucherMetadata(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().CreateVoucherMetadata(rctx, fc.Args["input"].(model.NewVoucherMetadata))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.VoucherMetadata)
+	fc.Result = res
+	return ec.marshalNVoucherMetadata2ᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐVoucherMetadata(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_createVoucherMetadata(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "label":
+				return ec.fieldContext_VoucherMetadata_label(ctx, field)
+			case "beneficiary":
+				return ec.fieldContext_VoucherMetadata_beneficiary(ctx, field)
+			case "contract":
+				return ec.fieldContext_VoucherMetadata_contract(ctx, field)
+			case "amount":
+				return ec.fieldContext_VoucherMetadata_amount(ctx, field)
+			case "executedAt":
+				return ec.fieldContext_VoucherMetadata_executedAt(ctx, field)
+			case "executedBlock":
+				return ec.fieldContext_VoucherMetadata_executedBlock(ctx, field)
+			case "inputIndex":
+				return ec.fieldContext_VoucherMetadata_inputIndex(ctx, field)
+			case "outputIndex":
+				return ec.fieldContext_VoucherMetadata_outputIndex(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type VoucherMetadata", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_createVoucherMetadata_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
 	}
 	return fc, nil
 }
@@ -7473,6 +7611,68 @@ func (ec *executionContext) unmarshalInputInputFilter(ctx context.Context, obj i
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputNewVoucherMetadata(ctx context.Context, obj interface{}) (model.NewVoucherMetadata, error) {
+	var it model.NewVoucherMetadata
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"label", "beneficiary", "contract", "amount", "inputIndex", "outputIndex"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "label":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("label"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Label = data
+		case "beneficiary":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("beneficiary"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Beneficiary = data
+		case "contract":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("contract"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Contract = data
+		case "amount":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("amount"))
+			data, err := ec.unmarshalNBigInt2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Amount = data
+		case "inputIndex":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("inputIndex"))
+			data, err := ec.unmarshalNInt2int(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.InputIndex = data
+		case "outputIndex":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("outputIndex"))
+			data, err := ec.unmarshalNInt2int(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.OutputIndex = data
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputVoucherExecutionEvent(ctx context.Context, obj interface{}) (model.VoucherExecutionEvent, error) {
 	var it model.VoucherExecutionEvent
 	asMap := map[string]interface{}{}
@@ -7973,6 +8173,55 @@ func (ec *executionContext) _InputEdge(ctx context.Context, sel ast.SelectionSet
 			}
 		case "cursor":
 			out.Values[i] = ec._InputEdge_cursor(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var mutationImplementors = []string{"Mutation"}
+
+func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, mutationImplementors)
+	ctx = graphql.WithFieldContext(ctx, &graphql.FieldContext{
+		Object: "Mutation",
+	})
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		innerCtx := graphql.WithRootFieldContext(ctx, &graphql.RootFieldContext{
+			Object: field.Name,
+			Field:  field,
+		})
+
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("Mutation")
+		case "createVoucherMetadata":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_createVoucherMetadata(ctx, field)
+			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -9475,6 +9724,11 @@ func (ec *executionContext) marshalNInt2int(ctx context.Context, sel ast.Selecti
 	return res
 }
 
+func (ec *executionContext) unmarshalNNewVoucherMetadata2githubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐNewVoucherMetadata(ctx context.Context, v interface{}) (model.NewVoucherMetadata, error) {
+	res, err := ec.unmarshalInputNewVoucherMetadata(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
 func (ec *executionContext) marshalNNotice2githubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐNotice(ctx context.Context, sel ast.SelectionSet, v model.Notice) graphql.Marshaler {
 	return ec._Notice(ctx, sel, &v)
 }
@@ -9786,6 +10040,20 @@ func (ec *executionContext) marshalNVoucherEdge2ᚖgithubᚗcomᚋcalindraᚋnon
 		return graphql.Null
 	}
 	return ec._VoucherEdge(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNVoucherMetadata2githubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐVoucherMetadata(ctx context.Context, sel ast.SelectionSet, v model.VoucherMetadata) graphql.Marshaler {
+	return ec._VoucherMetadata(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNVoucherMetadata2ᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐVoucherMetadata(ctx context.Context, sel ast.SelectionSet, v *model.VoucherMetadata) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._VoucherMetadata(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalN__Directive2githubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐDirective(ctx context.Context, sel ast.SelectionSet, v introspection.Directive) graphql.Marshaler {

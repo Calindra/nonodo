@@ -16,6 +16,15 @@ type InputFilter struct {
 	IndexGreaterThan *int `json:"indexGreaterThan,omitempty"`
 }
 
+type NewVoucherMetadata struct {
+	Label       string `json:"label"`
+	Beneficiary string `json:"beneficiary"`
+	Contract    string `json:"contract"`
+	Amount      string `json:"amount"`
+	InputIndex  int    `json:"inputIndex"`
+	OutputIndex int    `json:"outputIndex"`
+}
+
 // Validity proof for an output
 type OutputValidityProof struct {
 	// Local input index within the context of the related epoch

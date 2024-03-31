@@ -28,16 +28,16 @@ func (x ExecListener) String() string {
 }
 
 func (x ExecListener) Start(ctx context.Context, ready chan<- struct{}) error {
+	slog.Info("Connecting to", "provider", x.Provider)
 	client, err := ethclient.DialContext(ctx, x.Provider)
 	if err != nil {
 		return fmt.Errorf("inputter: dial: %w", err)
 	}
-	x.WatchExecutions(client)
 	ready <- struct{}{}
-	return nil
+	return x.WatchExecutions(client)
 }
 
-func (x *ExecListener) WatchExecutions(client *ethclient.Client) {
+func (x *ExecListener) WatchExecutions(client *ethclient.Client) error {
 
 	contractAddress := x.ApplicationAddress
 
@@ -119,11 +119,27 @@ func (x *ExecListener) WatchExecutions(client *ethclient.Client) {
 			context := context.Background()
 
 			fmt.Println("Context", context, timestamp)
-			// graphConfig.Resolvers.Mutation().UpdateVoucherMetadata(context, model.UpdateVoucherExecution{
-			// 	InputIndex:  input.String(),
-			// 	OutputIndex: voucher.String(),
-			// 	ExecutedAt:  int(timestamp),
-			// })
+			filterList := []*model.MetadataFilter{}
+			strInputIndex := input.String()
+			filterList = append(filterList, &model.MetadataFilter{
+				Field: "InputIndex",
+				Eq:    &strInputIndex,
+			})
+			strOutputIndex := voucher.String()
+			filterList = append(filterList, &model.MetadataFilter{
+				Field: "OutputIndex",
+				Eq:    &strOutputIndex,
+			})
+			vouchers, err := x.Model.GetVouchersMetadata(filterList)
+			if err != nil {
+				slog.Error(err.Error())
+			} else if len(vouchers) < 1 {
+				slog.Warn("Voucher not found", "strInputIndex", strInputIndex, "strOutputIndex", strOutputIndex)
+			} else {
+				slog.Info("Voucher execution updated", "blockNumber", blockNumber, "timestamp", timestamp)
+				vouchers[0].ExecutedBlock = blockNumber
+				vouchers[0].ExecutedAt = timestamp
+			}
 		}
 	}
 }

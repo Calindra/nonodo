@@ -170,14 +170,16 @@ func (m *NonodoModel) AddVoucherMetadata(voucherMetadata *VoucherMetadata) error
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	m.vouchersMetadata = append(m.vouchersMetadata, voucherMetadata)
+	slog.Info("Added Vouchers metadata", "len", len(m.vouchersMetadata))
 	return nil
 }
 
-func (m *NonodoModel) GetVouchersMetadata(filters []*MetadataFilter) ([]VoucherMetadata, error) {
-	result := []VoucherMetadata{}
+func (m *NonodoModel) GetVouchersMetadata(filters []*MetadataFilter) ([]*VoucherMetadata, error) {
+	result := []*VoucherMetadata{}
+	slog.Info("Filtering Vouchers metadata", "len", len(m.vouchersMetadata))
 	for _, voucherMetadata := range m.vouchersMetadata {
 		if passFilters(voucherMetadata, filters) {
-			result = append(result, *voucherMetadata)
+			result = append(result, voucherMetadata)
 		}
 	}
 	return result, nil

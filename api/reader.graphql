@@ -219,12 +219,26 @@ type VoucherEdge {
 
 schema {
   query: Query
+  mutation: Mutation
 }
 
 
 #--------------------#
 #  Voucher Metadata  #
 #--------------------#
+
+type Mutation {
+  createVoucherMetadata(input: NewVoucherMetadata!): VoucherMetadata!
+}
+
+input NewVoucherMetadata {
+  label: String!
+  beneficiary: String!
+  contract: String!
+  amount: BigInt!
+  inputIndex: Int!
+  outputIndex: Int!
+}
 
 type VoucherMetadata {
   label: String!

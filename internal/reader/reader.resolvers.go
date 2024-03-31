@@ -41,6 +41,11 @@ func (r *inputResolver) Reports(ctx context.Context, obj *model.Input, first *in
 	return r.model.GetReports(first, last, after, before, &obj.Index)
 }
 
+// CreateVoucherMetadata is the resolver for the createVoucherMetadata field.
+func (r *mutationResolver) CreateVoucherMetadata(ctx context.Context, input model.NewVoucherMetadata) (*model.VoucherMetadata, error) {
+	return r.model.CreateVoucherMetadata(input)
+}
+
 // Input is the resolver for the input field.
 func (r *noticeResolver) Input(ctx context.Context, obj *model.Notice) (*model.Input, error) {
 	return r.model.GetInput(obj.InputIndex)
@@ -104,6 +109,9 @@ func (r *voucherResolver) Input(ctx context.Context, obj *model.Voucher) (*model
 // Input returns graph.InputResolver implementation.
 func (r *Resolver) Input() graph.InputResolver { return &inputResolver{r} }
 
+// Mutation returns graph.MutationResolver implementation.
+func (r *Resolver) Mutation() graph.MutationResolver { return &mutationResolver{r} }
+
 // Notice returns graph.NoticeResolver implementation.
 func (r *Resolver) Notice() graph.NoticeResolver { return &noticeResolver{r} }
 
@@ -117,6 +125,7 @@ func (r *Resolver) Report() graph.ReportResolver { return &reportResolver{r} }
 func (r *Resolver) Voucher() graph.VoucherResolver { return &voucherResolver{r} }
 
 type inputResolver struct{ *Resolver }
+type mutationResolver struct{ *Resolver }
 type noticeResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type reportResolver struct{ *Resolver }

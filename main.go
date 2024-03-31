@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -24,8 +25,8 @@ import (
 
 var startupMessage = `
 Http Rollups for development started at http://localhost:5004
-GraphQL running at http://localhost:8080/graphql
-Inspect running at http://localhost:8080/inspect/
+GraphQL running at http://localhost:HTTP_PORT/graphql
+Inspect running at http://localhost:HTTP_PORT/inspect/
 Press Ctrl+C to stop the node
 `
 var cmd = &cobra.Command{
@@ -128,7 +129,7 @@ func run(cmd *cobra.Command, args []string) {
 	go func() {
 		select {
 		case <-ready:
-			fmt.Println(startupMessage)
+			fmt.Println(strings.Replace(startupMessage, "HTTP_PORT", fmt.Sprint(opts.HttpPort), -1))
 			slog.Info("nonodo: ready", "after", time.Since(startTime))
 		case <-ctx.Done():
 		}

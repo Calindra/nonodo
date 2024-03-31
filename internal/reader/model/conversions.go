@@ -50,6 +50,23 @@ func convertVoucher(voucher model.Voucher) *Voucher {
 	}
 }
 
+func convertVouchersMetadata(oldList []*model.VoucherMetadata) []*VoucherMetadata {
+	newList := make([]*VoucherMetadata, len(oldList))
+	for i, old := range oldList {
+		newList[i] = &VoucherMetadata{
+			Label:         old.Label,
+			Beneficiary:   old.Beneficiary.String(),
+			Contract:      old.Contract.String(),
+			Amount:        fmt.Sprintf("%d", old.Amount),
+			ExecutedAt:    fmt.Sprintf("%d", old.ExecutedAt),
+			ExecutedBlock: fmt.Sprintf("%d", old.ExecutedBlock),
+			InputIndex:    old.InputIndex,
+			OutputIndex:   old.OutputIndex,
+		}
+	}
+	return newList
+}
+
 func convertNotice(notice model.Notice) *Notice {
 	return &Notice{
 		InputIndex: notice.InputIndex,
@@ -79,4 +96,40 @@ func convertInputFilter(filter *InputFilter) model.InputFilter {
 		IndexGreaterThan: filter.IndexGreaterThan,
 		IndexLowerThan:   filter.IndexGreaterThan,
 	}
+}
+
+func convertVoucherMetadataFilters(filter []*VoucherMetadataFilter) []*model.MetadataFilter {
+	result := []*model.MetadataFilter{}
+	for _, f := range filter {
+		result = append(result, convertVoucherMetadataFilter(f))
+	}
+	return result
+}
+
+func convertVoucherMetadataFilter(filter *VoucherMetadataFilter) *model.MetadataFilter {
+	if filter == nil {
+		return nil
+	}
+
+	result := &model.MetadataFilter{
+		Field: filter.Field,
+		Eq:    filter.Eq,
+		Ne:    filter.Ne,
+		Gt:    filter.Gt,
+		Gte:   filter.Gte,
+		Lt:    filter.Lt,
+		Lte:   filter.Lte,
+		In:    filter.In,
+		Nin:   filter.Nin,
+	}
+
+	// Recursively convert And and Or filters
+	for _, f := range filter.And {
+		result.And = append(result.And, convertVoucherMetadataFilter(f))
+	}
+	for _, f := range filter.Or {
+		result.Or = append(result.Or, convertVoucherMetadataFilter(f))
+	}
+
+	return result
 }
