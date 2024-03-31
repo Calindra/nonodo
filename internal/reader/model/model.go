@@ -147,7 +147,10 @@ func (m *ModelWrapper) CreateVoucherMetadata(input NewVoucherMetadata) (*Voucher
 		InputIndex:    input.InputIndex,
 		OutputIndex:   input.OutputIndex,
 	}
-	m.model.AddVoucherMetadata(&voucherMetadata)
+	err = m.model.AddVoucherMetadata(&voucherMetadata)
+	if err != nil {
+		return nil, err
+	}
 	graphVoucherMetadata := VoucherMetadata{
 		Label:         input.Label,
 		Contract:      input.Contract,

@@ -3,6 +3,11 @@
 
 package model
 
+import (
+	"encoding/json"
+	"fmt"
+)
+
 //
 // Query filters
 //
@@ -52,4 +57,12 @@ type MetadataFilter struct {
 	// Logical operators
 	And []*MetadataFilter
 	Or  []*MetadataFilter
+}
+
+func CreateFilterList(content string) []*MetadataFilter {
+	filterList := []*MetadataFilter{}
+	if err := json.Unmarshal([]byte(content), &filterList); err != nil {
+		panic(fmt.Errorf("Error parsing JSON: %v", err))
+	}
+	return filterList
 }

@@ -89,6 +89,10 @@ func init() {
 	// rpc-url
 	cmd.Flags().StringVar(&opts.RpcUrl, "rpc-url", opts.RpcUrl,
 		"If set, nonodo connects to this url instead of setting up Anvil")
+
+	// experimental
+	cmd.Flags().BoolVar(&opts.VoucherExecPoC, "voucher-exec-poc", opts.VoucherExecPoC,
+		"If set, enables the voucher execution listener experiment.")
 }
 
 func run(cmd *cobra.Command, args []string) {
@@ -129,7 +133,11 @@ func run(cmd *cobra.Command, args []string) {
 	go func() {
 		select {
 		case <-ready:
-			fmt.Println(strings.Replace(startupMessage, "HTTP_PORT", fmt.Sprint(opts.HttpPort), -1))
+			fmt.Println(strings.Replace(
+				startupMessage,
+				"HTTP_PORT",
+				fmt.Sprint(opts.HttpPort), -1),
+			)
 			slog.Info("nonodo: ready", "after", time.Since(startTime))
 		case <-ctx.Done():
 		}

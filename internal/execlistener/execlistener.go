@@ -24,7 +24,11 @@ type ExecListener struct {
 	EventName          string
 }
 
-func NewExecListener(model *model.NonodoModel, provider string, applicationAddress common.Address) ExecListener {
+func NewExecListener(
+	model *model.NonodoModel,
+	provider string,
+	applicationAddress common.Address,
+) ExecListener {
 	return ExecListener{
 		Model:              model,
 		Provider:           provider,
@@ -48,46 +52,56 @@ func NewExecListener(model *model.NonodoModel, provider string, applicationAddre
 	}
 }
 
+func toStringPtr(num *big.Int) *string {
+	s := num.String()
+	return &s
+}
+
 // on event callback
 func (x ExecListener) OnEvent(eventValues []interface{}, timestamp, blockNumber uint64) error {
-	event := struct {
-		VoucherId *big.Int
-	}{}
-	// Assign the unpacked value to the VoucherId field
-	if len(eventValues) > 0 {
-		event.VoucherId, _ = eventValues[0].(*big.Int)
+	if len(eventValues) != 1 {
+		return fmt.Errorf("wrong event values length != 1")
 	}
-	bitMask := new(big.Int).SetUint64(0xFFFFFFFFFFFFFFFF)
+	voucherId, ok := eventValues[0].(*big.Int)
+	if !ok {
+		return fmt.Errorf("cannot cast voucher id to big.Int")
+	}
+
 	// Extract voucher and input using bit masking and shifting
-	voucher := new(big.Int).Rsh(event.VoucherId, 128)
-	input := new(big.Int).And(event.VoucherId, bitMask)
+	var bitsToShift uint = 128
+	var maxHexBytes uint64 = 0xFFFFFFFFFFFFFFFF
+	bitMask := new(big.Int).SetUint64(maxHexBytes)
+	voucher := new(big.Int).Rsh(voucherId, bitsToShift)
+	input := new(big.Int).And(voucherId, bitMask)
 
 	// Print the extracted voucher and input
-	fmt.Println("Voucher:", voucher)
-	fmt.Println("Input:", input)
-	// Print decoded event data
-	fmt.Println("Voucher Executed - Voucher ID:", event.VoucherId.String())
-	context := context.Background()
+	slog.Debug("Decoded voucher params", "voucher", voucher, "input", input)
 
-	fmt.Println("Context", context, timestamp)
+	// Print decoded event data
+	slog.Debug("Voucher Executed", "voucherId", voucherId.String())
+
 	filterList := []*model.MetadataFilter{}
-	strInputIndex := input.String()
 	filterList = append(filterList, &model.MetadataFilter{
 		Field: "InputIndex",
-		Eq:    &strInputIndex,
+		Eq:    toStringPtr(input),
 	})
-	strOutputIndex := voucher.String()
 	filterList = append(filterList, &model.MetadataFilter{
 		Field: "OutputIndex",
-		Eq:    &strOutputIndex,
+		Eq:    toStringPtr(voucher),
 	})
 	vouchers, err := x.Model.GetVouchersMetadata(filterList)
 	if err != nil {
 		slog.Error(err.Error())
 	} else if len(vouchers) < 1 {
-		slog.Warn("Voucher not found", "strInputIndex", strInputIndex, "strOutputIndex", strOutputIndex)
+		slog.Warn("Voucher not found",
+			"InputIndex", input.String(),
+			"OutputIndex", voucher.String(),
+		)
 	} else {
-		slog.Info("Voucher execution updated", "blockNumber", blockNumber, "timestamp", timestamp)
+		slog.Debug("Voucher Metadata updated",
+			"blockNumber", blockNumber,
+			"timestamp", timestamp,
+		)
 		vouchers[0].ExecutedBlock = blockNumber
 		vouchers[0].ExecutedAt = timestamp
 	}
@@ -138,6 +152,7 @@ func (x *ExecListener) WatchExecutions(ctx context.Context, client *ethclient.Cl
 			return ctx.Err()
 		case err := <-sub.Err():
 			log.Fatal(err)
+			return err
 		case vLog := <-logs:
 			fmt.Println(vLog)
 
@@ -147,7 +162,8 @@ func (x *ExecListener) WatchExecutions(ctx context.Context, client *ethclient.Cl
 			// Fetch the block information
 			block, err := client.BlockByNumber(context.Background(), blockNumberBigInt)
 			if err != nil {
-				log.Fatal(err)
+				slog.Error(err.Error())
+				continue
 			}
 
 			// Extract the timestamp from the block
@@ -155,9 +171,13 @@ func (x *ExecListener) WatchExecutions(ctx context.Context, client *ethclient.Cl
 
 			values, err := contractABI.Unpack(x.EventName, vLog.Data)
 			if err != nil {
-				log.Fatal(err)
-			} else {
-				x.OnEvent(values, timestamp, blockNumber)
+				slog.Error(err.Error())
+				continue
+			}
+			err = x.OnEvent(values, timestamp, blockNumber)
+			if err != nil {
+				slog.Error(err.Error())
+				continue
 			}
 		}
 	}

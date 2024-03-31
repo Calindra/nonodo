@@ -57,7 +57,7 @@ type NonodoOpts struct {
 	// If set, start application.
 	ApplicationArgs []string
 
-	OnlyExecListener bool
+	VoucherExecPoC bool
 }
 
 // Create the options struct with default values.
@@ -77,7 +77,7 @@ func NewNonodoOpts() NonodoOpts {
 		DisableDevnet:      false,
 		DisableAdvance:     false,
 		ApplicationArgs:    nil,
-		OnlyExecListener:   true,
+		VoucherExecPoC:     false,
 	}
 }
 
@@ -86,7 +86,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	var w supervisor.SupervisorWorker
 
 	model := model.NewNonodoModel()
-	if opts.OnlyExecListener {
+	if opts.VoucherExecPoC {
 		opts.RpcUrl = fmt.Sprintf("ws://%s:%v", opts.AnvilAddress, opts.AnvilPort)
 		voucherListener := execlistener.NewExecListener(
 			model, opts.RpcUrl, common.HexToAddress(opts.ApplicationAddress),

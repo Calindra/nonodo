@@ -4,9 +4,7 @@
 package model
 
 import (
-	"encoding/json"
 	"errors"
-	"fmt"
 	"testing"
 	"time"
 
@@ -1255,14 +1253,6 @@ func (s *ModelSuite) TestItAddsVoucherMetadataAndFindNeverExecuted() {
 	s.Equal(1, len(results))
 	s.Equal(Bob.String(), results[0].Beneficiary.String())
 	s.Equal(uint64(0), results[0].ExecutedAt)
-}
-
-func CreateFilterList(content string) []*MetadataFilter {
-	filterList := []*MetadataFilter{}
-	if err := json.Unmarshal([]byte(content), &filterList); err != nil {
-		panic(fmt.Errorf("Error parsing JSON: %v", err))
-	}
-	return filterList
 }
 
 func createVoucherMetadataOrFail(s *ModelSuite, voucherMetadata VoucherMetadata) {
