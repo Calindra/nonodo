@@ -11,6 +11,7 @@ import (
 
 	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/calindra/nonodo/internal/echoapp"
+	"github.com/calindra/nonodo/internal/execlistener"
 	"github.com/calindra/nonodo/internal/inputter"
 	"github.com/calindra/nonodo/internal/inspect"
 	"github.com/calindra/nonodo/internal/model"
@@ -54,6 +55,8 @@ type NonodoOpts struct {
 
 	// If set, start application.
 	ApplicationArgs []string
+
+	OnlyExecListener bool
 }
 
 // Create the options struct with default values.
@@ -73,6 +76,7 @@ func NewNonodoOpts() NonodoOpts {
 		DisableDevnet:      false,
 		DisableAdvance:     false,
 		ApplicationArgs:    nil,
+		OnlyExecListener:   true,
 	}
 }
 
@@ -81,6 +85,14 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	var w supervisor.SupervisorWorker
 
 	model := model.NewNonodoModel()
+	w.Workers = append(w.Workers, execlistener.ExecListener{
+		Model:              model,
+		Provider:           opts.RpcUrl,
+		ApplicationAddress: common.HexToAddress(opts.ApplicationAddress),
+	})
+	if opts.OnlyExecListener {
+		return w
+	}
 	e := echo.New()
 	e.Use(middleware.CORS())
 	e.Use(middleware.Recover())

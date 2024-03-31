@@ -1,6 +1,8 @@
 {
     "cSpell.words": [
         "devnet",
+        "ethclient",
+        "execlistener",
         "github",
         "Ligneul",
         "rollup"

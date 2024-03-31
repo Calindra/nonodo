@@ -1155,7 +1155,7 @@ func (s *ModelSuite) TestItAddsVoucherMetadataAndFindByAddress() {
 		s.Fail("Unexpected error")
 	}
 	s.Equal(1, len(results))
-	s.Equal("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", results[0].Beneficiary.String())
+	s.Equal(Bob.String(), results[0].Beneficiary.String())
 }
 
 func (s *ModelSuite) TestItAddsVoucherMetadataAndFindByInputIndex() {
@@ -1185,7 +1185,7 @@ func (s *ModelSuite) TestItAddsVoucherMetadataAndFindByInputIndex() {
 		s.Fail("Unexpected error")
 	}
 	s.Equal(1, len(results))
-	s.Equal("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", results[0].Beneficiary.String())
+	s.Equal(Bob.String(), results[0].Beneficiary.String())
 	s.Equal(2, results[0].InputIndex)
 }
 
@@ -1219,7 +1219,7 @@ func (s *ModelSuite) TestItAddsVoucherMetadataAndFindByExecutedAt() {
 		s.Fail("Unexpected error")
 	}
 	s.Equal(1, len(results))
-	s.Equal("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", results[0].Beneficiary.String())
+	s.Equal(Bob.String(), results[0].Beneficiary.String())
 	s.Equal(uint64(1234), results[0].ExecutedAt)
 }
 
@@ -1253,7 +1253,7 @@ func (s *ModelSuite) TestItAddsVoucherMetadataAndFindNeverExecuted() {
 		s.Fail("Unexpected error")
 	}
 	s.Equal(1, len(results))
-	s.Equal("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", results[0].Beneficiary.String())
+	s.Equal(Bob.String(), results[0].Beneficiary.String())
 	s.Equal(uint64(0), results[0].ExecutedAt)
 }
 
