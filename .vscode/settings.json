@@ -1,11 +1,16 @@
 {
     "cSpell.words": [
         "devnet",
+        "ERCX",
         "ethclient",
         "execlistener",
         "github",
+        "hexutil",
+        "Inputter",
         "Ligneul",
         "nonodomodel",
-        "rollup"
+        "outputdecoder",
+        "rollup",
+        "rollups"
     ]
 }
