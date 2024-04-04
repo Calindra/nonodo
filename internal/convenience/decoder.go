@@ -1,6 +1,7 @@
-package outputdecoder
+package convenience
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -11,6 +12,23 @@ import (
 )
 
 type OutputDecoder struct {
+	convenienceService ConvenienceService
+}
+
+type ConvenienceService interface {
+	CreateVoucher(ctx context.Context, voucher *ConvenienceVoucher)
+	CreateNotice()
+}
+
+func (o *OutputDecoder) HandleOutput(ctx context.Context, destination common.Address, payload string, inputIndex uint64, outputIndex uint64) {
+	// TODO detect the output type
+	o.convenienceService.CreateVoucher(ctx, &ConvenienceVoucher{
+		Destination: destination,
+		Payload:     payload,
+		Executed:    false,
+		InputIndex:  inputIndex,
+		OutputIndex: outputIndex,
+	})
 }
 
 func (o *OutputDecoder) GetAbi(address common.Address) (*abi.ABI, error) {

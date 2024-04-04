@@ -8,9 +8,13 @@
         "hexutil",
         "Inputter",
         "Ligneul",
+        "mattn",
         "nonodomodel",
         "outputdecoder",
         "rollup",
-        "rollups"
+        "rollups",
+        "sqlite",
+        "sqlx",
+        "stretchr"
     ]
 }
