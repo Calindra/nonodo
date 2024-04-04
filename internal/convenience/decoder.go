@@ -15,20 +15,16 @@ type OutputDecoder struct {
 	convenienceService ConvenienceService
 }
 
-type ConvenienceService interface {
-	CreateVoucher(ctx context.Context, voucher *ConvenienceVoucher)
-	CreateNotice()
-}
-
-func (o *OutputDecoder) HandleOutput(ctx context.Context, destination common.Address, payload string, inputIndex uint64, outputIndex uint64) {
-	// TODO detect the output type
-	o.convenienceService.CreateVoucher(ctx, &ConvenienceVoucher{
+func (o *OutputDecoder) HandleOutput(ctx context.Context, destination common.Address, payload string, inputIndex uint64, outputIndex uint64) error {
+	// TODO detect the output type Voucher | Notice
+	_, err := o.convenienceService.CreateVoucher(ctx, &ConvenienceVoucher{
 		Destination: destination,
 		Payload:     payload,
 		Executed:    false,
 		InputIndex:  inputIndex,
 		OutputIndex: outputIndex,
 	})
+	return err
 }
 
 func (o *OutputDecoder) GetAbi(address common.Address) (*abi.ABI, error) {

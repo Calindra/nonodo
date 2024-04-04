@@ -1,29 +1,52 @@
 package convenience
 
 import (
+	"context"
 	"encoding/hex"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/suite"
 )
 
 type OutputDecoderSuite struct {
 	suite.Suite
+	decoder *OutputDecoder
 }
 
 func (s *OutputDecoderSuite) SetupTest() {
+	db := sqlx.MustConnect("sqlite3", ":memory:")
+	repository := ConvenienceRepositoryImpl{
+		db: *db,
+	}
+	repository.CreateTables()
+	s.decoder = &OutputDecoder{
+		convenienceService: ConvenienceService{
+			repository: &repository,
+		},
+	}
 }
 
 func TestDecoderSuite(t *testing.T) {
 	suite.Run(t, new(OutputDecoderSuite))
 }
 
+func (s *OutputDecoderSuite) TestHandleOutput() {
+	ctx := context.Background()
+	s.decoder.HandleOutput(ctx, Token, "0x111122", 1, 2)
+	voucher, err := s.decoder.convenienceService.repository.FindVoucherByInputAndOutputIndex(ctx, 1, 2)
+	if err != nil {
+		panic(err)
+	}
+	s.Equal(Token.String(), voucher.Destination.String())
+	s.Equal("0x111122", voucher.Payload)
+}
+
 func (s *OutputDecoderSuite) TestGetAbiFromEtherscan() {
 	s.T().Skip()
-	decoder := OutputDecoder{}
 	address := common.HexToAddress("0x26A61aF89053c847B4bd5084E2caFe7211874a29")
-	abi, err := decoder.GetAbi(address)
+	abi, err := s.decoder.GetAbi(address)
 	checkError(s, err)
 	selectorBytes, err2 := hex.DecodeString("a9059cbb")
 	checkError(s, err2)

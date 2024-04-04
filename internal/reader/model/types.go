@@ -35,6 +35,8 @@ type Voucher struct {
 	// Proof object that allows this voucher to be validated and executed on the base layer
 	// blockchain
 	Proof *Proof `json:"proof,omitempty"`
+
+	Executed bool
 }
 
 // Application log or diagnostic information

@@ -33,7 +33,7 @@ func (c *ConvenienceRepositoryImpl) CreateVoucher(
 		InputIndex,
 		OutputIndex) VALUES (?, ?, ?, ?, ?)`
 	c.db.MustExec(insertVoucher, voucher.Destination, voucher.Payload, voucher.Executed, voucher.InputIndex, voucher.OutputIndex)
-	return nil, nil
+	return voucher, nil
 }
 
 func (c *ConvenienceRepositoryImpl) VoucherCount(
@@ -60,4 +60,13 @@ func (c *ConvenienceRepositoryImpl) FindVoucherByInputAndOutputIndex(
 		return nil, err
 	}
 	return &p, nil
+}
+
+func (c *ConvenienceRepositoryImpl) UpdateExecuted(
+	ctx context.Context, inputIndex uint64, outputIndex uint64,
+	executedValue bool,
+) error {
+	query := `UPDATE vouchers SET Executed =? WHERE inputIndex = ? and outputIndex = ?`
+	c.db.MustExec(query, executedValue, inputIndex, outputIndex)
+	return nil
 }

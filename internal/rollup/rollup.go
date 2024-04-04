@@ -190,8 +190,8 @@ func (r *rollupAPI) RegisterException(c echo.Context) error {
 
 // Check whether the content type is application/json.
 func checkContentType(c echo.Context) bool {
-	ctype := c.Request().Header.Get(echo.HeaderContentType)
-	return strings.HasPrefix(ctype, echo.MIMEApplicationJSON)
+	cType := c.Request().Header.Get(echo.HeaderContentType)
+	return strings.HasPrefix(cType, echo.MIMEApplicationJSON)
 }
 
 // Convert model input to API type.
