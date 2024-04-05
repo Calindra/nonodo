@@ -38,7 +38,7 @@ func (s *ExecListenerSuite) SetupTest() {
 }
 
 func (s *ExecListenerSuite) TestItUpdateExecutedAtAndBlocknumber() {
-	s.m = model.NewNonodoModel()
+	s.m = model.NewNonodoModel(nil)
 	{
 		createVoucherMetadataOrFail(s, model.VoucherMetadata{
 			Beneficiary: Bruno,

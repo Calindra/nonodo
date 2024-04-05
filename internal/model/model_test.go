@@ -27,7 +27,7 @@ type ModelSuite struct {
 }
 
 func (s *ModelSuite) SetupTest() {
-	s.m = NewNonodoModel()
+	s.m = NewNonodoModel(nil)
 	s.n = 3
 	s.payloads = make([][]byte, s.n)
 	s.senders = make([]common.Address, s.n)

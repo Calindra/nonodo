@@ -9,10 +9,28 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/jmoiron/sqlx"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 type OutputDecoder struct {
 	convenienceService ConvenienceService
+}
+
+func NewOutputDecoder() *OutputDecoder {
+	db := sqlx.MustConnect("sqlite3", ":memory:")
+	repository := ConvenienceRepositoryImpl{
+		db: *db,
+	}
+	err := repository.CreateTables()
+	if err != nil {
+		panic(err)
+	}
+	return &OutputDecoder{
+		convenienceService: ConvenienceService{
+			repository: &repository,
+		},
+	}
 }
 
 func (o *OutputDecoder) HandleOutput(

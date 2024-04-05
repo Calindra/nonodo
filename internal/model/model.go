@@ -26,12 +26,14 @@ type NonodoModel struct {
 	inspects         []*InspectInput
 	vouchersMetadata []*VoucherMetadata
 	state            rollupsState
+	decoder          Decoder
 }
 
 // Create a new model.
-func NewNonodoModel() *NonodoModel {
+func NewNonodoModel(decoder Decoder) *NonodoModel {
 	return &NonodoModel{
-		state: &rollupsStateIdle{},
+		state:   &rollupsStateIdle{},
+		decoder: decoder,
 	}
 }
 
@@ -127,7 +129,7 @@ func (m *NonodoModel) FinishAndGetNext(accepted bool) Input {
 	// try to get first unprocessed advance
 	for _, input := range m.advances {
 		if input.Status == CompletionStatusUnprocessed {
-			m.state = newRollupsStateAdvance(input)
+			m.state = newRollupsStateAdvance(input, m.decoder)
 			return *input
 		}
 	}

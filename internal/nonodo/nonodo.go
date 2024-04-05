@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/calindra/nonodo/internal/convenience"
 	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/calindra/nonodo/internal/echoapp"
 	"github.com/calindra/nonodo/internal/execlistener"
@@ -84,8 +85,8 @@ func NewNonodoOpts() NonodoOpts {
 // Create the nonodo supervisor.
 func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	var w supervisor.SupervisorWorker
-
-	model := model.NewNonodoModel()
+	decoder := convenience.NewOutputDecoder()
+	model := model.NewNonodoModel(decoder)
 	if opts.VoucherExecPoC {
 		opts.RpcUrl = fmt.Sprintf("ws://%s:%v", opts.AnvilAddress, opts.AnvilPort)
 		voucherListener := execlistener.NewExecListener(

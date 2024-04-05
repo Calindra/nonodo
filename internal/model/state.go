@@ -4,6 +4,7 @@
 package model
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 
@@ -28,6 +29,17 @@ type rollupsState interface {
 
 	// Register exception in current state.
 	registerException(payload []byte) error
+}
+
+// Convenience OutputDecoder
+type Decoder interface {
+	HandleOutput(
+		ctx context.Context,
+		destination common.Address,
+		payload string,
+		inputIndex uint64,
+		outputIndex uint64,
+	) error
 }
 
 //
@@ -71,12 +83,34 @@ type rollupsStateAdvance struct {
 	vouchers []Voucher
 	notices  []Notice
 	reports  []Report
+	decoder  Decoder
 }
 
-func newRollupsStateAdvance(input *AdvanceInput) *rollupsStateAdvance {
+func newRollupsStateAdvance(input *AdvanceInput, decoder Decoder) *rollupsStateAdvance {
 	slog.Info("nonodo: processing advance", "index", input.Index)
 	return &rollupsStateAdvance{
-		input: input,
+		input:   input,
+		decoder: decoder,
+	}
+}
+
+func sendAllInputVouchersToDecoder(decoder Decoder, inputIndex uint64, vouchers []Voucher) {
+	if decoder == nil {
+		slog.Warn("Missing OutputDecoder to send vouchers")
+		return
+	}
+	ctx := context.Background()
+	for _, v := range vouchers {
+		err := decoder.HandleOutput(
+			ctx,
+			v.Destination,
+			common.Bytes2Hex(v.Payload),
+			inputIndex,
+			uint64(v.Index),
+		)
+		if err != nil {
+			panic(err)
+		}
 	}
 }
 
@@ -85,6 +119,7 @@ func (s *rollupsStateAdvance) finish(status CompletionStatus) {
 	if status == CompletionStatusAccepted {
 		s.input.Vouchers = s.vouchers
 		s.input.Notices = s.notices
+		sendAllInputVouchersToDecoder(s.decoder, uint64(s.input.Index), s.vouchers)
 	}
 	s.input.Reports = s.reports
 	slog.Info("nonodo: finished advance")
