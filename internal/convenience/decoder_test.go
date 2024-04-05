@@ -20,7 +20,10 @@ func (s *OutputDecoderSuite) SetupTest() {
 	repository := ConvenienceRepositoryImpl{
 		db: *db,
 	}
-	repository.CreateTables()
+	err := repository.CreateTables()
+	if err != nil {
+		panic(err)
+	}
 	s.decoder = &OutputDecoder{
 		convenienceService: ConvenienceService{
 			repository: &repository,
@@ -34,8 +37,12 @@ func TestDecoderSuite(t *testing.T) {
 
 func (s *OutputDecoderSuite) TestHandleOutput() {
 	ctx := context.Background()
-	s.decoder.HandleOutput(ctx, Token, "0x111122", 1, 2)
-	voucher, err := s.decoder.convenienceService.repository.FindVoucherByInputAndOutputIndex(ctx, 1, 2)
+	err := s.decoder.HandleOutput(ctx, Token, "0x111122", 1, 2)
+	if err != nil {
+		panic(err)
+	}
+	voucher, err := s.decoder.convenienceService.
+		repository.FindVoucherByInputAndOutputIndex(ctx, 1, 2)
 	if err != nil {
 		panic(err)
 	}

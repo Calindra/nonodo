@@ -32,7 +32,14 @@ func (c *ConvenienceRepositoryImpl) CreateVoucher(
 		Executed,
 		InputIndex,
 		OutputIndex) VALUES (?, ?, ?, ?, ?)`
-	c.db.MustExec(insertVoucher, voucher.Destination, voucher.Payload, voucher.Executed, voucher.InputIndex, voucher.OutputIndex)
+	c.db.MustExec(
+		insertVoucher,
+		voucher.Destination,
+		voucher.Payload,
+		voucher.Executed,
+		voucher.InputIndex,
+		voucher.OutputIndex,
+	)
 	return voucher, nil
 }
 

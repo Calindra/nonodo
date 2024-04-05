@@ -15,8 +15,14 @@ type OutputDecoder struct {
 	convenienceService ConvenienceService
 }
 
-func (o *OutputDecoder) HandleOutput(ctx context.Context, destination common.Address, payload string, inputIndex uint64, outputIndex uint64) error {
-	// TODO detect the output type Voucher | Notice
+func (o *OutputDecoder) HandleOutput(
+	ctx context.Context,
+	destination common.Address,
+	payload string,
+	inputIndex uint64,
+	outputIndex uint64,
+) error {
+	// detect the output type Voucher | Notice
 	_, err := o.convenienceService.CreateVoucher(ctx, &ConvenienceVoucher{
 		Destination: destination,
 		Payload:     payload,

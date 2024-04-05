@@ -31,10 +31,11 @@ func TestConvenienceRepositorySuite(t *testing.T) {
 
 func (s *ConvenienceRepositorySuite) TestCreateVoucher() {
 	ctx := context.Background()
-	s.repository.CreateVoucher(ctx, &ConvenienceVoucher{
+	_, err := s.repository.CreateVoucher(ctx, &ConvenienceVoucher{
 		InputIndex:  1,
 		OutputIndex: 2,
 	})
+	checkError2(s, err)
 	count, err := s.repository.VoucherCount(ctx)
 	checkError2(s, err)
 	s.Equal(uint64(1), count)
@@ -42,13 +43,14 @@ func (s *ConvenienceRepositorySuite) TestCreateVoucher() {
 
 func (s *ConvenienceRepositorySuite) TestFindVoucher() {
 	ctx := context.Background()
-	s.repository.CreateVoucher(ctx, &ConvenienceVoucher{
+	_, err := s.repository.CreateVoucher(ctx, &ConvenienceVoucher{
 		Destination: common.HexToAddress("0x26A61aF89053c847B4bd5084E2caFe7211874a29"),
 		Payload:     "0x0011",
 		InputIndex:  1,
 		OutputIndex: 2,
 		Executed:    false,
 	})
+	checkError2(s, err)
 	voucher, err := s.repository.FindVoucherByInputAndOutputIndex(ctx, 1, 2)
 	checkError2(s, err)
 	fmt.Println(voucher.Destination)
@@ -61,13 +63,14 @@ func (s *ConvenienceRepositorySuite) TestFindVoucher() {
 
 func (s *ConvenienceRepositorySuite) TestFindVoucherExecuted() {
 	ctx := context.Background()
-	s.repository.CreateVoucher(ctx, &ConvenienceVoucher{
+	_, err := s.repository.CreateVoucher(ctx, &ConvenienceVoucher{
 		Destination: common.HexToAddress("0x26A61aF89053c847B4bd5084E2caFe7211874a29"),
 		Payload:     "0x0011",
 		InputIndex:  1,
 		OutputIndex: 2,
 		Executed:    true,
 	})
+	checkError2(s, err)
 	voucher, err := s.repository.FindVoucherByInputAndOutputIndex(ctx, 1, 2)
 	checkError2(s, err)
 	fmt.Println(voucher.Destination)
