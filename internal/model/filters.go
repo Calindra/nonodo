@@ -62,7 +62,7 @@ type MetadataFilter struct {
 func CreateFilterList(content string) []*MetadataFilter {
 	filterList := []*MetadataFilter{}
 	if err := json.Unmarshal([]byte(content), &filterList); err != nil {
-		panic(fmt.Errorf("Error parsing JSON: %v", err))
+		panic(fmt.Errorf("create filter list error parsing json: %v", err))
 	}
 	return filterList
 }
