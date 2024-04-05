@@ -3,6 +3,7 @@
         "codegen",
         "deepmap",
         "devnet",
+        "echoapp",
         "ERCX",
         "ethclient",
         "execlistener",

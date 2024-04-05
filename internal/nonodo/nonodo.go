@@ -10,9 +10,9 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/calindra/nonodo/internal/convenience"
 	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/calindra/nonodo/internal/echoapp"
-	"github.com/calindra/nonodo/internal/execlistener"
 	"github.com/calindra/nonodo/internal/inputter"
 	"github.com/calindra/nonodo/internal/inspect"
 	"github.com/calindra/nonodo/internal/model"
@@ -87,11 +87,13 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 
 	model := model.NewNonodoModel()
 	if opts.VoucherExecPoC {
+		w.Workers = append(w.Workers, convenience.Synchronizer{})
+
 		opts.RpcUrl = fmt.Sprintf("ws://%s:%v", opts.AnvilAddress, opts.AnvilPort)
-		voucherListener := execlistener.NewExecListener(
+		execVoucherListener := convenience.NewExecListener(
 			model, opts.RpcUrl, common.HexToAddress(opts.ApplicationAddress),
 		)
-		w.Workers = append(w.Workers, voucherListener)
+		w.Workers = append(w.Workers, execVoucherListener)
 		e := echo.New()
 		e.Use(middleware.CORS())
 		e.Use(middleware.Recover())
