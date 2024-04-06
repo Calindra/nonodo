@@ -50,6 +50,15 @@ type DirectiveRoot struct {
 }
 
 type ComplexityRoot struct {
+	ConvenientVoucher struct {
+		Destination func(childComplexity int) int
+		Executed    func(childComplexity int) int
+		Index       func(childComplexity int) int
+		Input       func(childComplexity int) int
+		Payload     func(childComplexity int) int
+		Proof       func(childComplexity int) int
+	}
+
 	Input struct {
 		BlockNumber func(childComplexity int) int
 		Index       func(childComplexity int) int
@@ -152,7 +161,6 @@ type ComplexityRoot struct {
 
 	Voucher struct {
 		Destination func(childComplexity int) int
-		Executed    func(childComplexity int) int
 		Index       func(childComplexity int) int
 		Input       func(childComplexity int) int
 		Payload     func(childComplexity int) int
@@ -232,6 +240,48 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 	ec := executionContext{nil, e, 0, 0, nil}
 	_ = ec
 	switch typeName + "." + field {
+
+	case "ConvenientVoucher.destination":
+		if e.complexity.ConvenientVoucher.Destination == nil {
+			break
+		}
+
+		return e.complexity.ConvenientVoucher.Destination(childComplexity), true
+
+	case "ConvenientVoucher.executed":
+		if e.complexity.ConvenientVoucher.Executed == nil {
+			break
+		}
+
+		return e.complexity.ConvenientVoucher.Executed(childComplexity), true
+
+	case "ConvenientVoucher.index":
+		if e.complexity.ConvenientVoucher.Index == nil {
+			break
+		}
+
+		return e.complexity.ConvenientVoucher.Index(childComplexity), true
+
+	case "ConvenientVoucher.input":
+		if e.complexity.ConvenientVoucher.Input == nil {
+			break
+		}
+
+		return e.complexity.ConvenientVoucher.Input(childComplexity), true
+
+	case "ConvenientVoucher.payload":
+		if e.complexity.ConvenientVoucher.Payload == nil {
+			break
+		}
+
+		return e.complexity.ConvenientVoucher.Payload(childComplexity), true
+
+	case "ConvenientVoucher.proof":
+		if e.complexity.ConvenientVoucher.Proof == nil {
+			break
+		}
+
+		return e.complexity.ConvenientVoucher.Proof(childComplexity), true
 
 	case "Input.blockNumber":
 		if e.complexity.Input.BlockNumber == nil {
@@ -726,13 +776,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Voucher.Destination(childComplexity), true
 
-	case "Voucher.executed":
-		if e.complexity.Voucher.Executed == nil {
-			break
-		}
-
-		return e.complexity.Voucher.Executed(childComplexity), true
-
 	case "Voucher.index":
 		if e.complexity.Voucher.Index == nil {
 			break
@@ -1040,8 +1083,6 @@ type Voucher {
   payload: String!
   "Proof object that allows this voucher to be validated and executed on the base layer blockchain"
   proof: Proof
-  "Flag for marking vouchers as executed on the base layer blockchain"
-  executed: Boolean
 }
 
 "Top level queries"
@@ -1191,6 +1232,21 @@ schema {
 #--------------------#
 #  Voucher Metadata  #
 #--------------------#
+
+type ConvenientVoucher {
+  "Voucher index within the context of the input that produced it"
+  index: Int!
+  "Input whose processing produced the voucher"
+  input: Input!
+  "Transaction destination address in Ethereum hex binary format (20 bytes), starting with '0x'"
+  destination: String!
+  "Transaction payload in Ethereum hex binary format, starting with '0x'"
+  payload: String!
+  "Proof object that allows this voucher to be validated and executed on the base layer blockchain"
+  proof: Proof
+  "Executed"
+  executed: Boolean
+}
 
 type Mutation {
   createVoucherMetadata(input: NewVoucherMetadata!): VoucherMetadata!
@@ -1774,6 +1830,296 @@ func (ec *executionContext) field___Type_fields_args(ctx context.Context, rawArg
 
 // region    **************************** field.gotpl *****************************
 
+func (ec *executionContext) _ConvenientVoucher_index(ctx context.Context, field graphql.CollectedField, obj *model.ConvenientVoucher) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ConvenientVoucher_index(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Index, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ConvenientVoucher_index(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ConvenientVoucher",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ConvenientVoucher_input(ctx context.Context, field graphql.CollectedField, obj *model.ConvenientVoucher) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ConvenientVoucher_input(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Input, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Input)
+	fc.Result = res
+	return ec.marshalNInput2ᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐInput(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ConvenientVoucher_input(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ConvenientVoucher",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "index":
+				return ec.fieldContext_Input_index(ctx, field)
+			case "status":
+				return ec.fieldContext_Input_status(ctx, field)
+			case "msgSender":
+				return ec.fieldContext_Input_msgSender(ctx, field)
+			case "timestamp":
+				return ec.fieldContext_Input_timestamp(ctx, field)
+			case "blockNumber":
+				return ec.fieldContext_Input_blockNumber(ctx, field)
+			case "payload":
+				return ec.fieldContext_Input_payload(ctx, field)
+			case "voucher":
+				return ec.fieldContext_Input_voucher(ctx, field)
+			case "notice":
+				return ec.fieldContext_Input_notice(ctx, field)
+			case "report":
+				return ec.fieldContext_Input_report(ctx, field)
+			case "vouchers":
+				return ec.fieldContext_Input_vouchers(ctx, field)
+			case "notices":
+				return ec.fieldContext_Input_notices(ctx, field)
+			case "reports":
+				return ec.fieldContext_Input_reports(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Input", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ConvenientVoucher_destination(ctx context.Context, field graphql.CollectedField, obj *model.ConvenientVoucher) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ConvenientVoucher_destination(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Destination, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ConvenientVoucher_destination(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ConvenientVoucher",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ConvenientVoucher_payload(ctx context.Context, field graphql.CollectedField, obj *model.ConvenientVoucher) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ConvenientVoucher_payload(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Payload, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ConvenientVoucher_payload(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ConvenientVoucher",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ConvenientVoucher_proof(ctx context.Context, field graphql.CollectedField, obj *model.ConvenientVoucher) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ConvenientVoucher_proof(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Proof, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*model.Proof)
+	fc.Result = res
+	return ec.marshalOProof2ᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐProof(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ConvenientVoucher_proof(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ConvenientVoucher",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "validity":
+				return ec.fieldContext_Proof_validity(ctx, field)
+			case "context":
+				return ec.fieldContext_Proof_context(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Proof", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _ConvenientVoucher_executed(ctx context.Context, field graphql.CollectedField, obj *model.ConvenientVoucher) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_ConvenientVoucher_executed(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Executed, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*bool)
+	fc.Result = res
+	return ec.marshalOBoolean2ᚖbool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_ConvenientVoucher_executed(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "ConvenientVoucher",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Input_index(ctx context.Context, field graphql.CollectedField, obj *model.Input) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Input_index(ctx, field)
 	if err != nil {
@@ -2087,8 +2433,6 @@ func (ec *executionContext) fieldContext_Input_voucher(ctx context.Context, fiel
 				return ec.fieldContext_Voucher_payload(ctx, field)
 			case "proof":
 				return ec.fieldContext_Voucher_proof(ctx, field)
-			case "executed":
-				return ec.fieldContext_Voucher_executed(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Voucher", field.Name)
 		},
@@ -3968,8 +4312,6 @@ func (ec *executionContext) fieldContext_Query_voucher(ctx context.Context, fiel
 				return ec.fieldContext_Voucher_payload(ctx, field)
 			case "proof":
 				return ec.fieldContext_Voucher_proof(ctx, field)
-			case "executed":
-				return ec.fieldContext_Voucher_executed(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Voucher", field.Name)
 		},
@@ -5218,47 +5560,6 @@ func (ec *executionContext) fieldContext_Voucher_proof(ctx context.Context, fiel
 	return fc, nil
 }
 
-func (ec *executionContext) _Voucher_executed(ctx context.Context, field graphql.CollectedField, obj *model.Voucher) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Voucher_executed(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Executed, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(bool)
-	fc.Result = res
-	return ec.marshalOBoolean2bool(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Voucher_executed(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Voucher",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Boolean does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _VoucherConnection_totalCount(ctx context.Context, field graphql.CollectedField, obj *model.Connection[*model.Voucher]) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_VoucherConnection_totalCount(ctx, field)
 	if err != nil {
@@ -5456,8 +5757,6 @@ func (ec *executionContext) fieldContext_VoucherEdge_node(ctx context.Context, f
 				return ec.fieldContext_Voucher_payload(ctx, field)
 			case "proof":
 				return ec.fieldContext_Voucher_proof(ctx, field)
-			case "executed":
-				return ec.fieldContext_Voucher_executed(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Voucher", field.Name)
 		},
@@ -7883,6 +8182,64 @@ func (ec *executionContext) unmarshalInputVoucherMetadataFilter(ctx context.Cont
 
 // region    **************************** object.gotpl ****************************
 
+var convenientVoucherImplementors = []string{"ConvenientVoucher"}
+
+func (ec *executionContext) _ConvenientVoucher(ctx context.Context, sel ast.SelectionSet, obj *model.ConvenientVoucher) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, convenientVoucherImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("ConvenientVoucher")
+		case "index":
+			out.Values[i] = ec._ConvenientVoucher_index(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "input":
+			out.Values[i] = ec._ConvenientVoucher_input(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "destination":
+			out.Values[i] = ec._ConvenientVoucher_destination(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "payload":
+			out.Values[i] = ec._ConvenientVoucher_payload(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "proof":
+			out.Values[i] = ec._ConvenientVoucher_proof(ctx, field, obj)
+		case "executed":
+			out.Values[i] = ec._ConvenientVoucher_executed(ctx, field, obj)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var inputImplementors = []string{"Input"}
 
 func (ec *executionContext) _Input(ctx context.Context, sel ast.SelectionSet, obj *model.Input) graphql.Marshaler {
@@ -9128,8 +9485,6 @@ func (ec *executionContext) _Voucher(ctx context.Context, sel ast.SelectionSet, 
 			}
 		case "proof":
 			out.Values[i] = ec._Voucher_proof(ctx, field, obj)
-		case "executed":
-			out.Values[i] = ec._Voucher_executed(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}

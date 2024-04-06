@@ -8,6 +8,21 @@ import (
 	"strconv"
 )
 
+type ConvenientVoucher struct {
+	// Voucher index within the context of the input that produced it
+	Index int `json:"index"`
+	// Input whose processing produced the voucher
+	Input *Input `json:"input"`
+	// Transaction destination address in Ethereum hex binary format (20 bytes), starting with '0x'
+	Destination string `json:"destination"`
+	// Transaction payload in Ethereum hex binary format, starting with '0x'
+	Payload string `json:"payload"`
+	// Proof object that allows this voucher to be validated and executed on the base layer blockchain
+	Proof *Proof `json:"proof,omitempty"`
+	// Executed
+	Executed *bool `json:"executed,omitempty"`
+}
+
 // Filter object to restrict results depending on input properties
 type InputFilter struct {
 	// Filter only inputs with index lower than a given value
