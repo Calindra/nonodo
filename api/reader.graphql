@@ -98,7 +98,7 @@ type Query {
   "Get reports with support for pagination"
   reports(first: Int, last: Int, after: String, before: String): ReportConnection!
 
-  vouchersMetadata(filter: [VoucherMetadataFilter]): [VoucherMetadata]
+  convenientVouchers(first: Int, last: Int, after: String, before: String, filter: [ConvenientFilter]): ConvenientVoucherConnection!
 }
 
 "Pagination entry"
@@ -219,13 +219,12 @@ type VoucherEdge {
 
 schema {
   query: Query
-  mutation: Mutation
 }
 
 
-#--------------------#
-#  Voucher Metadata  #
-#--------------------#
+#----------------------#
+#  Convenient Voucher  #
+#----------------------#
 
 type ConvenientVoucher {
   "Voucher index within the context of the input that produced it"
@@ -242,45 +241,27 @@ type ConvenientVoucher {
   executed: Boolean
 }
 
-type Mutation {
-  createVoucherMetadata(input: NewVoucherMetadata!): VoucherMetadata!
+"Pagination result"
+type ConvenientVoucherConnection {
+  "Total number of entries that match the query"
+  totalCount: Int!
+  "Pagination entries returned for the current page"
+  edges: [ConvenientVoucherEdge!]!
+  "Pagination metadata"
+  pageInfo: PageInfo!
 }
 
-input NewVoucherMetadata {
-  label: String!
-  beneficiary: String!
-  contract: String!
-  amount: BigInt!
-  inputIndex: Int!
-  outputIndex: Int!
+"Pagination entry"
+type ConvenientVoucherEdge {
+  "Node instance"
+  node: ConvenientVoucher!
+  "Pagination cursor"
+  cursor: String!
 }
 
-type VoucherMetadata {
-  label: String!
-  beneficiary: String!
-  contract: String!
-  amount: BigInt!
-
-  # we handle that status outside the CM
-  executedAt: BigInt!
-  executedBlock: BigInt!
-
-  inputIndex: Int!
-  outputIndex: Int!
-}
-
-input VoucherExecutionEvent {
-  inputIndex: BigInt!
-  outputIndex: BigInt!
-
-  # we handle that status outside the CM
-  executedAt: BigInt!
-  executedBlock: BigInt!
-}
-
-input VoucherMetadataFilter {
+input ConvenientFilter {
   # The field to apply the comparison operation on
-  field: String!
+  field: String
 
   # Basic comparison operators
   eq: String
@@ -295,6 +276,6 @@ input VoucherMetadataFilter {
   nin: [String]
 
   # Logical operators
-  and: [VoucherMetadataFilter]
-  or: [VoucherMetadataFilter]
+  and: [ConvenientFilter]
+  or: [ConvenientFilter]
 }

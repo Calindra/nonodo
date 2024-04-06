@@ -24,3 +24,17 @@ type ConvenienceVoucher struct {
 	// MethodSignature string
 	// ERCX            string
 }
+
+type ConvenienceFilter struct {
+	Field *string              `json:"field,omitempty"`
+	Eq    *string              `json:"eq,omitempty"`
+	Ne    *string              `json:"ne,omitempty"`
+	Gt    *string              `json:"gt,omitempty"`
+	Gte   *string              `json:"gte,omitempty"`
+	Lt    *string              `json:"lt,omitempty"`
+	Lte   *string              `json:"lte,omitempty"`
+	In    []*string            `json:"in,omitempty"`
+	Nin   []*string            `json:"nin,omitempty"`
+	And   []*ConvenienceFilter `json:"and,omitempty"`
+	Or    []*ConvenienceFilter `json:"or,omitempty"`
+}

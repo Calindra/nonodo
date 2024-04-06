@@ -7,10 +7,9 @@ package model
 
 import (
 	"fmt"
-	"strconv"
 
+	"github.com/calindra/nonodo/internal/convenience"
 	"github.com/calindra/nonodo/internal/model"
-	"github.com/ethereum/go-ethereum/common"
 )
 
 // Nonodo model wrapper that convert types to GraphQL types.
@@ -122,44 +121,14 @@ func (m *ModelWrapper) GetReports(
 	return newConnection(offset, total, convNodes), nil
 }
 
-func (m *ModelWrapper) GetVouchersMetadata(
-	filter []*VoucherMetadataFilter,
-) ([]*VoucherMetadata, error) {
-	models, err := m.model.GetVouchersMetadata(convertVoucherMetadataFilters(filter))
-	if err != nil {
-		return nil, err
+func (m *ModelWrapper) PaginateConvenientVouchers(
+	vouchers []convenience.ConvenienceVoucher,
+) (*ConvenientVoucherConnection, error) {
+	total := len(vouchers)
+	offset := 0
+	convNodes := make([]*ConvenientVoucher, len(vouchers))
+	for i := range vouchers {
+		convNodes[i] = convertConvenientVoucher(vouchers[i])
 	}
-	return convertVouchersMetadata(models), nil
-}
-
-func (m *ModelWrapper) CreateVoucherMetadata(input NewVoucherMetadata) (*VoucherMetadata, error) {
-	amount, err := strconv.ParseUint(input.Amount, 10, 64)
-	if err != nil {
-		return nil, err
-	}
-	voucherMetadata := model.VoucherMetadata{
-		Contract:      common.HexToAddress(input.Contract),
-		Beneficiary:   common.HexToAddress(input.Beneficiary),
-		Label:         input.Label,
-		Amount:        amount,
-		ExecutedAt:    0,
-		ExecutedBlock: 0,
-		InputIndex:    input.InputIndex,
-		OutputIndex:   input.OutputIndex,
-	}
-	err = m.model.AddVoucherMetadata(&voucherMetadata)
-	if err != nil {
-		return nil, err
-	}
-	graphVoucherMetadata := VoucherMetadata{
-		Label:         input.Label,
-		Contract:      input.Contract,
-		Beneficiary:   input.Beneficiary,
-		Amount:        input.Amount,
-		ExecutedAt:    "0",
-		ExecutedBlock: "0",
-		InputIndex:    input.InputIndex,
-		OutputIndex:   input.OutputIndex,
-	}
-	return &graphVoucherMetadata, nil
+	return newConnection(offset, total, convNodes), nil
 }

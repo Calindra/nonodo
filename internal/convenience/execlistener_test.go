@@ -7,7 +7,6 @@ import (
 	"os"
 	"testing"
 
-	"github.com/calindra/nonodo/internal/model"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
 	"github.com/lmittmann/tint"
@@ -20,7 +19,6 @@ func TestExecListenerSuite(t *testing.T) {
 
 type ExecListenerSuite struct {
 	suite.Suite
-	m                  *model.NonodoModel
 	ConvenienceService *ConvenienceService
 	repository         *ConvenienceRepositoryImpl
 }
@@ -53,7 +51,6 @@ func (s *ExecListenerSuite) SetupTest() {
 }
 
 func (s *ExecListenerSuite) TestItUpdateExecutedAtAndBlocknumber() {
-	s.m = model.NewNonodoModel(nil)
 	{
 		createVoucherMetadataOrFail(s, &ConvenienceVoucher{
 			Destination: Bruno,

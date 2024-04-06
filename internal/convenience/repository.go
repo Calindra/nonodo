@@ -2,6 +2,7 @@ package convenience
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -73,7 +74,46 @@ func (c *ConvenienceRepositoryImpl) UpdateExecuted(
 	ctx context.Context, inputIndex uint64, outputIndex uint64,
 	executedValue bool,
 ) error {
-	query := `UPDATE vouchers SET Executed =? WHERE inputIndex = ? and outputIndex = ?`
+	query := `UPDATE vouchers SET Executed = ? WHERE inputIndex = ? and outputIndex = ?`
 	c.db.MustExec(query, executedValue, inputIndex, outputIndex)
 	return nil
+}
+
+func (c *ConvenienceRepositoryImpl) FindAllVouchers(
+	ctx context.Context,
+	first *int,
+	last *int,
+	after *string,
+	before *string,
+	filter []*ConvenienceFilter,
+) ([]ConvenienceVoucher, error) {
+	query := `SELECT * FROM vouchers `
+	if len(filter) > 0 {
+		query += "WHERE "
+	}
+	args := []interface{}{}
+	for _, filter := range filter {
+		if *filter.Field == "Executed" {
+			query += "Executed = ? "
+			if *filter.Eq == "true" {
+				args = append(args, true)
+			} else if *filter.Eq == "false" {
+				args = append(args, false)
+			} else {
+				return nil, fmt.Errorf("unexpected executed value %s", *filter.Eq)
+			}
+		} else {
+			return nil, fmt.Errorf("unexpected field %s", *filter.Field)
+		}
+	}
+	stmt, err := c.db.Preparex(query)
+	if err != nil {
+		return nil, err
+	}
+	var vouchers []ConvenienceVoucher
+	err = stmt.Select(&vouchers, args...)
+	if err != nil {
+		return nil, err
+	}
+	return vouchers, nil
 }

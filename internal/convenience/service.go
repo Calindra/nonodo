@@ -1,6 +1,8 @@
 package convenience
 
-import "context"
+import (
+	"context"
+)
 
 type ConvenienceService struct {
 	repository *ConvenienceRepositoryImpl
@@ -24,5 +26,23 @@ func (c *ConvenienceService) UpdateExecuted(
 		inputIndex,
 		outputIndex,
 		executedValue,
+	)
+}
+
+func (c *ConvenienceService) FindAllVouchers(
+	ctx context.Context,
+	first *int,
+	last *int,
+	after *string,
+	before *string,
+	filter []*ConvenienceFilter,
+) ([]ConvenienceVoucher, error) {
+	return c.repository.FindAllVouchers(
+		ctx,
+		first,
+		last,
+		after,
+		before,
+		filter,
 	)
 }

@@ -6,6 +6,7 @@ package reader
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/calindra/nonodo/internal/reader/graph"
 	"github.com/calindra/nonodo/internal/reader/model"
@@ -39,11 +40,6 @@ func (r *inputResolver) Notices(ctx context.Context, obj *model.Input, first *in
 // Reports is the resolver for the reports field.
 func (r *inputResolver) Reports(ctx context.Context, obj *model.Input, first *int, last *int, after *string, before *string) (*model.Connection[*model.Report], error) {
 	return r.model.GetReports(first, last, after, before, &obj.Index)
-}
-
-// CreateVoucherMetadata is the resolver for the createVoucherMetadata field.
-func (r *mutationResolver) CreateVoucherMetadata(ctx context.Context, input model.NewVoucherMetadata) (*model.VoucherMetadata, error) {
-	return r.model.CreateVoucherMetadata(input)
 }
 
 // Input is the resolver for the input field.
@@ -91,9 +87,15 @@ func (r *queryResolver) Reports(ctx context.Context, first *int, last *int, afte
 	return r.model.GetReports(first, last, after, before, nil)
 }
 
-// VouchersMetadata is the resolver for the vouchersMetadata field.
-func (r *queryResolver) VouchersMetadata(ctx context.Context, filter []*model.VoucherMetadataFilter) ([]*model.VoucherMetadata, error) {
-	return r.model.GetVouchersMetadata(filter)
+// ConvenientVouchers is the resolver for the convenientVouchers field.
+func (r *queryResolver) ConvenientVouchers(ctx context.Context, first *int, last *int, after *string, before *string, filter []*model.ConvenientFilter) (*model.Connection[*model.ConvenientVoucher], error) {
+	convenienceFilter, err := model.ConvertToConvenienceFilter(filter)
+	if err != nil {
+		return nil, err
+	}
+	r.convenienceService.FindAllVouchers(ctx, first, last, after, before, convenienceFilter)
+	// r.model.PaginateConvenientVouchers()
+	panic(fmt.Errorf("not implemented: ConvenientVouchers - convenientVouchers"))
 }
 
 // Input is the resolver for the input field.
@@ -109,9 +111,6 @@ func (r *voucherResolver) Input(ctx context.Context, obj *model.Voucher) (*model
 // Input returns graph.InputResolver implementation.
 func (r *Resolver) Input() graph.InputResolver { return &inputResolver{r} }
 
-// Mutation returns graph.MutationResolver implementation.
-func (r *Resolver) Mutation() graph.MutationResolver { return &mutationResolver{r} }
-
 // Notice returns graph.NoticeResolver implementation.
 func (r *Resolver) Notice() graph.NoticeResolver { return &noticeResolver{r} }
 
@@ -125,7 +124,6 @@ func (r *Resolver) Report() graph.ReportResolver { return &reportResolver{r} }
 func (r *Resolver) Voucher() graph.VoucherResolver { return &voucherResolver{r} }
 
 type inputResolver struct{ *Resolver }
-type mutationResolver struct{ *Resolver }
 type noticeResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type reportResolver struct{ *Resolver }

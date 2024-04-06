@@ -8,19 +8,18 @@ import (
 	"strconv"
 )
 
-type ConvenientVoucher struct {
-	// Voucher index within the context of the input that produced it
-	Index int `json:"index"`
-	// Input whose processing produced the voucher
-	Input *Input `json:"input"`
-	// Transaction destination address in Ethereum hex binary format (20 bytes), starting with '0x'
-	Destination string `json:"destination"`
-	// Transaction payload in Ethereum hex binary format, starting with '0x'
-	Payload string `json:"payload"`
-	// Proof object that allows this voucher to be validated and executed on the base layer blockchain
-	Proof *Proof `json:"proof,omitempty"`
-	// Executed
-	Executed *bool `json:"executed,omitempty"`
+type ConvenientFilter struct {
+	Field *string             `json:"field,omitempty"`
+	Eq    *string             `json:"eq,omitempty"`
+	Ne    *string             `json:"ne,omitempty"`
+	Gt    *string             `json:"gt,omitempty"`
+	Gte   *string             `json:"gte,omitempty"`
+	Lt    *string             `json:"lt,omitempty"`
+	Lte   *string             `json:"lte,omitempty"`
+	In    []*string           `json:"in,omitempty"`
+	Nin   []*string           `json:"nin,omitempty"`
+	And   []*ConvenientFilter `json:"and,omitempty"`
+	Or    []*ConvenientFilter `json:"or,omitempty"`
 }
 
 // Filter object to restrict results depending on input properties
@@ -29,15 +28,6 @@ type InputFilter struct {
 	IndexLowerThan *int `json:"indexLowerThan,omitempty"`
 	// Filter only inputs with index greater than a given value
 	IndexGreaterThan *int `json:"indexGreaterThan,omitempty"`
-}
-
-type NewVoucherMetadata struct {
-	Label       string `json:"label"`
-	Beneficiary string `json:"beneficiary"`
-	Contract    string `json:"contract"`
-	Amount      string `json:"amount"`
-	InputIndex  int    `json:"inputIndex"`
-	OutputIndex int    `json:"outputIndex"`
 }
 
 // Validity proof for an output
@@ -78,38 +68,6 @@ type Proof struct {
 	Validity *OutputValidityProof `json:"validity"`
 	// Data that allows the validity proof to be contextualized within submitted claims, given as a payload in Ethereum hex binary format, starting with '0x'
 	Context string `json:"context"`
-}
-
-type VoucherExecutionEvent struct {
-	InputIndex    string `json:"inputIndex"`
-	OutputIndex   string `json:"outputIndex"`
-	ExecutedAt    string `json:"executedAt"`
-	ExecutedBlock string `json:"executedBlock"`
-}
-
-type VoucherMetadata struct {
-	Label         string `json:"label"`
-	Beneficiary   string `json:"beneficiary"`
-	Contract      string `json:"contract"`
-	Amount        string `json:"amount"`
-	ExecutedAt    string `json:"executedAt"`
-	ExecutedBlock string `json:"executedBlock"`
-	InputIndex    int    `json:"inputIndex"`
-	OutputIndex   int    `json:"outputIndex"`
-}
-
-type VoucherMetadataFilter struct {
-	Field string                   `json:"field"`
-	Eq    *string                  `json:"eq,omitempty"`
-	Ne    *string                  `json:"ne,omitempty"`
-	Gt    *string                  `json:"gt,omitempty"`
-	Gte   *string                  `json:"gte,omitempty"`
-	Lt    *string                  `json:"lt,omitempty"`
-	Lte   *string                  `json:"lte,omitempty"`
-	In    []*string                `json:"in,omitempty"`
-	Nin   []*string                `json:"nin,omitempty"`
-	And   []*VoucherMetadataFilter `json:"and,omitempty"`
-	Or    []*VoucherMetadataFilter `json:"or,omitempty"`
 }
 
 type CompletionStatus string

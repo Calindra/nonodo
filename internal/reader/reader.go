@@ -9,6 +9,7 @@ package reader
 import (
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
+	"github.com/calindra/nonodo/internal/convenience"
 	nonodomodel "github.com/calindra/nonodo/internal/model"
 	"github.com/calindra/nonodo/internal/reader/graph"
 	"github.com/calindra/nonodo/internal/reader/model"
@@ -16,8 +17,12 @@ import (
 )
 
 // Register the GraphQL reader API to echo.
-func Register(e *echo.Echo, nonodomodel *nonodomodel.NonodoModel) {
-	resolver := Resolver{model.NewModelWrapper(nonodomodel)}
+func Register(
+	e *echo.Echo,
+	nonodomodel *nonodomodel.NonodoModel,
+	convenienceService *convenience.ConvenienceService,
+) {
+	resolver := Resolver{model.NewModelWrapper(nonodomodel), convenienceService}
 	config := graph.Config{Resolvers: &resolver}
 	schema := graph.NewExecutableSchema(config)
 	graphqlHandler := handler.NewDefaultServer(schema)

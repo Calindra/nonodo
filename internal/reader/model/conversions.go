@@ -6,6 +6,7 @@ package model
 import (
 	"fmt"
 
+	"github.com/calindra/nonodo/internal/convenience"
 	"github.com/calindra/nonodo/internal/model"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
@@ -50,23 +51,6 @@ func convertVoucher(voucher model.Voucher) *Voucher {
 	}
 }
 
-func convertVouchersMetadata(oldList []*model.VoucherMetadata) []*VoucherMetadata {
-	newList := make([]*VoucherMetadata, len(oldList))
-	for i, old := range oldList {
-		newList[i] = &VoucherMetadata{
-			Label:         old.Label,
-			Beneficiary:   old.Beneficiary.String(),
-			Contract:      old.Contract.String(),
-			Amount:        fmt.Sprintf("%d", old.Amount),
-			ExecutedAt:    fmt.Sprintf("%d", old.ExecutedAt),
-			ExecutedBlock: fmt.Sprintf("%d", old.ExecutedBlock),
-			InputIndex:    old.InputIndex,
-			OutputIndex:   old.OutputIndex,
-		}
-	}
-	return newList
-}
-
 func convertNotice(notice model.Notice) *Notice {
 	return &Notice{
 		InputIndex: notice.InputIndex,
@@ -84,6 +68,46 @@ func convertReport(report model.Report) *Report {
 	}
 }
 
+func convertConvenientVoucher(cVoucher convenience.ConvenienceVoucher) *ConvenientVoucher {
+	return &ConvenientVoucher{
+		Index:       int(cVoucher.OutputIndex),
+		Input:       &Input{Index: int(cVoucher.InputIndex)},
+		Destination: cVoucher.Destination.String(),
+		Payload:     cVoucher.Payload,
+		Executed:    &cVoucher.Executed,
+	}
+}
+
+func ConvertToConvenienceFilter(
+	filter []*ConvenientFilter,
+) ([]*convenience.ConvenienceFilter, error) {
+	filters := []*convenience.ConvenienceFilter{}
+	for _, f := range filter {
+		and, err := ConvertToConvenienceFilter(f.And)
+		if err != nil {
+			return nil, err
+		}
+		or, err := ConvertToConvenienceFilter(f.Or)
+		if err != nil {
+			return nil, err
+		}
+		filters = append(filters, &convenience.ConvenienceFilter{
+			Field: f.Field,
+			Eq:    f.Eq,
+			Ne:    f.Ne,
+			Gt:    f.Gt,
+			Gte:   f.Gte,
+			Lt:    f.Lt,
+			Lte:   f.Lte,
+			In:    f.In,
+			Nin:   f.Nin,
+			And:   and,
+			Or:    or,
+		})
+	}
+	return filters, nil
+}
+
 //
 // GraphQL -> Nonodo conversions
 //
@@ -96,40 +120,4 @@ func convertInputFilter(filter *InputFilter) model.InputFilter {
 		IndexGreaterThan: filter.IndexGreaterThan,
 		IndexLowerThan:   filter.IndexGreaterThan,
 	}
-}
-
-func convertVoucherMetadataFilters(filter []*VoucherMetadataFilter) []*model.MetadataFilter {
-	result := []*model.MetadataFilter{}
-	for _, f := range filter {
-		result = append(result, convertVoucherMetadataFilter(f))
-	}
-	return result
-}
-
-func convertVoucherMetadataFilter(filter *VoucherMetadataFilter) *model.MetadataFilter {
-	if filter == nil {
-		return nil
-	}
-
-	result := &model.MetadataFilter{
-		Field: filter.Field,
-		Eq:    filter.Eq,
-		Ne:    filter.Ne,
-		Gt:    filter.Gt,
-		Gte:   filter.Gte,
-		Lt:    filter.Lt,
-		Lte:   filter.Lte,
-		In:    filter.In,
-		Nin:   filter.Nin,
-	}
-
-	// Recursively convert And and Or filters
-	for _, f := range filter.And {
-		result.And = append(result.And, convertVoucherMetadataFilter(f))
-	}
-	for _, f := range filter.Or {
-		result.Or = append(result.Or, convertVoucherMetadataFilter(f))
-	}
-
-	return result
 }

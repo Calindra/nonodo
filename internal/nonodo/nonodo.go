@@ -87,13 +87,14 @@ func NewSupervisorPoC(opts NonodoOpts) supervisor.SupervisorWorker {
 	db := sqlx.MustConnect("sqlite3", ":memory:")
 	container := convenience.NewContainer(*db)
 	decoder := container.GetOutputDecoder()
+	convenienceService := container.GetConvenienceService()
 	model := model.NewNonodoModel(decoder)
 	w.Workers = append(w.Workers, convenience.NewSynchronizer(decoder))
 	opts.RpcUrl = fmt.Sprintf("ws://%s:%v", opts.AnvilAddress, opts.AnvilPort)
 	execVoucherListener := convenience.NewExecListener(
 		opts.RpcUrl,
 		common.HexToAddress(opts.ApplicationAddress),
-		container.GetConvenienceService(),
+		convenienceService,
 	)
 	w.Workers = append(w.Workers, execVoucherListener)
 	e := echo.New()
@@ -104,7 +105,7 @@ func NewSupervisorPoC(opts NonodoOpts) supervisor.SupervisorWorker {
 		Timeout:      HttpTimeout,
 	}))
 	inspect.Register(e, model)
-	reader.Register(e, model)
+	reader.Register(e, model, convenienceService)
 	w.Workers = append(w.Workers, supervisor.HttpWorker{
 		Address: fmt.Sprintf("%v:%v", opts.HttpAddress, opts.HttpPort),
 		Handler: e,
@@ -119,6 +120,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	db := sqlx.MustConnect("sqlite3", ":memory:")
 	container := convenience.NewContainer(*db)
 	decoder := container.GetOutputDecoder()
+	convenienceService := container.GetConvenienceService()
 	model := model.NewNonodoModel(decoder)
 	e := echo.New()
 	e.Use(middleware.CORS())
@@ -128,7 +130,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		Timeout:      HttpTimeout,
 	}))
 	inspect.Register(e, model)
-	reader.Register(e, model)
+	reader.Register(e, model, convenienceService)
 
 	// Start the "internal" http rollup server
 	re := echo.New()
