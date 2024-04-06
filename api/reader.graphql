@@ -227,6 +227,21 @@ schema {
 #  Voucher Metadata  #
 #--------------------#
 
+type ConvenientVoucher {
+  "Voucher index within the context of the input that produced it"
+  index: Int!
+  "Input whose processing produced the voucher"
+  input: Input!
+  "Transaction destination address in Ethereum hex binary format (20 bytes), starting with '0x'"
+  destination: String!
+  "Transaction payload in Ethereum hex binary format, starting with '0x'"
+  payload: String!
+  "Proof object that allows this voucher to be validated and executed on the base layer blockchain"
+  proof: Proof
+  "Executed"
+  executed: Boolean
+}
+
 type Mutation {
   createVoucherMetadata(input: NewVoucherMetadata!): VoucherMetadata!
 }

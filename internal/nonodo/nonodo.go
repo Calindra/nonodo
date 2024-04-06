@@ -20,6 +20,7 @@ import (
 	"github.com/calindra/nonodo/internal/rollup"
 	"github.com/calindra/nonodo/internal/supervisor"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
@@ -81,36 +82,44 @@ func NewNonodoOpts() NonodoOpts {
 	}
 }
 
+func NewSupervisorPoC(opts NonodoOpts) supervisor.SupervisorWorker {
+	var w supervisor.SupervisorWorker
+	db := sqlx.MustConnect("sqlite3", ":memory:")
+	container := convenience.NewContainer(*db)
+	decoder := container.GetOutputDecoder()
+	model := model.NewNonodoModel(decoder)
+	w.Workers = append(w.Workers, convenience.NewSynchronizer(decoder))
+	opts.RpcUrl = fmt.Sprintf("ws://%s:%v", opts.AnvilAddress, opts.AnvilPort)
+	execVoucherListener := convenience.NewExecListener(
+		opts.RpcUrl,
+		common.HexToAddress(opts.ApplicationAddress),
+		container.GetConvenienceService(),
+	)
+	w.Workers = append(w.Workers, execVoucherListener)
+	e := echo.New()
+	e.Use(middleware.CORS())
+	e.Use(middleware.Recover())
+	e.Use(middleware.TimeoutWithConfig(middleware.TimeoutConfig{
+		ErrorMessage: "Request timed out",
+		Timeout:      HttpTimeout,
+	}))
+	inspect.Register(e, model)
+	reader.Register(e, model)
+	w.Workers = append(w.Workers, supervisor.HttpWorker{
+		Address: fmt.Sprintf("%v:%v", opts.HttpAddress, opts.HttpPort),
+		Handler: e,
+	})
+	slog.Info("Listening", "port", opts.HttpPort)
+	return w
+}
+
 // Create the nonodo supervisor.
 func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	var w supervisor.SupervisorWorker
-	decoder := convenience.NewOutputDecoder()
+	db := sqlx.MustConnect("sqlite3", ":memory:")
+	container := convenience.NewContainer(*db)
+	decoder := container.GetOutputDecoder()
 	model := model.NewNonodoModel(decoder)
-	if opts.VoucherExecPoC {
-		w.Workers = append(w.Workers, convenience.Synchronizer{})
-
-		opts.RpcUrl = fmt.Sprintf("ws://%s:%v", opts.AnvilAddress, opts.AnvilPort)
-		execVoucherListener := convenience.NewExecListener(
-			model, opts.RpcUrl, common.HexToAddress(opts.ApplicationAddress),
-		)
-		w.Workers = append(w.Workers, execVoucherListener)
-		e := echo.New()
-		e.Use(middleware.CORS())
-		e.Use(middleware.Recover())
-		e.Use(middleware.TimeoutWithConfig(middleware.TimeoutConfig{
-			ErrorMessage: "Request timed out",
-			Timeout:      HttpTimeout,
-		}))
-		inspect.Register(e, model)
-		reader.Register(e, model)
-		w.Workers = append(w.Workers, supervisor.HttpWorker{
-			Address: fmt.Sprintf("%v:%v", opts.HttpAddress, opts.HttpPort),
-			Handler: e,
-		})
-		slog.Info("Listening", "port", opts.HttpPort)
-		return w
-	}
-
 	e := echo.New()
 	e.Use(middleware.CORS())
 	e.Use(middleware.Recover())

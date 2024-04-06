@@ -17,8 +17,7 @@ type OutputDecoder struct {
 	convenienceService ConvenienceService
 }
 
-func NewOutputDecoder() *OutputDecoder {
-	db := sqlx.MustConnect("sqlite3", ":memory:")
+func NewOutputDecoder(db *sqlx.DB) *OutputDecoder {
 	repository := ConvenienceRepositoryImpl{
 		db: *db,
 	}

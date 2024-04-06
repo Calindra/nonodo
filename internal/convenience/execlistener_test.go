@@ -20,8 +20,9 @@ func TestExecListenerSuite(t *testing.T) {
 
 type ExecListenerSuite struct {
 	suite.Suite
-	m          *model.NonodoModel
-	repository *ConvenienceRepositoryImpl
+	m                  *model.NonodoModel
+	ConvenienceService *ConvenienceService
+	repository         *ConvenienceRepositoryImpl
 }
 
 var Bob = common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
@@ -45,6 +46,9 @@ func (s *ExecListenerSuite) SetupTest() {
 	err := s.repository.CreateTables()
 	if err != nil {
 		panic(err)
+	}
+	s.ConvenienceService = &ConvenienceService{
+		repository: s.repository,
 	}
 }
 
@@ -73,8 +77,7 @@ func (s *ExecListenerSuite) TestItUpdateExecutedAtAndBlocknumber() {
 			Executed:    false,
 		})
 	}
-	listener := NewExecListener(s.m, "not a problem", Token)
-	listener.repository = s.repository
+	listener := NewExecListener("not a problem", Token, s.ConvenienceService)
 	eventValues := make([]interface{}, 1)
 	eventValues[0] = big.NewInt(2)
 	timestamp := uint64(9999)

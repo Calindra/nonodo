@@ -142,8 +142,14 @@ func run(cmd *cobra.Command, args []string) {
 		case <-ctx.Done():
 		}
 	}()
-	err := nonodo.NewSupervisor(opts).Start(ctx, ready)
-	cobra.CheckErr(err)
+	if opts.VoucherExecPoC {
+		err := nonodo.NewSupervisorPoC(opts).Start(ctx, ready)
+		cobra.CheckErr(err)
+	} else {
+		err := nonodo.NewSupervisor(opts).Start(ctx, ready)
+		cobra.CheckErr(err)
+	}
+
 }
 
 func main() {

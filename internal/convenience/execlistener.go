@@ -8,7 +8,6 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/calindra/nonodo/internal/model"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -17,22 +16,20 @@ import (
 )
 
 type ExecListener struct {
-	Model              *model.NonodoModel
 	Provider           string
 	ApplicationAddress common.Address
 	AbiString          string
 	EventName          string
-	repository         *ConvenienceRepositoryImpl
+	ConvenienceService *ConvenienceService
 }
 
 func NewExecListener(
-	model *model.NonodoModel,
 	provider string,
 	applicationAddress common.Address,
-
+	convenienceService *ConvenienceService,
 ) ExecListener {
 	return ExecListener{
-		Model:              model,
+		ConvenienceService: convenienceService,
 		Provider:           provider,
 		ApplicationAddress: applicationAddress,
 		EventName:          "VoucherExecuted",
@@ -78,7 +75,7 @@ func (x ExecListener) OnEvent(eventValues []interface{}, timestamp, blockNumber 
 	slog.Debug("Voucher Executed", "voucherId", voucherId.String())
 
 	ctx := context.Background()
-	return x.repository.UpdateExecuted(ctx, input.Uint64(), voucher.Uint64(), true)
+	return x.ConvenienceService.UpdateExecuted(ctx, input.Uint64(), voucher.Uint64(), true)
 }
 
 // String implements supervisor.Worker.

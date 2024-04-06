@@ -119,7 +119,9 @@ func (s *rollupsStateAdvance) finish(status CompletionStatus) {
 	if status == CompletionStatusAccepted {
 		s.input.Vouchers = s.vouchers
 		s.input.Notices = s.notices
-		sendAllInputVouchersToDecoder(s.decoder, uint64(s.input.Index), s.vouchers)
+		if s.decoder != nil {
+			sendAllInputVouchersToDecoder(s.decoder, uint64(s.input.Index), s.vouchers)
+		}
 	}
 	s.input.Reports = s.reports
 	slog.Info("nonodo: finished advance")
