@@ -123,12 +123,28 @@ func (m *ModelWrapper) GetReports(
 
 func (m *ModelWrapper) PaginateConvenientVouchers(
 	vouchers []convenience.ConvenienceVoucher,
+	first *int, last *int, after *string, before *string,
 ) (*ConvenientVoucherConnection, error) {
 	total := len(vouchers)
-	offset := 0
-	convNodes := make([]*ConvenientVoucher, len(vouchers))
-	for i := range vouchers {
-		convNodes[i] = convertConvenientVoucher(vouchers[i])
+	offset, limit, err := computePage(first, last, after, before, total)
+	if err != nil {
+		return nil, err
+	}
+	nodes := paginate(vouchers, offset, limit)
+	convNodes := make([]*ConvenientVoucher, len(nodes))
+	for i := range nodes {
+		convNodes[i] = convertConvenientVoucher(nodes[i])
 	}
 	return newConnection(offset, total, convNodes), nil
+}
+
+func paginate[T any](slice []T, offset int, limit int) []T {
+	if offset >= len(slice) {
+		return nil
+	}
+	upperBound := offset + limit
+	if upperBound > len(slice) {
+		upperBound = len(slice)
+	}
+	return slice[offset:upperBound]
 }

@@ -6,7 +6,6 @@ package reader
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/calindra/nonodo/internal/reader/graph"
 	"github.com/calindra/nonodo/internal/reader/model"
@@ -93,9 +92,11 @@ func (r *queryResolver) ConvenientVouchers(ctx context.Context, first *int, last
 	if err != nil {
 		return nil, err
 	}
-	r.convenienceService.FindAllVouchers(ctx, first, last, after, before, convenienceFilter)
-	// r.model.PaginateConvenientVouchers()
-	panic(fmt.Errorf("not implemented: ConvenientVouchers - convenientVouchers"))
+	vouchers, err := r.convenienceService.FindAllVouchers(ctx, first, last, after, before, convenienceFilter)
+	if err != nil {
+		return nil, err
+	}
+	return r.model.PaginateConvenientVouchers(vouchers, first, last, after, before)
 }
 
 // Input is the resolver for the input field.
