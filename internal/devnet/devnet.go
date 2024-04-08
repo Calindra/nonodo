@@ -7,7 +7,11 @@ package devnet
 const InputBoxAddress = "0x59b22D57D4f067708AB0c00552767405926dc768"
 
 // Application address in devnet.
-const ApplicationAddress = "0x70ac08179605AF2D9e75782b8DEcDD3c22aA4D0C"
+// sunodo v0.10.4
+// const ApplicationAddress = "0x70ac08179605AF2D9e75782b8DEcDD3c22aA4D0C"
+
+// sunodo v0.11.2
+const ApplicationAddress = "0xab7528bb862fb57e8a2bcd567a2e929a0be56a5e"
 
 // Foundry test mnemonic.
 const TestMnemonic = "test test test test test test test test test test test junk"
