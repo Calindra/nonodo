@@ -91,8 +91,9 @@ func ConvertToConvenienceFilter(
 		if err != nil {
 			return nil, err
 		}
+		field := f.Field.String()
 		filters = append(filters, &convenience.ConvenienceFilter{
-			Field: f.Field,
+			Field: &field,
 			Eq:    f.Eq,
 			Ne:    f.Ne,
 			Gt:    f.Gt,

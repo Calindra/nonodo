@@ -9,7 +9,7 @@ import (
 )
 
 type ConvenientFilter struct {
-	Field *string             `json:"field,omitempty"`
+	Field *AllowedFields      `json:"field,omitempty"`
 	Eq    *string             `json:"eq,omitempty"`
 	Ne    *string             `json:"ne,omitempty"`
 	Gt    *string             `json:"gt,omitempty"`
@@ -68,6 +68,47 @@ type Proof struct {
 	Validity *OutputValidityProof `json:"validity"`
 	// Data that allows the validity proof to be contextualized within submitted claims, given as a payload in Ethereum hex binary format, starting with '0x'
 	Context string `json:"context"`
+}
+
+type AllowedFields string
+
+const (
+	AllowedFieldsDestination AllowedFields = "Destination"
+	AllowedFieldsExecuted    AllowedFields = "Executed"
+)
+
+var AllAllowedFields = []AllowedFields{
+	AllowedFieldsDestination,
+	AllowedFieldsExecuted,
+}
+
+func (e AllowedFields) IsValid() bool {
+	switch e {
+	case AllowedFieldsDestination, AllowedFieldsExecuted:
+		return true
+	}
+	return false
+}
+
+func (e AllowedFields) String() string {
+	return string(e)
+}
+
+func (e *AllowedFields) UnmarshalGQL(v interface{}) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = AllowedFields(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid AllowedFields", str)
+	}
+	return nil
+}
+
+func (e AllowedFields) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
 }
 
 type CompletionStatus string

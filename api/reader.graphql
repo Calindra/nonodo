@@ -259,9 +259,14 @@ type ConvenientVoucherEdge {
   cursor: String!
 }
 
+enum AllowedFields {
+  Destination
+  Executed
+}
+
 input ConvenientFilter {
   # The field to apply the comparison operation on
-  field: String
+  field: AllowedFields
 
   # Basic comparison operators
   eq: String

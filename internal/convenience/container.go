@@ -5,6 +5,8 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
+// what is the best IoC for go?
+
 type Container struct {
 	db                 *sqlx.DB
 	outputDecoder      *OutputDecoder

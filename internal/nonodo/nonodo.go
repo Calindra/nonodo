@@ -85,7 +85,9 @@ func NewNonodoOpts() NonodoOpts {
 
 func NewSupervisorPoC(opts NonodoOpts) supervisor.SupervisorWorker {
 	var w supervisor.SupervisorWorker
-	db := sqlx.MustConnect("sqlite3", ":memory:")
+	// db := sqlx.MustConnect("sqlite3", ":memory:")
+	db := sqlx.MustConnect("sqlite3", "./my_database.db")
+
 	container := convenience.NewContainer(*db)
 	decoder := container.GetOutputDecoder()
 	convenienceService := container.GetConvenienceService()

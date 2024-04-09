@@ -1207,9 +1207,14 @@ type ConvenientVoucherEdge {
   cursor: String!
 }
 
+enum AllowedFields {
+  Destination
+  Executed
+}
+
 input ConvenientFilter {
   # The field to apply the comparison operation on
-  field: String
+  field: AllowedFields
 
   # Basic comparison operators
   eq: String
@@ -7711,7 +7716,7 @@ func (ec *executionContext) unmarshalInputConvenientFilter(ctx context.Context, 
 		switch k {
 		case "field":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("field"))
-			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			data, err := ec.unmarshalOAllowedFields2ᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐAllowedFields(ctx, v)
 			if err != nil {
 				return it, err
 			}
@@ -10405,6 +10410,22 @@ func (ec *executionContext) marshalN__TypeKind2string(ctx context.Context, sel a
 		}
 	}
 	return res
+}
+
+func (ec *executionContext) unmarshalOAllowedFields2ᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐAllowedFields(ctx context.Context, v interface{}) (*model.AllowedFields, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var res = new(model.AllowedFields)
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOAllowedFields2ᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐAllowedFields(ctx context.Context, sel ast.SelectionSet, v *model.AllowedFields) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return v
 }
 
 func (ec *executionContext) unmarshalOBoolean2bool(ctx context.Context, v interface{}) (bool, error) {

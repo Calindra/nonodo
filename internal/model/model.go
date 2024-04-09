@@ -121,7 +121,7 @@ func (m *NonodoModel) FinishAndGetNext(accepted bool) Input {
 	// try to get first unprocessed inspect
 	for _, input := range m.inspects {
 		if input.Status == CompletionStatusUnprocessed {
-			m.state = newRollupsStateInspect(input, m.getProccessedInputCount)
+			m.state = newRollupsStateInspect(input, m.getProcessedInputCount)
 			return *input
 		}
 	}
@@ -390,7 +390,7 @@ func (m *NonodoModel) GetReports(filter OutputFilter, offset int, limit int) []R
 // Auxiliary Methods
 //
 
-func (m *NonodoModel) getProccessedInputCount() int {
+func (m *NonodoModel) getProcessedInputCount() int {
 	n := 0
 	for _, input := range m.advances {
 		if input.Status == CompletionStatusUnprocessed {
