@@ -30,7 +30,7 @@ var query = `query GetVouchers($after: String, $batchSize: Int) {
 						outputHashInOutputHashesSiblings
 						outputHashesInEpochSiblings
 					}
-				context
+					context
 				}
 			}
 		}

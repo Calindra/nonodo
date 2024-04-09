@@ -27,6 +27,7 @@
         "rollups",
         "sqlite",
         "sqlx",
-        "stretchr"
+        "stretchr",
+        "unmarshal"
     ]
 }
