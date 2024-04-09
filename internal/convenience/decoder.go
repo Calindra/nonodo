@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/calindra/nonodo/internal/convenience/model"
+	"github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
@@ -18,8 +20,8 @@ type OutputDecoder struct {
 }
 
 func NewOutputDecoder(db *sqlx.DB) *OutputDecoder {
-	repository := ConvenienceRepositoryImpl{
-		db: *db,
+	repository := repository.VoucherRepository{
+		Db: *db,
 	}
 	err := repository.CreateTables()
 	if err != nil {
@@ -40,7 +42,7 @@ func (o *OutputDecoder) HandleOutput(
 	outputIndex uint64,
 ) error {
 	// detect the output type Voucher | Notice
-	_, err := o.convenienceService.CreateVoucher(ctx, &ConvenienceVoucher{
+	_, err := o.convenienceService.CreateVoucher(ctx, &model.ConvenienceVoucher{
 		Destination: destination,
 		Payload:     payload,
 		Executed:    false,

@@ -15,7 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-type ExecListener struct {
+type VoucherExecListener struct {
 	Provider           string
 	ApplicationAddress common.Address
 	AbiString          string
@@ -27,8 +27,8 @@ func NewExecListener(
 	provider string,
 	applicationAddress common.Address,
 	convenienceService *ConvenienceService,
-) ExecListener {
-	return ExecListener{
+) VoucherExecListener {
+	return VoucherExecListener{
 		ConvenienceService: convenienceService,
 		Provider:           provider,
 		ApplicationAddress: applicationAddress,
@@ -52,7 +52,11 @@ func NewExecListener(
 }
 
 // on event callback
-func (x ExecListener) OnEvent(eventValues []interface{}, timestamp, blockNumber uint64) error {
+func (x VoucherExecListener) OnEvent(
+	eventValues []interface{},
+	timestamp,
+	blockNumber uint64,
+) error {
 	if len(eventValues) != 1 {
 		return fmt.Errorf("wrong event values length != 1")
 	}
@@ -79,11 +83,11 @@ func (x ExecListener) OnEvent(eventValues []interface{}, timestamp, blockNumber 
 }
 
 // String implements supervisor.Worker.
-func (x ExecListener) String() string {
+func (x VoucherExecListener) String() string {
 	return "ExecListener"
 }
 
-func (x ExecListener) Start(ctx context.Context, ready chan<- struct{}) error {
+func (x VoucherExecListener) Start(ctx context.Context, ready chan<- struct{}) error {
 	slog.Info("Connecting to", "provider", x.Provider)
 	client, err := ethclient.DialContext(ctx, x.Provider)
 	if err != nil {
@@ -93,7 +97,7 @@ func (x ExecListener) Start(ctx context.Context, ready chan<- struct{}) error {
 	return x.WatchExecutions(ctx, client)
 }
 
-func (x *ExecListener) WatchExecutions(ctx context.Context, client *ethclient.Client) error {
+func (x *VoucherExecListener) WatchExecutions(ctx context.Context, client *ethclient.Client) error {
 
 	// ABI of your contract
 	contractABI, err := abi.JSON(strings.NewReader(x.AbiString))

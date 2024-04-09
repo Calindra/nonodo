@@ -1,17 +1,18 @@
-package convenience
+package repository
 
 import (
 	"context"
 	"fmt"
 
+	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/jmoiron/sqlx"
 )
 
-type ConvenienceRepositoryImpl struct {
-	db sqlx.DB
+type VoucherRepository struct {
+	Db sqlx.DB
 }
 
-func (c *ConvenienceRepositoryImpl) CreateTables() error {
+func (c *VoucherRepository) CreateTables() error {
 	schema := `CREATE TABLE vouchers (
 		Destination text,
 		Payload 	text,
@@ -20,20 +21,20 @@ func (c *ConvenienceRepositoryImpl) CreateTables() error {
 		OutputIndex integer);`
 
 	// execute a query on the server
-	_, err := c.db.Exec(schema)
+	_, err := c.Db.Exec(schema)
 	return err
 }
 
-func (c *ConvenienceRepositoryImpl) CreateVoucher(
-	ctx context.Context, voucher *ConvenienceVoucher,
-) (*ConvenienceVoucher, error) {
+func (c *VoucherRepository) CreateVoucher(
+	ctx context.Context, voucher *model.ConvenienceVoucher,
+) (*model.ConvenienceVoucher, error) {
 	insertVoucher := `INSERT INTO vouchers (
 		Destination,
 		Payload,
 		Executed,
 		InputIndex,
 		OutputIndex) VALUES (?, ?, ?, ?, ?)`
-	c.db.MustExec(
+	c.Db.MustExec(
 		insertVoucher,
 		voucher.Destination,
 		voucher.Payload,
@@ -44,25 +45,26 @@ func (c *ConvenienceRepositoryImpl) CreateVoucher(
 	return voucher, nil
 }
 
-func (c *ConvenienceRepositoryImpl) VoucherCount(
+func (c *VoucherRepository) VoucherCount(
 	ctx context.Context,
 ) (uint64, error) {
 	var id int
-	err := c.db.Get(&id, "SELECT count(*) FROM vouchers")
+	err := c.Db.Get(&id, "SELECT count(*) FROM vouchers")
 	if err != nil {
 		return 0, nil
 	}
 	return uint64(id), nil
 }
-func (c *ConvenienceRepositoryImpl) FindVoucherByInputAndOutputIndex(
+
+func (c *VoucherRepository) FindVoucherByInputAndOutputIndex(
 	ctx context.Context, inputIndex uint64, outputIndex uint64,
-) (*ConvenienceVoucher, error) {
+) (*model.ConvenienceVoucher, error) {
 	query := `SELECT * FROM vouchers WHERE inputIndex = ? and outputIndex = ?`
-	stmt, err := c.db.Preparex(query)
+	stmt, err := c.Db.Preparex(query)
 	if err != nil {
 		return nil, err
 	}
-	var p ConvenienceVoucher
+	var p model.ConvenienceVoucher
 	err = stmt.Get(&p, inputIndex, outputIndex)
 	if err != nil {
 		return nil, err
@@ -70,23 +72,23 @@ func (c *ConvenienceRepositoryImpl) FindVoucherByInputAndOutputIndex(
 	return &p, nil
 }
 
-func (c *ConvenienceRepositoryImpl) UpdateExecuted(
+func (c *VoucherRepository) UpdateExecuted(
 	ctx context.Context, inputIndex uint64, outputIndex uint64,
 	executedValue bool,
 ) error {
 	query := `UPDATE vouchers SET Executed = ? WHERE inputIndex = ? and outputIndex = ?`
-	c.db.MustExec(query, executedValue, inputIndex, outputIndex)
+	c.Db.MustExec(query, executedValue, inputIndex, outputIndex)
 	return nil
 }
 
-func (c *ConvenienceRepositoryImpl) FindAllVouchers(
+func (c *VoucherRepository) FindAllVouchers(
 	ctx context.Context,
 	first *int,
 	last *int,
 	after *string,
 	before *string,
-	filter []*ConvenienceFilter,
-) ([]ConvenienceVoucher, error) {
+	filter []*model.ConvenienceFilter,
+) ([]model.ConvenienceVoucher, error) {
 	query := `SELECT * FROM vouchers `
 	if len(filter) > 0 {
 		query += "WHERE "
@@ -106,11 +108,11 @@ func (c *ConvenienceRepositoryImpl) FindAllVouchers(
 			return nil, fmt.Errorf("unexpected field %s", *filter.Field)
 		}
 	}
-	stmt, err := c.db.Preparex(query)
+	stmt, err := c.Db.Preparex(query)
 	if err != nil {
 		return nil, err
 	}
-	var vouchers []ConvenienceVoucher
+	var vouchers []model.ConvenienceVoucher
 	err = stmt.Select(&vouchers, args...)
 	if err != nil {
 		return nil, err

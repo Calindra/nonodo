@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"testing"
 
+	"github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/suite"
@@ -17,8 +18,8 @@ type OutputDecoderSuite struct {
 
 func (s *OutputDecoderSuite) SetupTest() {
 	db := sqlx.MustConnect("sqlite3", ":memory:")
-	repository := ConvenienceRepositoryImpl{
-		db: *db,
+	repository := repository.VoucherRepository{
+		Db: *db,
 	}
 	err := repository.CreateTables()
 	if err != nil {

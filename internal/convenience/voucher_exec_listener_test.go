@@ -7,6 +7,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/calindra/nonodo/internal/convenience/model"
+	"github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
 	"github.com/lmittmann/tint"
@@ -20,7 +22,7 @@ func TestExecListenerSuite(t *testing.T) {
 type ExecListenerSuite struct {
 	suite.Suite
 	ConvenienceService *ConvenienceService
-	repository         *ConvenienceRepositoryImpl
+	repository         *repository.VoucherRepository
 }
 
 var Bob = common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
@@ -38,8 +40,8 @@ func (s *ExecListenerSuite) SetupTest() {
 	logger := slog.New(handler)
 	slog.SetDefault(logger)
 	db := sqlx.MustConnect("sqlite3", ":memory:")
-	s.repository = &ConvenienceRepositoryImpl{
-		db: *db,
+	s.repository = &repository.VoucherRepository{
+		Db: *db,
 	}
 	err := s.repository.CreateTables()
 	if err != nil {
@@ -52,21 +54,21 @@ func (s *ExecListenerSuite) SetupTest() {
 
 func (s *ExecListenerSuite) TestItUpdateExecutedAtAndBlocknumber() {
 	{
-		createVoucherMetadataOrFail(s, &ConvenienceVoucher{
+		createVoucherMetadataOrFail(s, &model.ConvenienceVoucher{
 			Destination: Bruno,
 			Payload:     "0x1122",
 			InputIndex:  1,
 			OutputIndex: 0,
 			Executed:    false,
 		})
-		createVoucherMetadataOrFail(s, &ConvenienceVoucher{
+		createVoucherMetadataOrFail(s, &model.ConvenienceVoucher{
 			Destination: Bob,
 			Payload:     "0x1122",
 			InputIndex:  2,
 			OutputIndex: 0,
 			Executed:    false,
 		})
-		createVoucherMetadataOrFail(s, &ConvenienceVoucher{
+		createVoucherMetadataOrFail(s, &model.ConvenienceVoucher{
 			Destination: Alice,
 			Payload:     "0x1122",
 			InputIndex:  3,
@@ -92,7 +94,7 @@ func (s *ExecListenerSuite) TestItUpdateExecutedAtAndBlocknumber() {
 	s.Equal(true, voucher.Executed)
 }
 
-func createVoucherMetadataOrFail(s *ExecListenerSuite, voucher *ConvenienceVoucher) {
+func createVoucherMetadataOrFail(s *ExecListenerSuite, voucher *model.ConvenienceVoucher) {
 	ctx := context.Background()
 	if _, err := s.repository.CreateVoucher(ctx, voucher); err != nil {
 		panic(err)

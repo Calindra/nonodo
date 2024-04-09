@@ -1,37 +1,38 @@
-package convenience
+package repository
 
 import (
 	"context"
 	"fmt"
 	"testing"
 
+	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/suite"
 )
 
-type ConvenienceRepositorySuite struct {
+type VoucherRepositorySuite struct {
 	suite.Suite
-	repository *ConvenienceRepositoryImpl
+	repository *VoucherRepository
 }
 
-func (s *ConvenienceRepositorySuite) SetupTest() {
+func (s *VoucherRepositorySuite) SetupTest() {
 	db := sqlx.MustConnect("sqlite3", ":memory:")
-	s.repository = &ConvenienceRepositoryImpl{
-		db: *db,
+	s.repository = &VoucherRepository{
+		Db: *db,
 	}
 	err := s.repository.CreateTables()
 	checkError2(s, err)
 }
 
 func TestConvenienceRepositorySuite(t *testing.T) {
-	suite.Run(t, new(ConvenienceRepositorySuite))
+	suite.Run(t, new(VoucherRepositorySuite))
 }
 
-func (s *ConvenienceRepositorySuite) TestCreateVoucher() {
+func (s *VoucherRepositorySuite) TestCreateVoucher() {
 	ctx := context.Background()
-	_, err := s.repository.CreateVoucher(ctx, &ConvenienceVoucher{
+	_, err := s.repository.CreateVoucher(ctx, &model.ConvenienceVoucher{
 		InputIndex:  1,
 		OutputIndex: 2,
 	})
@@ -41,9 +42,9 @@ func (s *ConvenienceRepositorySuite) TestCreateVoucher() {
 	s.Equal(uint64(1), count)
 }
 
-func (s *ConvenienceRepositorySuite) TestFindVoucher() {
+func (s *VoucherRepositorySuite) TestFindVoucher() {
 	ctx := context.Background()
-	_, err := s.repository.CreateVoucher(ctx, &ConvenienceVoucher{
+	_, err := s.repository.CreateVoucher(ctx, &model.ConvenienceVoucher{
 		Destination: common.HexToAddress("0x26A61aF89053c847B4bd5084E2caFe7211874a29"),
 		Payload:     "0x0011",
 		InputIndex:  1,
@@ -61,9 +62,9 @@ func (s *ConvenienceRepositorySuite) TestFindVoucher() {
 	s.Equal(false, voucher.Executed)
 }
 
-func (s *ConvenienceRepositorySuite) TestFindVoucherExecuted() {
+func (s *VoucherRepositorySuite) TestFindVoucherExecuted() {
 	ctx := context.Background()
-	_, err := s.repository.CreateVoucher(ctx, &ConvenienceVoucher{
+	_, err := s.repository.CreateVoucher(ctx, &model.ConvenienceVoucher{
 		Destination: common.HexToAddress("0x26A61aF89053c847B4bd5084E2caFe7211874a29"),
 		Payload:     "0x0011",
 		InputIndex:  1,
@@ -81,7 +82,7 @@ func (s *ConvenienceRepositorySuite) TestFindVoucherExecuted() {
 	s.Equal(true, voucher.Executed)
 }
 
-func checkError2(s *ConvenienceRepositorySuite, err error) {
+func checkError2(s *VoucherRepositorySuite, err error) {
 	if err != nil {
 		s.T().Fatal(err.Error())
 	}

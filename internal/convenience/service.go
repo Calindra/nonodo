@@ -2,16 +2,19 @@ package convenience
 
 import (
 	"context"
+
+	"github.com/calindra/nonodo/internal/convenience/model"
+	"github.com/calindra/nonodo/internal/convenience/repository"
 )
 
 type ConvenienceService struct {
-	repository *ConvenienceRepositoryImpl
+	repository *repository.VoucherRepository
 }
 
 func (s *ConvenienceService) CreateVoucher(
 	ctx context.Context,
-	voucher *ConvenienceVoucher,
-) (*ConvenienceVoucher, error) {
+	voucher *model.ConvenienceVoucher,
+) (*model.ConvenienceVoucher, error) {
 	return s.repository.CreateVoucher(ctx, voucher)
 }
 
@@ -35,8 +38,8 @@ func (c *ConvenienceService) FindAllVouchers(
 	last *int,
 	after *string,
 	before *string,
-	filter []*ConvenienceFilter,
-) ([]ConvenienceVoucher, error) {
+	filter []*model.ConvenienceFilter,
+) ([]model.ConvenienceVoucher, error) {
 	return c.repository.FindAllVouchers(
 		ctx,
 		first,

@@ -6,7 +6,7 @@ package model
 import (
 	"fmt"
 
-	"github.com/calindra/nonodo/internal/convenience"
+	convenience "github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/model"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )

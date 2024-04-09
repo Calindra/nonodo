@@ -1,6 +1,7 @@
 package convenience
 
 import (
+	"github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -8,7 +9,7 @@ type Container struct {
 	db                 *sqlx.DB
 	outputDecoder      *OutputDecoder
 	convenienceService *ConvenienceService
-	repository         *ConvenienceRepositoryImpl
+	repository         *repository.VoucherRepository
 }
 
 func NewContainer(db sqlx.DB) *Container {
@@ -25,12 +26,12 @@ func (c *Container) GetOutputDecoder() *OutputDecoder {
 	return c.outputDecoder
 }
 
-func (c *Container) GetRepository() *ConvenienceRepositoryImpl {
+func (c *Container) GetRepository() *repository.VoucherRepository {
 	if c.repository != nil {
 		return c.repository
 	}
-	c.repository = &ConvenienceRepositoryImpl{
-		db: *c.db,
+	c.repository = &repository.VoucherRepository{
+		Db: *c.db,
 	}
 	return c.repository
 }
