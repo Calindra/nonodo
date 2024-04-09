@@ -3,9 +3,12 @@ package repository
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/calindra/nonodo/internal/convenience/model"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
+	"golang.org/x/exp/slog"
 )
 
 type VoucherRepository struct {
@@ -90,24 +93,12 @@ func (c *VoucherRepository) FindAllVouchers(
 	filter []*model.ConvenienceFilter,
 ) ([]model.ConvenienceVoucher, error) {
 	query := `SELECT * FROM vouchers `
-	if len(filter) > 0 {
-		query += "WHERE "
+	where, args, err := transformToQuery(filter)
+	if err != nil {
+		return nil, err
 	}
-	args := []interface{}{}
-	for _, filter := range filter {
-		if *filter.Field == "Executed" {
-			query += "Executed = ? "
-			if *filter.Eq == "true" {
-				args = append(args, true)
-			} else if *filter.Eq == "false" {
-				args = append(args, false)
-			} else {
-				return nil, fmt.Errorf("unexpected executed value %s", *filter.Eq)
-			}
-		} else {
-			return nil, fmt.Errorf("unexpected field %s", *filter.Field)
-		}
-	}
+	query += where
+	slog.Debug("Query", "query", query, "args", args)
 	stmt, err := c.Db.Preparex(query)
 	if err != nil {
 		return nil, err
@@ -118,4 +109,42 @@ func (c *VoucherRepository) FindAllVouchers(
 		return nil, err
 	}
 	return vouchers, nil
+}
+
+func transformToQuery(
+	filter []*model.ConvenienceFilter,
+) (string, []interface{}, error) {
+	query := ""
+	if len(filter) > 0 {
+		query += "WHERE "
+	}
+	args := []interface{}{}
+	where := []string{}
+	for _, filter := range filter {
+		if *filter.Field == "Executed" {
+			if *filter.Eq == "true" {
+				where = append(where, "Executed = ?")
+				args = append(args, true)
+			} else if *filter.Eq == "false" {
+				where = append(where, "Executed = ?")
+				args = append(args, false)
+			} else {
+				return "", nil, fmt.Errorf(
+					"unexpected executed value %s", *filter.Eq,
+				)
+			}
+		} else if *filter.Field == "Destination" {
+			if filter.Eq != nil {
+				where = append(where, "Destination = ?")
+				args = append(args, common.HexToAddress(*filter.Eq))
+			} else {
+				return "", nil, fmt.Errorf("operation not implemented")
+			}
+		} else {
+			return "", nil, fmt.Errorf("unexpected field %s", *filter.Field)
+		}
+	}
+	query += strings.Join(where, " and ")
+	slog.Debug("Query", "query", query, "args", args)
+	return query, args, nil
 }

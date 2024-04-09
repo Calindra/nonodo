@@ -68,13 +68,21 @@ func (s *ConvenienceServiceSuite) TestFindAllVouchersExecuted() {
 		Payload:     "0x0011",
 		InputIndex:  1,
 		OutputIndex: 2,
-		Executed:    true,
+		Executed:    false,
 	})
 	checkError3(s.T(), err)
 	_, err = s.repository.CreateVoucher(ctx, &model.ConvenienceVoucher{
 		Destination: common.HexToAddress("0x26A61aF89053c847B4bd5084E2caFe7211874a29"),
 		Payload:     "0x0011",
 		InputIndex:  2,
+		OutputIndex: 1,
+		Executed:    true,
+	})
+	checkError3(s.T(), err)
+	_, err = s.repository.CreateVoucher(ctx, &model.ConvenienceVoucher{
+		Destination: common.HexToAddress("0x26A61aF89053c847B4bd5084E2caFe7211874a29"),
+		Payload:     "0x0011",
+		InputIndex:  3,
 		OutputIndex: 1,
 		Executed:    false,
 	})
@@ -90,6 +98,56 @@ func (s *ConvenienceServiceSuite) TestFindAllVouchersExecuted() {
 	vouchers, err := s.service.FindAllVouchers(ctx, nil, nil, nil, nil, filters)
 	checkError3(s.T(), err)
 	s.Equal(1, len(vouchers))
+	s.Equal(uint64(2), vouchers[0].InputIndex)
+}
+
+func (s *ConvenienceServiceSuite) TestFindAllVouchersByDestination() {
+	ctx := context.Background()
+	_, err := s.repository.CreateVoucher(ctx, &model.ConvenienceVoucher{
+		Destination: common.HexToAddress("0x26A61aF89053c847B4bd5084E2caFe7211874a29"),
+		Payload:     "0x0011",
+		InputIndex:  1,
+		OutputIndex: 2,
+		Executed:    true,
+	})
+	checkError3(s.T(), err)
+	_, err = s.repository.CreateVoucher(ctx, &model.ConvenienceVoucher{
+		Destination: common.HexToAddress("0xf795b3D15D47ac1c61BEf4Cc6469EBb2454C6a9b"),
+		Payload:     "0x0011",
+		InputIndex:  2,
+		OutputIndex: 1,
+		Executed:    true,
+	})
+	checkError3(s.T(), err)
+	_, err = s.repository.CreateVoucher(ctx, &model.ConvenienceVoucher{
+		Destination: common.HexToAddress("0xf795b3D15D47ac1c61BEf4Cc6469EBb2454C6a9b"),
+		Payload:     "0x0011",
+		InputIndex:  3,
+		OutputIndex: 1,
+		Executed:    false,
+	})
+	checkError3(s.T(), err)
+	filters := []*model.ConvenienceFilter{}
+	{
+		field := "Destination"
+		value := "0xf795b3D15D47ac1c61BEf4Cc6469EBb2454C6a9b"
+		filters = append(filters, &model.ConvenienceFilter{
+			Field: &field,
+			Eq:    &value,
+		})
+	}
+	{
+		field := "Executed"
+		value := "true"
+		filters = append(filters, &model.ConvenienceFilter{
+			Field: &field,
+			Eq:    &value,
+		})
+	}
+	vouchers, err := s.service.FindAllVouchers(ctx, nil, nil, nil, nil, filters)
+	checkError3(s.T(), err)
+	s.Equal(1, len(vouchers))
+	s.Equal(uint64(2), vouchers[0].InputIndex)
 }
 
 func checkError3(t *testing.T, err error) {

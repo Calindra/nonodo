@@ -82,6 +82,10 @@ func (s *VoucherRepositorySuite) TestFindVoucherExecuted() {
 	s.Equal(true, voucher.Executed)
 }
 
+func (s *VoucherRepositorySuite) TestTransformToQuery() {
+
+}
+
 func checkError2(s *VoucherRepositorySuite, err error) {
 	if err != nil {
 		s.T().Fatal(err.Error())
