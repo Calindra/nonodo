@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/calindra/nonodo/internal/convenience"
+	"github.com/calindra/nonodo/internal/convenience/synchronizer"
 	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/calindra/nonodo/internal/echoapp"
 	"github.com/calindra/nonodo/internal/inputter"
@@ -89,7 +90,7 @@ func NewSupervisorPoC(opts NonodoOpts) supervisor.SupervisorWorker {
 	decoder := container.GetOutputDecoder()
 	convenienceService := container.GetConvenienceService()
 	model := model.NewNonodoModel(decoder)
-	w.Workers = append(w.Workers, convenience.NewSynchronizer(decoder))
+	w.Workers = append(w.Workers, synchronizer.NewSynchronizer(decoder))
 	opts.RpcUrl = fmt.Sprintf("ws://%s:%v", opts.AnvilAddress, opts.AnvilPort)
 	execVoucherListener := convenience.NewExecListener(
 		opts.RpcUrl,

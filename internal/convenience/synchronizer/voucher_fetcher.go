@@ -1,4 +1,4 @@
-package convenience
+package synchronizer
 
 import (
 	"bytes"

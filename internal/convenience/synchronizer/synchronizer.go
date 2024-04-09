@@ -1,18 +1,19 @@
-package convenience
+package synchronizer
 
 import (
 	"context"
 	"log/slog"
 	"time"
 
+	"github.com/calindra/nonodo/internal/convenience"
 	"github.com/ethereum/go-ethereum/common"
 )
 
 type Synchronizer struct {
-	decoder *OutputDecoder
+	decoder *convenience.OutputDecoder
 }
 
-func NewSynchronizer(decoder *OutputDecoder) *Synchronizer {
+func NewSynchronizer(decoder *convenience.OutputDecoder) *Synchronizer {
 	return &Synchronizer{
 		decoder: decoder,
 	}

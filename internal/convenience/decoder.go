@@ -8,10 +8,8 @@ import (
 	"net/http"
 
 	"github.com/calindra/nonodo/internal/convenience/model"
-	"github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -19,18 +17,9 @@ type OutputDecoder struct {
 	convenienceService ConvenienceService
 }
 
-func NewOutputDecoder(db *sqlx.DB) *OutputDecoder {
-	repository := repository.VoucherRepository{
-		Db: *db,
-	}
-	err := repository.CreateTables()
-	if err != nil {
-		panic(err)
-	}
+func NewOutputDecoder(convenienceService ConvenienceService) *OutputDecoder {
 	return &OutputDecoder{
-		convenienceService: ConvenienceService{
-			repository: &repository,
-		},
+		convenienceService: convenienceService,
 	}
 }
 

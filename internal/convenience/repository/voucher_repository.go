@@ -13,7 +13,7 @@ type VoucherRepository struct {
 }
 
 func (c *VoucherRepository) CreateTables() error {
-	schema := `CREATE TABLE vouchers (
+	schema := `CREATE TABLE IF NOT EXISTS vouchers (
 		Destination text,
 		Payload 	text,
 		Executed	BOOLEAN,

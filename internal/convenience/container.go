@@ -22,7 +22,7 @@ func (c *Container) GetOutputDecoder() *OutputDecoder {
 	if c.outputDecoder != nil {
 		return c.outputDecoder
 	}
-	c.outputDecoder = NewOutputDecoder(c.db)
+	c.outputDecoder = NewOutputDecoder(*c.GetConvenienceService())
 	return c.outputDecoder
 }
 
@@ -32,6 +32,10 @@ func (c *Container) GetRepository() *repository.VoucherRepository {
 	}
 	c.repository = &repository.VoucherRepository{
 		Db: *c.db,
+	}
+	err := c.repository.CreateTables()
+	if err != nil {
+		panic(err)
 	}
 	return c.repository
 }
