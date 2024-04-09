@@ -3,11 +3,14 @@ package repository
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"os"
 	"testing"
 
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
+	"github.com/lmittmann/tint"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/suite"
 )
@@ -18,6 +21,14 @@ type VoucherRepositorySuite struct {
 }
 
 func (s *VoucherRepositorySuite) SetupTest() {
+	logOpts := new(tint.Options)
+	logOpts.Level = slog.LevelDebug
+	logOpts.AddSource = true
+	logOpts.NoColor = false
+	logOpts.TimeFormat = "[15:04:05.000]"
+	handler := tint.NewHandler(os.Stdout, logOpts)
+	logger := slog.New(handler)
+	slog.SetDefault(logger)
 	db := sqlx.MustConnect("sqlite3", ":memory:")
 	s.repository = &VoucherRepository{
 		Db: *db,
@@ -82,8 +93,31 @@ func (s *VoucherRepositorySuite) TestFindVoucherExecuted() {
 	s.Equal(true, voucher.Executed)
 }
 
-func (s *VoucherRepositorySuite) TestTransformToQuery() {
-
+func (s *VoucherRepositorySuite) TestWrongAddress() {
+	ctx := context.Background()
+	_, err := s.repository.CreateVoucher(ctx, &model.ConvenienceVoucher{
+		Destination: common.HexToAddress("0x26A61aF89053c847B4bd5084E2caFe7211874a29"),
+		Payload:     "0x0011",
+		InputIndex:  1,
+		OutputIndex: 2,
+		Executed:    true,
+	})
+	checkError2(s, err)
+	filters := []*model.ConvenienceFilter{}
+	{
+		field := "Destination"
+		value := "0xError"
+		filters = append(filters, &model.ConvenienceFilter{
+			Field: &field,
+			Eq:    &value,
+		})
+	}
+	vouchers, err := s.repository.FindAllVouchers(ctx, nil, nil, nil, nil, filters)
+	if err == nil {
+		s.Fail("where is the error?")
+	}
+	s.Equal("wrong address value", err.Error())
+	s.Equal(0, len(vouchers))
 }
 
 func checkError2(s *VoucherRepositorySuite, err error) {

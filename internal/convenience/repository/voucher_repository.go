@@ -3,12 +3,12 @@ package repository
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
-	"golang.org/x/exp/slog"
 )
 
 type VoucherRepository struct {
@@ -136,6 +136,9 @@ func transformToQuery(
 		} else if *filter.Field == "Destination" {
 			if filter.Eq != nil {
 				where = append(where, "Destination = ?")
+				if !common.IsHexAddress(*filter.Eq) {
+					return "", nil, fmt.Errorf("wrong address value")
+				}
 				args = append(args, common.HexToAddress(*filter.Eq))
 			} else {
 				return "", nil, fmt.Errorf("operation not implemented")
