@@ -59,7 +59,8 @@ type NonodoOpts struct {
 	// If set, start application.
 	ApplicationArgs []string
 
-	VoucherExecPoC bool
+	ConveniencePoC bool
+	SqliteFile     string
 }
 
 // Create the options struct with default values.
@@ -79,15 +80,14 @@ func NewNonodoOpts() NonodoOpts {
 		DisableDevnet:      false,
 		DisableAdvance:     false,
 		ApplicationArgs:    nil,
-		VoucherExecPoC:     false,
+		ConveniencePoC:     false,
+		SqliteFile:         ":memory:",
 	}
 }
 
 func NewSupervisorPoC(opts NonodoOpts) supervisor.SupervisorWorker {
 	var w supervisor.SupervisorWorker
-	// db := sqlx.MustConnect("sqlite3", ":memory:")
-	db := sqlx.MustConnect("sqlite3", "./my_database.db")
-
+	db := sqlx.MustConnect("sqlite3", opts.SqliteFile)
 	container := convenience.NewContainer(*db)
 	decoder := container.GetOutputDecoder()
 	convenienceService := container.GetConvenienceService()
@@ -120,7 +120,7 @@ func NewSupervisorPoC(opts NonodoOpts) supervisor.SupervisorWorker {
 // Create the nonodo supervisor.
 func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	var w supervisor.SupervisorWorker
-	db := sqlx.MustConnect("sqlite3", ":memory:")
+	db := sqlx.MustConnect("sqlite3", opts.SqliteFile)
 	container := convenience.NewContainer(*db)
 	decoder := container.GetOutputDecoder()
 	convenienceService := container.GetConvenienceService()

@@ -3,12 +3,14 @@ package synchronizer
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
+	"strings"
 )
 
-var query = `query GetVouchers($after: String, $batchSize: Int) {
+const query = `query GetVouchers($after: String, $batchSize: Int) {
 	vouchers(first: $batchSize, after: $after) {
 		totalCount
 		edges{
@@ -43,7 +45,14 @@ var query = `query GetVouchers($after: String, $batchSize: Int) {
 	}
 }`
 
-var DefaultBatchSize = 10
+const ErrorSendingRequest = `
++-----------------------------------------------------------+
+| Please ensure that the rollups-node is up and running at: |
+GRAPH_QL_URL
++-----------------------------------------------------------+
+`
+
+const DefaultBatchSize = 10
 
 type VoucherFetcher struct {
 	Url         string
@@ -96,6 +105,13 @@ func (v *VoucherFetcher) Fetch() (*VoucherResponse, error) {
 	resp, err := client.Do(req)
 	if err != nil {
 		slog.Error("Error sending request:", err)
+		fmt.Println(
+			strings.Replace(
+				ErrorSendingRequest,
+				"GRAPH_QL_URL",
+				fmt.Sprintf("|    %-55s|", v.Url),
+				-1,
+			))
 		return nil, err
 	}
 
