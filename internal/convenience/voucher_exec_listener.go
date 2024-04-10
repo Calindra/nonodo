@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/calindra/nonodo/internal/convenience/services"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -20,13 +21,13 @@ type VoucherExecListener struct {
 	ApplicationAddress common.Address
 	AbiString          string
 	EventName          string
-	ConvenienceService *ConvenienceService
+	ConvenienceService *services.ConvenienceService
 }
 
 func NewExecListener(
 	provider string,
 	applicationAddress common.Address,
-	convenienceService *ConvenienceService,
+	convenienceService *services.ConvenienceService,
 ) VoucherExecListener {
 	return VoucherExecListener{
 		ConvenienceService: convenienceService,

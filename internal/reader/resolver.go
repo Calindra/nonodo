@@ -1,7 +1,7 @@
 package reader
 
 import (
-	"github.com/calindra/nonodo/internal/convenience"
+	"github.com/calindra/nonodo/internal/convenience/services"
 	"github.com/calindra/nonodo/internal/reader/model"
 )
 
@@ -11,5 +11,5 @@ import (
 
 type Resolver struct {
 	model              *model.ModelWrapper
-	convenienceService *convenience.ConvenienceService
+	convenienceService *services.ConvenienceService
 }

@@ -1,17 +1,23 @@
 package convenience
 
 import (
+	"github.com/calindra/nonodo/internal/convenience/decoder"
 	"github.com/calindra/nonodo/internal/convenience/repository"
+	"github.com/calindra/nonodo/internal/convenience/services"
+	"github.com/calindra/nonodo/internal/convenience/synchronizer"
 	"github.com/jmoiron/sqlx"
 )
 
-// what is the best IoC for go?
+// what is the best DI/IoC framework for go?
 
 type Container struct {
-	db                 *sqlx.DB
-	outputDecoder      *OutputDecoder
-	convenienceService *ConvenienceService
-	repository         *repository.VoucherRepository
+	db                  *sqlx.DB
+	outputDecoder       *decoder.OutputDecoder
+	convenienceService  *services.ConvenienceService
+	repository          *repository.VoucherRepository
+	syncRepository      *repository.SynchronizerRepository
+	graphQLSynchronizer *synchronizer.Synchronizer
+	voucherFetcher      *synchronizer.VoucherFetcher
 }
 
 func NewContainer(db sqlx.DB) *Container {
@@ -20,11 +26,11 @@ func NewContainer(db sqlx.DB) *Container {
 	}
 }
 
-func (c *Container) GetOutputDecoder() *OutputDecoder {
+func (c *Container) GetOutputDecoder() *decoder.OutputDecoder {
 	if c.outputDecoder != nil {
 		return c.outputDecoder
 	}
-	c.outputDecoder = NewOutputDecoder(*c.GetConvenienceService())
+	c.outputDecoder = decoder.NewOutputDecoder(*c.GetConvenienceService())
 	return c.outputDecoder
 }
 
@@ -42,12 +48,43 @@ func (c *Container) GetRepository() *repository.VoucherRepository {
 	return c.repository
 }
 
-func (c *Container) GetConvenienceService() *ConvenienceService {
+func (c *Container) GetSyncRepository() *repository.SynchronizerRepository {
+	if c.syncRepository != nil {
+		return c.syncRepository
+	}
+	c.syncRepository = &repository.SynchronizerRepository{
+		Db: *c.db,
+	}
+	err := c.syncRepository.CreateTables()
+	if err != nil {
+		panic(err)
+	}
+	return c.syncRepository
+}
+
+func (c *Container) GetConvenienceService() *services.ConvenienceService {
 	if c.convenienceService != nil {
 		return c.convenienceService
 	}
-	c.convenienceService = &ConvenienceService{
-		repository: c.GetRepository(),
-	}
+	c.convenienceService = services.NewConvenienceService(c.GetRepository())
 	return c.convenienceService
+}
+
+func (c *Container) GetGraphQLSynchronizer() *synchronizer.Synchronizer {
+	if c.graphQLSynchronizer != nil {
+		return c.graphQLSynchronizer
+	}
+	c.graphQLSynchronizer = synchronizer.NewSynchronizer(
+		c.GetOutputDecoder(),
+		c.GetVoucherFetcher(),
+		c.GetSyncRepository(),
+	)
+	return c.graphQLSynchronizer
+}
+func (c *Container) GetVoucherFetcher() *synchronizer.VoucherFetcher {
+	if c.voucherFetcher != nil {
+		return c.voucherFetcher
+	}
+	c.voucherFetcher = synchronizer.NewVoucherFetcher()
+	return c.voucherFetcher
 }

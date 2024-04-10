@@ -9,6 +9,7 @@ import (
 
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/convenience/repository"
+	"github.com/calindra/nonodo/internal/convenience/services"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
 	"github.com/lmittmann/tint"
@@ -21,7 +22,7 @@ func TestExecListenerSuite(t *testing.T) {
 
 type ExecListenerSuite struct {
 	suite.Suite
-	ConvenienceService *ConvenienceService
+	ConvenienceService *services.ConvenienceService
 	repository         *repository.VoucherRepository
 }
 
@@ -47,9 +48,7 @@ func (s *ExecListenerSuite) SetupTest() {
 	if err != nil {
 		panic(err)
 	}
-	s.ConvenienceService = &ConvenienceService{
-		repository: s.repository,
-	}
+	s.ConvenienceService = services.NewConvenienceService(s.repository)
 }
 
 func (s *ExecListenerSuite) TestItUpdateExecutedAtAndBlocknumber() {

@@ -1,4 +1,4 @@
-package convenience
+package services
 
 import (
 	"context"
@@ -9,6 +9,12 @@ import (
 
 type ConvenienceService struct {
 	repository *repository.VoucherRepository
+}
+
+func NewConvenienceService(repository *repository.VoucherRepository) *ConvenienceService {
+	return &ConvenienceService{
+		repository: repository,
+	}
 }
 
 func (s *ConvenienceService) CreateVoucher(
