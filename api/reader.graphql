@@ -259,28 +259,50 @@ type ConvenientVoucherEdge {
   cursor: String!
 }
 
+
 enum AllowedFields {
   Destination
   Executed
 }
 
-input ConvenientFilter {
-  # The field to apply the comparison operation on
-  field: AllowedFields
+union ConvenientFilter = FilterDestination | FilterExecuted
 
-  # Basic comparison operators
+input FilterDestination {
+  field: AllowedFields.Destination
   eq: String
-  ne: String
-  gt: String
-  gte: String
-  lt: String
-  lte: String
-
-  # Inclusion/exclusion operators
-  in: [String]
-  nin: [String]
 
   # Logical operators
   and: [ConvenientFilter]
   or: [ConvenientFilter]
 }
+
+input FilterExecuted {
+  field: AllowedFields.Executed
+  eq: Boolean
+
+  # Logical operators
+  and: [ConvenientFilter]
+  or: [ConvenientFilter]
+}
+
+
+# input ConvenientFilter {
+#   # The field to apply the comparison operation on
+#   field: AllowedFields
+
+#   # Basic comparison operators
+#   eq: String
+#   ne: String
+#   gt: String
+#   gte: String
+#   lt: String
+#   lte: String
+
+#   # Inclusion/exclusion operators
+#   in: [String]
+#   nin: [String]
+
+#   # Logical operators
+#   and: [ConvenientFilter]
+#   or: [ConvenientFilter]
+# }
