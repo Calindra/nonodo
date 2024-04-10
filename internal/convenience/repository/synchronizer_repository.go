@@ -2,6 +2,8 @@ package repository
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/jmoiron/sqlx"
@@ -63,7 +65,7 @@ func (c *SynchronizerRepository) GetLastFetched(
 	var p model.SynchronizerFetch
 	err = stmt.Get(&p)
 	if err != nil {
-		if err.Error() == "sql: no rows in result set" {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
 		return nil, err
