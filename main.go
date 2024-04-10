@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -24,8 +25,8 @@ import (
 
 var startupMessage = `
 Http Rollups for development started at http://localhost:5004
-GraphQL running at http://localhost:8080/graphql
-Inspect running at http://localhost:8080/inspect/
+GraphQL running at http://localhost:HTTP_PORT/graphql
+Inspect running at http://localhost:HTTP_PORT/inspect/
 Press Ctrl+C to stop the node
 `
 var cmd = &cobra.Command{
@@ -88,6 +89,14 @@ func init() {
 	// rpc-url
 	cmd.Flags().StringVar(&opts.RpcUrl, "rpc-url", opts.RpcUrl,
 		"If set, nonodo connects to this url instead of setting up Anvil")
+
+	// convenience experimental implementation
+	cmd.Flags().BoolVar(&opts.ConveniencePoC, "convenience-poc", opts.ConveniencePoC,
+		"If set, enables the voucher execution listener experiment.")
+
+	// database file
+	cmd.Flags().StringVar(&opts.SqliteFile, "sqlite-file", opts.SqliteFile,
+		"The sqlite file to load the state")
 }
 
 func run(cmd *cobra.Command, args []string) {
@@ -128,13 +137,23 @@ func run(cmd *cobra.Command, args []string) {
 	go func() {
 		select {
 		case <-ready:
-			fmt.Println(startupMessage)
+			fmt.Println(strings.Replace(
+				startupMessage,
+				"HTTP_PORT",
+				fmt.Sprint(opts.HttpPort), -1),
+			)
 			slog.Info("nonodo: ready", "after", time.Since(startTime))
 		case <-ctx.Done():
 		}
 	}()
-	err := nonodo.NewSupervisor(opts).Start(ctx, ready)
-	cobra.CheckErr(err)
+	if opts.ConveniencePoC {
+		err := nonodo.NewSupervisorPoC(opts).Start(ctx, ready)
+		cobra.CheckErr(err)
+	} else {
+		err := nonodo.NewSupervisor(opts).Start(ctx, ready)
+		cobra.CheckErr(err)
+	}
+
 }
 
 func main() {

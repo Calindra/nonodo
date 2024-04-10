@@ -3,6 +3,11 @@
 
 package model
 
+import (
+	"encoding/json"
+	"fmt"
+)
+
 //
 // Query filters
 //
@@ -32,4 +37,32 @@ type OutputFilter struct {
 // Return true when the given output should be filtered.
 func (f OutputFilter) Filter(o Output) bool {
 	return f.InputIndex != nil && o.GetInputIndex() != *f.InputIndex
+}
+
+type MetadataFilter struct {
+	Field string
+
+	// Basic comparison operators
+	Eq  *string
+	Ne  *string
+	Gt  *string
+	Gte *string
+	Lt  *string
+	Lte *string
+
+	// Inclusion/exclusion operators
+	In  []*string
+	Nin []*string
+
+	// Logical operators
+	And []*MetadataFilter
+	Or  []*MetadataFilter
+}
+
+func CreateFilterList(content string) []*MetadataFilter {
+	filterList := []*MetadataFilter{}
+	if err := json.Unmarshal([]byte(content), &filterList); err != nil {
+		panic(fmt.Errorf("create filter list error parsing json: %v", err))
+	}
+	return filterList
 }

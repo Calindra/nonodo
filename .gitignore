@@ -2,3 +2,4 @@ TODO
 
 .DS_Store
 /nonodo
+*.sqlite3

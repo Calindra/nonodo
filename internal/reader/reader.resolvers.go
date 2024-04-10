@@ -86,6 +86,19 @@ func (r *queryResolver) Reports(ctx context.Context, first *int, last *int, afte
 	return r.model.GetReports(first, last, after, before, nil)
 }
 
+// ConvenientVouchers is the resolver for the convenientVouchers field.
+func (r *queryResolver) ConvenientVouchers(ctx context.Context, first *int, last *int, after *string, before *string, filter []*model.ConvenientFilter) (*model.Connection[*model.ConvenientVoucher], error) {
+	convenienceFilter, err := model.ConvertToConvenienceFilter(filter)
+	if err != nil {
+		return nil, err
+	}
+	vouchers, err := r.convenienceService.FindAllVouchers(ctx, first, last, after, before, convenienceFilter)
+	if err != nil {
+		return nil, err
+	}
+	return r.model.PaginateConvenientVouchers(vouchers, first, last, after, before)
+}
+
 // Input is the resolver for the input field.
 func (r *reportResolver) Input(ctx context.Context, obj *model.Report) (*model.Input, error) {
 	return r.model.GetInput(obj.InputIndex)

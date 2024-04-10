@@ -1,6 +1,33 @@
 {
     "cSpell.words": [
+        "codegen",
+        "deepmap",
         "devnet",
-        "rollup"
+        "echoapp",
+        "ERCX",
+        "ethclient",
+        "execlistener",
+        "getsourcecode",
+        "github",
+        "hexutil",
+        "inputter",
+        "Inputter",
+        "jmoiron",
+        "labstack",
+        "Ligneul",
+        "lmittmann",
+        "mattn",
+        "merkle",
+        "Merkle",
+        "nonodomodel",
+        "oapi",
+        "outputdecoder",
+        "Preparex",
+        "rollup",
+        "rollups",
+        "sqlite",
+        "sqlx",
+        "stretchr",
+        "unmarshal"
     ]
 }

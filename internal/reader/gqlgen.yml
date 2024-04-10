@@ -25,6 +25,9 @@ models:
   Voucher:
     model:
       - github.com/calindra/nonodo/internal/reader/model.Voucher
+  ConvenientVoucher:
+    model:
+      - github.com/calindra/nonodo/internal/reader/model.ConvenientVoucher
   Notice:
     model:
       - github.com/calindra/nonodo/internal/reader/model.Notice
@@ -55,3 +58,9 @@ models:
   ReportEdge:
     model:
       - github.com/calindra/nonodo/internal/reader/model.ReportEdge
+  ConvenientVoucherConnection:
+    model:
+      - github.com/calindra/nonodo/internal/reader/model.ConvenientVoucherConnection
+  ConvenientVoucherEdge:
+    model:
+      - github.com/calindra/nonodo/internal/reader/model.ConvenientVoucherEdge

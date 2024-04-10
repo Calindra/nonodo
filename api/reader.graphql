@@ -97,6 +97,8 @@ type Query {
   notices(first: Int, last: Int, after: String, before: String): NoticeConnection!
   "Get reports with support for pagination"
   reports(first: Int, last: Int, after: String, before: String): ReportConnection!
+
+  convenientVouchers(first: Int, last: Int, after: String, before: String, filter: [ConvenientFilter]): ConvenientVoucherConnection!
 }
 
 "Pagination entry"
@@ -217,4 +219,68 @@ type VoucherEdge {
 
 schema {
   query: Query
+}
+
+
+#----------------------#
+#  Convenient Voucher  #
+#----------------------#
+
+type ConvenientVoucher {
+  "Voucher index within the context of the input that produced it"
+  index: Int!
+  "Input whose processing produced the voucher"
+  input: Input!
+  "Transaction destination address in Ethereum hex binary format (20 bytes), starting with '0x'"
+  destination: String!
+  "Transaction payload in Ethereum hex binary format, starting with '0x'"
+  payload: String!
+  "Proof object that allows this voucher to be validated and executed on the base layer blockchain"
+  proof: Proof
+  "Executed"
+  executed: Boolean
+}
+
+"Pagination result"
+type ConvenientVoucherConnection {
+  "Total number of entries that match the query"
+  totalCount: Int!
+  "Pagination entries returned for the current page"
+  edges: [ConvenientVoucherEdge!]!
+  "Pagination metadata"
+  pageInfo: PageInfo!
+}
+
+"Pagination entry"
+type ConvenientVoucherEdge {
+  "Node instance"
+  node: ConvenientVoucher!
+  "Pagination cursor"
+  cursor: String!
+}
+
+enum AllowedFields {
+  Destination
+  Executed
+}
+
+input ConvenientFilter {
+  # The field to apply the comparison operation on
+  field: AllowedFields
+
+  # Basic comparison operators
+  eq: String
+  ne: String
+  gt: String
+  gte: String
+  lt: String
+  lte: String
+
+  # Inclusion/exclusion operators
+  in: [String]
+  nin: [String]
+
+  # Logical operators
+  and: [ConvenientFilter]
+  or: [ConvenientFilter]
 }

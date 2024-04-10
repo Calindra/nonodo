@@ -8,9 +8,11 @@ require (
 	github.com/carlmjohnson/versioninfo v0.22.5
 	github.com/deepmap/oapi-codegen/v2 v2.0.0
 	github.com/ethereum/go-ethereum v1.13.5
+	github.com/jmoiron/sqlx v1.3.5
 	github.com/labstack/echo/v4 v4.11.3
 	github.com/lmittmann/tint v1.0.3
 	github.com/mattn/go-isatty v0.0.19
+	github.com/mattn/go-sqlite3 v1.14.22
 	github.com/oapi-codegen/runtime v1.1.0
 	github.com/spf13/cobra v1.8.0
 	github.com/stretchr/testify v1.8.4

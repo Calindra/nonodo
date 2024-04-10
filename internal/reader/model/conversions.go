@@ -6,6 +6,7 @@ package model
 import (
 	"fmt"
 
+	convenience "github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/model"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
@@ -65,6 +66,47 @@ func convertReport(report model.Report) *Report {
 		Index:      report.Index,
 		Payload:    hexutil.Encode(report.Payload),
 	}
+}
+
+func convertConvenientVoucher(cVoucher convenience.ConvenienceVoucher) *ConvenientVoucher {
+	return &ConvenientVoucher{
+		Index:       int(cVoucher.OutputIndex),
+		Input:       &Input{Index: int(cVoucher.InputIndex)},
+		Destination: cVoucher.Destination.String(),
+		Payload:     cVoucher.Payload,
+		Executed:    &cVoucher.Executed,
+	}
+}
+
+func ConvertToConvenienceFilter(
+	filter []*ConvenientFilter,
+) ([]*convenience.ConvenienceFilter, error) {
+	filters := []*convenience.ConvenienceFilter{}
+	for _, f := range filter {
+		and, err := ConvertToConvenienceFilter(f.And)
+		if err != nil {
+			return nil, err
+		}
+		or, err := ConvertToConvenienceFilter(f.Or)
+		if err != nil {
+			return nil, err
+		}
+		field := f.Field.String()
+		filters = append(filters, &convenience.ConvenienceFilter{
+			Field: &field,
+			Eq:    f.Eq,
+			Ne:    f.Ne,
+			Gt:    f.Gt,
+			Gte:   f.Gte,
+			Lt:    f.Lt,
+			Lte:   f.Lte,
+			In:    f.In,
+			Nin:   f.Nin,
+			And:   and,
+			Or:    or,
+		})
+	}
+	return filters, nil
 }
 
 //

@@ -11,6 +11,7 @@ import (
 	"log/slog"
 	"os"
 	"path"
+	"sort"
 	"strings"
 
 	"github.com/calindra/nonodo/internal/supervisor"
@@ -57,12 +58,19 @@ func ShowAddresses() {
 		slog.Warn("anvil: failed to unmarshal localhost.json", "error", err)
 		return
 	}
-	space := 20
-	adddressSpace := 42
-	fmt.Printf("%-20s %s\n", "Contract", "Address")
-	fmt.Printf("%-20s %s\n", strings.Repeat("─", space), strings.Repeat("─", adddressSpace))
-	for name, contract := range contracts.Contracts {
-		fmt.Printf("%-20s %s\n", name, contract.Address)
+	var names []string
+	for name := range contracts.Contracts {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	space := 28
+	addressSpace := 42
+	fmt.Printf("%-28s %s\n", "Contract", "Address")
+	fmt.Printf("%-28s %s\n", strings.Repeat("─", space), strings.Repeat("─", addressSpace))
+	for _, name := range names {
+		if contract, ok := contracts.Contracts[name]; ok {
+			fmt.Printf("%-28s %s\n", name, contract.Address)
+		}
 	}
 }
 

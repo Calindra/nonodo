@@ -7,8 +7,10 @@ package nonodo
 
 import (
 	"fmt"
+	"log/slog"
 	"time"
 
+	"github.com/calindra/nonodo/internal/convenience"
 	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/calindra/nonodo/internal/echoapp"
 	"github.com/calindra/nonodo/internal/inputter"
@@ -18,6 +20,7 @@ import (
 	"github.com/calindra/nonodo/internal/rollup"
 	"github.com/calindra/nonodo/internal/supervisor"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
@@ -54,6 +57,9 @@ type NonodoOpts struct {
 
 	// If set, start application.
 	ApplicationArgs []string
+
+	ConveniencePoC bool
+	SqliteFile     string
 }
 
 // Create the options struct with default values.
@@ -73,14 +79,27 @@ func NewNonodoOpts() NonodoOpts {
 		DisableDevnet:      false,
 		DisableAdvance:     false,
 		ApplicationArgs:    nil,
+		ConveniencePoC:     false,
+		SqliteFile:         ":memory:",
 	}
 }
 
-// Create the nonodo supervisor.
-func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
+func NewSupervisorPoC(opts NonodoOpts) supervisor.SupervisorWorker {
 	var w supervisor.SupervisorWorker
-
-	model := model.NewNonodoModel()
+	db := sqlx.MustConnect("sqlite3", opts.SqliteFile)
+	container := convenience.NewContainer(*db)
+	decoder := container.GetOutputDecoder()
+	convenienceService := container.GetConvenienceService()
+	synchronizer := container.GetGraphQLSynchronizer()
+	model := model.NewNonodoModel(decoder)
+	w.Workers = append(w.Workers, synchronizer)
+	opts.RpcUrl = fmt.Sprintf("ws://%s:%v", opts.AnvilAddress, opts.AnvilPort)
+	execVoucherListener := convenience.NewExecListener(
+		opts.RpcUrl,
+		common.HexToAddress(opts.ApplicationAddress),
+		convenienceService,
+	)
+	w.Workers = append(w.Workers, execVoucherListener)
 	e := echo.New()
 	e.Use(middleware.CORS())
 	e.Use(middleware.Recover())
@@ -89,7 +108,32 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		Timeout:      HttpTimeout,
 	}))
 	inspect.Register(e, model)
-	reader.Register(e, model)
+	reader.Register(e, model, convenienceService)
+	w.Workers = append(w.Workers, supervisor.HttpWorker{
+		Address: fmt.Sprintf("%v:%v", opts.HttpAddress, opts.HttpPort),
+		Handler: e,
+	})
+	slog.Info("Listening", "port", opts.HttpPort)
+	return w
+}
+
+// Create the nonodo supervisor.
+func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
+	var w supervisor.SupervisorWorker
+	db := sqlx.MustConnect("sqlite3", opts.SqliteFile)
+	container := convenience.NewContainer(*db)
+	decoder := container.GetOutputDecoder()
+	convenienceService := container.GetConvenienceService()
+	model := model.NewNonodoModel(decoder)
+	e := echo.New()
+	e.Use(middleware.CORS())
+	e.Use(middleware.Recover())
+	e.Use(middleware.TimeoutWithConfig(middleware.TimeoutConfig{
+		ErrorMessage: "Request timed out",
+		Timeout:      HttpTimeout,
+	}))
+	inspect.Register(e, model)
+	reader.Register(e, model, convenienceService)
 
 	// Start the "internal" http rollup server
 	re := echo.New()

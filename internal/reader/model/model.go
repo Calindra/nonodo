@@ -8,6 +8,7 @@ package model
 import (
 	"fmt"
 
+	convenience "github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/model"
 )
 
@@ -118,4 +119,32 @@ func (m *ModelWrapper) GetReports(
 		convNodes[i] = convertReport(nodes[i])
 	}
 	return newConnection(offset, total, convNodes), nil
+}
+
+func (m *ModelWrapper) PaginateConvenientVouchers(
+	vouchers []convenience.ConvenienceVoucher,
+	first *int, last *int, after *string, before *string,
+) (*ConvenientVoucherConnection, error) {
+	total := len(vouchers)
+	offset, limit, err := computePage(first, last, after, before, total)
+	if err != nil {
+		return nil, err
+	}
+	nodes := paginate(vouchers, offset, limit)
+	convNodes := make([]*ConvenientVoucher, len(nodes))
+	for i := range nodes {
+		convNodes[i] = convertConvenientVoucher(nodes[i])
+	}
+	return newConnection(offset, total, convNodes), nil
+}
+
+func paginate[T any](slice []T, offset int, limit int) []T {
+	if offset >= len(slice) {
+		return nil
+	}
+	upperBound := offset + limit
+	if upperBound > len(slice) {
+		upperBound = len(slice)
+	}
+	return slice[offset:upperBound]
 }
