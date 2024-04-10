@@ -1,5 +1,8 @@
 # NoNodo
 
+> [!IMPORTANT]
+> Calindra is maintaing this project. Go to https://github.com/Calindra/nonodo to get the latest version.
+
 ![CI](https://github.com/gligneul/nonodo/actions/workflows/ci.yaml/badge.svg)
 [![Go Report Card](https://goreportcard.com/badge/github.com/gligneul/nonodo)](https://goreportcard.com/report/github.com/gligneul/nonodo)
 
