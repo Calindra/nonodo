@@ -97,7 +97,7 @@ type Query {
   notices(first: Int, last: Int, after: String, before: String): NoticeConnection!
   "Get reports with support for pagination"
   reports(first: Int, last: Int, after: String, before: String): ReportConnection!
-
+  "Get a convenient voucher based on its index or filter"
   convenientVouchers(first: Int, last: Int, after: String, before: String, filter: [ConvenientFilter]): ConvenientVoucherConnection!
 }
 
@@ -265,26 +265,32 @@ enum AllowedFields {
   Executed
 }
 
-# union ConvenientFilter = FilterDestination | FilterExecuted
+# union ConvenientFilterUnion = FilterDestination | FilterExecuted
 
-# input FilterDestination {
-#   field: AllowedFields.Destination
-#   eq: String
-
-#   # Logical operators
-#   and: [ConvenientFilter]
-#   or: [ConvenientFilter]
-# }
-
-# input FilterExecuted {
-#   field: AllowedFields.Executed
-#   eq: Boolean
+# interface Filter {
+#   # field: AllowedFields!
+#   # eq: String!
 
 #   # Logical operators
-#   and: [ConvenientFilter]
-#   or: [ConvenientFilter]
+#   and: [ConvenientFilterUnion]
+#   or: [ConvenientFilterUnion]
 # }
 
+# type FilterDestination implements Filter {
+#   destination: String!
+
+#   # Logical operators
+#   and: [ConvenientFilterUnion]
+#   or: [ConvenientFilterUnion]
+# }
+
+# type FilterExecuted implements Filter {
+#   isExecuted: Boolean!
+
+#   # Logical operators
+#   and: [ConvenientFilterUnion]
+#   or: [ConvenientFilterUnion]
+# }
 
 input ConvenientFilter {
   # The field to apply the comparison operation on
