@@ -265,44 +265,44 @@ enum AllowedFields {
   Executed
 }
 
-union ConvenientFilter = FilterDestination | FilterExecuted
+# union ConvenientFilter = FilterDestination | FilterExecuted
 
-input FilterDestination {
-  field: AllowedFields.Destination
-  eq: String
-
-  # Logical operators
-  and: [ConvenientFilter]
-  or: [ConvenientFilter]
-}
-
-input FilterExecuted {
-  field: AllowedFields.Executed
-  eq: Boolean
-
-  # Logical operators
-  and: [ConvenientFilter]
-  or: [ConvenientFilter]
-}
-
-
-# input ConvenientFilter {
-#   # The field to apply the comparison operation on
-#   field: AllowedFields
-
-#   # Basic comparison operators
+# input FilterDestination {
+#   field: AllowedFields.Destination
 #   eq: String
-#   ne: String
-#   gt: String
-#   gte: String
-#   lt: String
-#   lte: String
-
-#   # Inclusion/exclusion operators
-#   in: [String]
-#   nin: [String]
 
 #   # Logical operators
 #   and: [ConvenientFilter]
 #   or: [ConvenientFilter]
 # }
+
+# input FilterExecuted {
+#   field: AllowedFields.Executed
+#   eq: Boolean
+
+#   # Logical operators
+#   and: [ConvenientFilter]
+#   or: [ConvenientFilter]
+# }
+
+
+input ConvenientFilter {
+  # The field to apply the comparison operation on
+  field: AllowedFields
+
+  # Basic comparison operators
+  eq: String
+  ne: String
+  gt: String
+  gte: String
+  lt: String
+  lte: String
+
+  # Inclusion/exclusion operators
+  in: [String]
+  nin: [String]
+
+  # Logical operators
+  and: [ConvenientFilter]
+  or: [ConvenientFilter]
+}

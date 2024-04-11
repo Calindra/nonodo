@@ -1207,10 +1207,32 @@ type ConvenientVoucherEdge {
   cursor: String!
 }
 
+
 enum AllowedFields {
   Destination
   Executed
 }
+
+# union ConvenientFilter = FilterDestination | FilterExecuted
+
+# input FilterDestination {
+#   field: AllowedFields.Destination
+#   eq: String
+
+#   # Logical operators
+#   and: [ConvenientFilter]
+#   or: [ConvenientFilter]
+# }
+
+# input FilterExecuted {
+#   field: AllowedFields.Executed
+#   eq: Boolean
+
+#   # Logical operators
+#   and: [ConvenientFilter]
+#   or: [ConvenientFilter]
+# }
+
 
 input ConvenientFilter {
   # The field to apply the comparison operation on
