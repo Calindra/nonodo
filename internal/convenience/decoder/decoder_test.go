@@ -1,4 +1,4 @@
-package convenience
+package decoder
 
 import (
 	"context"
@@ -6,29 +6,31 @@ import (
 	"testing"
 
 	"github.com/calindra/nonodo/internal/convenience/repository"
+	"github.com/calindra/nonodo/internal/convenience/services"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/suite"
 )
 
+var Token = common.HexToAddress("0xc6e7DF5E7b4f2A278906862b61205850344D4e7d")
+
 type OutputDecoderSuite struct {
 	suite.Suite
-	decoder *OutputDecoder
+	decoder           *OutputDecoder
+	voucherRepository *repository.VoucherRepository
 }
 
 func (s *OutputDecoderSuite) SetupTest() {
 	db := sqlx.MustConnect("sqlite3", ":memory:")
-	repository := repository.VoucherRepository{
+	s.voucherRepository = &repository.VoucherRepository{
 		Db: *db,
 	}
-	err := repository.CreateTables()
+	err := s.voucherRepository.CreateTables()
 	if err != nil {
 		panic(err)
 	}
 	s.decoder = &OutputDecoder{
-		convenienceService: ConvenienceService{
-			repository: &repository,
-		},
+		convenienceService: *services.NewConvenienceService(s.voucherRepository),
 	}
 }
 
@@ -42,8 +44,7 @@ func (s *OutputDecoderSuite) TestHandleOutput() {
 	if err != nil {
 		panic(err)
 	}
-	voucher, err := s.decoder.convenienceService.
-		repository.FindVoucherByInputAndOutputIndex(ctx, 1, 2)
+	voucher, err := s.voucherRepository.FindVoucherByInputAndOutputIndex(ctx, 1, 2)
 	if err != nil {
 		panic(err)
 	}

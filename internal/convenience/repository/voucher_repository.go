@@ -51,12 +51,12 @@ func (c *VoucherRepository) CreateVoucher(
 func (c *VoucherRepository) VoucherCount(
 	ctx context.Context,
 ) (uint64, error) {
-	var id int
-	err := c.Db.Get(&id, "SELECT count(*) FROM vouchers")
+	var count int
+	err := c.Db.Get(&count, "SELECT count(*) FROM vouchers")
 	if err != nil {
 		return 0, nil
 	}
-	return uint64(id), nil
+	return uint64(count), nil
 }
 
 func (c *VoucherRepository) FindVoucherByInputAndOutputIndex(

@@ -2,20 +2,32 @@ package synchronizer
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
-	"github.com/calindra/nonodo/internal/convenience"
+	"github.com/calindra/nonodo/internal/convenience/decoder"
+	"github.com/calindra/nonodo/internal/convenience/model"
+	"github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/ethereum/go-ethereum/common"
 )
 
 type Synchronizer struct {
-	decoder *convenience.OutputDecoder
+	decoder                *decoder.OutputDecoder
+	VoucherFetcher         *VoucherFetcher
+	SynchronizerRepository *repository.SynchronizerRepository
 }
 
-func NewSynchronizer(decoder *convenience.OutputDecoder) *Synchronizer {
+func NewSynchronizer(
+	decoder *decoder.OutputDecoder,
+	voucherFetcher *VoucherFetcher,
+	SynchronizerRepository *repository.SynchronizerRepository,
+) *Synchronizer {
 	return &Synchronizer{
-		decoder: decoder,
+		decoder:                decoder,
+		VoucherFetcher:         voucherFetcher,
+		SynchronizerRepository: SynchronizerRepository,
 	}
 }
 
@@ -30,10 +42,16 @@ func (x Synchronizer) Start(ctx context.Context, ready chan<- struct{}) error {
 }
 
 func (x *Synchronizer) VoucherPolling(ctx context.Context) error {
-	voucherFetcher := NewVoucherFetcher()
 	sleepInSeconds := 3
+	lastFetch, err := x.SynchronizerRepository.GetLastFetched(ctx)
+	if err != nil {
+		panic(err)
+	}
+	if lastFetch != nil {
+		x.VoucherFetcher.CursorAfter = lastFetch.EndCursorAfter
+	}
 	for {
-		voucherResp, err := voucherFetcher.Fetch()
+		voucherResp, err := x.VoucherFetcher.Fetch()
 		if err != nil {
 			slog.Warn(
 				"Voucher fetcher error, we will try again",
@@ -41,12 +59,17 @@ func (x *Synchronizer) VoucherPolling(ctx context.Context) error {
 			)
 		} else {
 			// Handle response data
+			voucherIds := []string{}
 			for _, edge := range voucherResp.Data.Vouchers.Edges {
 				outputIndex := edge.Node.Index
 				inputIndex := edge.Node.Input.Index
 				slog.Debug("Add Voucher",
 					"inputIndex", inputIndex,
 					"outputIndex", outputIndex,
+				)
+				voucherIds = append(
+					voucherIds,
+					fmt.Sprintf("%d:%d", inputIndex, outputIndex),
 				)
 				err := x.decoder.HandleOutput(ctx,
 					common.HexToAddress(edge.Node.Destination),
@@ -59,8 +82,19 @@ func (x *Synchronizer) VoucherPolling(ctx context.Context) error {
 				}
 			}
 			if len(voucherResp.Data.Vouchers.PageInfo.EndCursor) > 0 {
-				voucherFetcher.CursorAfter = voucherResp.Data.
+				initCursorAfter := x.VoucherFetcher.CursorAfter
+				x.VoucherFetcher.CursorAfter = voucherResp.Data.
 					Vouchers.PageInfo.EndCursor
+				_, err := x.SynchronizerRepository.Create(
+					ctx, &model.SynchronizerFetch{
+						TimestampAfter: uint64(time.Now().UnixMilli()),
+						IniCursorAfter: initCursorAfter,
+						EndCursorAfter: x.VoucherFetcher.CursorAfter,
+						LogVouchersIds: strings.Join(voucherIds, ";"),
+					})
+				if err != nil {
+					panic(err)
+				}
 			}
 		}
 		select {

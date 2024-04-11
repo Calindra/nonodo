@@ -9,7 +9,7 @@ package reader
 import (
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
-	"github.com/calindra/nonodo/internal/convenience"
+	"github.com/calindra/nonodo/internal/convenience/services"
 	nonodomodel "github.com/calindra/nonodo/internal/model"
 	"github.com/calindra/nonodo/internal/reader/graph"
 	"github.com/calindra/nonodo/internal/reader/model"
@@ -20,7 +20,7 @@ import (
 func Register(
 	e *echo.Echo,
 	nonodomodel *nonodomodel.NonodoModel,
-	convenienceService *convenience.ConvenienceService,
+	convenienceService *services.ConvenienceService,
 ) {
 	resolver := Resolver{model.NewModelWrapper(nonodomodel), convenienceService}
 	config := graph.Config{Resolvers: &resolver}

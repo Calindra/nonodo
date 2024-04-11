@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/calindra/nonodo/internal/convenience"
-	"github.com/calindra/nonodo/internal/convenience/synchronizer"
 	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/calindra/nonodo/internal/echoapp"
 	"github.com/calindra/nonodo/internal/inputter"
@@ -59,7 +58,8 @@ type NonodoOpts struct {
 	// If set, start application.
 	ApplicationArgs []string
 
-	VoucherExecPoC bool
+	ConveniencePoC bool
+	SqliteFile     string
 }
 
 // Create the options struct with default values.
@@ -79,20 +79,20 @@ func NewNonodoOpts() NonodoOpts {
 		DisableDevnet:      false,
 		DisableAdvance:     false,
 		ApplicationArgs:    nil,
-		VoucherExecPoC:     false,
+		ConveniencePoC:     false,
+		SqliteFile:         ":memory:",
 	}
 }
 
 func NewSupervisorPoC(opts NonodoOpts) supervisor.SupervisorWorker {
 	var w supervisor.SupervisorWorker
-	// db := sqlx.MustConnect("sqlite3", ":memory:")
-	db := sqlx.MustConnect("sqlite3", "./my_database.db")
-
+	db := sqlx.MustConnect("sqlite3", opts.SqliteFile)
 	container := convenience.NewContainer(*db)
 	decoder := container.GetOutputDecoder()
 	convenienceService := container.GetConvenienceService()
+	synchronizer := container.GetGraphQLSynchronizer()
 	model := model.NewNonodoModel(decoder)
-	w.Workers = append(w.Workers, synchronizer.NewSynchronizer(decoder))
+	w.Workers = append(w.Workers, synchronizer)
 	opts.RpcUrl = fmt.Sprintf("ws://%s:%v", opts.AnvilAddress, opts.AnvilPort)
 	execVoucherListener := convenience.NewExecListener(
 		opts.RpcUrl,
@@ -120,7 +120,7 @@ func NewSupervisorPoC(opts NonodoOpts) supervisor.SupervisorWorker {
 // Create the nonodo supervisor.
 func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	var w supervisor.SupervisorWorker
-	db := sqlx.MustConnect("sqlite3", ":memory:")
+	db := sqlx.MustConnect("sqlite3", opts.SqliteFile)
 	container := convenience.NewContainer(*db)
 	decoder := container.GetOutputDecoder()
 	convenienceService := container.GetConvenienceService()

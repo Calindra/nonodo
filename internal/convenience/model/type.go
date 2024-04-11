@@ -38,3 +38,11 @@ type ConvenienceFilter struct {
 	And   []*ConvenienceFilter `json:"and,omitempty"`
 	Or    []*ConvenienceFilter `json:"or,omitempty"`
 }
+
+type SynchronizerFetch struct {
+	Id             int64  `db:"Id"`
+	TimestampAfter uint64 `db:"TimestampAfter"`
+	IniCursorAfter string `db:"IniCursorAfter"`
+	LogVouchersIds string `db:"LogVouchersIds"`
+	EndCursorAfter string `db:"EndCursorAfter"`
+}

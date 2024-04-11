@@ -1,4 +1,4 @@
-package convenience
+package decoder
 
 import (
 	"context"
@@ -8,16 +8,17 @@ import (
 	"net/http"
 
 	"github.com/calindra/nonodo/internal/convenience/model"
+	"github.com/calindra/nonodo/internal/convenience/services"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	_ "github.com/mattn/go-sqlite3"
 )
 
 type OutputDecoder struct {
-	convenienceService ConvenienceService
+	convenienceService services.ConvenienceService
 }
 
-func NewOutputDecoder(convenienceService ConvenienceService) *OutputDecoder {
+func NewOutputDecoder(convenienceService services.ConvenienceService) *OutputDecoder {
 	return &OutputDecoder{
 		convenienceService: convenienceService,
 	}

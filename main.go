@@ -90,9 +90,13 @@ func init() {
 	cmd.Flags().StringVar(&opts.RpcUrl, "rpc-url", opts.RpcUrl,
 		"If set, nonodo connects to this url instead of setting up Anvil")
 
-	// experimental
-	cmd.Flags().BoolVar(&opts.VoucherExecPoC, "voucher-exec-poc", opts.VoucherExecPoC,
+	// convenience experimental implementation
+	cmd.Flags().BoolVar(&opts.ConveniencePoC, "convenience-poc", opts.ConveniencePoC,
 		"If set, enables the voucher execution listener experiment.")
+
+	// database file
+	cmd.Flags().StringVar(&opts.SqliteFile, "sqlite-file", opts.SqliteFile,
+		"The sqlite file to load the state")
 }
 
 func run(cmd *cobra.Command, args []string) {
@@ -142,7 +146,7 @@ func run(cmd *cobra.Command, args []string) {
 		case <-ctx.Done():
 		}
 	}()
-	if opts.VoucherExecPoC {
+	if opts.ConveniencePoC {
 		err := nonodo.NewSupervisorPoC(opts).Start(ctx, ready)
 		cobra.CheckErr(err)
 	} else {
