@@ -179,25 +179,25 @@ func (s *rollupsStateAdvance) registerException(payload []byte) error {
 
 // In the inspect state, the model accumulates the reports from an inspect.
 type rollupsStateInspect struct {
-	input                   *InspectInput
-	reports                 []Report
-	getProccessedInputCount func() int
+	input                  *InspectInput
+	reports                []Report
+	getProcessedInputCount func() int
 }
 
 func newRollupsStateInspect(
 	input *InspectInput,
-	getProccessedInputCount func() int,
+	getProcessedInputCount func() int,
 ) *rollupsStateInspect {
 	slog.Info("nonodo: processing inspect", "index", input.Index)
 	return &rollupsStateInspect{
-		input:                   input,
-		getProccessedInputCount: getProccessedInputCount,
+		input:                  input,
+		getProcessedInputCount: getProcessedInputCount,
 	}
 }
 
 func (s *rollupsStateInspect) finish(status CompletionStatus) {
 	s.input.Status = status
-	s.input.ProccessedInputCount = s.getProccessedInputCount()
+	s.input.ProcessedInputCount = s.getProcessedInputCount()
 	s.input.Reports = s.reports
 	slog.Info("nonodo: finished inspect")
 }
@@ -224,7 +224,7 @@ func (s *rollupsStateInspect) addReport(payload []byte) error {
 
 func (s *rollupsStateInspect) registerException(payload []byte) error {
 	s.input.Status = CompletionStatusException
-	s.input.ProccessedInputCount = s.getProccessedInputCount()
+	s.input.ProcessedInputCount = s.getProcessedInputCount()
 	s.input.Reports = s.reports
 	s.input.Exception = payload
 	slog.Info("nonodo: finished inspect with exception")

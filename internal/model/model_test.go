@@ -93,7 +93,7 @@ func (s *ModelSuite) TestItAddsAndGetsInspectInput() {
 		s.Equal(i, input.Index)
 		s.Equal(CompletionStatusUnprocessed, input.Status)
 		s.Equal(s.payloads[i], input.Payload)
-		s.Equal(0, input.ProccessedInputCount)
+		s.Equal(0, input.ProcessedInputCount)
 		s.Empty(input.Reports)
 		s.Empty(input.Exception)
 	}
@@ -222,7 +222,7 @@ func (s *ModelSuite) TestItFinishesInspectWithAccept() {
 	s.Equal(0, input.Index)
 	s.Equal(CompletionStatusAccepted, input.Status)
 	s.Equal(s.payloads[0], input.Payload)
-	s.Equal(0, input.ProccessedInputCount)
+	s.Equal(0, input.ProcessedInputCount)
 	s.Len(input.Reports, 1)
 	s.Empty(input.Exception)
 }
@@ -240,7 +240,7 @@ func (s *ModelSuite) TestItFinishesInspectWithReject() {
 	s.Equal(0, input.Index)
 	s.Equal(CompletionStatusRejected, input.Status)
 	s.Equal(s.payloads[0], input.Payload)
-	s.Equal(0, input.ProccessedInputCount)
+	s.Equal(0, input.ProcessedInputCount)
 	s.Len(input.Reports, 1)
 	s.Empty(input.Exception)
 }
@@ -261,7 +261,7 @@ func (s *ModelSuite) TestItComputesProcessedInputCount() {
 	// check input
 	input := s.m.GetInspectInput(0)
 	s.Equal(0, input.Index)
-	s.Equal(s.n, input.ProccessedInputCount)
+	s.Equal(s.n, input.ProcessedInputCount)
 }
 
 //
@@ -465,7 +465,7 @@ func (s *ModelSuite) TestItRegistersExceptionWhenInspecting() {
 	s.Equal(0, input.Index)
 	s.Equal(CompletionStatusException, input.Status)
 	s.Equal(s.payloads[0], input.Payload)
-	s.Equal(0, input.ProccessedInputCount)
+	s.Equal(0, input.ProcessedInputCount)
 	s.Len(input.Reports, 1)
 	s.Equal(s.payloads[0], input.Exception)
 }

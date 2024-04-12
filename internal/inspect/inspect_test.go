@@ -48,10 +48,10 @@ func (m *ModelMock) GetInspectInput(index int) model.InspectInput {
 func (m *ModelMock) setInspectInput(payload []byte) {
 	m.On("AddInspectInput", payload).Return(0)
 	m.On("GetInspectInput", 0).Return(model.InspectInput{
-		Index:                0,
-		Status:               model.CompletionStatusAccepted,
-		Payload:              payload,
-		ProccessedInputCount: 0,
+		Index:               0,
+		Status:              model.CompletionStatusAccepted,
+		Payload:             payload,
+		ProcessedInputCount: 0,
 		Reports: []model.Report{
 			{Payload: payload},
 		},

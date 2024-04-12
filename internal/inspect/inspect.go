@@ -109,6 +109,6 @@ func convertInput(input model.InspectInput) InspectResult {
 		Status:              status,
 		Reports:             reports,
 		ExceptionPayload:    hexutil.Encode(input.Exception),
-		ProcessedInputCount: input.ProccessedInputCount,
+		ProcessedInputCount: input.ProcessedInputCount,
 	}
 }

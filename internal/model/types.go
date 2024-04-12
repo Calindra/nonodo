@@ -72,12 +72,12 @@ type AdvanceInput struct {
 
 // Rollups inspect input type.
 type InspectInput struct {
-	Index                int
-	Status               CompletionStatus
-	Payload              []byte
-	ProccessedInputCount int
-	Reports              []Report
-	Exception            []byte
+	Index               int
+	Status              CompletionStatus
+	Payload             []byte
+	ProcessedInputCount int
+	Reports             []Report
+	Exception           []byte
 }
 
 // Voucher metadata type
