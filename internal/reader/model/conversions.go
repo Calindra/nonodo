@@ -135,7 +135,6 @@ func ConvertToConvenienceFilter(
 			}
 			or = append(_or, or...)
 
-
 			var eq string
 			var ne string
 
