@@ -79,17 +79,3 @@ type InspectInput struct {
 	Reports             []Report
 	Exception           []byte
 }
-
-// Voucher metadata type
-type VoucherMetadata struct {
-	Contract        common.Address
-	Beneficiary     common.Address
-	Label           string
-	Amount          uint64
-	ExecutedAt      uint64
-	ExecutedBlock   uint64
-	InputIndex      int
-	OutputIndex     int
-	MethodSignature string
-	ERCX            string
-}

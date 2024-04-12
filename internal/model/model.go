@@ -5,12 +5,8 @@
 package model
 
 import (
-	"errors"
 	"fmt"
 	"log/slog"
-	"reflect"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -21,12 +17,11 @@ import (
 // Nonodo model shared among the internal workers.
 // The model store inputs as pointers because these pointers are shared with the rollup state.
 type NonodoModel struct {
-	mutex            sync.Mutex
-	advances         []*AdvanceInput
-	inspects         []*InspectInput
-	vouchersMetadata []*VoucherMetadata
-	state            rollupsState
-	decoder          Decoder
+	mutex    sync.Mutex
+	advances []*AdvanceInput
+	inspects []*InspectInput
+	state    rollupsState
+	decoder  Decoder
 }
 
 // Create a new model.
@@ -166,25 +161,6 @@ func (m *NonodoModel) AddReport(payload []byte) error {
 	defer m.mutex.Unlock()
 
 	return m.state.addReport(payload)
-}
-
-func (m *NonodoModel) AddVoucherMetadata(voucherMetadata *VoucherMetadata) error {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-	m.vouchersMetadata = append(m.vouchersMetadata, voucherMetadata)
-	slog.Debug("Added Vouchers metadata", "len", len(m.vouchersMetadata))
-	return nil
-}
-
-func (m *NonodoModel) GetVouchersMetadata(filters []*MetadataFilter) ([]*VoucherMetadata, error) {
-	result := []*VoucherMetadata{}
-	slog.Debug("Filtering Vouchers metadata", "len", len(m.vouchersMetadata))
-	for _, voucherMetadata := range m.vouchersMetadata {
-		if passFilters(voucherMetadata, filters) {
-			result = append(result, voucherMetadata)
-		}
-	}
-	return result, nil
 }
 
 // Finish the current input with an exception.
@@ -410,113 +386,4 @@ func paginate[T any](slice []T, offset int, limit int) []T {
 		upperBound = len(slice)
 	}
 	return slice[offset:upperBound]
-}
-
-func passFilters(voucherMetadata *VoucherMetadata, filterList []*MetadataFilter) bool {
-	for _, filter := range filterList {
-		if filter.Eq != nil && !fieldValueMatches(voucherMetadata,
-			filter.Field, *filter.Eq) {
-			return false
-		} else if filter.Gt != nil &&
-			!fieldValueGt(voucherMetadata, filter.Field, *filter.Gt) {
-			return false
-		}
-	}
-	return true
-}
-
-func isIntegerType(t reflect.Type) bool {
-	return t == reflect.TypeOf(int(0)) ||
-		t == reflect.TypeOf(int8(0)) ||
-		t == reflect.TypeOf(int16(0)) ||
-		t == reflect.TypeOf(int32(0)) ||
-		t == reflect.TypeOf(int64(0))
-}
-
-func fieldValueMatches(data interface{}, fieldName string, compareValue interface{}) bool {
-	value := reflect.ValueOf(data).Elem()
-	field := value.FieldByName(capitalizeFirstLetter(fieldName))
-	if !field.IsValid() {
-		slog.Warn(fmt.Sprintf("Field with the given name does not exist: %s", fieldName))
-		return false
-	}
-	fieldType := field.Type()
-	if isIntegerType(fieldType) {
-		intValue, err := toInt64(compareValue)
-		if err != nil {
-			slog.Error(err.Error())
-			return false
-		}
-		return intValue == field.Int()
-	} else if address, ok := field.Interface().(common.Address); ok {
-		return address.String() == compareValue
-	} else if fieldType.Kind() == reflect.Uint64 {
-		num, err := toUint64(compareValue)
-		if err != nil {
-			slog.Error(err.Error())
-			return false
-		}
-		return num == field.Interface().(uint64)
-	}
-	return reflect.DeepEqual(field.Interface(), compareValue)
-}
-
-func fieldValueGt(data interface{}, fieldName string, compareValue interface{}) bool {
-	value := reflect.ValueOf(data).Elem()
-	field := value.FieldByName(capitalizeFirstLetter(fieldName))
-	if !field.IsValid() {
-		slog.Warn(fmt.Sprintf("Field with the given name does not exist: %s", fieldName))
-		return false
-	}
-	fieldType := field.Type()
-	if isIntegerType(fieldType) {
-		intValue, err := toInt64(compareValue)
-		if err != nil {
-			slog.Error(err.Error())
-			return false
-		}
-		return intValue > field.Int()
-	} else if fieldType.Kind() == reflect.Uint64 {
-		num, err := toUint64(compareValue)
-		if err != nil {
-			slog.Error(err.Error())
-			return false
-		}
-		return num < field.Interface().(uint64)
-	} else {
-		slog.Warn(fmt.Sprintf("Checking %s not a integer type\n", fieldName))
-	}
-	return false
-}
-
-func toInt64(compareValue interface{}) (int64, error) {
-	strValue, ok := compareValue.(string)
-	if !ok {
-		return 0, errors.New("conversion to string failed")
-	}
-	intValue, err := strconv.ParseInt(strValue, 10, 64)
-	if err != nil {
-		return 0, errors.New("conversion to int64 failed")
-	}
-	return intValue, nil
-}
-
-func toUint64(compareValue interface{}) (uint64, error) {
-	strValue, ok := compareValue.(string)
-	if !ok {
-		return 0, errors.New("conversion to string failed")
-	}
-	num, err := strconv.ParseUint(strValue, 10, 64)
-	if err != nil {
-		return 0, errors.New("conversion to uint64 failed")
-	}
-	return num, nil
-}
-
-func capitalizeFirstLetter(s string) string {
-	if len(s) == 0 {
-		return s
-	}
-	firstChar := strings.ToUpper(s[:1])
-	return firstChar + s[1:]
 }
