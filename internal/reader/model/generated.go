@@ -8,23 +8,27 @@ import (
 	"strconv"
 )
 
-type ConvenientFilter struct {
-	Field *AllowedFields      `json:"field,omitempty"`
-	Eq    *string             `json:"eq,omitempty"`
-	Ne    *string             `json:"ne,omitempty"`
-	Gt    *string             `json:"gt,omitempty"`
-	Gte   *string             `json:"gte,omitempty"`
-	Lt    *string             `json:"lt,omitempty"`
-	Lte   *string             `json:"lte,omitempty"`
-	In    []*string           `json:"in,omitempty"`
-	Nin   []*string           `json:"nin,omitempty"`
-	And   []*ConvenientFilter `json:"and,omitempty"`
-	Or    []*ConvenientFilter `json:"or,omitempty"`
+type AddressFilterInput struct {
+	Eq  *string             `json:"eq,omitempty"`
+	Ne  *string             `json:"ne,omitempty"`
+	In  []*string           `json:"in,omitempty"`
+	Nin []*string           `json:"nin,omitempty"`
+	And []*ConvenientFilter `json:"and,omitempty"`
+	Or  []*ConvenientFilter `json:"or,omitempty"`
 }
 
-type ConvenientFilterNew struct {
-	Destination *StringFilterInput `json:"destination,omitempty"`
-	IsExecuted  *bool              `json:"isExecuted,omitempty"`
+type BooleanFilterInput struct {
+	Eq  *bool               `json:"eq,omitempty"`
+	Ne  *bool               `json:"ne,omitempty"`
+	And []*ConvenientFilter `json:"and,omitempty"`
+	Or  []*ConvenientFilter `json:"or,omitempty"`
+}
+
+type ConvenientFilter struct {
+	Destination *AddressFilterInput `json:"Destination,omitempty"`
+	Executed    *BooleanFilterInput `json:"Executed,omitempty"`
+	And         []*ConvenientFilter `json:"and,omitempty"`
+	Or          []*ConvenientFilter `json:"or,omitempty"`
 }
 
 // Filter object to restrict results depending on input properties
@@ -33,17 +37,6 @@ type InputFilter struct {
 	IndexLowerThan *int `json:"indexLowerThan,omitempty"`
 	// Filter only inputs with index greater than a given value
 	IndexGreaterThan *int `json:"indexGreaterThan,omitempty"`
-}
-
-type IntFilterInput struct {
-	Eq  *int   `json:"eq,omitempty"`
-	Ne  *int   `json:"ne,omitempty"`
-	Gt  *int   `json:"gt,omitempty"`
-	Gte *int   `json:"gte,omitempty"`
-	Lt  *int   `json:"lt,omitempty"`
-	Lte *int   `json:"lte,omitempty"`
-	In  []*int `json:"in,omitempty"`
-	Nin []*int `json:"nin,omitempty"`
 }
 
 // Validity proof for an output
@@ -84,54 +77,6 @@ type Proof struct {
 	Validity *OutputValidityProof `json:"validity"`
 	// Data that allows the validity proof to be contextualized within submitted claims, given as a payload in Ethereum hex binary format, starting with '0x'
 	Context string `json:"context"`
-}
-
-type StringFilterInput struct {
-	Eq  *string   `json:"eq,omitempty"`
-	Ne  *string   `json:"ne,omitempty"`
-	In  []*string `json:"in,omitempty"`
-	Nin []*string `json:"nin,omitempty"`
-}
-
-type AllowedFields string
-
-const (
-	AllowedFieldsDestination AllowedFields = "Destination"
-	AllowedFieldsExecuted    AllowedFields = "Executed"
-)
-
-var AllAllowedFields = []AllowedFields{
-	AllowedFieldsDestination,
-	AllowedFieldsExecuted,
-}
-
-func (e AllowedFields) IsValid() bool {
-	switch e {
-	case AllowedFieldsDestination, AllowedFieldsExecuted:
-		return true
-	}
-	return false
-}
-
-func (e AllowedFields) String() string {
-	return string(e)
-}
-
-func (e *AllowedFields) UnmarshalGQL(v interface{}) error {
-	str, ok := v.(string)
-	if !ok {
-		return fmt.Errorf("enums must be strings")
-	}
-
-	*e = AllowedFields(str)
-	if !e.IsValid() {
-		return fmt.Errorf("%s is not a valid AllowedFields", str)
-	}
-	return nil
-}
-
-func (e AllowedFields) MarshalGQL(w io.Writer) {
-	fmt.Fprint(w, strconv.Quote(e.String()))
 }
 
 type CompletionStatus string

@@ -259,48 +259,9 @@ type ConvenientVoucherEdge {
   cursor: String!
 }
 
-
-enum AllowedFields {
-  Destination
-  Executed
-}
-
-input StringFilterInput {
+input AddressFilterInput {
   eq: String
   ne: String
-  in: [String]
-  nin: [String]
-}
-
-input IntFilterInput {
-  eq: Int
-  ne: Int
-  gt: Int
-  gte: Int
-  lt: Int
-  lte: Int
-  in: [Int]
-  nin: [Int]
-}
-
-input ConvenientFilterNew {
-  destination: StringFilterInput
-  isExecuted: Boolean
-}
-
-input ConvenientFilter {
-  # The field to apply the comparison operation on
-  field: AllowedFields
-
-  # Basic comparison operators
-  eq: String
-  ne: String
-  gt: String
-  gte: String
-  lt: String
-  lte: String
-
-  # Inclusion/exclusion operators
   in: [String]
   nin: [String]
 
@@ -308,3 +269,43 @@ input ConvenientFilter {
   and: [ConvenientFilter]
   or: [ConvenientFilter]
 }
+
+input BooleanFilterInput {
+  eq: Boolean
+  ne: Boolean
+
+  # Logical operators
+  and: [ConvenientFilter]
+  or: [ConvenientFilter]
+}
+
+input ConvenientFilter {
+  Destination: AddressFilterInput
+  Executed: BooleanFilterInput
+  # UserData: UserDataFilter
+
+  # Logical operators
+  and: [ConvenientFilter]
+  or: [ConvenientFilter]
+}
+
+# input UserDataFilter {
+#   # The field to apply the comparison operation on
+#   field: String!
+
+#   # Basic comparison operators
+#   eq: String
+#   ne: String
+#   gt: String
+#   gte: String
+#   lt: String
+#   lte: String
+
+#   # Inclusion/exclusion operators
+#   in: [String]
+#   nin: [String]
+
+#   # Logical operators
+#   and: [ConvenientFilter]
+#   or: [ConvenientFilter]
+# }
