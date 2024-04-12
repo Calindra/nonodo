@@ -22,12 +22,28 @@ type ConvenientFilter struct {
 	Or    []*ConvenientFilter `json:"or,omitempty"`
 }
 
+type ConvenientFilterNew struct {
+	Destination *StringFilterInput `json:"destination,omitempty"`
+	IsExecuted  *bool              `json:"isExecuted,omitempty"`
+}
+
 // Filter object to restrict results depending on input properties
 type InputFilter struct {
 	// Filter only inputs with index lower than a given value
 	IndexLowerThan *int `json:"indexLowerThan,omitempty"`
 	// Filter only inputs with index greater than a given value
 	IndexGreaterThan *int `json:"indexGreaterThan,omitempty"`
+}
+
+type IntFilterInput struct {
+	Eq  *int   `json:"eq,omitempty"`
+	Ne  *int   `json:"ne,omitempty"`
+	Gt  *int   `json:"gt,omitempty"`
+	Gte *int   `json:"gte,omitempty"`
+	Lt  *int   `json:"lt,omitempty"`
+	Lte *int   `json:"lte,omitempty"`
+	In  []*int `json:"in,omitempty"`
+	Nin []*int `json:"nin,omitempty"`
 }
 
 // Validity proof for an output
@@ -68,6 +84,13 @@ type Proof struct {
 	Validity *OutputValidityProof `json:"validity"`
 	// Data that allows the validity proof to be contextualized within submitted claims, given as a payload in Ethereum hex binary format, starting with '0x'
 	Context string `json:"context"`
+}
+
+type StringFilterInput struct {
+	Eq  *string   `json:"eq,omitempty"`
+	Ne  *string   `json:"ne,omitempty"`
+	In  []*string `json:"in,omitempty"`
+	Nin []*string `json:"nin,omitempty"`
 }
 
 type AllowedFields string

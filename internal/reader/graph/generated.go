@@ -863,7 +863,10 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 	ec := executionContext{rc, e, 0, 0, make(chan graphql.DeferredResult)}
 	inputUnmarshalMap := graphql.BuildUnmarshalerMap(
 		ec.unmarshalInputConvenientFilter,
+		ec.unmarshalInputConvenientFilterNew,
 		ec.unmarshalInputInputFilter,
+		ec.unmarshalInputIntFilterInput,
+		ec.unmarshalInputStringFilterInput,
 	)
 	first := true
 
@@ -1045,7 +1048,7 @@ type Query {
   notices(first: Int, last: Int, after: String, before: String): NoticeConnection!
   "Get reports with support for pagination"
   reports(first: Int, last: Int, after: String, before: String): ReportConnection!
-
+  "Get a convenient voucher based on its index or filter"
   convenientVouchers(first: Int, last: Int, after: String, before: String, filter: [ConvenientFilter]): ConvenientVoucherConnection!
 }
 
@@ -1213,26 +1216,28 @@ enum AllowedFields {
   Executed
 }
 
-# union ConvenientFilter = FilterDestination | FilterExecuted
+input StringFilterInput {
+  eq: String
+  ne: String
+  in: [String]
+  nin: [String]
+}
 
-# input FilterDestination {
-#   field: AllowedFields.Destination
-#   eq: String
+input IntFilterInput {
+  eq: Int
+  ne: Int
+  gt: Int
+  gte: Int
+  lt: Int
+  lte: Int
+  in: [Int]
+  nin: [Int]
+}
 
-#   # Logical operators
-#   and: [ConvenientFilter]
-#   or: [ConvenientFilter]
-# }
-
-# input FilterExecuted {
-#   field: AllowedFields.Executed
-#   eq: Boolean
-
-#   # Logical operators
-#   and: [ConvenientFilter]
-#   or: [ConvenientFilter]
-# }
-
+input ConvenientFilterNew {
+  destination: StringFilterInput
+  isExecuted: Boolean
+}
 
 input ConvenientFilter {
   # The field to apply the comparison operation on
@@ -7819,6 +7824,40 @@ func (ec *executionContext) unmarshalInputConvenientFilter(ctx context.Context, 
 	return it, nil
 }
 
+func (ec *executionContext) unmarshalInputConvenientFilterNew(ctx context.Context, obj interface{}) (model.ConvenientFilterNew, error) {
+	var it model.ConvenientFilterNew
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"destination", "isExecuted"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "destination":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("destination"))
+			data, err := ec.unmarshalOStringFilterInput2ᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐStringFilterInput(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Destination = data
+		case "isExecuted":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("isExecuted"))
+			data, err := ec.unmarshalOBoolean2ᚖbool(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.IsExecuted = data
+		}
+	}
+
+	return it, nil
+}
+
 func (ec *executionContext) unmarshalInputInputFilter(ctx context.Context, obj interface{}) (model.InputFilter, error) {
 	var it model.InputFilter
 	asMap := map[string]interface{}{}
@@ -7847,6 +7886,130 @@ func (ec *executionContext) unmarshalInputInputFilter(ctx context.Context, obj i
 				return it, err
 			}
 			it.IndexGreaterThan = data
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputIntFilterInput(ctx context.Context, obj interface{}) (model.IntFilterInput, error) {
+	var it model.IntFilterInput
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"eq", "ne", "gt", "gte", "lt", "lte", "in", "nin"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "eq":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("eq"))
+			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Eq = data
+		case "ne":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("ne"))
+			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Ne = data
+		case "gt":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("gt"))
+			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Gt = data
+		case "gte":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("gte"))
+			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Gte = data
+		case "lt":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("lt"))
+			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Lt = data
+		case "lte":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("lte"))
+			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Lte = data
+		case "in":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("in"))
+			data, err := ec.unmarshalOInt2ᚕᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.In = data
+		case "nin":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("nin"))
+			data, err := ec.unmarshalOInt2ᚕᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Nin = data
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputStringFilterInput(ctx context.Context, obj interface{}) (model.StringFilterInput, error) {
+	var it model.StringFilterInput
+	asMap := map[string]interface{}{}
+	for k, v := range obj.(map[string]interface{}) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"eq", "ne", "in", "nin"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "eq":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("eq"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Eq = data
+		case "ne":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("ne"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Ne = data
+		case "in":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("in"))
+			data, err := ec.unmarshalOString2ᚕᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.In = data
+		case "nin":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("nin"))
+			data, err := ec.unmarshalOString2ᚕᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Nin = data
 		}
 	}
 
@@ -10512,6 +10675,38 @@ func (ec *executionContext) unmarshalOInputFilter2ᚖgithubᚗcomᚋcalindraᚋn
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
+func (ec *executionContext) unmarshalOInt2ᚕᚖint(ctx context.Context, v interface{}) ([]*int, error) {
+	if v == nil {
+		return nil, nil
+	}
+	var vSlice []interface{}
+	if v != nil {
+		vSlice = graphql.CoerceList(v)
+	}
+	var err error
+	res := make([]*int, len(vSlice))
+	for i := range vSlice {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
+		res[i], err = ec.unmarshalOInt2ᚖint(ctx, vSlice[i])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return res, nil
+}
+
+func (ec *executionContext) marshalOInt2ᚕᚖint(ctx context.Context, sel ast.SelectionSet, v []*int) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	for i := range v {
+		ret[i] = ec.marshalOInt2ᚖint(ctx, sel, v[i])
+	}
+
+	return ret
+}
+
 func (ec *executionContext) unmarshalOInt2ᚖint(ctx context.Context, v interface{}) (*int, error) {
 	if v == nil {
 		return nil, nil
@@ -10581,6 +10776,14 @@ func (ec *executionContext) marshalOString2ᚖstring(ctx context.Context, sel as
 	}
 	res := graphql.MarshalString(*v)
 	return res
+}
+
+func (ec *executionContext) unmarshalOStringFilterInput2ᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐStringFilterInput(ctx context.Context, v interface{}) (*model.StringFilterInput, error) {
+	if v == nil {
+		return nil, nil
+	}
+	res, err := ec.unmarshalInputStringFilterInput(ctx, v)
+	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) marshalO__EnumValue2ᚕgithubᚗcomᚋ99designsᚋgqlgenᚋgraphqlᚋintrospectionᚐEnumValueᚄ(ctx context.Context, sel ast.SelectionSet, v []introspection.EnumValue) graphql.Marshaler {

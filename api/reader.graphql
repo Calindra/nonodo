@@ -265,32 +265,28 @@ enum AllowedFields {
   Executed
 }
 
-# union ConvenientFilterUnion = FilterDestination | FilterExecuted
+input StringFilterInput {
+  eq: String
+  ne: String
+  in: [String]
+  nin: [String]
+}
 
-# interface Filter {
-#   # field: AllowedFields!
-#   # eq: String!
+input IntFilterInput {
+  eq: Int
+  ne: Int
+  gt: Int
+  gte: Int
+  lt: Int
+  lte: Int
+  in: [Int]
+  nin: [Int]
+}
 
-#   # Logical operators
-#   and: [ConvenientFilterUnion]
-#   or: [ConvenientFilterUnion]
-# }
-
-# type FilterDestination implements Filter {
-#   destination: String!
-
-#   # Logical operators
-#   and: [ConvenientFilterUnion]
-#   or: [ConvenientFilterUnion]
-# }
-
-# type FilterExecuted implements Filter {
-#   isExecuted: Boolean!
-
-#   # Logical operators
-#   and: [ConvenientFilterUnion]
-#   or: [ConvenientFilterUnion]
-# }
+input ConvenientFilterNew {
+  destination: StringFilterInput
+  isExecuted: Boolean
+}
 
 input ConvenientFilter {
   # The field to apply the comparison operation on
