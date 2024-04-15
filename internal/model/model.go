@@ -12,23 +12,31 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/jmoiron/sqlx"
 )
 
 // Nonodo model shared among the internal workers.
 // The model store inputs as pointers because these pointers are shared with the rollup state.
 type NonodoModel struct {
-	mutex    sync.Mutex
-	advances []*AdvanceInput
-	inspects []*InspectInput
-	state    rollupsState
-	decoder  Decoder
+	mutex            sync.Mutex
+	advances         []*AdvanceInput
+	inspects         []*InspectInput
+	state            rollupsState
+	decoder          Decoder
+	reportRepository *ReportRepository
 }
 
 // Create a new model.
-func NewNonodoModel(decoder Decoder) *NonodoModel {
+func NewNonodoModel(decoder Decoder, db *sqlx.DB) *NonodoModel {
+	reportRepository := ReportRepository{Db: db}
+	err := reportRepository.CreateTables()
+	if err != nil {
+		panic(err)
+	}
 	return &NonodoModel{
-		state:   &rollupsStateIdle{},
-		decoder: decoder,
+		state:            &rollupsStateIdle{},
+		decoder:          decoder,
+		reportRepository: &reportRepository,
 	}
 }
 
@@ -124,7 +132,7 @@ func (m *NonodoModel) FinishAndGetNext(accepted bool) Input {
 	// try to get first unprocessed advance
 	for _, input := range m.advances {
 		if input.Status == CompletionStatusUnprocessed {
-			m.state = newRollupsStateAdvance(input, m.decoder)
+			m.state = newRollupsStateAdvance(input, m.decoder, m.reportRepository)
 			return *input
 		}
 	}

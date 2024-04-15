@@ -91,7 +91,7 @@ func NewSupervisorPoC(opts NonodoOpts) supervisor.SupervisorWorker {
 	decoder := container.GetOutputDecoder()
 	convenienceService := container.GetConvenienceService()
 	synchronizer := container.GetGraphQLSynchronizer()
-	model := model.NewNonodoModel(decoder)
+	model := model.NewNonodoModel(decoder, db)
 	w.Workers = append(w.Workers, synchronizer)
 	opts.RpcUrl = fmt.Sprintf("ws://%s:%v", opts.AnvilAddress, opts.AnvilPort)
 	execVoucherListener := convenience.NewExecListener(
@@ -124,7 +124,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	container := convenience.NewContainer(*db)
 	decoder := container.GetOutputDecoder()
 	convenienceService := container.GetConvenienceService()
-	model := model.NewNonodoModel(decoder)
+	model := model.NewNonodoModel(decoder, db)
 	e := echo.New()
 	e.Use(middleware.CORS())
 	e.Use(middleware.Recover())

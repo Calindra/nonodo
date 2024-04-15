@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/jmoiron/sqlx"
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -18,16 +20,19 @@ import (
 
 type ModelSuite struct {
 	suite.Suite
-	m            *NonodoModel
-	n            int
-	payloads     [][]byte
-	senders      []common.Address
-	blockNumbers []uint64
-	timestamps   []time.Time
+	m                *NonodoModel
+	n                int
+	payloads         [][]byte
+	senders          []common.Address
+	blockNumbers     []uint64
+	timestamps       []time.Time
+	reportRepository *ReportRepository
 }
 
 func (s *ModelSuite) SetupTest() {
-	s.m = NewNonodoModel(nil)
+	db := sqlx.MustConnect("sqlite3", ":memory:")
+	s.m = NewNonodoModel(nil, db)
+	s.reportRepository = s.m.reportRepository
 	s.n = 3
 	s.payloads = make([][]byte, s.n)
 	s.senders = make([]common.Address, s.n)
