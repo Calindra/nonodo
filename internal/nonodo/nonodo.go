@@ -163,7 +163,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		})
 	}
 	w.Workers = append(w.Workers, supervisor.HttpWorker{
-		Address: fmt.Sprintf("%v:%v", opts.HttpAddress, DefaultRollupsPort),
+		Address: fmt.Sprintf("%v:%v", opts.HttpAddress, opts.HttpRollupsPort),
 		Handler: re,
 	})
 	w.Workers = append(w.Workers, supervisor.HttpWorker{
