@@ -48,7 +48,7 @@ func (s *VoucherRepositorySuite) TestCreateVoucher() {
 		OutputIndex: 2,
 	})
 	checkError2(s, err)
-	count, err := s.repository.VoucherCount(ctx)
+	count, err := s.repository.CountVouchers(ctx, nil)
 	checkError2(s, err)
 	s.Equal(uint64(1), count)
 }
@@ -91,6 +91,42 @@ func (s *VoucherRepositorySuite) TestFindVoucherExecuted() {
 	s.Equal(uint64(1), voucher.InputIndex)
 	s.Equal(uint64(2), voucher.OutputIndex)
 	s.Equal(true, voucher.Executed)
+}
+
+func (s *VoucherRepositorySuite) TestCountVoucher() {
+	ctx := context.Background()
+	_, err := s.repository.CreateVoucher(ctx, &model.ConvenienceVoucher{
+		Destination: common.HexToAddress("0x26A61aF89053c847B4bd5084E2caFe7211874a29"),
+		Payload:     "0x0011",
+		InputIndex:  1,
+		OutputIndex: 2,
+		Executed:    true,
+	})
+	checkError2(s, err)
+	_, err = s.repository.CreateVoucher(ctx, &model.ConvenienceVoucher{
+		Destination: common.HexToAddress("0x26A61aF89053c847B4bd5084E2caFe7211874a29"),
+		Payload:     "0x0011",
+		InputIndex:  2,
+		OutputIndex: 0,
+		Executed:    false,
+	})
+	checkError2(s, err)
+	voucher, err := s.repository.CountVouchers(ctx, nil)
+	checkError2(s, err)
+	s.Equal(uint64(2), voucher)
+
+	filters := []*model.ConvenienceFilter{}
+	{
+		field := "Executed"
+		value := "false"
+		filters = append(filters, &model.ConvenienceFilter{
+			Field: &field,
+			Eq:    &value,
+		})
+	}
+	voucher, err = s.repository.CountVouchers(ctx, filters)
+	checkError2(s, err)
+	s.Equal(uint64(1), voucher)
 }
 
 func (s *VoucherRepositorySuite) TestWrongAddress() {

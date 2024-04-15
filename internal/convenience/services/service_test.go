@@ -41,7 +41,7 @@ func (s *ConvenienceServiceSuite) TestCreateVoucher() {
 		OutputIndex: 2,
 	})
 	checkError3(s.T(), err)
-	count, err := s.repository.VoucherCount(ctx)
+	count, err := s.repository.CountVouchers(ctx, nil)
 	checkError3(s.T(), err)
 	s.Equal(uint64(1), count)
 }

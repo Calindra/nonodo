@@ -48,17 +48,6 @@ func (c *VoucherRepository) CreateVoucher(
 	return voucher, nil
 }
 
-func (c *VoucherRepository) VoucherCount(
-	ctx context.Context,
-) (uint64, error) {
-	var count int
-	err := c.Db.Get(&count, "SELECT count(*) FROM vouchers")
-	if err != nil {
-		return 0, nil
-	}
-	return uint64(count), nil
-}
-
 func (c *VoucherRepository) FindVoucherByInputAndOutputIndex(
 	ctx context.Context, inputIndex uint64, outputIndex uint64,
 ) (*model.ConvenienceVoucher, error) {
@@ -82,6 +71,29 @@ func (c *VoucherRepository) UpdateExecuted(
 	query := `UPDATE vouchers SET Executed = ? WHERE inputIndex = ? and outputIndex = ?`
 	c.Db.MustExec(query, executedValue, inputIndex, outputIndex)
 	return nil
+}
+
+func (c *VoucherRepository) CountVouchers(
+	ctx context.Context,
+	filter []*model.ConvenienceFilter,
+) (uint64, error) {
+	query := `SELECT count(*) FROM vouchers `
+	where, args, err := transformToQuery(filter)
+	if err != nil {
+		return 0, err
+	}
+	query += where
+	slog.Debug("Query", "query", query, "args", args)
+	stmt, err := c.Db.Preparex(query)
+	if err != nil {
+		return 0, err
+	}
+	var count uint64
+	err = stmt.Get(&count, args...)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
 }
 
 func (c *VoucherRepository) FindAllVouchers(
