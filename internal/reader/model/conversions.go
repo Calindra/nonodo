@@ -5,6 +5,7 @@ package model
 
 import (
 	"fmt"
+	"strconv"
 
 	convenience "github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/model"
@@ -91,20 +92,89 @@ func ConvertToConvenienceFilter(
 		if err != nil {
 			return nil, err
 		}
-		field := f.Field.String()
-		filters = append(filters, &convenience.ConvenienceFilter{
-			Field: &field,
-			Eq:    f.Eq,
-			Ne:    f.Ne,
-			Gt:    f.Gt,
-			Gte:   f.Gte,
-			Lt:    f.Lt,
-			Lte:   f.Lte,
-			In:    f.In,
-			Nin:   f.Nin,
-			And:   and,
-			Or:    or,
-		})
+
+		// Destination
+		if f.Destination != nil {
+			_and, err := ConvertToConvenienceFilter(f.Destination.And)
+			if err != nil {
+				return nil, err
+			}
+			and = append(_and, and...)
+			_or, err := ConvertToConvenienceFilter(f.Destination.Or)
+			if err != nil {
+				return nil, err
+			}
+			or = append(_or, or...)
+
+			filter := "Destination"
+			filters = append(filters, &convenience.ConvenienceFilter{
+				Field: &filter,
+				Eq:    f.Destination.Eq,
+				Ne:    f.Destination.Ne,
+				Gt:    nil,
+				Gte:   nil,
+				Lt:    nil,
+				Lte:   nil,
+				In:    f.Destination.In,
+				Nin:   f.Destination.Nin,
+				And:   and,
+				Or:    or,
+			})
+		}
+
+		// Executed
+		if f.Executed != nil {
+			_and, err := ConvertToConvenienceFilter(f.Executed.And)
+			if err != nil {
+				return nil, err
+			}
+			and = append(_and, and...)
+			_or, err := ConvertToConvenienceFilter(f.Executed.Or)
+			if err != nil {
+				return nil, err
+			}
+			or = append(_or, or...)
+
+			var eq string
+			var ne string
+
+			if f.Executed.Eq != nil {
+				eq = strconv.FormatBool(*f.Executed.Eq)
+			}
+
+			if f.Executed.Ne != nil {
+				ne = strconv.FormatBool(*f.Executed.Ne)
+			}
+
+			filter := "Executed"
+			filters = append(filters, &convenience.ConvenienceFilter{
+				Field: &filter,
+				Eq:    &eq,
+				Ne:    &ne,
+				Gt:    nil,
+				Gte:   nil,
+				Lt:    nil,
+				Lte:   nil,
+				In:    nil,
+				Nin:   nil,
+				And:   and,
+				Or:    or,
+			})
+		}
+		// field := f.Field.String()
+		// filters = append(filters, &convenience.ConvenienceFilter{
+		// 	Field: &field,
+		// 	Eq:    f.Eq,
+		// 	Ne:    f.Ne,
+		// 	Gt:    f.Gt,
+		// 	Gte:   f.Gte,
+		// 	Lt:    f.Lt,
+		// 	Lte:   f.Lte,
+		// 	In:    f.In,
+		// 	Nin:   f.Nin,
+		// 	And:   and,
+		// 	Or:    or,
+		// })
 	}
 	return filters, nil
 }
