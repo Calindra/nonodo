@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
-
+    "database/sql"
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
@@ -53,8 +53,8 @@ func (c *VoucherRepository) UpdateVoucher(
 	ctx context.Context, voucher *model.ConvenienceVoucher,
 ) (*model.ConvenienceVoucher, error) {
 	updateVoucher := `UPDATE vouchers SET 
-		Destination = ?
-		Payload = ?
+		Destination = ?,
+		Payload = ?,
 		Executed = ?
 		WHERE InputIndex = ? and OutputIndex = ?`
 	
@@ -91,8 +91,12 @@ func (c *VoucherRepository) FindVoucherByInputAndOutputIndex(
 	}
 	var p model.ConvenienceVoucher
 	err = stmt.Get(&p, inputIndex, outputIndex)
-	if err != nil {
-		return nil, err
+	if err != nil { 
+		if err == sql.ErrNoRows {
+			return nil, nil
+		} else {
+			return nil, err
+		}								
 	}
 	return &p, nil
 }
