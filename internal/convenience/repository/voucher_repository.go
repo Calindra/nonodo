@@ -2,13 +2,13 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
-	"log/slog"
-	"strings"
-
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
+	"log/slog"
+	"strings"
 )
 
 type VoucherRepository struct {
@@ -21,7 +21,8 @@ func (c *VoucherRepository) CreateTables() error {
 		Payload 	text,
 		Executed	BOOLEAN,
 		InputIndex 	integer,
-		OutputIndex integer);`
+		OutputIndex integer,
+		PRIMARY KEY (InputIndex, OutputIndex));`
 
 	// execute a query on the server
 	_, err := c.Db.Exec(schema)
@@ -48,6 +49,27 @@ func (c *VoucherRepository) CreateVoucher(
 	return voucher, nil
 }
 
+func (c *VoucherRepository) UpdateVoucher(
+	ctx context.Context, voucher *model.ConvenienceVoucher,
+) (*model.ConvenienceVoucher, error) {
+	updateVoucher := `UPDATE vouchers SET 
+		Destination = ?,
+		Payload = ?,
+		Executed = ?
+		WHERE InputIndex = ? and OutputIndex = ?`
+
+	c.Db.MustExec(
+		updateVoucher,
+		voucher.Destination,
+		voucher.Payload,
+		voucher.Executed,
+		voucher.InputIndex,
+		voucher.OutputIndex,
+	)
+
+	return voucher, nil
+}
+
 func (c *VoucherRepository) VoucherCount(
 	ctx context.Context,
 ) (uint64, error) {
@@ -70,7 +92,11 @@ func (c *VoucherRepository) FindVoucherByInputAndOutputIndex(
 	var p model.ConvenienceVoucher
 	err = stmt.Get(&p, inputIndex, outputIndex)
 	if err != nil {
-		return nil, err
+		if err == sql.ErrNoRows {
+			return nil, nil
+		} else {
+			return nil, err
+		}
 	}
 	return &p, nil
 }
