@@ -75,9 +75,8 @@ func (s *OutputDecoderSuite) TestCreateVoucherIdempotency() {
 	if err != nil {
 		panic(err)
 	}
-	
+
 	s.Equal(uint64(1), voucherCount)
-	
 
 	err = s.decoder.HandleOutput(ctx, Token, "0x3333344", 3, 4)
 
@@ -86,6 +85,10 @@ func (s *OutputDecoderSuite) TestCreateVoucherIdempotency() {
 	}
 
 	voucherCount, err = s.voucherRepository.VoucherCount(ctx)
+
+	if err != nil {
+		panic(err)
+	}
 
 	s.Equal(uint64(1), voucherCount)
 }

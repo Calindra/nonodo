@@ -2,13 +2,13 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
-	"log/slog"
-	"strings"
-    "database/sql"
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
+	"log/slog"
+	"strings"
 )
 
 type VoucherRepository struct {
@@ -57,7 +57,7 @@ func (c *VoucherRepository) UpdateVoucher(
 		Payload = ?,
 		Executed = ?
 		WHERE InputIndex = ? and OutputIndex = ?`
-	
+
 	c.Db.MustExec(
 		updateVoucher,
 		voucher.Destination,
@@ -91,12 +91,12 @@ func (c *VoucherRepository) FindVoucherByInputAndOutputIndex(
 	}
 	var p model.ConvenienceVoucher
 	err = stmt.Get(&p, inputIndex, outputIndex)
-	if err != nil { 
+	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
 		} else {
 			return nil, err
-		}								
+		}
 	}
 	return &p, nil
 }
