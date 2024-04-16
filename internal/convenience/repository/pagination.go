@@ -12,10 +12,16 @@ import (
 
 const DefaultPaginationLimit = 1000
 
-var MixedPaginationErr = errors.New(
+var ErrMixedPagination = errors.New(
 	"cannot mix forward pagination (first, after) with backward pagination (last, before)")
-var InvalidCursorErr = errors.New("invalid pagination cursor")
-var InvalidLimitErr = errors.New("limit cannot be negative")
+var ErrInvalidCursor = errors.New("invalid pagination cursor")
+var ErrInvalidLimit = errors.New("limit cannot be negative")
+
+type PageResult[T any] struct {
+	Total  uint64
+	Offset uint64
+	Rows   []T
+}
 
 // Compute the pagination parameters given the GraphQL connection parameters.
 func computePage(
@@ -24,7 +30,7 @@ func computePage(
 	forward := first != nil || after != nil
 	backward := last != nil || before != nil
 	if forward && backward {
-		return 0, 0, MixedPaginationErr
+		return 0, 0, ErrMixedPagination
 	}
 	if !forward && !backward {
 		// If nothing was set, use forward pagination by default
@@ -41,7 +47,7 @@ func computePage(
 func computeForwardPage(first *int, after *string, total int) (offset int, limit int, err error) {
 	if first != nil {
 		if *first < 0 {
-			return 0, 0, InvalidLimitErr
+			return 0, 0, ErrInvalidLimit
 		}
 		limit = *first
 	} else {
@@ -64,7 +70,7 @@ func computeForwardPage(first *int, after *string, total int) (offset int, limit
 func computeBackwardPage(last *int, before *string, total int) (offset int, limit int, err error) {
 	if last != nil {
 		if *last < 0 {
-			return 0, 0, InvalidLimitErr
+			return 0, 0, ErrInvalidLimit
 		}
 		limit = *last
 	} else {
@@ -100,7 +106,7 @@ func decodeCursor(base64Cursor string, total int) (int, error) {
 		return 0, err
 	}
 	if offset < 0 || offset >= total {
-		return 0, InvalidCursorErr
+		return 0, ErrInvalidCursor
 	}
 	return offset, nil
 }

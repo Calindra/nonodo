@@ -76,7 +76,7 @@ func (c *VoucherRepository) UpdateExecuted(
 	return nil
 }
 
-func (c *VoucherRepository) CountVouchers(
+func (c *VoucherRepository) Count(
 	ctx context.Context,
 	filter []*model.ConvenienceFilter,
 ) (uint64, error) {
@@ -106,8 +106,8 @@ func (c *VoucherRepository) FindAllVouchers(
 	after *string,
 	before *string,
 	filter []*model.ConvenienceFilter,
-) ([]model.ConvenienceVoucher, error) {
-	total, err := c.CountVouchers(ctx, filter)
+) (*PageResult[model.ConvenienceVoucher], error) {
+	total, err := c.Count(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +137,12 @@ func (c *VoucherRepository) FindAllVouchers(
 	if err != nil {
 		return nil, err
 	}
-	return vouchers, nil
+	pageResult := &PageResult[model.ConvenienceVoucher]{
+		Rows:   vouchers,
+		Total:  total,
+		Offset: uint64(offset),
+	}
+	return pageResult, nil
 }
 
 func transformToQuery(

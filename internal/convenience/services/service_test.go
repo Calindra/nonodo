@@ -41,9 +41,9 @@ func (s *ConvenienceServiceSuite) TestCreateVoucher() {
 		OutputIndex: 2,
 	})
 	checkError3(s.T(), err)
-	count, err := s.repository.CountVouchers(ctx, nil)
+	count, err := s.repository.Count(ctx, nil)
 	checkError3(s.T(), err)
-	s.Equal(uint64(1), count)
+	s.Equal(1, int(count))
 }
 
 func (s *ConvenienceServiceSuite) TestFindAllVouchers() {
@@ -58,7 +58,7 @@ func (s *ConvenienceServiceSuite) TestFindAllVouchers() {
 	checkError3(s.T(), err)
 	vouchers, err := s.service.FindAllVouchers(ctx, nil, nil, nil, nil, nil)
 	checkError3(s.T(), err)
-	s.Equal(1, len(vouchers))
+	s.Equal(1, len(vouchers.Rows))
 }
 
 func (s *ConvenienceServiceSuite) TestFindAllVouchersExecuted() {
@@ -97,8 +97,8 @@ func (s *ConvenienceServiceSuite) TestFindAllVouchersExecuted() {
 	filters = append(filters, &byExecuted)
 	vouchers, err := s.service.FindAllVouchers(ctx, nil, nil, nil, nil, filters)
 	checkError3(s.T(), err)
-	s.Equal(1, len(vouchers))
-	s.Equal(uint64(2), vouchers[0].InputIndex)
+	s.Equal(1, len(vouchers.Rows))
+	s.Equal(2, int(vouchers.Rows[0].InputIndex))
 }
 
 func (s *ConvenienceServiceSuite) TestFindAllVouchersByDestination() {
@@ -146,8 +146,8 @@ func (s *ConvenienceServiceSuite) TestFindAllVouchersByDestination() {
 	}
 	vouchers, err := s.service.FindAllVouchers(ctx, nil, nil, nil, nil, filters)
 	checkError3(s.T(), err)
-	s.Equal(1, len(vouchers))
-	s.Equal(uint64(2), vouchers[0].InputIndex)
+	s.Equal(1, len(vouchers.Rows))
+	s.Equal(2, int(vouchers.Rows[0].InputIndex))
 }
 
 func checkError3(t *testing.T, err error) {
