@@ -129,6 +129,62 @@ func (s *VoucherRepositorySuite) TestCountVoucher() {
 	s.Equal(uint64(1), voucher)
 }
 
+func (s *VoucherRepositorySuite) TestPagination() {
+	destination := common.HexToAddress("0x26A61aF89053c847B4bd5084E2caFe7211874a29")
+	ctx := context.Background()
+	for i := 0; i < 30; i++ {
+		_, err := s.repository.CreateVoucher(ctx, &model.ConvenienceVoucher{
+			Destination: destination,
+			Payload:     "0x0011",
+			InputIndex:  uint64(i),
+			OutputIndex: 0,
+			Executed:    false,
+		})
+		checkError2(s, err)
+	}
+
+	voucher, err := s.repository.CountVouchers(ctx, nil)
+	checkError2(s, err)
+	s.Equal(uint64(30), voucher)
+
+	filters := []*model.ConvenienceFilter{}
+	{
+		field := "Executed"
+		value := "false"
+		filters = append(filters, &model.ConvenienceFilter{
+			Field: &field,
+			Eq:    &value,
+		})
+	}
+	first := 10
+	vouchers, err := s.repository.FindAllVouchers(ctx, &first, nil, nil, nil, filters)
+	checkError2(s, err)
+	s.Equal(10, len(vouchers))
+	s.Equal(0, int(vouchers[0].InputIndex))
+	s.Equal(9, int(vouchers[len(vouchers)-1].InputIndex))
+
+	after := encodeCursor(10)
+	vouchers, err = s.repository.FindAllVouchers(ctx, &first, nil, &after, nil, filters)
+	checkError2(s, err)
+	s.Equal(10, len(vouchers))
+	s.Equal(11, int(vouchers[0].InputIndex))
+	s.Equal(20, int(vouchers[len(vouchers)-1].InputIndex))
+
+	last := 10
+	vouchers, err = s.repository.FindAllVouchers(ctx, nil, &last, nil, nil, filters)
+	checkError2(s, err)
+	s.Equal(10, len(vouchers))
+	s.Equal(20, int(vouchers[0].InputIndex))
+	s.Equal(29, int(vouchers[len(vouchers)-1].InputIndex))
+
+	before := encodeCursor(20)
+	vouchers, err = s.repository.FindAllVouchers(ctx, nil, &last, nil, &before, filters)
+	checkError2(s, err)
+	s.Equal(10, len(vouchers))
+	s.Equal(10, int(vouchers[0].InputIndex))
+	s.Equal(19, int(vouchers[len(vouchers)-1].InputIndex))
+}
+
 func (s *VoucherRepositorySuite) TestWrongAddress() {
 	ctx := context.Background()
 	_, err := s.repository.CreateVoucher(ctx, &model.ConvenienceVoucher{
