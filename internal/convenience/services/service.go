@@ -21,6 +21,16 @@ func (s *ConvenienceService) CreateVoucher(
 	ctx context.Context,
 	voucher *model.ConvenienceVoucher,
 ) (*model.ConvenienceVoucher, error) {
+	voucher, err := s.repository.FindVoucherByInputAndOutputIndex(ctx, voucher.InputIndex, voucher.OutputIndex)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if voucher != nil {
+		return s.repository.UpdateVoucher(ctx, voucher)
+	}
+	
 	return s.repository.CreateVoucher(ctx, voucher)
 }
 
