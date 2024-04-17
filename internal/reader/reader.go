@@ -8,12 +8,17 @@ package reader
 
 import (
 	"github.com/99designs/gqlgen/graphql/handler"
+	"github.com/99designs/gqlgen/graphql/handler/debug"
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/calindra/nonodo/internal/convenience/services"
 	nonodomodel "github.com/calindra/nonodo/internal/model"
 	"github.com/calindra/nonodo/internal/reader/graph"
 	"github.com/calindra/nonodo/internal/reader/model"
 	"github.com/labstack/echo/v4"
+)
+
+var (
+	schemaTest = "https://api.cartql.com/"
 )
 
 // Register the GraphQL reader API to echo.
@@ -27,6 +32,8 @@ func Register(
 	schema := graph.NewExecutableSchema(config)
 	graphqlHandler := handler.NewDefaultServer(schema)
 	playgroundHandler := playground.Handler("GraphQL", "/graphql")
+	// Enable tracing
+	graphqlHandler.Use(&debug.Tracer{})
 	e.POST("/graphql", func(c echo.Context) error {
 		graphqlHandler.ServeHTTP(c.Response(), c.Request())
 		return nil

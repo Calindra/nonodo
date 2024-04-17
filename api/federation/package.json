@@ -1,0 +1,10 @@
+{
+    "name": "nonodo-federation",
+    "private": true,
+    "version": "0.0.1",
+    "dependencies": {
+        "@apollo/gateway": "^2.7.3",
+        "apollo-server": "^3.13.0",
+        "graphql": "^16.8.1"
+    }
+}
