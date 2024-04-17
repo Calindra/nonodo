@@ -99,6 +99,9 @@ func init() {
 	// database file
 	cmd.Flags().StringVar(&opts.SqliteFile, "sqlite-file", opts.SqliteFile,
 		"The sqlite file to load the state")
+
+	cmd.Flags().Uint64Var(&opts.FromBlock, "from-block", opts.FromBlock,
+		"The sqlite file to load the state")
 }
 
 func run(cmd *cobra.Command, args []string) {

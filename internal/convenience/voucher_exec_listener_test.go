@@ -75,7 +75,7 @@ func (s *ExecListenerSuite) TestItUpdateExecutedAtAndBlocknumber() {
 			Executed:    false,
 		})
 	}
-	listener := NewExecListener("not a problem", Token, s.ConvenienceService)
+	listener := NewExecListener("not a problem", Token, s.ConvenienceService, nil)
 	eventValues := make([]interface{}, 1)
 	eventValues[0] = big.NewInt(2)
 	timestamp := uint64(9999)

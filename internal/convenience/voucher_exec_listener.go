@@ -22,14 +22,17 @@ type VoucherExecListener struct {
 	AbiString          string
 	EventName          string
 	ConvenienceService *services.ConvenienceService
+	FromBlock          *big.Int
 }
 
 func NewExecListener(
 	provider string,
 	applicationAddress common.Address,
 	convenienceService *services.ConvenienceService,
+	fromBlock *big.Int,
 ) VoucherExecListener {
 	return VoucherExecListener{
+		FromBlock:          fromBlock,
 		ConvenienceService: convenienceService,
 		Provider:           provider,
 		ApplicationAddress: applicationAddress,
@@ -74,7 +77,11 @@ func (x VoucherExecListener) OnEvent(
 	input := new(big.Int).And(voucherId, bitMask)
 
 	// Print the extracted voucher and input
-	slog.Debug("Decoded voucher params", "voucher", voucher, "input", input)
+	slog.Debug("Decoded voucher params",
+		"voucher", voucher,
+		"input", input,
+		"blockNumber", blockNumber,
+	)
 
 	// Print decoded event data
 	slog.Debug("Voucher Executed", "voucherId", voucherId.String())
@@ -106,11 +113,30 @@ func (x *VoucherExecListener) WatchExecutions(ctx context.Context, client *ethcl
 		slog.Error(err.Error())
 	}
 
+	slog.Debug("Reading executions", "FromBlock", x.FromBlock)
+
 	// Subscribe to event
 	query := ethereum.FilterQuery{
+		FromBlock: x.FromBlock,
 		Addresses: []common.Address{x.ApplicationAddress},
 		Topics:    [][]common.Hash{{contractABI.Events[x.EventName].ID}},
 	}
+
+	// Retrieve logs for the specified block range
+	oldLogs, err := client.FilterLogs(context.Background(), query)
+	if err != nil {
+		log.Fatal(err)
+	}
+	// Process old logs
+	for _, vLog := range oldLogs {
+		err := x.HandleLog(vLog, client, contractABI)
+		if err != nil {
+			slog.Error(err.Error())
+			continue
+		}
+	}
+
+	// subscribe to new logs
 	logs := make(chan types.Log)
 	sub, err := client.SubscribeFilterLogs(context.Background(), query, logs)
 	if err != nil {
@@ -129,31 +155,55 @@ func (x *VoucherExecListener) WatchExecutions(ctx context.Context, client *ethcl
 			log.Fatal(err)
 			return err
 		case vLog := <-logs:
-			fmt.Println(vLog)
-
-			// Get the block number of the event
-			blockNumber := vLog.BlockNumber
-			blockNumberBigInt := big.NewInt(int64(blockNumber))
-			// Fetch the block information
-			block, err := client.BlockByNumber(context.Background(), blockNumberBigInt)
-			if err != nil {
-				slog.Error(err.Error())
-				continue
-			}
-
-			// Extract the timestamp from the block
-			timestamp := block.Time()
-
-			values, err := contractABI.Unpack(x.EventName, vLog.Data)
-			if err != nil {
-				slog.Error(err.Error())
-				continue
-			}
-			err = x.OnEvent(values, timestamp, blockNumber)
+			err := x.HandleLog(vLog, client, contractABI)
 			if err != nil {
 				slog.Error(err.Error())
 				continue
 			}
 		}
 	}
+}
+
+func (x *VoucherExecListener) HandleLog(
+	vLog types.Log,
+	client *ethclient.Client,
+	contractABI abi.ABI,
+) error {
+	timestamp, blockNumber, values, err := x.GetEventData(
+		vLog,
+		client,
+		contractABI,
+	)
+	if err != nil {
+		return err
+	}
+	err = x.OnEvent(values, timestamp, blockNumber)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (x *VoucherExecListener) GetEventData(
+	vLog types.Log,
+	client *ethclient.Client,
+	contractABI abi.ABI,
+) (uint64, uint64, []interface{}, error) {
+	// Get the block number of the event
+	blockNumber := vLog.BlockNumber
+	blockNumberBigInt := big.NewInt(int64(blockNumber))
+	// Fetch the block information
+	block, err := client.BlockByNumber(context.Background(), blockNumberBigInt)
+	if err != nil {
+		return 0, 0, nil, err
+	}
+
+	// Extract the timestamp from the block
+	timestamp := block.Time()
+
+	values, err := contractABI.Unpack(x.EventName, vLog.Data)
+	if err != nil {
+		return 0, 0, nil, err
+	}
+	return timestamp, blockNumber, values, nil
 }
