@@ -17,9 +17,9 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-var (
-	schemaTest = "https://api.cartql.com/"
-)
+// var (
+// 	schemaTest = "https://api.cartql.com/"
+// )
 
 // Register the GraphQL reader API to echo.
 func Register(
