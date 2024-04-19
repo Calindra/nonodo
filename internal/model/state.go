@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/calindra/nonodo/internal/convenience/adapter"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
@@ -107,10 +108,36 @@ func sendAllInputVouchersToDecoder(decoder Decoder, inputIndex uint64, vouchers 
 	}
 	ctx := context.Background()
 	for _, v := range vouchers {
+		adapted := adapter.ConvertVoucherPayloadToV2(
+			common.Bytes2Hex(v.Payload),
+		)
 		err := decoder.HandleOutput(
 			ctx,
 			v.Destination,
+			adapted,
+			inputIndex,
+			uint64(v.Index),
+		)
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
+func sendAllInputNoticesToDecoder(decoder Decoder, inputIndex uint64, notices []Notice) {
+	if decoder == nil {
+		slog.Warn("Missing OutputDecoder to send notices")
+		return
+	}
+	ctx := context.Background()
+	for _, v := range notices {
+		adapted := adapter.ConvertNoticePayloadToV2(
 			common.Bytes2Hex(v.Payload),
+		)
+		err := decoder.HandleOutput(
+			ctx,
+			common.Address{},
+			adapted,
 			inputIndex,
 			uint64(v.Index),
 		)
@@ -144,6 +171,7 @@ func (s *rollupsStateAdvance) finish(status CompletionStatus) {
 		s.input.Notices = s.notices
 		if s.decoder != nil {
 			sendAllInputVouchersToDecoder(s.decoder, uint64(s.input.Index), s.vouchers)
+			sendAllInputNoticesToDecoder(s.decoder, uint64(s.input.Index), s.notices)
 		}
 	}
 	s.input.Reports = s.reports

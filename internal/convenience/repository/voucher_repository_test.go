@@ -4,13 +4,12 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"os"
 	"testing"
 
+	"github.com/calindra/nonodo/internal/convenience/config"
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
-	"github.com/lmittmann/tint"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/suite"
 )
@@ -21,14 +20,7 @@ type VoucherRepositorySuite struct {
 }
 
 func (s *VoucherRepositorySuite) SetupTest() {
-	logOpts := new(tint.Options)
-	logOpts.Level = slog.LevelDebug
-	logOpts.AddSource = true
-	logOpts.NoColor = false
-	logOpts.TimeFormat = "[15:04:05.000]"
-	handler := tint.NewHandler(os.Stdout, logOpts)
-	logger := slog.New(handler)
-	slog.SetDefault(logger)
+	config.ConfigureLog(slog.LevelDebug)
 	db := sqlx.MustConnect("sqlite3", ":memory:")
 	s.repository = &VoucherRepository{
 		Db: *db,

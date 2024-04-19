@@ -3,12 +3,11 @@ package repository
 import (
 	"context"
 	"log/slog"
-	"os"
 	"testing"
 
+	"github.com/calindra/nonodo/internal/convenience/config"
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/jmoiron/sqlx"
-	"github.com/lmittmann/tint"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/suite"
 )
@@ -19,14 +18,7 @@ type SynchronizerRepositorySuite struct {
 }
 
 func (s *SynchronizerRepositorySuite) SetupTest() {
-	logOpts := new(tint.Options)
-	logOpts.Level = slog.LevelDebug
-	logOpts.AddSource = true
-	logOpts.NoColor = false
-	logOpts.TimeFormat = "[15:04:05.000]"
-	handler := tint.NewHandler(os.Stdout, logOpts)
-	logger := slog.New(handler)
-	slog.SetDefault(logger)
+	config.ConfigureLog(slog.LevelDebug)
 	db := sqlx.MustConnect("sqlite3", ":memory:")
 	s.repository = &SynchronizerRepository{
 		Db: *db,
@@ -57,10 +49,4 @@ func (s *SynchronizerRepositorySuite) TestGetLastFetched() {
 	lastFetch, err := s.repository.GetLastFetched(ctx)
 	checkError(s.T(), err)
 	s.Equal(2, int(lastFetch.Id))
-}
-
-func checkError(s *testing.T, err error) {
-	if err != nil {
-		s.Fatal(err.Error())
-	}
 }

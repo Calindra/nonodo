@@ -2,8 +2,10 @@ package model
 
 import (
 	"context"
+	"log/slog"
 	"testing"
 
+	"github.com/calindra/nonodo/internal/convenience/config"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/suite"
 )
@@ -16,8 +18,14 @@ type StateSuite struct {
 	suite.Suite
 }
 
+type GenericOutput struct {
+	Index       int
+	InputIndex  int
+	Destination common.Address
+	Payload     []byte
+}
 type FakeDecoder struct {
-	vouchers []Voucher
+	outputs []GenericOutput
 }
 
 func (f *FakeDecoder) HandleOutput(
@@ -27,9 +35,10 @@ func (f *FakeDecoder) HandleOutput(
 	inputIndex uint64,
 	outputIndex uint64,
 ) error {
-	f.vouchers = append(f.vouchers, Voucher{
+	slog.Debug("HandleOutput", "payload", payload)
+	f.outputs = append(f.outputs, GenericOutput{
 		Destination: destination,
-		Payload:     common.Hex2Bytes(payload),
+		Payload:     common.Hex2Bytes(payload[2:]),
 		Index:       int(outputIndex),
 		InputIndex:  int(inputIndex),
 	})
@@ -37,21 +46,37 @@ func (f *FakeDecoder) HandleOutput(
 }
 
 func (s *StateSuite) SetupTest() {
-
+	config.ConfigureLog(slog.LevelDebug)
 }
 
 func TestStateSuite(t *testing.T) {
 	suite.Run(t, new(StateSuite))
 }
 
-//
-// AddAdvanceInput
-//
-
 func (s *StateSuite) TestSendAllVouchersToDecoder() {
 	decoder := FakeDecoder{}
 	vouchers := []Voucher{}
-	vouchers = append(vouchers, Voucher{})
+	vouchers = append(vouchers, Voucher{
+		Payload: common.Hex2Bytes("123456"),
+	})
 	sendAllInputVouchersToDecoder(&decoder, 1, vouchers)
-	s.Equal(1, len(decoder.vouchers))
+	s.Equal(1, len(decoder.outputs))
+	s.Equal(
+		"ef615e2f123456",
+		common.Bytes2Hex(decoder.outputs[0].Payload),
+	)
+}
+
+func (s *StateSuite) TestSendAllNoticesToDecoder() {
+	decoder := FakeDecoder{}
+	notices := []Notice{}
+	notices = append(notices, Notice{
+		Payload: common.Hex2Bytes("123456"),
+	})
+	sendAllInputNoticesToDecoder(&decoder, 1, notices)
+	s.Equal(1, len(decoder.outputs))
+	s.Equal(
+		"c258d6e5123456",
+		common.Bytes2Hex(decoder.outputs[0].Payload),
+	)
 }

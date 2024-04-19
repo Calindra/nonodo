@@ -18,6 +18,7 @@ type OutputDecoderSuite struct {
 	suite.Suite
 	decoder           *OutputDecoder
 	voucherRepository *repository.VoucherRepository
+	noticeRepository  *repository.NoticeRepository
 }
 
 func (s *OutputDecoderSuite) SetupTest() {
@@ -29,8 +30,18 @@ func (s *OutputDecoderSuite) SetupTest() {
 	if err != nil {
 		panic(err)
 	}
+	s.noticeRepository = &repository.NoticeRepository{
+		Db: *db,
+	}
+	err = s.noticeRepository.CreateTables()
+	if err != nil {
+		panic(err)
+	}
 	s.decoder = &OutputDecoder{
-		convenienceService: *services.NewConvenienceService(s.voucherRepository),
+		convenienceService: *services.NewConvenienceService(
+			s.voucherRepository,
+			s.noticeRepository,
+		),
 	}
 }
 
@@ -40,7 +51,7 @@ func TestDecoderSuite(t *testing.T) {
 
 func (s *OutputDecoderSuite) TestHandleOutput() {
 	ctx := context.Background()
-	err := s.decoder.HandleOutput(ctx, Token, "0x111122", 1, 2)
+	err := s.decoder.HandleOutput(ctx, Token, "0xef615e2f11", 1, 2)
 	if err != nil {
 		panic(err)
 	}
@@ -49,7 +60,7 @@ func (s *OutputDecoderSuite) TestHandleOutput() {
 		panic(err)
 	}
 	s.Equal(Token.String(), voucher.Destination.String())
-	s.Equal("0x111122", voucher.Payload)
+	s.Equal("0x11", voucher.Payload)
 }
 
 func (s *OutputDecoderSuite) TestGetAbiFromEtherscan() {

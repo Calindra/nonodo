@@ -4,15 +4,14 @@ import (
 	"context"
 	"log/slog"
 	"math/big"
-	"os"
 	"testing"
 
+	"github.com/calindra/nonodo/internal/convenience/config"
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/calindra/nonodo/internal/convenience/services"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
-	"github.com/lmittmann/tint"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -24,6 +23,7 @@ type ExecListenerSuite struct {
 	suite.Suite
 	ConvenienceService *services.ConvenienceService
 	repository         *repository.VoucherRepository
+	noticeRepository   *repository.NoticeRepository
 }
 
 var Bob = common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
@@ -32,14 +32,7 @@ var Alice = common.HexToAddress("0x70997970C51812dc3A010C7d01b50e0d17dc79C8")
 var Token = common.HexToAddress("0xc6e7DF5E7b4f2A278906862b61205850344D4e7d")
 
 func (s *ExecListenerSuite) SetupTest() {
-	logOpts := new(tint.Options)
-	logOpts.Level = slog.LevelDebug
-	logOpts.AddSource = true
-	logOpts.NoColor = false
-	logOpts.TimeFormat = "[15:04:05.000]"
-	handler := tint.NewHandler(os.Stdout, logOpts)
-	logger := slog.New(handler)
-	slog.SetDefault(logger)
+	config.ConfigureLog(slog.LevelDebug)
 	db := sqlx.MustConnect("sqlite3", ":memory:")
 	s.repository = &repository.VoucherRepository{
 		Db: *db,
@@ -48,7 +41,17 @@ func (s *ExecListenerSuite) SetupTest() {
 	if err != nil {
 		panic(err)
 	}
-	s.ConvenienceService = services.NewConvenienceService(s.repository)
+	s.noticeRepository = &repository.NoticeRepository{
+		Db: *db,
+	}
+	err = s.noticeRepository.CreateTables()
+	if err != nil {
+		panic(err)
+	}
+	s.ConvenienceService = services.NewConvenienceService(
+		s.repository,
+		s.noticeRepository,
+	)
 }
 
 func (s *ExecListenerSuite) TestItUpdateExecutedAtAndBlocknumber() {

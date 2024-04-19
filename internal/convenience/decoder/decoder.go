@@ -31,15 +31,34 @@ func (o *OutputDecoder) HandleOutput(
 	inputIndex uint64,
 	outputIndex uint64,
 ) error {
+	// https://github.com/cartesi/rollups-contracts/issues/42#issuecomment-1694932058
 	// detect the output type Voucher | Notice
-	_, err := o.convenienceService.CreateVoucher(ctx, &model.ConvenienceVoucher{
-		Destination: destination,
-		Payload:     payload,
-		Executed:    false,
-		InputIndex:  inputIndex,
-		OutputIndex: outputIndex,
-	})
-	return err
+	// 0xc258d6e5 for Notice
+	// 0xef615e2f for Vouchers
+	if payload[2:10] == model.VOUCHER_SELECTOR {
+		_, err := o.convenienceService.CreateVoucher(ctx, &model.ConvenienceVoucher{
+			Destination: destination,
+			Payload:     removeSelector(payload),
+			Executed:    false,
+			InputIndex:  inputIndex,
+			OutputIndex: outputIndex,
+		})
+		return err
+	} else {
+		_, err := o.convenienceService.CreateNotice(ctx, &model.ConvenienceNotice{
+			Destination: destination,
+			Payload:     removeSelector(payload),
+			InputIndex:  inputIndex,
+			OutputIndex: outputIndex,
+		})
+		return err
+	}
+}
+
+// for a while we will remove the prefix
+// until the v2 does not arrives
+func removeSelector(payload string) string {
+	return fmt.Sprintf("0x%s", payload[10:])
 }
 
 func (o *OutputDecoder) GetAbi(address common.Address) (*abi.ABI, error) {

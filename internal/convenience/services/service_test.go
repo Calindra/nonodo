@@ -26,7 +26,7 @@ func (s *ConvenienceServiceSuite) SetupTest() {
 	err := s.repository.CreateTables()
 	checkError3(s.T(), err)
 	s.service = &ConvenienceService{
-		repository: s.repository,
+		voucherRepository: s.repository,
 	}
 }
 

@@ -11,9 +11,6 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-const EXECUTED = "Executed"
-const FALSE = "false"
-
 type VoucherRepository struct {
 	Db sqlx.DB
 }
@@ -54,7 +51,7 @@ func (c *VoucherRepository) CreateVoucher(
 func (c *VoucherRepository) FindVoucherByInputAndOutputIndex(
 	ctx context.Context, inputIndex uint64, outputIndex uint64,
 ) (*model.ConvenienceVoucher, error) {
-	query := `SELECT * FROM vouchers WHERE inputIndex = ? and outputIndex = ?`
+	query := `SELECT * FROM vouchers WHERE inputIndex = ? and outputIndex = ? LIMIT 1`
 	stmt, err := c.Db.Preparex(query)
 	if err != nil {
 		return nil, err
@@ -155,11 +152,11 @@ func transformToQuery(
 	args := []interface{}{}
 	where := []string{}
 	for _, filter := range filter {
-		if *filter.Field == EXECUTED {
+		if *filter.Field == model.EXECUTED {
 			if *filter.Eq == "true" {
 				where = append(where, "Executed = ?")
 				args = append(args, true)
-			} else if *filter.Eq == FALSE {
+			} else if *filter.Eq == model.FALSE {
 				where = append(where, "Executed = ?")
 				args = append(args, false)
 			} else {
@@ -167,13 +164,20 @@ func transformToQuery(
 					"unexpected executed value %s", *filter.Eq,
 				)
 			}
-		} else if *filter.Field == "Destination" {
+		} else if *filter.Field == model.DESTINATION {
 			if filter.Eq != nil {
 				where = append(where, "Destination = ?")
 				if !common.IsHexAddress(*filter.Eq) {
 					return "", nil, fmt.Errorf("wrong address value")
 				}
 				args = append(args, common.HexToAddress(*filter.Eq))
+			} else {
+				return "", nil, fmt.Errorf("operation not implemented")
+			}
+		} else if *filter.Field == "InputIndex" {
+			if filter.Eq != nil {
+				where = append(where, "InputIndex = ?")
+				args = append(args, *filter.Eq)
 			} else {
 				return "", nil, fmt.Errorf("operation not implemented")
 			}

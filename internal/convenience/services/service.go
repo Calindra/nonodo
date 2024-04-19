@@ -8,12 +8,17 @@ import (
 )
 
 type ConvenienceService struct {
-	repository *repository.VoucherRepository
+	voucherRepository *repository.VoucherRepository
+	noticeRepository  *repository.NoticeRepository
 }
 
-func NewConvenienceService(repository *repository.VoucherRepository) *ConvenienceService {
+func NewConvenienceService(
+	voucherRepository *repository.VoucherRepository,
+	noticeRepository *repository.NoticeRepository,
+) *ConvenienceService {
 	return &ConvenienceService{
-		repository: repository,
+		voucherRepository: voucherRepository,
+		noticeRepository:  noticeRepository,
 	}
 }
 
@@ -21,7 +26,14 @@ func (s *ConvenienceService) CreateVoucher(
 	ctx context.Context,
 	voucher *model.ConvenienceVoucher,
 ) (*model.ConvenienceVoucher, error) {
-	return s.repository.CreateVoucher(ctx, voucher)
+	return s.voucherRepository.CreateVoucher(ctx, voucher)
+}
+
+func (s *ConvenienceService) CreateNotice(
+	ctx context.Context,
+	notice *model.ConvenienceNotice,
+) (*model.ConvenienceNotice, error) {
+	return s.noticeRepository.Create(ctx, notice)
 }
 
 func (c *ConvenienceService) UpdateExecuted(
@@ -30,7 +42,7 @@ func (c *ConvenienceService) UpdateExecuted(
 	outputIndex uint64,
 	executedValue bool,
 ) error {
-	return c.repository.UpdateExecuted(
+	return c.voucherRepository.UpdateExecuted(
 		ctx,
 		inputIndex,
 		outputIndex,
@@ -46,7 +58,7 @@ func (c *ConvenienceService) FindAllVouchers(
 	before *string,
 	filter []*model.ConvenienceFilter,
 ) (*repository.PageResult[model.ConvenienceVoucher], error) {
-	return c.repository.FindAllVouchers(
+	return c.voucherRepository.FindAllVouchers(
 		ctx,
 		first,
 		last,
