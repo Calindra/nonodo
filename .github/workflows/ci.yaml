@@ -60,12 +60,9 @@ jobs:
     name: Build binaries for release
     runs-on: ubuntu-latest
     needs: [release]
-    env:
-      CGO_ENABLED: 1
-      CC: gcc
     strategy:
       matrix:
-        goos: [linux, darwin, windows]
+        goos: [linux, windows]
         goarch: [amd64, arm64]
         exclude:
         - goarch: arm64
@@ -76,12 +73,28 @@ jobs:
     - uses: wangyoucao577/go-release-action@v1
       with:
         overwrite: true
-        pre_command: |
-          brew install sqlite3 || true
-          brew upgrade icu4c || true
-        # build_command: |
-        #   CC=x86_64-linux-musl-gcc CXX=x86_64-linux-musl-g++ GOARCH=amd64 GOOS=linux CGO_ENABLED=1 go build -ldflags "-linkmode external -extldflags -static"
         github_token: ${{ secrets.GITHUB_TOKEN }}
         goos: ${{ matrix.goos }}
         goarch: ${{ matrix.goarch }}
         extra_files: CHANGELOG.md LICENSE README.md
+  
+  release-darwin-arm64:
+    name: Build binaries for darwin arm64
+    runs-on: macos-14
+    needs: [release]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+    
+    - name: Install deps
+      run: |
+        brew install sqlite3
+        brew upgrade icu4c
+
+    - name: Compile
+      run: go build -tags "darwin arm64"
