@@ -104,8 +104,8 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
-        gh release upload $GITHUB_REF_NAME nonodo-$GITHUB_REF_NAME-darwin-arm64.tar.gz
-        gh release upload $GITHUB_REF_NAME nonodo-$GITHUB_REF_NAME-darwin-arm64.tar.gz.md5
+        gh release upload $GITHUB_REF_NAME nonodo-$GITHUB_REF_NAME-darwin-arm64.tar.gz --clobber
+        gh release upload $GITHUB_REF_NAME nonodo-$GITHUB_REF_NAME-darwin-arm64.tar.gz.md5 --clobber
 
   # release-darwin-amd64:
   #   name: Build binaries for Mac Intel
