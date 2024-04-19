@@ -76,7 +76,7 @@ type Voucher {
   "Transaction payload in Ethereum hex binary format, starting with '0x'"
   payload: String!
   "Proof object that allows this voucher to be validated and executed on the base layer blockchain"
-  proof: Proof
+  proof: Proof @external
 }
 
 "Top level queries"
@@ -84,7 +84,7 @@ type Query {
   "Get input based on its identifier"
   input(index: Int!): Input!
   "Get a voucher based on its index"
-  voucher(voucherIndex: Int!, inputIndex: Int!): Voucher!
+  voucher(voucherIndex: Int!, inputIndex: Int!): Voucher! @provides(fields: "proof")
   "Get a notice based on its index"
   notice(noticeIndex: Int!, inputIndex: Int!): Notice!
   "Get a report based on its index"
