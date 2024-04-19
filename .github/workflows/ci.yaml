@@ -98,7 +98,7 @@ jobs:
       run: tar -czvf nonodo-${{ github.event.release.tag_name }}-darwin-arm64.tar.gz ./nonodo
 
     - name: Generate MD5 checksum
-      run: md5sum nonodo-${{ github.event.release.tag_name }}-darwin-arm64.tar.gz > nonodo-${{ github.event.release.tag_name }}-darwin-arm64.tar.gz.md5
+      run: md5 -q nonodo-${{ github.event.release.tag_name }}-darwin-arm64.tar.gz > nonodo-${{ github.event.release.tag_name }}-darwin-arm64.tar.gz.md5
 
     - name: Upload Artifact
       env:
