@@ -93,6 +93,19 @@ jobs:
 
     - name: Compile arm64
       run: go build -tags "darwin arm64"
+    
+    - name: Compress binary
+      run: tar -czvf nonodo-${{ github.ref }}-darwin-arm64.tar.gz ./nonodo
+
+    - name: Generate MD5 checksum
+      run: md5sum nonodo-${{ github.ref }}-darwin-arm64.tar.gz > nonodo-${{ github.ref }}-darwin-arm64.tar.gz.md5
+
+    - name: Upload Artifact
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        gh release upload ${{ github.ref }} nonodo-${{ github.ref }}-darwin-arm64.tar.gz
+        gh release upload ${{ github.ref }} nonodo-${{ github.ref }}-darwin-arm64.tar.gz.md5
 
   # release-darwin-amd64:
   #   name: Build binaries for Mac Intel
