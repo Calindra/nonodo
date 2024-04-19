@@ -72,6 +72,9 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Install Clang
+      run: sudo apt-get update && sudo apt-get install -y clang
+
     - uses: wangyoucao577/go-release-action@v1
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
