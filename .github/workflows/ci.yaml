@@ -90,14 +90,27 @@ jobs:
       uses: actions/setup-go@v4
       with:
         go-version: '1.21'
+
+    - name: Compile arm64
+      run: go build -tags "darwin arm64"
+
+  release-darwin-amd64:
+    name: Build binaries for Mac Intel
+    runs-on: macos-13-large
+    needs: [release]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
     
     - name: Install deps
       run: |
         brew install sqlite3
         brew upgrade icu4c
 
-    - name: Compile arm64
-      run: go build -tags "darwin arm64"
-    
     - name: Compile amd64
       run: go build -tags "darwin amd64"
