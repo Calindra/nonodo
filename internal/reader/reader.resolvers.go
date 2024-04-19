@@ -73,7 +73,11 @@ func (r *queryResolver) Inputs(ctx context.Context, first *int, last *int, after
 
 // Vouchers is the resolver for the vouchers field.
 func (r *queryResolver) Vouchers(ctx context.Context, first *int, last *int, after *string, before *string) (*model.Connection[*model.Voucher], error) {
-	return r.model.GetVouchers(first, last, after, before, nil)
+	vouchers, err := r.convenienceService.FindAllVouchers(ctx, first, last, after, before, nil)
+	if err != nil {
+		return nil, err
+	}
+	return model.ConvertToVoucherConnectionV1(vouchers.Rows, int(vouchers.Offset), int(vouchers.Total))
 }
 
 // Notices is the resolver for the notices field.

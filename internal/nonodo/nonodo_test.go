@@ -45,10 +45,10 @@ func (s *NonodoSuite) TestItProcessesAdvanceInputs() {
 
 	s.T().Log("sending advance inputs")
 	const n = 3
-	payloads := make([][]byte, n)
+	var payloads [n][32]byte
 	for i := 0; i < n; i++ {
 		payloads[i] = s.makePayload()
-		err := devnet.AddInput(s.ctx, s.rpcUrl, payloads[i])
+		err := devnet.AddInput(s.ctx, s.rpcUrl, payloads[i][:])
 		s.Require().Nil(err)
 	}
 
@@ -62,13 +62,13 @@ func (s *NonodoSuite) TestItProcessesAdvanceInputs() {
 	for i := 0; i < n; i++ {
 		input := response.Inputs.Edges[i].Node
 		s.Equal(i, input.Index)
-		s.Equal(payloads[i], s.decodeHex(input.Payload))
+		s.Equal(payloads[i][:], s.decodeHex(input.Payload))
 		s.Equal(devnet.SenderAddress, input.MsgSender)
 		voucher := input.Vouchers.Edges[0].Node
-		s.Equal(payloads[i], s.decodeHex(voucher.Payload))
+		s.Equal(payloads[i][:], s.decodeHex(voucher.Payload))
 		s.Equal(devnet.SenderAddress, voucher.Destination)
-		s.Equal(payloads[i], s.decodeHex(input.Notices.Edges[0].Node.Payload))
-		s.Equal(payloads[i], s.decodeHex(input.Reports.Edges[0].Node.Payload))
+		s.Equal(payloads[i][:], s.decodeHex(input.Notices.Edges[0].Node.Payload))
+		s.Equal(payloads[i][:], s.decodeHex(input.Reports.Edges[0].Node.Payload))
 	}
 }
 
@@ -81,13 +81,13 @@ func (s *NonodoSuite) TestItProcessesInspectInputs() {
 	const n = 3
 	for i := 0; i < n; i++ {
 		payload := s.makePayload()
-		response, err := s.sendInspect(payload)
+		response, err := s.sendInspect(payload[:])
 		s.Nil(err)
 		s.Equal(http.StatusOK, response.StatusCode())
 		s.Equal("0x", response.JSON200.ExceptionPayload)
 		s.Equal(0, response.JSON200.ProcessedInputCount)
 		s.Len(response.JSON200.Reports, 1)
-		s.Equal(payload, s.decodeHex(response.JSON200.Reports[0].Payload))
+		s.Equal(payload[:], s.decodeHex(response.JSON200.Reports[0].Payload))
 		s.Equal(inspect.Accepted, response.JSON200.Status)
 	}
 }
@@ -106,10 +106,10 @@ func (s *NonodoSuite) TestItWorksWithExternalApplication() {
 	s.T().Log("sending inspect to external application")
 	payload := s.makePayload()
 
-	response, err := s.sendInspect(payload)
+	response, err := s.sendInspect(payload[:])
 	s.Require().Nil(err)
 	s.Require().Equal(http.StatusOK, response.StatusCode())
-	s.Require().Equal(payload, s.decodeHex(response.JSON200.Reports[0].Payload))
+	s.Require().Equal(payload[:], s.decodeHex(response.JSON200.Reports[0].Payload))
 }
 
 //
@@ -188,10 +188,11 @@ func (s *NonodoSuite) waitForAdvanceInput(inputIndex int) error {
 }
 
 // Create a random payload to use in the tests
-func (s *NonodoSuite) makePayload() []byte {
-	payload := make([]byte, 32)
-	_, err := rand.Read(payload)
+func (s *NonodoSuite) makePayload() [32]byte {
+	var payload [32]byte
+	_, err := rand.Read(payload[:])
 	s.Require().Nil(err)
+	fmt.Println(payload)
 	return payload
 }
 

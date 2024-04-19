@@ -79,6 +79,15 @@ func convertConvenientVoucher(cVoucher convenience.ConvenienceVoucher) *Convenie
 	}
 }
 
+func convertConvenientVoucherV1(cVoucher convenience.ConvenienceVoucher) *Voucher {
+	return &Voucher{
+		Index:       int(cVoucher.OutputIndex),
+		Destination: cVoucher.Destination.String(),
+		Payload:     cVoucher.Payload,
+		// Executed:    &cVoucher.Executed,
+	}
+}
+
 func ConvertToConvenienceFilter(
 	filter []*ConvenientFilter,
 ) ([]*convenience.ConvenienceFilter, error) {
@@ -186,6 +195,17 @@ func ConvertToVoucherConnection(
 	convNodes := make([]*ConvenientVoucher, len(vouchers))
 	for i := range vouchers {
 		convNodes[i] = convertConvenientVoucher(vouchers[i])
+	}
+	return newConnection(offset, total, convNodes), nil
+}
+
+func ConvertToVoucherConnectionV1(
+	vouchers []convenience.ConvenienceVoucher,
+	offset int, total int,
+) (*VoucherConnection, error) {
+	convNodes := make([]*Voucher, len(vouchers))
+	for i := range vouchers {
+		convNodes[i] = convertConvenientVoucherV1(vouchers[i])
 	}
 	return newConnection(offset, total, convNodes), nil
 }
