@@ -62,6 +62,7 @@ jobs:
     needs: [release]
     env:
       CGO_ENABLED: 1
+      CC: gcc
     strategy:
       matrix:
         goos: [linux, darwin, windows]
