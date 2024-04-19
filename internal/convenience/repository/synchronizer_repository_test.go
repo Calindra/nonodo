@@ -45,7 +45,7 @@ func (s *SynchronizerRepositorySuite) TestCreateSyncFetch() {
 	checkError(s.T(), err)
 	count, err := s.repository.Count(ctx)
 	checkError(s.T(), err)
-	s.Equal(uint64(1), count)
+	s.Equal(1, int(count))
 }
 
 func (s *SynchronizerRepositorySuite) TestGetLastFetched() {
@@ -56,7 +56,7 @@ func (s *SynchronizerRepositorySuite) TestGetLastFetched() {
 	checkError(s.T(), err)
 	lastFetch, err := s.repository.GetLastFetched(ctx)
 	checkError(s.T(), err)
-	s.Equal(int64(2), lastFetch.Id)
+	s.Equal(2, int(lastFetch.Id))
 }
 
 func checkError(s *testing.T, err error) {

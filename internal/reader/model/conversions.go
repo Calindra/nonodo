@@ -179,6 +179,17 @@ func ConvertToConvenienceFilter(
 	return filters, nil
 }
 
+func ConvertToVoucherConnection(
+	vouchers []convenience.ConvenienceVoucher,
+	offset int, total int,
+) (*ConvenientVoucherConnection, error) {
+	convNodes := make([]*ConvenientVoucher, len(vouchers))
+	for i := range vouchers {
+		convNodes[i] = convertConvenientVoucher(vouchers[i])
+	}
+	return newConnection(offset, total, convNodes), nil
+}
+
 //
 // GraphQL -> Nonodo conversions
 //
