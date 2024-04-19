@@ -40,9 +40,9 @@ type ConvenienceFilter struct {
 }
 
 type SynchronizerFetch struct {
-	Id             int64  `db:"Id"`
-	TimestampAfter uint64 `db:"TimestampAfter"`
-	IniCursorAfter string `db:"IniCursorAfter"`
-	LogVouchersIds string `db:"LogVouchersIds"`
-	EndCursorAfter string `db:"EndCursorAfter"`
+	Id             int64  `db:"id"`
+	TimestampAfter uint64 `db:"timestamp_after"`
+	IniCursorAfter string `db:"ini_cursor_after"`
+	LogVouchersIds string `db:"log_vouchers_ids"`
+	EndCursorAfter string `db:"end_cursor_after"`
 }

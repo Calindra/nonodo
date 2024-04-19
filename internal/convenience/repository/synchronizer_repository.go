@@ -15,11 +15,11 @@ type SynchronizerRepository struct {
 
 func (c *SynchronizerRepository) CreateTables() error {
 	schema := `CREATE TABLE IF NOT EXISTS synchronizer_fetch (
-		Id INTEGER NOT NULL PRIMARY KEY,
-		TimestampAfter 	INTEGER,
-		IniCursorAfter	text,
-		LogVouchersIds 	text,
-		EndCursorAfter  text);`
+		id INTEGER NOT NULL PRIMARY KEY,
+		timestamp_after 	INTEGER,
+		ini_cursor_after	text,
+		log_vouchers_ids 	text,
+		end_cursor_after  text);`
 
 	// execute a query on the server
 	_, err := c.Db.Exec(schema)

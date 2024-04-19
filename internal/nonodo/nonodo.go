@@ -24,6 +24,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	_ "github.com/lib/pq"
 )
 
 const DefaultHttpPort = 8080
@@ -62,6 +63,7 @@ type NonodoOpts struct {
 	ConveniencePoC bool
 	SqliteFile     string
 	FromBlock      uint64
+	DbImplementation string
 }
 
 // Create the options struct with default values.
@@ -84,12 +86,25 @@ func NewNonodoOpts() NonodoOpts {
 		ConveniencePoC:     false,
 		SqliteFile:         ":memory:",
 		FromBlock:          0,
+		DbImplementation:   "sqlite",
 	}
 }
 
 func NewSupervisorPoC(opts NonodoOpts) supervisor.SupervisorWorker {
 	var w supervisor.SupervisorWorker
-	db := sqlx.MustConnect("sqlite3", opts.SqliteFile)
+	
+	var db *sqlx.DB
+
+	connectionString := "host=localhost port=5432 user=myuser dbname=mydatabase password=mypassword sslmode=disable"
+
+	if opts.DbImplementation == "postgres" {
+		slog.Info("Usando PostGres DB ...")
+		db = sqlx.MustConnect("postgres", connectionString)
+	} else {
+		slog.Info("Usando SQLite DB ...")
+		db = sqlx.MustConnect("sqlite3", opts.SqliteFile)
+	}
+
 	container := convenience.NewContainer(*db)
 	decoder := container.GetOutputDecoder()
 	convenienceService := container.GetConvenienceService()
