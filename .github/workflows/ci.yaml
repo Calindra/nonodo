@@ -96,5 +96,8 @@ jobs:
         brew install sqlite3
         brew upgrade icu4c
 
-    - name: Compile
+    - name: Compile arm64
       run: go build -tags "darwin arm64"
+    
+    - name: Compile amd64
+      run: go build -tags "darwin amd64"
