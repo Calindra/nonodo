@@ -9,6 +9,7 @@
         "execlistener",
         "getsourcecode",
         "github",
+        "gqlgen",
         "hexutil",
         "inputter",
         "Inputter",
