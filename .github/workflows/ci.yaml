@@ -96,8 +96,8 @@ jobs:
     
     - name: Compress binary
       run: |
-        tar -cvf nonodo-$GITHUB_REF_NAME-darwin-arm64.tar ./nonodo
-        gzip nonodo-$GITHUB_REF_NAME-darwin-arm64.tar
+        tar -cvf nonodo-$GITHUB_REF_NAME-darwin-arm64.tar.gz ./nonodo
+        # gzip nonodo-$GITHUB_REF_NAME-darwin-arm64.tar
 
     - name: Generate MD5 checksum
       run: md5 -q nonodo-$GITHUB_REF_NAME-darwin-arm64.tar.gz > nonodo-$GITHUB_REF_NAME-darwin-arm64.tar.gz.md5
