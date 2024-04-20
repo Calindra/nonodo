@@ -95,7 +95,9 @@ jobs:
       run: go build -tags "darwin arm64"
     
     - name: Compress binary
-      run: tar -czvf nonodo-$GITHUB_REF_NAME-darwin-arm64.tar.gz ./nonodo
+      run: |
+        tar -cvf nonodo-$GITHUB_REF_NAME-darwin-arm64.tar ./nonodo
+        gzip nonodo-$GITHUB_REF_NAME-darwin-arm64.tar
 
     - name: Generate MD5 checksum
       run: md5 -q nonodo-$GITHUB_REF_NAME-darwin-arm64.tar.gz > nonodo-$GITHUB_REF_NAME-darwin-arm64.tar.gz.md5
