@@ -25,6 +25,7 @@
         "nonodomodel",
         "oapi",
         "outputdecoder",
+        "posix",
         "Preparex",
         "rollup",
         "rollups",
