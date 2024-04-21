@@ -1,10 +1,7 @@
 # NoNodo
 
-> [!IMPORTANT]
-> Calindra is maintaing this project. Go to https://github.com/Calindra/nonodo to get the latest version.
-
-![CI](https://github.com/gligneul/nonodo/actions/workflows/ci.yaml/badge.svg)
-[![Go Report Card](https://goreportcard.com/badge/github.com/gligneul/nonodo)](https://goreportcard.com/report/github.com/gligneul/nonodo)
+![CI](https://github.com/Calindra/nonodo/actions/workflows/ci.yaml/badge.svg)
+[![Go Report Card](https://goreportcard.com/badge/github.com/Calindra/nonodo)](https://goreportcard.com/report/github.com/Calindra/nonodo)
 
 NoNodo is a development node for [Cartesi Rollups](https://docs.cartesi.io/cartesi-rollups/) that was designed to work with applications running in the host machine instead of the Cartesi machine.
 So, the application developer doesn't need to be concerned with compiling their application to RISC-V.

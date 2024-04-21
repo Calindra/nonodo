@@ -1,6 +1,8 @@
 {
     "cSpell.words": [
         "codegen",
+        "czvf",
+        "darwin",
         "deepmap",
         "devnet",
         "echoapp",
@@ -9,6 +11,7 @@
         "execlistener",
         "getsourcecode",
         "github",
+        "gqlgen",
         "hexutil",
         "inputter",
         "Inputter",
@@ -22,6 +25,7 @@
         "nonodomodel",
         "oapi",
         "outputdecoder",
+        "posix",
         "Preparex",
         "rollup",
         "rollups",
