@@ -13,7 +13,16 @@ import (
 
 // Voucher is the resolver for the voucher field.
 func (r *inputResolver) Voucher(ctx context.Context, obj *model.Input, index int) (*model.Voucher, error) {
-	return r.model.GetVoucher(index, obj.Index)
+	voucher, err := r.convenienceService.FindVoucherByInputAndOutputIndex(ctx, uint64(obj.Index), uint64(index))
+	if err != nil {
+		return nil, err
+	}
+	return &model.Voucher{
+		Index:       index,
+		InputIndex:  int(voucher.InputIndex),
+		Destination: voucher.Destination.Hex(),
+		Payload:     voucher.Payload,
+	}, nil
 }
 
 // Notice is the resolver for the notice field.
@@ -23,7 +32,7 @@ func (r *inputResolver) Notice(ctx context.Context, obj *model.Input, index int)
 
 // Report is the resolver for the report field.
 func (r *inputResolver) Report(ctx context.Context, obj *model.Input, index int) (*model.Report, error) {
-	return r.model.GetReport(index, obj.Index)
+	return r.adapter.GetReport(index, obj.Index)
 }
 
 // Vouchers is the resolver for the vouchers field.
@@ -53,7 +62,16 @@ func (r *queryResolver) Input(ctx context.Context, index int) (*model.Input, err
 
 // Voucher is the resolver for the voucher field.
 func (r *queryResolver) Voucher(ctx context.Context, voucherIndex int, inputIndex int) (*model.Voucher, error) {
-	return r.model.GetVoucher(voucherIndex, inputIndex)
+	voucher, err := r.convenienceService.FindVoucherByInputAndOutputIndex(ctx, uint64(inputIndex), uint64(voucherIndex))
+	if err != nil {
+		return nil, err
+	}
+	return &model.Voucher{
+		Index:       voucherIndex,
+		InputIndex:  int(voucher.InputIndex),
+		Destination: voucher.Destination.Hex(),
+		Payload:     voucher.Payload,
+	}, nil
 }
 
 // Notice is the resolver for the notice field.
@@ -82,7 +100,11 @@ func (r *queryResolver) Vouchers(ctx context.Context, first *int, last *int, aft
 
 // Notices is the resolver for the notices field.
 func (r *queryResolver) Notices(ctx context.Context, first *int, last *int, after *string, before *string) (*model.Connection[*model.Notice], error) {
-	return r.model.GetNotices(first, last, after, before, nil)
+	notices, err := r.convenienceService.FindAllNotices(ctx, first, last, after, before, nil)
+	if err != nil {
+		return nil, err
+	}
+	return model.ConvertToNoticeConnectionV1(notices.Rows, int(notices.Offset), int(notices.Total))
 }
 
 // Reports is the resolver for the reports field.

@@ -68,3 +68,29 @@ func (c *ConvenienceService) FindAllVouchers(
 		filter,
 	)
 }
+
+func (c *ConvenienceService) FindAllNotices(
+	ctx context.Context,
+	first *int,
+	last *int,
+	after *string,
+	before *string,
+	filter []*model.ConvenienceFilter,
+) (*commons.PageResult[model.ConvenienceNotice], error) {
+	return c.noticeRepository.FindAllNotices(
+		ctx,
+		first,
+		last,
+		after,
+		before,
+		filter,
+	)
+}
+
+func (c *ConvenienceService) FindVoucherByInputAndOutputIndex(
+	ctx context.Context, inputIndex uint64, outputIndex uint64,
+) (*model.ConvenienceVoucher, error) {
+	return c.voucherRepository.FindVoucherByInputAndOutputIndex(
+		ctx, inputIndex, outputIndex,
+	)
+}
