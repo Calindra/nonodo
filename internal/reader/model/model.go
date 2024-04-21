@@ -66,7 +66,7 @@ func (m *ModelWrapper) GetInputs(
 	for i := range nodes {
 		convNodes[i] = convertInput(nodes[i])
 	}
-	return newConnection(offset, total, convNodes), nil
+	return NewConnection(offset, total, convNodes), nil
 }
 
 func (m *ModelWrapper) GetVouchers(
@@ -83,7 +83,7 @@ func (m *ModelWrapper) GetVouchers(
 	for i := range nodes {
 		convNodes[i] = convertVoucher(nodes[i])
 	}
-	return newConnection(offset, total, convNodes), nil
+	return NewConnection(offset, total, convNodes), nil
 }
 
 func (m *ModelWrapper) GetNotices(
@@ -100,7 +100,7 @@ func (m *ModelWrapper) GetNotices(
 	for i := range nodes {
 		convNodes[i] = convertNotice(nodes[i])
 	}
-	return newConnection(offset, total, convNodes), nil
+	return NewConnection(offset, total, convNodes), nil
 }
 
 func (m *ModelWrapper) GetReports(
@@ -117,5 +117,5 @@ func (m *ModelWrapper) GetReports(
 	for i := range nodes {
 		convNodes[i] = convertReport(nodes[i])
 	}
-	return newConnection(offset, total, convNodes), nil
+	return NewConnection(offset, total, convNodes), nil
 }

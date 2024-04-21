@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"testing"
 
-	"github.com/calindra/nonodo/internal/convenience/config"
+	"github.com/calindra/nonodo/internal/commons"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/suite"
 )
@@ -46,7 +46,7 @@ func (f *FakeDecoder) HandleOutput(
 }
 
 func (s *StateSuite) SetupTest() {
-	config.ConfigureLog(slog.LevelDebug)
+	commons.ConfigureLog(slog.LevelDebug)
 }
 
 func TestStateSuite(t *testing.T) {

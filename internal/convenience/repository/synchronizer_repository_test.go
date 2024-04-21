@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"testing"
 
-	"github.com/calindra/nonodo/internal/convenience/config"
+	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
@@ -18,7 +18,7 @@ type SynchronizerRepositorySuite struct {
 }
 
 func (s *SynchronizerRepositorySuite) SetupTest() {
-	config.ConfigureLog(slog.LevelDebug)
+	commons.ConfigureLog(slog.LevelDebug)
 	db := sqlx.MustConnect("sqlite3", ":memory:")
 	s.repository = &SynchronizerRepository{
 		Db: *db,

@@ -6,7 +6,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/calindra/nonodo/internal/convenience/config"
+	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/calindra/nonodo/internal/convenience/services"
@@ -32,7 +32,7 @@ var Alice = common.HexToAddress("0x70997970C51812dc3A010C7d01b50e0d17dc79C8")
 var Token = common.HexToAddress("0xc6e7DF5E7b4f2A278906862b61205850344D4e7d")
 
 func (s *ExecListenerSuite) SetupTest() {
-	config.ConfigureLog(slog.LevelDebug)
+	commons.ConfigureLog(slog.LevelDebug)
 	db := sqlx.MustConnect("sqlite3", ":memory:")
 	s.repository = &repository.VoucherRepository{
 		Db: *db,

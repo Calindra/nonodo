@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/jmoiron/sqlx"
 )
@@ -72,7 +73,7 @@ func (c *NoticeRepository) FindAllNotices(
 	after *string,
 	before *string,
 	filter []*model.ConvenienceFilter,
-) (*PageResult[model.ConvenienceNotice], error) {
+) (*commons.PageResult[model.ConvenienceNotice], error) {
 	total, err := c.Count(ctx, filter)
 	if err != nil {
 		return nil, err
@@ -84,7 +85,7 @@ func (c *NoticeRepository) FindAllNotices(
 	}
 	query += where
 	query += `ORDER BY InputIndex ASC, OutputIndex ASC `
-	offset, limit, err := computePage(first, last, after, before, int(total))
+	offset, limit, err := commons.ComputePage(first, last, after, before, int(total))
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +104,7 @@ func (c *NoticeRepository) FindAllNotices(
 	if err != nil {
 		return nil, err
 	}
-	pageResult := &PageResult[model.ConvenienceNotice]{
+	pageResult := &commons.PageResult[model.ConvenienceNotice]{
 		Rows:   vouchers,
 		Total:  total,
 		Offset: uint64(offset),

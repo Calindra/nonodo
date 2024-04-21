@@ -90,6 +90,7 @@ func NewNonodoOpts() NonodoOpts {
 func NewSupervisorPoC(opts NonodoOpts) supervisor.SupervisorWorker {
 	var w supervisor.SupervisorWorker
 	db := sqlx.MustConnect("sqlite3", opts.SqliteFile)
+	adapter := reader.NewAdapterV1(db)
 	container := convenience.NewContainer(*db)
 	decoder := container.GetOutputDecoder()
 	convenienceService := container.GetConvenienceService()
@@ -113,7 +114,7 @@ func NewSupervisorPoC(opts NonodoOpts) supervisor.SupervisorWorker {
 		Timeout:      HttpTimeout,
 	}))
 	inspect.Register(e, model)
-	reader.Register(e, model, convenienceService)
+	reader.Register(e, model, convenienceService, adapter)
 	w.Workers = append(w.Workers, supervisor.HttpWorker{
 		Address: fmt.Sprintf("%v:%v", opts.HttpAddress, opts.HttpPort),
 		Handler: e,
@@ -126,6 +127,7 @@ func NewSupervisorPoC(opts NonodoOpts) supervisor.SupervisorWorker {
 func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	var w supervisor.SupervisorWorker
 	db := sqlx.MustConnect("sqlite3", opts.SqliteFile)
+	adapter := reader.NewAdapterV1(db)
 	container := convenience.NewContainer(*db)
 	decoder := container.GetOutputDecoder()
 	convenienceService := container.GetConvenienceService()
@@ -138,7 +140,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		Timeout:      HttpTimeout,
 	}))
 	inspect.Register(e, model)
-	reader.Register(e, model, convenienceService)
+	reader.Register(e, model, convenienceService, adapter)
 
 	// Start the "internal" http rollup server
 	re := echo.New()

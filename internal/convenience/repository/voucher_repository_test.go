@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"testing"
 
-	"github.com/calindra/nonodo/internal/convenience/config"
+	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
@@ -20,7 +20,7 @@ type VoucherRepositorySuite struct {
 }
 
 func (s *VoucherRepositorySuite) SetupTest() {
-	config.ConfigureLog(slog.LevelDebug)
+	commons.ConfigureLog(slog.LevelDebug)
 	db := sqlx.MustConnect("sqlite3", ":memory:")
 	s.repository = &VoucherRepository{
 		Db: *db,
@@ -155,7 +155,7 @@ func (s *VoucherRepositorySuite) TestPagination() {
 	s.Equal(0, int(vouchers.Rows[0].InputIndex))
 	s.Equal(9, int(vouchers.Rows[len(vouchers.Rows)-1].InputIndex))
 
-	after := encodeCursor(10)
+	after := commons.EncodeCursor(10)
 	vouchers, err = s.repository.FindAllVouchers(ctx, &first, nil, &after, nil, filters)
 	checkError2(s, err)
 	s.Equal(10, len(vouchers.Rows))
@@ -169,7 +169,7 @@ func (s *VoucherRepositorySuite) TestPagination() {
 	s.Equal(20, int(vouchers.Rows[0].InputIndex))
 	s.Equal(29, int(vouchers.Rows[len(vouchers.Rows)-1].InputIndex))
 
-	before := encodeCursor(20)
+	before := commons.EncodeCursor(20)
 	vouchers, err = s.repository.FindAllVouchers(ctx, nil, &last, nil, &before, filters)
 	checkError2(s, err)
 	s.Equal(10, len(vouchers.Rows))

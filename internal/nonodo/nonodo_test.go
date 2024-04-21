@@ -8,12 +8,16 @@ import (
 	"context"
 	"crypto/rand"
 	"fmt"
+	"log/slog"
 	"net/http"
+	"os"
+	"path"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/Khan/genqlient/graphql"
+	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/calindra/nonodo/internal/inspect"
 	"github.com/calindra/nonodo/internal/readerclient"
@@ -40,25 +44,31 @@ type NonodoSuite struct {
 
 func (s *NonodoSuite) TestItProcessesAdvanceInputs() {
 	opts := NewNonodoOpts()
+	// we are using file cuz there is problem with memory
+	// no such table: reports
+	tempDir, err := os.MkdirTemp("", "")
+	s.NoError(err)
+	sqliteFileName := fmt.Sprintf("test%d.sqlite3", time.Now().UnixMilli())
 	opts.EnableEcho = true
-	s.SetupTest(opts)
-
+	opts.SqliteFile = path.Join(tempDir, sqliteFileName)
+	s.setupTest(opts)
+	defer os.RemoveAll(tempDir)
 	s.T().Log("sending advance inputs")
 	const n = 3
 	var payloads [n][32]byte
 	for i := 0; i < n; i++ {
 		payloads[i] = s.makePayload()
 		err := devnet.AddInput(s.ctx, s.rpcUrl, payloads[i][:])
-		s.Require().Nil(err)
+		s.NoError(err)
 	}
 
 	s.T().Log("waiting until last input is ready")
-	err := s.waitForAdvanceInput(n - 1)
-	s.Require().Nil(err)
+	err = s.waitForAdvanceInput(n - 1)
+	s.NoError(err)
 
 	s.T().Log("verifying node state")
 	response, err := readerclient.State(s.ctx, s.graphqlClient)
-	s.Require().Nil(err)
+	s.NoError(err)
 	for i := 0; i < n; i++ {
 		input := response.Inputs.Edges[i].Node
 		s.Equal(i, input.Index)
@@ -75,14 +85,14 @@ func (s *NonodoSuite) TestItProcessesAdvanceInputs() {
 func (s *NonodoSuite) TestItProcessesInspectInputs() {
 	opts := NewNonodoOpts()
 	opts.EnableEcho = true
-	s.SetupTest(opts)
+	s.setupTest(opts)
 
 	s.T().Log("sending inspect inputs")
 	const n = 3
 	for i := 0; i < n; i++ {
 		payload := s.makePayload()
 		response, err := s.sendInspect(payload[:])
-		s.Nil(err)
+		s.NoError(err)
 		s.Equal(http.StatusOK, response.StatusCode())
 		s.Equal("0x", response.JSON200.ExceptionPayload)
 		s.Equal(0, response.JSON200.ProcessedInputCount)
@@ -101,13 +111,13 @@ func (s *NonodoSuite) TestItWorksWithExternalApplication() {
 		"--endpoint",
 		fmt.Sprintf("http://%v:%v", opts.HttpAddress, opts.HttpRollupsPort),
 	}
-	s.SetupTest(opts)
+	s.setupTest(opts)
 
 	s.T().Log("sending inspect to external application")
 	payload := s.makePayload()
 
 	response, err := s.sendInspect(payload[:])
-	s.Require().Nil(err)
+	s.NoError(err)
 	s.Require().Equal(http.StatusOK, response.StatusCode())
 	s.Require().Equal(payload[:], s.decodeHex(response.JSON200.Reports[0].Payload))
 }
@@ -118,7 +128,8 @@ func (s *NonodoSuite) TestItWorksWithExternalApplication() {
 
 // Setup the nonodo suite.
 // This method requires the nonodo options, so each test must call it explicitly.
-func (s *NonodoSuite) SetupTest(opts NonodoOpts) {
+func (s *NonodoSuite) setupTest(opts NonodoOpts) {
+	commons.ConfigureLog(slog.LevelDebug)
 	s.ctx, s.timeoutCancel = context.WithTimeout(context.Background(), testTimeout)
 	s.workerResult = make(chan error)
 
@@ -148,7 +159,7 @@ func (s *NonodoSuite) SetupTest(opts NonodoOpts) {
 	inspectEndpoint := fmt.Sprintf("http://%s:%v/", opts.HttpAddress, opts.HttpPort)
 	var err error
 	s.inspectClient, err = inspect.NewClientWithResponses(inspectEndpoint)
-	s.Nil(err)
+	s.NoError(err)
 }
 
 func (s *NonodoSuite) TearDownTest() {
@@ -157,7 +168,7 @@ func (s *NonodoSuite) TearDownTest() {
 	case <-s.ctx.Done():
 		s.Fail("context error", s.ctx.Err())
 	case err := <-s.workerResult:
-		s.Nil(err)
+		s.NoError(err)
 	}
 	s.timeoutCancel()
 }
@@ -191,7 +202,7 @@ func (s *NonodoSuite) waitForAdvanceInput(inputIndex int) error {
 func (s *NonodoSuite) makePayload() [32]byte {
 	var payload [32]byte
 	_, err := rand.Read(payload[:])
-	s.Require().Nil(err)
+	s.NoError(err)
 	fmt.Println(payload)
 	return payload
 }
@@ -199,7 +210,7 @@ func (s *NonodoSuite) makePayload() [32]byte {
 // Decode the hex string into bytes.
 func (s *NonodoSuite) decodeHex(value string) []byte {
 	bytes, err := hexutil.Decode(value)
-	s.Require().Nil(err)
+	s.NoError(err)
 	return bytes
 }
 

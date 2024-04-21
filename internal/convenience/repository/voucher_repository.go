@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"strings"
 
+	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
@@ -103,7 +104,7 @@ func (c *VoucherRepository) FindAllVouchers(
 	after *string,
 	before *string,
 	filter []*model.ConvenienceFilter,
-) (*PageResult[model.ConvenienceVoucher], error) {
+) (*commons.PageResult[model.ConvenienceVoucher], error) {
 	total, err := c.Count(ctx, filter)
 	if err != nil {
 		return nil, err
@@ -115,7 +116,7 @@ func (c *VoucherRepository) FindAllVouchers(
 	}
 	query += where
 	query += `ORDER BY InputIndex ASC, OutputIndex ASC `
-	offset, limit, err := computePage(first, last, after, before, int(total))
+	offset, limit, err := commons.ComputePage(first, last, after, before, int(total))
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +135,7 @@ func (c *VoucherRepository) FindAllVouchers(
 	if err != nil {
 		return nil, err
 	}
-	pageResult := &PageResult[model.ConvenienceVoucher]{
+	pageResult := &commons.PageResult[model.ConvenienceVoucher]{
 		Rows:   vouchers,
 		Total:  total,
 		Offset: uint64(offset),

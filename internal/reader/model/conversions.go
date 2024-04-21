@@ -196,7 +196,7 @@ func ConvertToVoucherConnection(
 	for i := range vouchers {
 		convNodes[i] = convertConvenientVoucher(vouchers[i])
 	}
-	return newConnection(offset, total, convNodes), nil
+	return NewConnection(offset, total, convNodes), nil
 }
 
 func ConvertToVoucherConnectionV1(
@@ -207,7 +207,7 @@ func ConvertToVoucherConnectionV1(
 	for i := range vouchers {
 		convNodes[i] = convertConvenientVoucherV1(vouchers[i])
 	}
-	return newConnection(offset, total, convNodes), nil
+	return NewConnection(offset, total, convNodes), nil
 }
 
 //

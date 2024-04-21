@@ -3,6 +3,7 @@ package services
 import (
 	"context"
 
+	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/convenience/repository"
 )
@@ -57,7 +58,7 @@ func (c *ConvenienceService) FindAllVouchers(
 	after *string,
 	before *string,
 	filter []*model.ConvenienceFilter,
-) (*repository.PageResult[model.ConvenienceVoucher], error) {
+) (*commons.PageResult[model.ConvenienceVoucher], error) {
 	return c.voucherRepository.FindAllVouchers(
 		ctx,
 		first,

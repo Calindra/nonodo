@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"testing"
 
-	"github.com/calindra/nonodo/internal/convenience/config"
+	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
@@ -20,7 +20,7 @@ type NoticeRepositorySuite struct {
 }
 
 func (s *NoticeRepositorySuite) SetupTest() {
-	config.ConfigureLog(slog.LevelDebug)
+	commons.ConfigureLog(slog.LevelDebug)
 	db := sqlx.MustConnect("sqlite3", ":memory:")
 	s.repository = &NoticeRepository{
 		Db: *db,
@@ -122,7 +122,7 @@ func (s *NoticeRepositorySuite) TestNoticePagination() {
 	s.Equal(0, int(notices.Rows[0].InputIndex))
 	s.Equal(9, int(notices.Rows[len(notices.Rows)-1].InputIndex))
 
-	after := encodeCursor(10)
+	after := commons.EncodeCursor(10)
 	notices, err = s.repository.FindAllNotices(ctx, &first, nil, &after, nil, filters)
 	checkError(s.T(), err)
 	s.Equal(10, len(notices.Rows))
@@ -136,7 +136,7 @@ func (s *NoticeRepositorySuite) TestNoticePagination() {
 	s.Equal(20, int(notices.Rows[0].InputIndex))
 	s.Equal(29, int(notices.Rows[len(notices.Rows)-1].InputIndex))
 
-	before := encodeCursor(20)
+	before := commons.EncodeCursor(20)
 	notices, err = s.repository.FindAllNotices(ctx, nil, &last, nil, &before, filters)
 	checkError(s.T(), err)
 	s.Equal(10, len(notices.Rows))
