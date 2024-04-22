@@ -42,8 +42,6 @@ func (r *ReportRepository) Create(report Report) (Report, error) {
 		common.Bytes2Hex(report.Payload),
 		report.InputIndex,
 	)
-	total, _ := r.Count(nil)
-	slog.Debug("Report created", "total", total)
 	return report, nil
 }
 

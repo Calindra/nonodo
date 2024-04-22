@@ -1,5 +1,6 @@
 {
     "cSpell.words": [
+        "carlmjohnson",
         "codegen",
         "czvf",
         "darwin",
@@ -9,6 +10,7 @@
         "ERCX",
         "ethclient",
         "execlistener",
+        "exitf",
         "genqlient",
         "getsourcecode",
         "github",
@@ -16,6 +18,7 @@
         "hexutil",
         "inputter",
         "Inputter",
+        "isatty",
         "jmoiron",
         "labstack",
         "Ligneul",
@@ -35,6 +38,7 @@
         "sqlite",
         "sqlx",
         "stretchr",
-        "unmarshal"
+        "unmarshal",
+        "versioninfo"
     ]
 }
