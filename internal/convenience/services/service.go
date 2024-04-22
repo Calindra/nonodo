@@ -94,3 +94,11 @@ func (c *ConvenienceService) FindVoucherByInputAndOutputIndex(
 		ctx, inputIndex, outputIndex,
 	)
 }
+
+func (c *ConvenienceService) FindNoticeByInputAndOutputIndex(
+	ctx context.Context, inputIndex uint64, outputIndex uint64,
+) (*model.ConvenienceNotice, error) {
+	return c.noticeRepository.FindByInputAndOutputIndex(
+		ctx, inputIndex, outputIndex,
+	)
+}

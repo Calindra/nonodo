@@ -2,6 +2,8 @@ package repository
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"log/slog"
 
 	"github.com/calindra/nonodo/internal/commons"
@@ -123,6 +125,9 @@ func (c *NoticeRepository) FindByInputAndOutputIndex(
 	var p model.ConvenienceNotice
 	err = stmt.Get(&p, inputIndex, outputIndex)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return &p, nil

@@ -90,10 +90,10 @@ func NewNonodoOpts() NonodoOpts {
 func NewSupervisorPoC(opts NonodoOpts) supervisor.SupervisorWorker {
 	var w supervisor.SupervisorWorker
 	db := sqlx.MustConnect("sqlite3", opts.SqliteFile)
-	adapter := reader.NewAdapterV1(db)
 	container := convenience.NewContainer(*db)
 	decoder := container.GetOutputDecoder()
 	convenienceService := container.GetConvenienceService()
+	adapter := reader.NewAdapterV1(db, convenienceService)
 	synchronizer := container.GetGraphQLSynchronizer()
 	model := model.NewNonodoModel(decoder, db)
 	w.Workers = append(w.Workers, synchronizer)
@@ -127,10 +127,10 @@ func NewSupervisorPoC(opts NonodoOpts) supervisor.SupervisorWorker {
 func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	var w supervisor.SupervisorWorker
 	db := sqlx.MustConnect("sqlite3", opts.SqliteFile)
-	adapter := reader.NewAdapterV1(db)
 	container := convenience.NewContainer(*db)
 	decoder := container.GetOutputDecoder()
 	convenienceService := container.GetConvenienceService()
+	adapter := reader.NewAdapterV1(db, convenienceService)
 	model := model.NewNonodoModel(decoder, db)
 	e := echo.New()
 	e.Use(middleware.CORS())
