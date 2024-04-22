@@ -8,6 +8,7 @@ package nonodo
 import (
 	"fmt"
 	"log/slog"
+	"math/big"
 	"time"
 
 	"github.com/calindra/nonodo/internal/convenience"
@@ -60,6 +61,7 @@ type NonodoOpts struct {
 
 	ConveniencePoC bool
 	SqliteFile     string
+	FromBlock      uint64
 }
 
 // Create the options struct with default values.
@@ -81,6 +83,7 @@ func NewNonodoOpts() NonodoOpts {
 		ApplicationArgs:    nil,
 		ConveniencePoC:     false,
 		SqliteFile:         ":memory:",
+		FromBlock:          0,
 	}
 }
 
@@ -91,13 +94,15 @@ func NewSupervisorPoC(opts NonodoOpts) supervisor.SupervisorWorker {
 	decoder := container.GetOutputDecoder()
 	convenienceService := container.GetConvenienceService()
 	synchronizer := container.GetGraphQLSynchronizer()
-	model := model.NewNonodoModel(decoder)
+	model := model.NewNonodoModel(decoder, db)
 	w.Workers = append(w.Workers, synchronizer)
 	opts.RpcUrl = fmt.Sprintf("ws://%s:%v", opts.AnvilAddress, opts.AnvilPort)
+	fromBlock := new(big.Int).SetUint64(opts.FromBlock)
 	execVoucherListener := convenience.NewExecListener(
 		opts.RpcUrl,
 		common.HexToAddress(opts.ApplicationAddress),
 		convenienceService,
+		fromBlock,
 	)
 	w.Workers = append(w.Workers, execVoucherListener)
 	e := echo.New()
@@ -124,7 +129,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	container := convenience.NewContainer(*db)
 	decoder := container.GetOutputDecoder()
 	convenienceService := container.GetConvenienceService()
-	model := model.NewNonodoModel(decoder)
+	model := model.NewNonodoModel(decoder, db)
 	e := echo.New()
 	e.Use(middleware.CORS())
 	e.Use(middleware.Recover())
@@ -163,7 +168,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		})
 	}
 	w.Workers = append(w.Workers, supervisor.HttpWorker{
-		Address: fmt.Sprintf("%v:%v", opts.HttpAddress, DefaultRollupsPort),
+		Address: fmt.Sprintf("%v:%v", opts.HttpAddress, opts.HttpRollupsPort),
 		Handler: re,
 	})
 	w.Workers = append(w.Workers, supervisor.HttpWorker{

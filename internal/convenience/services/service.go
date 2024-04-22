@@ -58,7 +58,7 @@ func (c *ConvenienceService) FindAllVouchers(
 	after *string,
 	before *string,
 	filter []*model.ConvenienceFilter,
-) ([]model.ConvenienceVoucher, error) {
+) (*repository.PageResult[model.ConvenienceVoucher], error) {
 	return c.repository.FindAllVouchers(
 		ctx,
 		first,

@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/jmoiron/sqlx"
+	_ "github.com/mattn/go-sqlite3"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -18,16 +20,19 @@ import (
 
 type ModelSuite struct {
 	suite.Suite
-	m            *NonodoModel
-	n            int
-	payloads     [][]byte
-	senders      []common.Address
-	blockNumbers []uint64
-	timestamps   []time.Time
+	m                *NonodoModel
+	n                int
+	payloads         [][]byte
+	senders          []common.Address
+	blockNumbers     []uint64
+	timestamps       []time.Time
+	reportRepository *ReportRepository
 }
 
 func (s *ModelSuite) SetupTest() {
-	s.m = NewNonodoModel(nil)
+	db := sqlx.MustConnect("sqlite3", ":memory:")
+	s.m = NewNonodoModel(nil, db)
+	s.reportRepository = s.m.reportRepository
 	s.n = 3
 	s.payloads = make([][]byte, s.n)
 	s.senders = make([]common.Address, s.n)
@@ -93,7 +98,7 @@ func (s *ModelSuite) TestItAddsAndGetsInspectInput() {
 		s.Equal(i, input.Index)
 		s.Equal(CompletionStatusUnprocessed, input.Status)
 		s.Equal(s.payloads[i], input.Payload)
-		s.Equal(0, input.ProccessedInputCount)
+		s.Equal(0, input.ProcessedInputCount)
 		s.Empty(input.Reports)
 		s.Empty(input.Exception)
 	}
@@ -222,7 +227,7 @@ func (s *ModelSuite) TestItFinishesInspectWithAccept() {
 	s.Equal(0, input.Index)
 	s.Equal(CompletionStatusAccepted, input.Status)
 	s.Equal(s.payloads[0], input.Payload)
-	s.Equal(0, input.ProccessedInputCount)
+	s.Equal(0, input.ProcessedInputCount)
 	s.Len(input.Reports, 1)
 	s.Empty(input.Exception)
 }
@@ -240,7 +245,7 @@ func (s *ModelSuite) TestItFinishesInspectWithReject() {
 	s.Equal(0, input.Index)
 	s.Equal(CompletionStatusRejected, input.Status)
 	s.Equal(s.payloads[0], input.Payload)
-	s.Equal(0, input.ProccessedInputCount)
+	s.Equal(0, input.ProcessedInputCount)
 	s.Len(input.Reports, 1)
 	s.Empty(input.Exception)
 }
@@ -261,7 +266,7 @@ func (s *ModelSuite) TestItComputesProcessedInputCount() {
 	// check input
 	input := s.m.GetInspectInput(0)
 	s.Equal(0, input.Index)
-	s.Equal(s.n, input.ProccessedInputCount)
+	s.Equal(s.n, input.ProcessedInputCount)
 }
 
 //
@@ -465,7 +470,7 @@ func (s *ModelSuite) TestItRegistersExceptionWhenInspecting() {
 	s.Equal(0, input.Index)
 	s.Equal(CompletionStatusException, input.Status)
 	s.Equal(s.payloads[0], input.Payload)
-	s.Equal(0, input.ProccessedInputCount)
+	s.Equal(0, input.ProcessedInputCount)
 	s.Len(input.Reports, 1)
 	s.Equal(s.payloads[0], input.Exception)
 }
@@ -1122,141 +1127,4 @@ func (s *ModelSuite) TestItGetsNoReportsWhenOffsetIsGreaterThanInputs() {
 
 	reports := s.m.GetReports(OutputFilter{}, 0, 0)
 	s.Empty(reports)
-}
-
-var Bob = common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
-var Bruno = common.HexToAddress("0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC")
-var Alice = common.HexToAddress("0x70997970C51812dc3A010C7d01b50e0d17dc79C8")
-var Token = common.HexToAddress("0xc6e7DF5E7b4f2A278906862b61205850344D4e7d")
-
-func (s *ModelSuite) TestItAddsVoucherMetadataAndFindByAddress() {
-	{
-		createVoucherMetadataOrFail(s, VoucherMetadata{
-			Beneficiary: Bruno,
-			Contract:    Token,
-		})
-		createVoucherMetadataOrFail(s, VoucherMetadata{
-			Beneficiary: Bob,
-			Contract:    Token,
-		})
-		createVoucherMetadataOrFail(s, VoucherMetadata{
-			Beneficiary: Alice,
-			Contract:    Token,
-		})
-	}
-	filters := CreateFilterList(`[{
-		"field": "Beneficiary",
-		"eq": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
-	}]`)
-	results, err := s.m.GetVouchersMetadata(filters)
-	if err != nil {
-		s.Fail("Unexpected error")
-	}
-	s.Equal(1, len(results))
-	s.Equal(Bob.String(), results[0].Beneficiary.String())
-}
-
-func (s *ModelSuite) TestItAddsVoucherMetadataAndFindByInputIndex() {
-	{
-		createVoucherMetadataOrFail(s, VoucherMetadata{
-			Beneficiary: Bruno,
-			Contract:    Token,
-			InputIndex:  1,
-			OutputIndex: 0,
-		})
-		createVoucherMetadataOrFail(s, VoucherMetadata{
-			Beneficiary: Bob,
-			Contract:    Token,
-			InputIndex:  2,
-			OutputIndex: 0,
-		})
-		createVoucherMetadataOrFail(s, VoucherMetadata{
-			Beneficiary: Alice,
-			Contract:    Token,
-			InputIndex:  3,
-			OutputIndex: 0,
-		})
-	}
-	filters := CreateFilterList(`[{"field": "InputIndex", "eq": "2"}]`)
-	results, err := s.m.GetVouchersMetadata(filters)
-	if err != nil {
-		s.Fail("Unexpected error")
-	}
-	s.Equal(1, len(results))
-	s.Equal(Bob.String(), results[0].Beneficiary.String())
-	s.Equal(2, results[0].InputIndex)
-}
-
-func (s *ModelSuite) TestItAddsVoucherMetadataAndFindByExecutedAt() {
-	{
-		createVoucherMetadataOrFail(s, VoucherMetadata{
-			Beneficiary: Bruno,
-			Contract:    Token,
-			InputIndex:  1,
-			OutputIndex: 0,
-			ExecutedAt:  0,
-		})
-		createVoucherMetadataOrFail(s, VoucherMetadata{
-			Beneficiary: Bob,
-			Contract:    Token,
-			InputIndex:  2,
-			OutputIndex: 0,
-			ExecutedAt:  1234,
-		})
-		createVoucherMetadataOrFail(s, VoucherMetadata{
-			Beneficiary: Alice,
-			Contract:    Token,
-			InputIndex:  3,
-			OutputIndex: 0,
-			ExecutedAt:  0,
-		})
-	}
-	filters := CreateFilterList(`[{"field": "ExecutedAt", "gt": "0"}]`)
-	results, err := s.m.GetVouchersMetadata(filters)
-	if err != nil {
-		s.Fail("Unexpected error")
-	}
-	s.Equal(1, len(results))
-	s.Equal(Bob.String(), results[0].Beneficiary.String())
-	s.Equal(uint64(1234), results[0].ExecutedAt)
-}
-
-func (s *ModelSuite) TestItAddsVoucherMetadataAndFindNeverExecuted() {
-	{
-		createVoucherMetadataOrFail(s, VoucherMetadata{
-			Beneficiary: Bruno,
-			Contract:    Token,
-			InputIndex:  1,
-			OutputIndex: 0,
-			ExecutedAt:  123,
-		})
-		createVoucherMetadataOrFail(s, VoucherMetadata{
-			Beneficiary: Bob,
-			Contract:    Token,
-			InputIndex:  2,
-			OutputIndex: 0,
-			ExecutedAt:  0,
-		})
-		createVoucherMetadataOrFail(s, VoucherMetadata{
-			Beneficiary: Alice,
-			Contract:    Token,
-			InputIndex:  3,
-			OutputIndex: 0,
-			ExecutedAt:  123,
-		})
-	}
-	filters := CreateFilterList(`[{"field": "executedAt", "eq": "0"}]`)
-	results, err := s.m.GetVouchersMetadata(filters)
-	if err != nil {
-		s.Fail("Unexpected error")
-	}
-	s.Equal(1, len(results))
-	s.Equal(Bob.String(), results[0].Beneficiary.String())
-	s.Equal(uint64(0), results[0].ExecutedAt)
-}
-
-func createVoucherMetadataOrFail(s *ModelSuite, voucherMetadata VoucherMetadata) {
-	if err := s.m.AddVoucherMetadata(&voucherMetadata); err != nil {
-		s.Fail(err.Error())
-	}
 }

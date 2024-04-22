@@ -22,7 +22,9 @@ func run(name string, args ...string) {
 }
 
 func main() {
-	run("docker", "create", "--name", "temp-devnet", "sunodo/devnet:1.4.0")
+	// you can see the tags on
+	// https://hub.docker.com/r/sunodo/devnet/tags
+	run("docker", "create", "--name", "temp-devnet", "sunodo/devnet:1.5.0")
 	defer run("docker", "rm", "temp-devnet")
 	run("docker", "cp", "temp-devnet:/usr/share/sunodo/anvil_state.json", ".")
 	run("docker", "cp", "temp-devnet:/usr/share/sunodo/localhost.json", ".")

@@ -79,18 +79,24 @@ func (s *rollupsStateIdle) registerException(payload []byte) error {
 
 // In the advance state, the model accumulates the outputs from an advance.
 type rollupsStateAdvance struct {
-	input    *AdvanceInput
-	vouchers []Voucher
-	notices  []Notice
-	reports  []Report
-	decoder  Decoder
+	input            *AdvanceInput
+	vouchers         []Voucher
+	notices          []Notice
+	reports          []Report
+	decoder          Decoder
+	reportRepository *ReportRepository
 }
 
-func newRollupsStateAdvance(input *AdvanceInput, decoder Decoder) *rollupsStateAdvance {
+func newRollupsStateAdvance(
+	input *AdvanceInput,
+	decoder Decoder,
+	reportRepository *ReportRepository,
+) *rollupsStateAdvance {
 	slog.Info("nonodo: processing advance", "index", input.Index)
 	return &rollupsStateAdvance{
-		input:   input,
-		decoder: decoder,
+		input:            input,
+		decoder:          decoder,
+		reportRepository: reportRepository,
 	}
 }
 
@@ -114,6 +120,23 @@ func sendAllInputVouchersToDecoder(decoder Decoder, inputIndex uint64, vouchers 
 	}
 }
 
+func saveAllReports(reportRepository *ReportRepository, reports []Report) {
+	if reportRepository == nil {
+		slog.Warn("Missing reportRepository to save reports")
+		return
+	}
+	if reportRepository.Db == nil {
+		slog.Warn("Missing reportRepository.Db to save reports")
+		return
+	}
+	for _, r := range reports {
+		_, err := reportRepository.Create(r)
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
 func (s *rollupsStateAdvance) finish(status CompletionStatus) {
 	s.input.Status = status
 	if status == CompletionStatusAccepted {
@@ -124,6 +147,7 @@ func (s *rollupsStateAdvance) finish(status CompletionStatus) {
 		}
 	}
 	s.input.Reports = s.reports
+	saveAllReports(s.reportRepository, s.input.Reports)
 	slog.Info("nonodo: finished advance")
 }
 
@@ -179,25 +203,25 @@ func (s *rollupsStateAdvance) registerException(payload []byte) error {
 
 // In the inspect state, the model accumulates the reports from an inspect.
 type rollupsStateInspect struct {
-	input                   *InspectInput
-	reports                 []Report
-	getProccessedInputCount func() int
+	input                  *InspectInput
+	reports                []Report
+	getProcessedInputCount func() int
 }
 
 func newRollupsStateInspect(
 	input *InspectInput,
-	getProccessedInputCount func() int,
+	getProcessedInputCount func() int,
 ) *rollupsStateInspect {
 	slog.Info("nonodo: processing inspect", "index", input.Index)
 	return &rollupsStateInspect{
-		input:                   input,
-		getProccessedInputCount: getProccessedInputCount,
+		input:                  input,
+		getProcessedInputCount: getProcessedInputCount,
 	}
 }
 
 func (s *rollupsStateInspect) finish(status CompletionStatus) {
 	s.input.Status = status
-	s.input.ProccessedInputCount = s.getProccessedInputCount()
+	s.input.ProcessedInputCount = s.getProcessedInputCount()
 	s.input.Reports = s.reports
 	slog.Info("nonodo: finished inspect")
 }
@@ -224,7 +248,7 @@ func (s *rollupsStateInspect) addReport(payload []byte) error {
 
 func (s *rollupsStateInspect) registerException(payload []byte) error {
 	s.input.Status = CompletionStatusException
-	s.input.ProccessedInputCount = s.getProccessedInputCount()
+	s.input.ProcessedInputCount = s.getProcessedInputCount()
 	s.input.Reports = s.reports
 	s.input.Exception = payload
 	slog.Info("nonodo: finished inspect with exception")

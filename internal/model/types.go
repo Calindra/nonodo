@@ -72,24 +72,10 @@ type AdvanceInput struct {
 
 // Rollups inspect input type.
 type InspectInput struct {
-	Index                int
-	Status               CompletionStatus
-	Payload              []byte
-	ProccessedInputCount int
-	Reports              []Report
-	Exception            []byte
-}
-
-// Voucher metadata type
-type VoucherMetadata struct {
-	Contract        common.Address
-	Beneficiary     common.Address
-	Label           string
-	Amount          uint64
-	ExecutedAt      uint64
-	ExecutedBlock   uint64
-	InputIndex      int
-	OutputIndex     int
-	MethodSignature string
-	ERCX            string
+	Index               int
+	Status              CompletionStatus
+	Payload             []byte
+	ProcessedInputCount int
+	Reports             []Report
+	Exception           []byte
 }

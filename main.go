@@ -24,7 +24,7 @@ import (
 )
 
 var startupMessage = `
-Http Rollups for development started at http://localhost:5004
+Http Rollups for development started at http://localhost:ROLLUPS_PORT
 GraphQL running at http://localhost:HTTP_PORT/graphql
 Inspect running at http://localhost:HTTP_PORT/inspect/
 Press Ctrl+C to stop the node
@@ -84,7 +84,9 @@ func init() {
 	cmd.Flags().StringVar(&opts.HttpAddress, "http-address", opts.HttpAddress,
 		"HTTP address used by nonodo to serve its APIs")
 	cmd.Flags().IntVar(&opts.HttpPort, "http-port", opts.HttpPort,
-		"HTTP port used by nonodo to serve its APIs")
+		"HTTP port used by nonodo to serve its external APIs")
+	cmd.Flags().IntVar(&opts.HttpRollupsPort, "http-rollups-port", opts.HttpRollupsPort,
+		"HTTP port used by nonodo to serve its internal APIs")
 
 	// rpc-url
 	cmd.Flags().StringVar(&opts.RpcUrl, "rpc-url", opts.RpcUrl,
@@ -92,11 +94,14 @@ func init() {
 
 	// convenience experimental implementation
 	cmd.Flags().BoolVar(&opts.ConveniencePoC, "convenience-poc", opts.ConveniencePoC,
-		"If set, enables the voucher execution listener experiment.")
+		"If set, enables the convenience layer experiment")
 
 	// database file
 	cmd.Flags().StringVar(&opts.SqliteFile, "sqlite-file", opts.SqliteFile,
 		"The sqlite file to load the state")
+
+	cmd.Flags().Uint64Var(&opts.FromBlock, "from-block", opts.FromBlock,
+		"The beginning of the queried range for events")
 }
 
 func run(cmd *cobra.Command, args []string) {
@@ -137,11 +142,15 @@ func run(cmd *cobra.Command, args []string) {
 	go func() {
 		select {
 		case <-ready:
-			fmt.Println(strings.Replace(
+			msg := strings.Replace(
 				startupMessage,
 				"HTTP_PORT",
-				fmt.Sprint(opts.HttpPort), -1),
-			)
+				fmt.Sprint(opts.HttpPort), -1)
+			msg = strings.Replace(
+				msg,
+				"ROLLUPS_PORT",
+				fmt.Sprint(opts.HttpRollupsPort), -1)
+			fmt.Println(msg)
 			slog.Info("nonodo: ready", "after", time.Since(startTime))
 		case <-ctx.Done():
 		}

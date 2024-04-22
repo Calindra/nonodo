@@ -4,12 +4,16 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log/slog"
+	"strings"
+
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
-	"log/slog"
-	"strings"
 )
+
+const EXECUTED = "Executed"
+const FALSE = "false"
 
 type VoucherRepository struct {
 	Db sqlx.DB
@@ -110,6 +114,29 @@ func (c *VoucherRepository) UpdateExecuted(
 	return nil
 }
 
+func (c *VoucherRepository) Count(
+	ctx context.Context,
+	filter []*model.ConvenienceFilter,
+) (uint64, error) {
+	query := `SELECT count(*) FROM vouchers `
+	where, args, err := transformToQuery(filter)
+	if err != nil {
+		return 0, err
+	}
+	query += where
+	slog.Debug("Query", "query", query, "args", args)
+	stmt, err := c.Db.Preparex(query)
+	if err != nil {
+		return 0, err
+	}
+	var count uint64
+	err = stmt.Get(&count, args...)
+	if err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
 func (c *VoucherRepository) FindAllVouchers(
 	ctx context.Context,
 	first *int,
@@ -117,14 +144,28 @@ func (c *VoucherRepository) FindAllVouchers(
 	after *string,
 	before *string,
 	filter []*model.ConvenienceFilter,
-) ([]model.ConvenienceVoucher, error) {
+) (*PageResult[model.ConvenienceVoucher], error) {
+	total, err := c.Count(ctx, filter)
+	if err != nil {
+		return nil, err
+	}
 	query := `SELECT * FROM vouchers `
 	where, args, err := transformToQuery(filter)
 	if err != nil {
 		return nil, err
 	}
 	query += where
-	slog.Debug("Query", "query", query, "args", args)
+	query += `ORDER BY InputIndex ASC, OutputIndex ASC `
+	offset, limit, err := computePage(first, last, after, before, int(total))
+	if err != nil {
+		return nil, err
+	}
+	query += `LIMIT ? `
+	args = append(args, limit)
+	query += `OFFSET ? `
+	args = append(args, offset)
+
+	slog.Debug("Query", "query", query, "args", args, "total", total)
 	stmt, err := c.Db.Preparex(query)
 	if err != nil {
 		return nil, err
@@ -134,7 +175,12 @@ func (c *VoucherRepository) FindAllVouchers(
 	if err != nil {
 		return nil, err
 	}
-	return vouchers, nil
+	pageResult := &PageResult[model.ConvenienceVoucher]{
+		Rows:   vouchers,
+		Total:  total,
+		Offset: uint64(offset),
+	}
+	return pageResult, nil
 }
 
 func transformToQuery(
@@ -147,11 +193,11 @@ func transformToQuery(
 	args := []interface{}{}
 	where := []string{}
 	for _, filter := range filter {
-		if *filter.Field == "Executed" {
+		if *filter.Field == EXECUTED {
 			if *filter.Eq == "true" {
 				where = append(where, "Executed = ?")
 				args = append(args, true)
-			} else if *filter.Eq == "false" {
+			} else if *filter.Eq == FALSE {
 				where = append(where, "Executed = ?")
 				args = append(args, false)
 			} else {
