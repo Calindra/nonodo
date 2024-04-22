@@ -10,12 +10,6 @@ type MySlog struct {
 	instance slog.Logger
 }
 
-func NewMySlog() MySlog {
-	return MySlog{
-		instance: slog.NewLogLogger()
-	}
-}
-
 // Debug implements abstractlogger.Logger.
 func (m MySlog) Debug(msg string, fields ...log.Field) {
 	// panic("unimplemented")
@@ -50,10 +44,4 @@ func (m MySlog) Panic(msg string, fields ...log.Field) {
 // Warn implements abstractlogger.Logger.
 func (m MySlog) Warn(msg string, fields ...log.Field) {
 	panic("unimplemented")
-}
-
-func Test() {
-	var logger log.Logger = MySlog{}
-
-	logger.Debug("test")
 }
