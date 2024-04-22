@@ -96,7 +96,7 @@ func (r *queryResolver) ConvenientVouchers(ctx context.Context, first *int, last
 	if err != nil {
 		return nil, err
 	}
-	return r.model.PaginateConvenientVouchers(vouchers, first, last, after, before)
+	return model.ConvertToVoucherConnection(vouchers.Rows, int(vouchers.Offset), int(vouchers.Total))
 }
 
 // Input is the resolver for the input field.

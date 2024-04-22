@@ -94,11 +94,14 @@ func init() {
 
 	// convenience experimental implementation
 	cmd.Flags().BoolVar(&opts.ConveniencePoC, "convenience-poc", opts.ConveniencePoC,
-		"If set, enables the voucher execution listener experiment.")
+		"If set, enables the convenience layer experiment")
 
 	// database file
 	cmd.Flags().StringVar(&opts.SqliteFile, "sqlite-file", opts.SqliteFile,
 		"The sqlite file to load the state")
+
+	cmd.Flags().Uint64Var(&opts.FromBlock, "from-block", opts.FromBlock,
+		"The beginning of the queried range for events")
 }
 
 func run(cmd *cobra.Command, args []string) {

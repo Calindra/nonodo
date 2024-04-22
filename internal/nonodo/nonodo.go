@@ -8,6 +8,7 @@ package nonodo
 import (
 	"fmt"
 	"log/slog"
+	"math/big"
 	"time"
 
 	"github.com/calindra/nonodo/internal/convenience"
@@ -60,6 +61,7 @@ type NonodoOpts struct {
 
 	ConveniencePoC bool
 	SqliteFile     string
+	FromBlock      uint64
 }
 
 // Create the options struct with default values.
@@ -81,6 +83,7 @@ func NewNonodoOpts() NonodoOpts {
 		ApplicationArgs:    nil,
 		ConveniencePoC:     false,
 		SqliteFile:         ":memory:",
+		FromBlock:          0,
 	}
 }
 
@@ -94,10 +97,12 @@ func NewSupervisorPoC(opts NonodoOpts) supervisor.SupervisorWorker {
 	model := model.NewNonodoModel(decoder, db)
 	w.Workers = append(w.Workers, synchronizer)
 	opts.RpcUrl = fmt.Sprintf("ws://%s:%v", opts.AnvilAddress, opts.AnvilPort)
+	fromBlock := new(big.Int).SetUint64(opts.FromBlock)
 	execVoucherListener := convenience.NewExecListener(
 		opts.RpcUrl,
 		common.HexToAddress(opts.ApplicationAddress),
 		convenienceService,
+		fromBlock,
 	)
 	w.Workers = append(w.Workers, execVoucherListener)
 	e := echo.New()
