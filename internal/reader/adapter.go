@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	convenience "github.com/calindra/nonodo/internal/convenience/model"
 	repos "github.com/calindra/nonodo/internal/model"
 	"github.com/calindra/nonodo/internal/reader/model"
 	"github.com/ethereum/go-ethereum/common"
@@ -26,19 +27,28 @@ type Adapter interface {
 
 type AdapterV1 struct {
 	reportRepository *repos.ReportRepository
+	inputRepository  *repos.InputRepository
 }
 
 func NewAdapterV1(db *sqlx.DB) Adapter {
 	slog.Debug("NewAdapterV1")
-	repo := &repos.ReportRepository{
+	reportRepository := &repos.ReportRepository{
 		Db: db,
 	}
-	err := repo.CreateTables()
+	err := reportRepository.CreateTables()
+	if err != nil {
+		panic(err)
+	}
+	inputRepository := &repos.InputRepository{
+		Db: db,
+	}
+	err = inputRepository.CreateTables()
 	if err != nil {
 		panic(err)
 	}
 	return AdapterV1{
-		reportRepository: repo,
+		reportRepository: reportRepository,
+		inputRepository:  inputRepository,
 	}
 }
 
@@ -94,11 +104,54 @@ func (a AdapterV1) convertToReport(
 }
 
 func (a AdapterV1) GetInput(index int) (*model.Input, error) {
-	return nil, nil
+	input, err := a.inputRepository.FindByIndex(index)
+	if err != nil {
+		return nil, err
+	}
+	return model.ConvertInput(*input), nil
 }
 
 func (a AdapterV1) GetInputs(
 	first *int, last *int, after *string, before *string, where *model.InputFilter,
 ) (*model.InputConnection, error) {
-	return nil, nil
+	filters := []*convenience.ConvenienceFilter{}
+	if where != nil {
+		field := "Index"
+		if where.IndexGreaterThan != nil {
+			value := fmt.Sprintf("%d", *where.IndexGreaterThan)
+			filters = append(filters, &convenience.ConvenienceFilter{
+				Field: &field,
+				Gt:    &value,
+			})
+		}
+		if where.IndexLowerThan != nil {
+			value := fmt.Sprintf("%d", *where.IndexLowerThan)
+			filters = append(filters, &convenience.ConvenienceFilter{
+				Field: &field,
+				Lt:    &value,
+			})
+		}
+	}
+	inputs, err := a.inputRepository.FindAll(
+		first, last, after, before, filters,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return a.convertToInputConnection(
+		inputs.Rows,
+		int(inputs.Offset),
+		int(inputs.Total),
+	)
+}
+
+func (a AdapterV1) convertToInputConnection(
+	inputs []repos.AdvanceInput,
+	offset int, total int,
+) (*model.InputConnection, error) {
+	convNodes := make([]*model.Input, len(inputs))
+	for i := range inputs {
+		convNodes[i] = model.ConvertInput(inputs[i])
+	}
+	return model.NewConnection(offset, total, convNodes), nil
 }

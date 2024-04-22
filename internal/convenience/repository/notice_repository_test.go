@@ -26,7 +26,7 @@ func (s *NoticeRepositorySuite) SetupTest() {
 		Db: *db,
 	}
 	err := s.repository.CreateTables()
-	checkError(s.T(), err)
+	s.NoError(err)
 }
 
 func TestNoticeRepositorySuite(t *testing.T) {
@@ -39,9 +39,9 @@ func (s *NoticeRepositorySuite) TestCreateNotice() {
 		InputIndex:  1,
 		OutputIndex: 2,
 	})
-	checkError(s.T(), err)
+	s.NoError(err)
 	count, err := s.repository.Count(ctx, nil)
-	checkError(s.T(), err)
+	s.NoError(err)
 	s.Equal(1, int(count))
 }
 
@@ -53,9 +53,9 @@ func (s *NoticeRepositorySuite) TestFindByInputAndOutputIndex() {
 		InputIndex:  1,
 		OutputIndex: 2,
 	})
-	checkError(s.T(), err)
+	s.NoError(err)
 	notice, err := s.repository.FindByInputAndOutputIndex(ctx, 1, 2)
-	checkError(s.T(), err)
+	s.NoError(err)
 	fmt.Println(notice.Destination)
 	s.Equal("0x26A61aF89053c847B4bd5084E2caFe7211874a29", notice.Destination.String())
 	s.Equal("0x0011", notice.Payload)
@@ -71,16 +71,16 @@ func (s *NoticeRepositorySuite) TestCountNotices() {
 		InputIndex:  1,
 		OutputIndex: 2,
 	})
-	checkError(s.T(), err)
+	s.NoError(err)
 	_, err = s.repository.Create(ctx, &model.ConvenienceNotice{
 		Destination: common.HexToAddress("0x26A61aF89053c847B4bd5084E2caFe7211874a29"),
 		Payload:     "0x0011",
 		InputIndex:  2,
 		OutputIndex: 0,
 	})
-	checkError(s.T(), err)
+	s.NoError(err)
 	total, err := s.repository.Count(ctx, nil)
-	checkError(s.T(), err)
+	s.NoError(err)
 	s.Equal(2, int(total))
 
 	filters := []*model.ConvenienceFilter{}
@@ -93,7 +93,7 @@ func (s *NoticeRepositorySuite) TestCountNotices() {
 		})
 	}
 	total, err = s.repository.Count(ctx, filters)
-	checkError(s.T(), err)
+	s.NoError(err)
 	s.Equal(1, int(total))
 }
 
@@ -107,38 +107,38 @@ func (s *NoticeRepositorySuite) TestNoticePagination() {
 			InputIndex:  uint64(i),
 			OutputIndex: 0,
 		})
-		checkError(s.T(), err)
+		s.NoError(err)
 	}
 
 	total, err := s.repository.Count(ctx, nil)
-	checkError(s.T(), err)
+	s.NoError(err)
 	s.Equal(30, int(total))
 
 	filters := []*model.ConvenienceFilter{}
 	first := 10
 	notices, err := s.repository.FindAllNotices(ctx, &first, nil, nil, nil, filters)
-	checkError(s.T(), err)
+	s.NoError(err)
 	s.Equal(10, len(notices.Rows))
 	s.Equal(0, int(notices.Rows[0].InputIndex))
 	s.Equal(9, int(notices.Rows[len(notices.Rows)-1].InputIndex))
 
 	after := commons.EncodeCursor(10)
 	notices, err = s.repository.FindAllNotices(ctx, &first, nil, &after, nil, filters)
-	checkError(s.T(), err)
+	s.NoError(err)
 	s.Equal(10, len(notices.Rows))
 	s.Equal(11, int(notices.Rows[0].InputIndex))
 	s.Equal(20, int(notices.Rows[len(notices.Rows)-1].InputIndex))
 
 	last := 10
 	notices, err = s.repository.FindAllNotices(ctx, nil, &last, nil, nil, filters)
-	checkError(s.T(), err)
+	s.NoError(err)
 	s.Equal(10, len(notices.Rows))
 	s.Equal(20, int(notices.Rows[0].InputIndex))
 	s.Equal(29, int(notices.Rows[len(notices.Rows)-1].InputIndex))
 
 	before := commons.EncodeCursor(20)
 	notices, err = s.repository.FindAllNotices(ctx, nil, &last, nil, &before, filters)
-	checkError(s.T(), err)
+	s.NoError(err)
 	s.Equal(10, len(notices.Rows))
 	s.Equal(10, int(notices.Rows[0].InputIndex))
 	s.Equal(19, int(notices.Rows[len(notices.Rows)-1].InputIndex))
@@ -152,7 +152,7 @@ func (s *NoticeRepositorySuite) TestWrongAddress() {
 		InputIndex:  1,
 		OutputIndex: 2,
 	})
-	checkError(s.T(), err)
+	s.NoError(err)
 	filters := []*model.ConvenienceFilter{}
 	{
 		field := model.DESTINATION
@@ -167,10 +167,4 @@ func (s *NoticeRepositorySuite) TestWrongAddress() {
 		s.Fail("where is the error?")
 	}
 	s.Equal("wrong address value", err.Error())
-}
-
-func checkError(s *testing.T, err error) {
-	if err != nil {
-		s.Fatal(err.Error())
-	}
 }

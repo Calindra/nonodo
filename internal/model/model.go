@@ -24,6 +24,7 @@ type NonodoModel struct {
 	state            rollupsState
 	decoder          Decoder
 	reportRepository *ReportRepository
+	inputRepository  *InputRepository
 }
 
 // Create a new model.
@@ -33,10 +34,16 @@ func NewNonodoModel(decoder Decoder, db *sqlx.DB) *NonodoModel {
 	if err != nil {
 		panic(err)
 	}
+	inputRepository := InputRepository{Db: db}
+	err = inputRepository.CreateTables()
+	if err != nil {
+		panic(err)
+	}
 	return &NonodoModel{
 		state:            &rollupsStateIdle{},
 		decoder:          decoder,
 		reportRepository: &reportRepository,
+		inputRepository:  &inputRepository,
 	}
 }
 
@@ -64,6 +71,10 @@ func (m *NonodoModel) AddAdvanceInput(
 		BlockNumber: blockNumber,
 	}
 	m.advances = append(m.advances, &input)
+	_, err := m.inputRepository.Create(input)
+	if err != nil {
+		panic(err)
+	}
 	slog.Info("nonodo: added advance input", "index", input.Index, "sender", input.MsgSender,
 		"payload", hexutil.Encode(input.Payload))
 }
@@ -132,7 +143,12 @@ func (m *NonodoModel) FinishAndGetNext(accepted bool) Input {
 	// try to get first unprocessed advance
 	for _, input := range m.advances {
 		if input.Status == CompletionStatusUnprocessed {
-			m.state = newRollupsStateAdvance(input, m.decoder, m.reportRepository)
+			m.state = newRollupsStateAdvance(
+				input,
+				m.decoder,
+				m.reportRepository,
+				m.inputRepository,
+			)
 			return *input
 		}
 	}

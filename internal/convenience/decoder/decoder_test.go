@@ -67,11 +67,11 @@ func (s *OutputDecoderSuite) TestGetAbiFromEtherscan() {
 	s.T().Skip()
 	address := common.HexToAddress("0x26A61aF89053c847B4bd5084E2caFe7211874a29")
 	abi, err := s.decoder.GetAbi(address)
-	checkError(s, err)
-	selectorBytes, err2 := hex.DecodeString("a9059cbb")
-	checkError(s, err2)
-	abiMethod, err3 := abi.MethodById(selectorBytes)
-	checkError(s, err3)
+	s.NoError(err)
+	selectorBytes, err := hex.DecodeString("a9059cbb")
+	s.NoError(err)
+	abiMethod, err := abi.MethodById(selectorBytes)
+	s.NoError(err)
 	s.Equal("transfer", abiMethod.RawName)
 }
 
@@ -100,16 +100,10 @@ func (s *OutputDecoderSuite) TestDecode() {
 		"type": "function"
 	}]`
 	abi, err := jsonToAbi(json)
-	checkError(s, err)
-	selectorBytes, err2 := hex.DecodeString("a9059cbb")
-	checkError(s, err2)
-	abiMethod, err3 := abi.MethodById(selectorBytes)
-	checkError(s, err3)
+	s.NoError(err)
+	selectorBytes, err := hex.DecodeString("a9059cbb")
+	s.NoError(err)
+	abiMethod, err := abi.MethodById(selectorBytes)
+	s.NoError(err)
 	s.Equal("transfer", abiMethod.RawName)
-}
-
-func checkError(s *OutputDecoderSuite, err error) {
-	if err != nil {
-		s.T().Fatal(err.Error())
-	}
 }

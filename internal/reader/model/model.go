@@ -25,7 +25,7 @@ func (m *ModelWrapper) GetInput(index int) (*Input, error) {
 	if !ok {
 		return nil, fmt.Errorf("input not found")
 	}
-	return convertInput(input), nil
+	return ConvertInput(input), nil
 }
 
 func (m *ModelWrapper) GetVoucher(voucherIndex int, inputIndex int) (*Voucher, error) {
@@ -64,7 +64,7 @@ func (m *ModelWrapper) GetInputs(
 	nodes := m.model.GetInputs(filter, offset, limit)
 	convNodes := make([]*Input, len(nodes))
 	for i := range nodes {
-		convNodes[i] = convertInput(nodes[i])
+		convNodes[i] = ConvertInput(nodes[i])
 	}
 	return NewConnection(offset, total, convNodes), nil
 }

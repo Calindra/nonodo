@@ -52,12 +52,12 @@ func (r *inputResolver) Reports(ctx context.Context, obj *model.Input, first *in
 
 // Input is the resolver for the input field.
 func (r *noticeResolver) Input(ctx context.Context, obj *model.Notice) (*model.Input, error) {
-	return r.model.GetInput(obj.InputIndex)
+	return r.adapter.GetInput(obj.InputIndex)
 }
 
 // Input is the resolver for the input field.
 func (r *queryResolver) Input(ctx context.Context, index int) (*model.Input, error) {
-	return r.model.GetInput(index)
+	return r.adapter.GetInput(index)
 }
 
 // Voucher is the resolver for the voucher field.
@@ -86,7 +86,7 @@ func (r *queryResolver) Report(ctx context.Context, reportIndex int, inputIndex 
 
 // Inputs is the resolver for the inputs field.
 func (r *queryResolver) Inputs(ctx context.Context, first *int, last *int, after *string, before *string, where *model.InputFilter) (*model.Connection[*model.Input], error) {
-	return r.model.GetInputs(first, last, after, before, where)
+	return r.adapter.GetInputs(first, last, after, before, where)
 }
 
 // Vouchers is the resolver for the vouchers field.
@@ -127,12 +127,12 @@ func (r *queryResolver) ConvenientVouchers(ctx context.Context, first *int, last
 
 // Input is the resolver for the input field.
 func (r *reportResolver) Input(ctx context.Context, obj *model.Report) (*model.Input, error) {
-	return r.model.GetInput(obj.InputIndex)
+	return r.adapter.GetInput(obj.InputIndex)
 }
 
 // Input is the resolver for the input field.
 func (r *voucherResolver) Input(ctx context.Context, obj *model.Voucher) (*model.Input, error) {
-	return r.model.GetInput(obj.InputIndex)
+	return r.adapter.GetInput(obj.InputIndex)
 }
 
 // Input returns graph.InputResolver implementation.

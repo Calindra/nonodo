@@ -31,7 +31,7 @@ func convertCompletionStatus(status model.CompletionStatus) CompletionStatus {
 	}
 }
 
-func convertInput(input model.AdvanceInput) *Input {
+func ConvertInput(input model.AdvanceInput) *Input {
 	return &Input{
 		Index:       input.Index,
 		Status:      convertCompletionStatus(input.Status),
