@@ -195,6 +195,8 @@ type InputResolver interface {
 }
 type NoticeResolver interface {
 	Input(ctx context.Context, obj *model.Notice) (*model.Input, error)
+
+	Proof(ctx context.Context, obj *model.Notice) (*model.Proof, error)
 }
 type QueryResolver interface {
 	Input(ctx context.Context, index int) (*model.Input, error)
@@ -212,6 +214,8 @@ type ReportResolver interface {
 }
 type VoucherResolver interface {
 	Input(ctx context.Context, obj *model.Voucher) (*model.Input, error)
+
+	Proof(ctx context.Context, obj *model.Voucher) (*model.Proof, error)
 }
 
 type executableSchema struct {
@@ -3428,7 +3432,7 @@ func (ec *executionContext) _Notice_proof(ctx context.Context, field graphql.Col
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Proof, nil
+		return ec.resolvers.Notice().Proof(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3446,8 +3450,8 @@ func (ec *executionContext) fieldContext_Notice_proof(ctx context.Context, field
 	fc = &graphql.FieldContext{
 		Object:     "Notice",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "validity":
@@ -5673,7 +5677,7 @@ func (ec *executionContext) _Voucher_proof(ctx context.Context, field graphql.Co
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.Proof, nil
+		return ec.resolvers.Voucher().Proof(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -5691,8 +5695,8 @@ func (ec *executionContext) fieldContext_Voucher_proof(ctx context.Context, fiel
 	fc = &graphql.FieldContext{
 		Object:     "Voucher",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "validity":
@@ -8509,7 +8513,38 @@ func (ec *executionContext) _Notice(ctx context.Context, sel ast.SelectionSet, o
 				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "proof":
-			out.Values[i] = ec._Notice_proof(ctx, field, obj)
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Notice_proof(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -9276,7 +9311,38 @@ func (ec *executionContext) _Voucher(ctx context.Context, sel ast.SelectionSet, 
 				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "proof":
-			out.Values[i] = ec._Voucher_proof(ctx, field, obj)
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Voucher_proof(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}

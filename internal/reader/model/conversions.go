@@ -48,7 +48,7 @@ func convertVoucher(voucher model.Voucher) *Voucher {
 		Index:       voucher.Index,
 		Destination: voucher.Destination.String(),
 		Payload:     hexutil.Encode(voucher.Payload),
-		Proof:       nil, // nonodo doesn't compute proofs
+		// Proof:       nil, // nonodo doesn't compute proofs
 	}
 }
 
@@ -57,7 +57,7 @@ func convertNotice(notice model.Notice) *Notice {
 		InputIndex: notice.InputIndex,
 		Index:      notice.Index,
 		Payload:    hexutil.Encode(notice.Payload),
-		Proof:      nil, // nonodo doesn't compute proofs
+		// Proof:      nil, // nonodo doesn't compute proofs
 	}
 }
 
