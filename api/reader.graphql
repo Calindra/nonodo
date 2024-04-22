@@ -280,8 +280,8 @@ input BooleanFilterInput {
 }
 
 input ConvenientFilter {
-  Destination: AddressFilterInput
-  Executed: BooleanFilterInput
+  destination: AddressFilterInput
+  executed: BooleanFilterInput
   # UserData: UserDataFilter
 
   # Logical operators
