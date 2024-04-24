@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/calindra/nonodo/internal/convenience/model"
@@ -146,7 +145,6 @@ func (s *ConvenienceServiceSuite) TestFindAllVouchersByDestination() {
 		})
 	}
 	vouchers, err := s.service.FindAllVouchers(ctx, nil, nil, nil, nil, filters)
-	fmt.Println("vouchers>>>>>>>>>>>", vouchers.Rows)
 	checkError3(s.T(), err)
 	s.Equal(1, len(vouchers.Rows))
 	s.Equal(2, int(vouchers.Rows[0].InputIndex))

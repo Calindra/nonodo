@@ -190,8 +190,6 @@ func (c *VoucherRepository) FindAllVouchers(
 		return nil, err
 	}
 
-	fmt.Println("rows>>>>>>>>>>>>", rows)
-
 	vouchers := make([]model.ConvenienceVoucher, len(rows))
 
 	for i, row := range rows {
