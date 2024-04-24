@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/calindra/nonodo/internal/commons"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
@@ -188,7 +189,11 @@ func (s *ModelSuite) TestItFinishesAdvanceWithAccept() {
 	s.Equal(CompletionStatusAccepted, input.Status)
 	s.Len(input.Vouchers, 1)
 	s.Len(input.Notices, 1)
-	s.Len(input.Reports, 1)
+
+	inputIndex := 0
+	page, err := s.reportRepository.FindAllByInputIndex(nil, nil, nil, nil, &inputIndex)
+	s.NoError(err)
+	s.Equal(1, int(page.Total))
 }
 
 func (s *ModelSuite) TestItFinishesAdvanceWithReject() {
@@ -210,8 +215,13 @@ func (s *ModelSuite) TestItFinishesAdvanceWithReject() {
 	s.Equal(CompletionStatusRejected, input.Status)
 	s.Empty(input.Vouchers)
 	s.Empty(input.Notices)
-	s.Len(input.Reports, 1)
+
 	s.Empty(input.Exception)
+
+	inputIndex := 0
+	page, err := s.reportRepository.FindAllByInputIndex(nil, nil, nil, nil, &inputIndex)
+	s.NoError(err)
+	s.Equal(1, int(page.Total))
 }
 
 func (s *ModelSuite) TestItFinishesInspectWithAccept() {
@@ -385,12 +395,16 @@ func (s *ModelSuite) TestItAddsReportWhenAdvancing() {
 	s.m.FinishAndGetNext(true)
 
 	// check reports
-	reports = s.m.GetReports(OutputFilter{}, 0, 100)
-	s.Len(reports, s.n)
+	count, err := s.reportRepository.Count(nil)
+	s.NoError(err)
+	s.Equal(s.n, int(count))
+
+	page, err := s.reportRepository.FindAll(nil, nil, nil, nil, nil)
+	s.NoError(err)
 	for i := 0; i < s.n; i++ {
-		s.Equal(0, reports[i].InputIndex)
-		s.Equal(i, reports[i].Index)
-		s.Equal(s.payloads[i], reports[i].Payload)
+		s.Equal(0, page.Rows[i].InputIndex)
+		s.Equal(i, page.Rows[i].Index)
+		s.Equal(s.payloads[i], page.Rows[i].Payload)
 	}
 }
 
@@ -597,8 +611,11 @@ func (s *ModelSuite) TestItGetsReport() {
 	}
 	for i := 0; i < s.n; i++ {
 		for j := 0; j < s.n; j++ {
-			report, ok := s.m.GetReport(j, i)
-			s.True(ok)
+			report, err := s.reportRepository.FindByInputAndOutputIndex(
+				uint64(i),
+				uint64(j),
+			)
+			s.NoError(err)
 			s.Equal(j, report.Index)
 			s.Equal(i, report.InputIndex)
 			s.Equal(s.payloads[j], report.Payload)
@@ -703,8 +720,10 @@ func (s *ModelSuite) TestItGetsNumNotices() {
 //
 
 func (s *ModelSuite) TestItGetsNumReports() {
-	n := s.m.GetNumReports(OutputFilter{})
-	s.Equal(0, n)
+	inputIndex := 0
+	page, err := s.reportRepository.FindAllByInputIndex(nil, nil, nil, nil, nil)
+	s.NoError(err)
+	s.Equal(0, int(page.Total))
 
 	for i := 0; i < s.n; i++ {
 		s.m.AddAdvanceInput(s.senders[i], s.payloads[i], s.blockNumbers[i], s.timestamps[i])
@@ -714,15 +733,12 @@ func (s *ModelSuite) TestItGetsNumReports() {
 		s.m.FinishAndGetNext(true) // finish
 	}
 
-	n = s.m.GetNumReports(OutputFilter{})
-	s.Equal(s.n, n)
-
-	inputIndex := 0
-	filter := OutputFilter{
-		InputIndex: &inputIndex,
-	}
-	n = s.m.GetNumReports(filter)
-	s.Equal(1, n)
+	page, err = s.reportRepository.FindAllByInputIndex(nil, nil, nil, nil, nil)
+	s.NoError(err)
+	s.Equal(s.n, int(page.Total))
+	page, err = s.reportRepository.FindAllByInputIndex(nil, nil, nil, nil, &inputIndex)
+	s.NoError(err)
+	s.Equal(1, int(page.Total))
 }
 
 //
@@ -1038,14 +1054,15 @@ func (s *ModelSuite) TestItGetsReports() {
 		}
 		s.m.FinishAndGetNext(true) // finish
 	}
-	reports := s.m.GetReports(OutputFilter{}, 0, 100)
-	s.Len(reports, s.n*s.n)
+	page, err := s.reportRepository.FindAll(nil, nil, nil, nil, nil)
+	s.NoError(err)
+	s.Len(page.Rows, s.n*s.n)
 	for i := 0; i < s.n; i++ {
 		for j := 0; j < s.n; j++ {
 			idx := s.n*i + j
-			s.Equal(j, reports[idx].Index)
-			s.Equal(i, reports[idx].InputIndex)
-			s.Equal(s.payloads[j], reports[idx].Payload)
+			s.Equal(j, page.Rows[idx].Index)
+			s.Equal(i, page.Rows[idx].InputIndex)
+			s.Equal(s.payloads[j], page.Rows[idx].Payload)
 		}
 	}
 }
@@ -1061,31 +1078,31 @@ func (s *ModelSuite) TestItGetsReportsWithFilter() {
 		s.m.FinishAndGetNext(true) // finish
 	}
 	inputIndex := 1
-	filter := OutputFilter{
-		InputIndex: &inputIndex,
-	}
-	reports := s.m.GetReports(filter, 0, 100)
-	s.Len(reports, s.n)
+	page, err := s.reportRepository.FindAllByInputIndex(nil, nil, nil, nil, &inputIndex)
+	s.NoError(err)
+	s.Len(page.Rows, s.n)
 	for i := 0; i < s.n; i++ {
-		s.Equal(i, reports[i].Index)
-		s.Equal(inputIndex, reports[i].InputIndex)
-		s.Equal(s.payloads[i], reports[i].Payload)
+		s.Equal(i, page.Rows[i].Index)
+		s.Equal(inputIndex, page.Rows[i].InputIndex)
+		s.Equal(s.payloads[i], page.Rows[i].Payload)
 	}
 }
 
 func (s *ModelSuite) TestItGetsReportsWithOffset() {
 	s.m.AddAdvanceInput(s.senders[0], s.payloads[0], s.blockNumbers[0], s.timestamps[0])
 	s.m.FinishAndGetNext(true) // get
-	for i := 0; i < s.n; i++ {
-		err := s.m.AddReport(s.payloads[i])
+	for i := 0; i < s.n*2; i++ {
+		err := s.m.AddReport(s.payloads[i%s.n])
 		s.Nil(err)
 	}
 	s.m.FinishAndGetNext(true) // finish
 
-	reports := s.m.GetReports(OutputFilter{}, 1, 100)
-	s.Len(reports, 2)
-	s.Equal(1, reports[0].Index)
-	s.Equal(2, reports[1].Index)
+	after := commons.EncodeCursor(3)
+	page, err := s.reportRepository.FindAllByInputIndex(nil, nil, &after, nil, nil)
+	s.NoError(err)
+	s.Require().Len(page.Rows, 2)
+	s.Equal(4, page.Rows[0].Index)
+	s.Equal(5, page.Rows[1].Index)
 }
 
 func (s *ModelSuite) TestItGetsReportsWithLimit() {
@@ -1097,10 +1114,12 @@ func (s *ModelSuite) TestItGetsReportsWithLimit() {
 	}
 	s.m.FinishAndGetNext(true) // finish
 
-	reports := s.m.GetReports(OutputFilter{}, 0, 2)
-	s.Len(reports, 2)
-	s.Equal(0, reports[0].Index)
-	s.Equal(1, reports[1].Index)
+	first := 2
+	page, err := s.reportRepository.FindAllByInputIndex(&first, nil, nil, nil, nil)
+	s.NoError(err)
+	s.Len(page.Rows, 2)
+	s.Equal(0, page.Rows[0].Index)
+	s.Equal(1, page.Rows[1].Index)
 }
 
 func (s *ModelSuite) TestItGetsNoReportsWithZeroLimit() {
