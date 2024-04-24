@@ -20,6 +20,14 @@ type VoucherRepository struct {
 	Db sqlx.DB
 }
 
+type voucherRow struct {
+	Destination string `db:"destination"`
+	Payload     string `db:"payload"`
+	InputIndex  uint64 `db:"input_index"`
+	OutputIndex uint64 `db:"output_index"`
+	Executed    bool   `db:"executed"`
+}
+
 func (c *VoucherRepository) CreateTables() error {
 	schema := `CREATE TABLE IF NOT EXISTS vouchers (
 		destination text,
@@ -65,7 +73,7 @@ func (c *VoucherRepository) UpdateVoucher(
 
 	c.Db.MustExec(
 		updateVoucher,
-		voucher.Destination,
+		voucher.Destination.Hex(),
 		voucher.Payload,
 		voucher.Executed,
 		voucher.InputIndex,
@@ -94,8 +102,8 @@ func (c *VoucherRepository) FindVoucherByInputAndOutputIndex(
 	if err != nil {
 		return nil, err
 	}
-	var p model.ConvenienceVoucher
-	err = stmt.Get(&p, inputIndex, outputIndex)
+	var row voucherRow
+	err = stmt.Get(&row, inputIndex, outputIndex)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, nil
@@ -103,6 +111,9 @@ func (c *VoucherRepository) FindVoucherByInputAndOutputIndex(
 			return nil, err
 		}
 	}
+
+	p := convertToConvenienceVoucher(row)
+
 	return &p, nil
 }
 
@@ -120,7 +131,7 @@ func (c *VoucherRepository) Count(
 	filter []*model.ConvenienceFilter,
 ) (uint64, error) {
 	query := `SELECT count(*) FROM vouchers `
-	where, args, err := transformToQuery(filter)
+	where, args, _, err := transformToQuery(filter)
 	if err != nil {
 		return 0, err
 	}
@@ -151,19 +162,21 @@ func (c *VoucherRepository) FindAllVouchers(
 		return nil, err
 	}
 	query := `SELECT * FROM vouchers `
-	where, args, err := transformToQuery(filter)
+	where, args, argsCount, err := transformToQuery(filter)
 	if err != nil {
 		return nil, err
 	}
 	query += where
-	query += `ORDER BY InputIndex ASC, OutputIndex ASC `
+	query += ` ORDER BY input_index ASC, output_index ASC `
 	offset, limit, err := computePage(first, last, after, before, int(total))
 	if err != nil {
 		return nil, err
 	}
-	query += `LIMIT ? `
+
+	query += `LIMIT $` + strconv.Itoa(argsCount) + ` `
 	args = append(args, limit)
-	query += `OFFSET ? `
+	argsCount = argsCount + 1
+	query += `OFFSET $` + strconv.Itoa(argsCount) + ` `
 	args = append(args, offset)
 
 	slog.Debug("Query", "query", query, "args", args, "total", total)
@@ -171,11 +184,20 @@ func (c *VoucherRepository) FindAllVouchers(
 	if err != nil {
 		return nil, err
 	}
-	var vouchers []model.ConvenienceVoucher
-	err = stmt.Select(&vouchers, args...)
+	var rows []voucherRow
+	err = stmt.Select(&rows, args...)
 	if err != nil {
 		return nil, err
 	}
+
+	fmt.Println("rows>>>>>>>>>>>>", rows)
+
+	vouchers := make([]model.ConvenienceVoucher, len(rows))
+
+	for i, row := range rows {
+		vouchers[i] = convertToConvenienceVoucher(row)
+	}
+
 	pageResult := &PageResult[model.ConvenienceVoucher]{
 		Rows:   vouchers,
 		Total:  total,
@@ -184,9 +206,23 @@ func (c *VoucherRepository) FindAllVouchers(
 	return pageResult, nil
 }
 
+func convertToConvenienceVoucher(row voucherRow) model.ConvenienceVoucher {
+	destinationAddress := common.HexToAddress(row.Destination)
+
+	voucher := model.ConvenienceVoucher{
+		Destination: destinationAddress,
+		Payload:     row.Payload,
+		InputIndex:  row.InputIndex,
+		OutputIndex: row.OutputIndex,
+		Executed:    row.Executed,
+	}
+
+	return voucher
+}
+
 func transformToQuery(
 	filter []*model.ConvenienceFilter,
-) (string, []interface{}, error) {
+) (string, []interface{}, int, error) {
 	query := ""
 	if len(filter) > 0 {
 		query += "WHERE "
@@ -199,13 +235,13 @@ func transformToQuery(
 			if *filter.Eq == "true" {
 				where = append(where, "executed = $"+strconv.Itoa(count))
 				args = append(args, true)
-				count++
+				count += 1
 			} else if *filter.Eq == FALSE {
 				where = append(where, "executed = $"+strconv.Itoa(count))
 				args = append(args, false)
-				count++
+				count += 1
 			} else {
-				return "", nil, fmt.Errorf(
+				return "", nil, 0, fmt.Errorf(
 					"unexpected executed value %s", *filter.Eq,
 				)
 			}
@@ -213,17 +249,18 @@ func transformToQuery(
 			if filter.Eq != nil {
 				where = append(where, "destination = $"+strconv.Itoa(count))
 				if !common.IsHexAddress(*filter.Eq) {
-					return "", nil, fmt.Errorf("wrong address value")
+					return "", nil, 0, fmt.Errorf("wrong address value")
 				}
-				args = append(args, common.HexToAddress(*filter.Eq))
+				args = append(args, *filter.Eq)
+				count += 1
 			} else {
-				return "", nil, fmt.Errorf("operation not implemented")
+				return "", nil, 0, fmt.Errorf("operation not implemented")
 			}
 		} else {
-			return "", nil, fmt.Errorf("unexpected field %s", *filter.Field)
+			return "", nil, 0, fmt.Errorf("unexpected field %s", *filter.Field)
 		}
 	}
 	query += strings.Join(where, " and ")
 	slog.Debug("Query", "query", query, "args", args)
-	return query, args, nil
+	return query, args, count, nil
 }

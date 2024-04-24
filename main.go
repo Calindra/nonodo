@@ -102,7 +102,7 @@ func init() {
 
 	cmd.Flags().Uint64Var(&opts.FromBlock, "from-block", opts.FromBlock,
 		"The beginning of the queried range for events")
-	
+
 	cmd.Flags().StringVar(&opts.DbImplementation, "db-implementation", opts.DbImplementation,
 		"DB to use. PostGres or SQLite")
 }

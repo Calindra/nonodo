@@ -60,9 +60,9 @@ type NonodoOpts struct {
 	// If set, start application.
 	ApplicationArgs []string
 
-	ConveniencePoC bool
-	SqliteFile     string
-	FromBlock      uint64
+	ConveniencePoC   bool
+	SqliteFile       string
+	FromBlock        uint64
 	DbImplementation string
 }
 
@@ -92,10 +92,12 @@ func NewNonodoOpts() NonodoOpts {
 
 func NewSupervisorPoC(opts NonodoOpts) supervisor.SupervisorWorker {
 	var w supervisor.SupervisorWorker
-	
+
 	var db *sqlx.DB
 
-	connectionString := "host=localhost port=5432 user=myuser dbname=mydatabase password=mypassword sslmode=disable"
+	connectionString :=
+		"host=localhost port=5432 user=myuser " +
+			"dbname=mydatabase password=mypassword sslmode=disable"
 
 	if opts.DbImplementation == "postgres" {
 		slog.Info("Usando PostGres DB ...")
