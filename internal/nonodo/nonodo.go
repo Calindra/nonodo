@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math/big"
+	"os"
 	"time"
 
 	"github.com/calindra/nonodo/internal/convenience"
@@ -95,15 +96,22 @@ func NewSupervisorPoC(opts NonodoOpts) supervisor.SupervisorWorker {
 
 	var db *sqlx.DB
 
-	connectionString :=
-		"host=localhost port=5432 user=myuser " +
-			"dbname=mydatabase password=mypassword sslmode=disable"
-
 	if opts.DbImplementation == "postgres" {
-		slog.Info("Usando PostGres DB ...")
+		slog.Info("Using PostGres DB ...")
+		postGresHost := os.Getenv("POSTGRES_HOST")
+		postGresPort := os.Getenv("POSTGRES_PORT")
+		postGresDataBase := os.Getenv("POSTGRES_DB")
+		postGresUser := os.Getenv("POSTGRES_USER")
+		postGresPassword := os.Getenv("POSTGRES_PASSWORD")
+
+		connectionString := fmt.Sprintf("host=%s port=%s user=%s "+
+			"dbname=%s password=%s sslmode=disable",
+			postGresHost, postGresPort, postGresUser,
+			postGresDataBase, postGresPassword)
+
 		db = sqlx.MustConnect("postgres", connectionString)
 	} else {
-		slog.Info("Usando SQLite DB ...")
+		slog.Info("Using SQLite ...")
 		db = sqlx.MustConnect("sqlite3", opts.SqliteFile)
 	}
 
