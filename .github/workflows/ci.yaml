@@ -11,6 +11,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
+    
+    - name: Install Clang
+      run: sudo apt-get update && sudo apt-get install -y clang
 
     - name: Set up Go
       uses: actions/setup-go@v4
@@ -59,7 +62,7 @@ jobs:
     needs: [release]
     strategy:
       matrix:
-        goos: [linux, darwin, windows]
+        goos: [linux, windows]
         goarch: [amd64, arm64]
         exclude:
         - goarch: arm64
@@ -69,7 +72,59 @@ jobs:
 
     - uses: wangyoucao577/go-release-action@v1
       with:
+        overwrite: true
         github_token: ${{ secrets.GITHUB_TOKEN }}
         goos: ${{ matrix.goos }}
         goarch: ${{ matrix.goarch }}
         extra_files: CHANGELOG.md LICENSE README.md
+  
+  release-darwin-arm64:
+    name: Build binaries for darwin arm64
+    runs-on: macos-14
+    needs: [release]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+
+    - name: Compile arm64
+      run: go build -tags "darwin arm64"
+    
+    - name: Compress binary
+      run: |
+        tar -czvf nonodo-$GITHUB_REF_NAME-darwin-arm64.tar.gz nonodo
+
+    - name: Generate MD5 checksum
+      run: md5 -q nonodo-$GITHUB_REF_NAME-darwin-arm64.tar.gz > nonodo-$GITHUB_REF_NAME-darwin-arm64.tar.gz.md5
+
+    - name: Upload Artifact
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        gh release upload $GITHUB_REF_NAME nonodo-$GITHUB_REF_NAME-darwin-arm64.tar.gz --clobber
+        gh release upload $GITHUB_REF_NAME nonodo-$GITHUB_REF_NAME-darwin-arm64.tar.gz.md5 --clobber
+
+  # release-darwin-amd64:
+  #   name: Build binaries for Mac Intel
+  #   runs-on: macos-13-large
+  #   needs: [release]
+
+  #   steps:
+  #   - uses: actions/checkout@v4
+
+  #   - name: Set up Go
+  #     uses: actions/setup-go@v4
+  #     with:
+  #       go-version: '1.21'
+    
+  #   - name: Install deps
+  #     run: |
+  #       brew install sqlite3
+  #       brew upgrade icu4c
+
+  #   - name: Compile amd64
+  #     run: go build -tags "darwin amd64"

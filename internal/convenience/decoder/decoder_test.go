@@ -64,6 +64,35 @@ func (s *OutputDecoderSuite) TestGetAbiFromEtherscan() {
 	s.Equal("transfer", abiMethod.RawName)
 }
 
+func (s *OutputDecoderSuite) TestCreateVoucherIdempotency() {
+	ctx := context.Background()
+	err := s.decoder.HandleOutput(ctx, Token, "0x3333344", 3, 4)
+	if err != nil {
+		panic(err)
+	}
+	voucherCount, err := s.voucherRepository.VoucherCount(ctx)
+
+	if err != nil {
+		panic(err)
+	}
+
+	s.Equal(1, int(voucherCount))
+
+	err = s.decoder.HandleOutput(ctx, Token, "0x3333344", 3, 4)
+
+	if err != nil {
+		panic(err)
+	}
+
+	voucherCount, err = s.voucherRepository.VoucherCount(ctx)
+
+	if err != nil {
+		panic(err)
+	}
+
+	s.Equal(1, int(voucherCount))
+}
+
 func (s *OutputDecoderSuite) TestDecode() {
 	json := `[{
 		"constant": false,

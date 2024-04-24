@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log/slog"
 	"strconv"
@@ -25,7 +26,8 @@ func (c *VoucherRepository) CreateTables() error {
 		payload 	text,
 		executed	BOOLEAN,
 		input_index  integer,
-		output_index integer);`
+		output_index integer,
+		PRIMARY KEY (input_index, output_index));`
 
 	// execute a query on the server
 	_, err := c.Db.Exec(schema)
@@ -52,6 +54,38 @@ func (c *VoucherRepository) CreateVoucher(
 	return voucher, nil
 }
 
+func (c *VoucherRepository) UpdateVoucher(
+	ctx context.Context, voucher *model.ConvenienceVoucher,
+) (*model.ConvenienceVoucher, error) {
+	updateVoucher := `UPDATE vouchers SET 
+		destination = $1,
+		payload = $2,
+		executed = $3
+		WHERE input_index = $4 and output_index = $5`
+
+	c.Db.MustExec(
+		updateVoucher,
+		voucher.Destination,
+		voucher.Payload,
+		voucher.Executed,
+		voucher.InputIndex,
+		voucher.OutputIndex,
+	)
+
+	return voucher, nil
+}
+
+func (c *VoucherRepository) VoucherCount(
+	ctx context.Context,
+) (uint64, error) {
+	var count int
+	err := c.Db.Get(&count, "SELECT count(*) FROM vouchers")
+	if err != nil {
+		return 0, nil
+	}
+	return uint64(count), nil
+}
+
 func (c *VoucherRepository) FindVoucherByInputAndOutputIndex(
 	ctx context.Context, inputIndex uint64, outputIndex uint64,
 ) (*model.ConvenienceVoucher, error) {
@@ -63,7 +97,11 @@ func (c *VoucherRepository) FindVoucherByInputAndOutputIndex(
 	var p model.ConvenienceVoucher
 	err = stmt.Get(&p, inputIndex, outputIndex)
 	if err != nil {
-		return nil, err
+		if err == sql.ErrNoRows {
+			return nil, nil
+		} else {
+			return nil, err
+		}
 	}
 	return &p, nil
 }

@@ -98,7 +98,7 @@ type Query {
   "Get reports with support for pagination"
   reports(first: Int, last: Int, after: String, before: String): ReportConnection!
   "Get a convenient voucher based on its index or filter"
-  convenientVouchers(first: Int, last: Int, after: String, before: String, filter: [ConvenientFilter]): ConvenientVoucherConnection!
+  convenientVouchers(first: Int, last: Int, after: String, before: String, filter: [ConvenientFilter]): ConvenientVoucherConnection! @deprecated(reason: "This field is hidden from introspection.")
 }
 
 "Pagination entry"
@@ -280,8 +280,8 @@ input BooleanFilterInput {
 }
 
 input ConvenientFilter {
-  Destination: AddressFilterInput
-  Executed: BooleanFilterInput
+  destination: AddressFilterInput
+  executed: BooleanFilterInput
   # UserData: UserDataFilter
 
   # Logical operators

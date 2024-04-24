@@ -25,8 +25,8 @@ type BooleanFilterInput struct {
 }
 
 type ConvenientFilter struct {
-	Destination *AddressFilterInput `json:"Destination,omitempty"`
-	Executed    *BooleanFilterInput `json:"Executed,omitempty"`
+	Destination *AddressFilterInput `json:"destination,omitempty"`
+	Executed    *BooleanFilterInput `json:"executed,omitempty"`
 	And         []*ConvenientFilter `json:"and,omitempty"`
 	Or          []*ConvenientFilter `json:"or,omitempty"`
 }
