@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/calindra/nonodo/internal/convenience/adapter"
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/convenience/services"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -38,7 +39,7 @@ func (o *OutputDecoder) HandleOutput(
 	if payload[2:10] == model.VOUCHER_SELECTOR {
 		_, err := o.convenienceService.CreateVoucher(ctx, &model.ConvenienceVoucher{
 			Destination: destination,
-			Payload:     removeSelector(payload),
+			Payload:     adapter.RemoveSelector(payload),
 			Executed:    false,
 			InputIndex:  inputIndex,
 			OutputIndex: outputIndex,
@@ -47,18 +48,12 @@ func (o *OutputDecoder) HandleOutput(
 	} else {
 		_, err := o.convenienceService.CreateNotice(ctx, &model.ConvenienceNotice{
 			Destination: destination,
-			Payload:     removeSelector(payload),
+			Payload:     adapter.RemoveSelector(payload),
 			InputIndex:  inputIndex,
 			OutputIndex: outputIndex,
 		})
 		return err
 	}
-}
-
-// for a while we will remove the prefix
-// until the v2 does not arrives
-func removeSelector(payload string) string {
-	return fmt.Sprintf("0x%s", payload[10:])
 }
 
 func (o *OutputDecoder) GetAbi(address common.Address) (*abi.ABI, error) {

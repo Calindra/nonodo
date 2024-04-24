@@ -6,6 +6,7 @@ package reader
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/calindra/nonodo/internal/reader/graph"
 	"github.com/calindra/nonodo/internal/reader/model"
@@ -48,16 +49,19 @@ func (r *noticeResolver) Input(ctx context.Context, obj *model.Notice) (*model.I
 
 // Input is the resolver for the input field.
 func (r *queryResolver) Input(ctx context.Context, index int) (*model.Input, error) {
+	slog.Debug("queryResolver.Input", "index", index)
 	return r.adapter.GetInput(index)
 }
 
 // Voucher is the resolver for the voucher field.
 func (r *queryResolver) Voucher(ctx context.Context, voucherIndex int, inputIndex int) (*model.Voucher, error) {
+	slog.Debug("queryResolver.Voucher", "voucherIndex", voucherIndex, "inputIndex", inputIndex)
 	return r.adapter.GetVoucher(voucherIndex, inputIndex)
 }
 
 // Notice is the resolver for the notice field.
 func (r *queryResolver) Notice(ctx context.Context, noticeIndex int, inputIndex int) (*model.Notice, error) {
+	slog.Debug("queryResolver.Notice", "noticeIndex", noticeIndex, "inputIndex", inputIndex)
 	return r.adapter.GetNotice(noticeIndex, inputIndex)
 }
 
