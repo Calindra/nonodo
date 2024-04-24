@@ -4,11 +4,11 @@ import "github.com/ethereum/go-ethereum/common"
 
 // Voucher metadata type
 type ConvenienceVoucher struct {
-	Destination common.Address `db:"Destination"`
-	Payload     string         `db:"Payload"`
-	InputIndex  uint64         `db:"InputIndex"`
-	OutputIndex uint64         `db:"OutputIndex"`
-	Executed    bool           `db:"Executed"`
+	Destination common.Address `db:"destination"`
+	Payload     string         `db:"payload"`
+	InputIndex  uint64         `db:"input_index"`
+	OutputIndex uint64         `db:"output_index"`
+	Executed    bool           `db:"executed"`
 
 	// Proof we can fetch from the original GraphQL
 

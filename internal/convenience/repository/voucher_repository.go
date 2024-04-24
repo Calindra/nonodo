@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strconv"
 	"strings"
 
 	"github.com/calindra/nonodo/internal/convenience/model"
@@ -20,11 +21,11 @@ type VoucherRepository struct {
 
 func (c *VoucherRepository) CreateTables() error {
 	schema := `CREATE TABLE IF NOT EXISTS vouchers (
-		Destination text,
-		Payload 	text,
-		Executed	BOOLEAN,
-		InputIndex 	integer,
-		OutputIndex integer);`
+		destination text,
+		payload 	text,
+		executed	BOOLEAN,
+		input_index  integer,
+		output_index integer);`
 
 	// execute a query on the server
 	_, err := c.Db.Exec(schema)
@@ -35,14 +36,14 @@ func (c *VoucherRepository) CreateVoucher(
 	ctx context.Context, voucher *model.ConvenienceVoucher,
 ) (*model.ConvenienceVoucher, error) {
 	insertVoucher := `INSERT INTO vouchers (
-		Destination,
-		Payload,
-		Executed,
-		InputIndex,
-		OutputIndex) VALUES (?, ?, ?, ?, ?)`
+		destination,
+		payload,
+		executed,
+		input_index,
+		output_index) VALUES ($1, $2, $3, $4, $5)`
 	c.Db.MustExec(
 		insertVoucher,
-		voucher.Destination,
+		voucher.Destination.Hex(),
 		voucher.Payload,
 		voucher.Executed,
 		voucher.InputIndex,
@@ -54,7 +55,7 @@ func (c *VoucherRepository) CreateVoucher(
 func (c *VoucherRepository) FindVoucherByInputAndOutputIndex(
 	ctx context.Context, inputIndex uint64, outputIndex uint64,
 ) (*model.ConvenienceVoucher, error) {
-	query := `SELECT * FROM vouchers WHERE inputIndex = ? and outputIndex = ?`
+	query := `SELECT * FROM vouchers WHERE input_index = $1 and output_index = $2`
 	stmt, err := c.Db.Preparex(query)
 	if err != nil {
 		return nil, err
@@ -71,7 +72,7 @@ func (c *VoucherRepository) UpdateExecuted(
 	ctx context.Context, inputIndex uint64, outputIndex uint64,
 	executedValue bool,
 ) error {
-	query := `UPDATE vouchers SET Executed = ? WHERE inputIndex = ? and outputIndex = ?`
+	query := `UPDATE vouchers SET executed = $1 WHERE input_index = $2 and output_index = $3`
 	c.Db.MustExec(query, executedValue, inputIndex, outputIndex)
 	return nil
 }
@@ -154,14 +155,17 @@ func transformToQuery(
 	}
 	args := []interface{}{}
 	where := []string{}
+	count := 1
 	for _, filter := range filter {
 		if *filter.Field == EXECUTED {
 			if *filter.Eq == "true" {
-				where = append(where, "Executed = ?")
+				where = append(where, "executed = $"+strconv.Itoa(count))
 				args = append(args, true)
+				count++
 			} else if *filter.Eq == FALSE {
-				where = append(where, "Executed = ?")
+				where = append(where, "executed = $"+strconv.Itoa(count))
 				args = append(args, false)
+				count++
 			} else {
 				return "", nil, fmt.Errorf(
 					"unexpected executed value %s", *filter.Eq,
@@ -169,7 +173,7 @@ func transformToQuery(
 			}
 		} else if *filter.Field == "Destination" {
 			if filter.Eq != nil {
-				where = append(where, "Destination = ?")
+				where = append(where, "destination = $"+strconv.Itoa(count))
 				if !common.IsHexAddress(*filter.Eq) {
 					return "", nil, fmt.Errorf("wrong address value")
 				}
