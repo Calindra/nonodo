@@ -137,7 +137,6 @@ func (s *NonodoSuite) TestItProcessesInspectInputs() {
 }
 
 func (s *NonodoSuite) TestItWorksWithExternalApplication() {
-	// defer s.teardown()
 	opts := NewNonodoOpts()
 	opts.ApplicationArgs = []string{
 		"go",
@@ -153,6 +152,7 @@ func (s *NonodoSuite) TestItWorksWithExternalApplication() {
 
 	response, err := s.sendInspect(payload[:])
 	s.NoError(err)
+	slog.Debug("response", "body", response.Body)
 	s.Require().Equal(http.StatusOK, response.StatusCode())
 	s.Require().Equal(payload[:], s.decodeHex(response.JSON200.Reports[0].Payload))
 }
