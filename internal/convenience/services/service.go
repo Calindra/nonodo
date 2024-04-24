@@ -23,7 +23,7 @@ func NewConvenienceService(
 	}
 }
 
-func (s *ConvenienceService) CreateVoucher(
+func (s *ConvenienceService) CreateVoucher1(
 	ctx context.Context,
 	voucher *model.ConvenienceVoucher,
 ) (*model.ConvenienceVoucher, error) {
@@ -35,6 +35,26 @@ func (s *ConvenienceService) CreateNotice(
 	notice *model.ConvenienceNotice,
 ) (*model.ConvenienceNotice, error) {
 	return s.noticeRepository.Create(ctx, notice)
+}
+func (s *ConvenienceService) CreateVoucher(
+	ctx context.Context,
+	voucher *model.ConvenienceVoucher,
+) (*model.ConvenienceVoucher, error) {
+
+	voucherInDb, err := s.voucherRepository.FindVoucherByInputAndOutputIndex(
+		ctx, voucher.InputIndex,
+		voucher.OutputIndex,
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if voucherInDb != nil {
+		return s.voucherRepository.UpdateVoucher(ctx, voucher)
+	}
+
+	return s.voucherRepository.CreateVoucher(ctx, voucher)
 }
 
 func (c *ConvenienceService) UpdateExecuted(

@@ -24,7 +24,8 @@ func (c *VoucherRepository) CreateTables() error {
 		Payload 	text,
 		Executed	BOOLEAN,
 		InputIndex 	integer,
-		OutputIndex integer);`
+		OutputIndex integer,
+		PRIMARY KEY (InputIndex, OutputIndex));`
 
 	// execute a query on the server
 	_, err := c.Db.Exec(schema)
@@ -49,6 +50,38 @@ func (c *VoucherRepository) CreateVoucher(
 		voucher.OutputIndex,
 	)
 	return voucher, nil
+}
+
+func (c *VoucherRepository) UpdateVoucher(
+	ctx context.Context, voucher *model.ConvenienceVoucher,
+) (*model.ConvenienceVoucher, error) {
+	updateVoucher := `UPDATE vouchers SET 
+		Destination = ?,
+		Payload = ?,
+		Executed = ?
+		WHERE InputIndex = ? and OutputIndex = ?`
+
+	c.Db.MustExec(
+		updateVoucher,
+		voucher.Destination,
+		voucher.Payload,
+		voucher.Executed,
+		voucher.InputIndex,
+		voucher.OutputIndex,
+	)
+
+	return voucher, nil
+}
+
+func (c *VoucherRepository) VoucherCount(
+	ctx context.Context,
+) (uint64, error) {
+	var count int
+	err := c.Db.Get(&count, "SELECT count(*) FROM vouchers")
+	if err != nil {
+		return 0, nil
+	}
+	return uint64(count), nil
 }
 
 func (c *VoucherRepository) FindVoucherByInputAndOutputIndex(
