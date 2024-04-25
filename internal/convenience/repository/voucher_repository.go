@@ -3,18 +3,17 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strconv"
 	"strings"
 
+	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
 )
-
-const EXECUTED = "Executed"
-const FALSE = "false"
 
 type VoucherRepository struct {
 	Db sqlx.DB
@@ -97,7 +96,9 @@ func (c *VoucherRepository) VoucherCount(
 func (c *VoucherRepository) FindVoucherByInputAndOutputIndex(
 	ctx context.Context, inputIndex uint64, outputIndex uint64,
 ) (*model.ConvenienceVoucher, error) {
-	query := `SELECT * FROM vouchers WHERE input_index = $1 and output_index = $2`
+
+	query := `SELECT * FROM vouchers WHERE input_index = $1 and output_index = $2 LIMIT 1`
+
 	stmt, err := c.Db.Preparex(query)
 	if err != nil {
 		return nil, err
@@ -105,11 +106,10 @@ func (c *VoucherRepository) FindVoucherByInputAndOutputIndex(
 	var row voucherRow
 	err = stmt.Get(&row, inputIndex, outputIndex)
 	if err != nil {
-		if err == sql.ErrNoRows {
+		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
-		} else {
-			return nil, err
 		}
+		return nil, err
 	}
 
 	p := convertToConvenienceVoucher(row)
@@ -156,7 +156,7 @@ func (c *VoucherRepository) FindAllVouchers(
 	after *string,
 	before *string,
 	filter []*model.ConvenienceFilter,
-) (*PageResult[model.ConvenienceVoucher], error) {
+) (*commons.PageResult[model.ConvenienceVoucher], error) {
 	total, err := c.Count(ctx, filter)
 	if err != nil {
 		return nil, err
@@ -167,8 +167,10 @@ func (c *VoucherRepository) FindAllVouchers(
 		return nil, err
 	}
 	query += where
+
 	query += ` ORDER BY input_index ASC, output_index ASC `
-	offset, limit, err := computePage(first, last, after, before, int(total))
+	offset, limit, err := commons.computePage(first, last, after, before, int(total))
+
 	if err != nil {
 		return nil, err
 	}
@@ -196,7 +198,8 @@ func (c *VoucherRepository) FindAllVouchers(
 		vouchers[i] = convertToConvenienceVoucher(row)
 	}
 
-	pageResult := &PageResult[model.ConvenienceVoucher]{
+	pageResult := &commons.PageResult[model.ConvenienceVoucher]{
+
 		Rows:   vouchers,
 		Total:  total,
 		Offset: uint64(offset),
@@ -229,7 +232,7 @@ func transformToQuery(
 	where := []string{}
 	count := 1
 	for _, filter := range filter {
-		if *filter.Field == EXECUTED {
+		if *filter.Field == model.EXECUTED {
 			if *filter.Eq == "true" {
 				where = append(where, "executed = $"+strconv.Itoa(count))
 				args = append(args, true)
@@ -243,7 +246,7 @@ func transformToQuery(
 					"unexpected executed value %s", *filter.Eq,
 				)
 			}
-		} else if *filter.Field == "Destination" {
+		} else if *filter.Field == model.DESTINATION {
 			if filter.Eq != nil {
 				where = append(where, "destination = $"+strconv.Itoa(count))
 				if !common.IsHexAddress(*filter.Eq) {
@@ -253,6 +256,13 @@ func transformToQuery(
 				count += 1
 			} else {
 				return "", nil, 0, fmt.Errorf("operation not implemented")
+			}
+		} else if *filter.Field == "InputIndex" {
+			if filter.Eq != nil {
+				where = append(where, "InputIndex = ?")
+				args = append(args, *filter.Eq)
+			} else {
+				return "", nil, fmt.Errorf("operation not implemented")
 			}
 		} else {
 			return "", nil, 0, fmt.Errorf("unexpected field %s", *filter.Field)

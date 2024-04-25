@@ -2,6 +2,19 @@ package model
 
 import "github.com/ethereum/go-ethereum/common"
 
+const EXECUTED = "Executed"
+const FALSE = "false"
+const DESTINATION = "Destination"
+const VOUCHER_SELECTOR = "ef615e2f"
+const NOTICE_SELECTOR = "c258d6e5"
+const INPUT_INDEX = "InputIndex"
+
+type ConvenienceNotice struct {
+	Payload     string `db:"payload"`
+	InputIndex  uint64 `db:"input_index"`
+	OutputIndex uint64 `db:"output_index"`
+}
+
 // Voucher metadata type
 type ConvenienceVoucher struct {
 	Destination common.Address `db:"destination"`

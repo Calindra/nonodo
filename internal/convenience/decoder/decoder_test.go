@@ -18,6 +18,7 @@ type OutputDecoderSuite struct {
 	suite.Suite
 	decoder           *OutputDecoder
 	voucherRepository *repository.VoucherRepository
+	noticeRepository  *repository.NoticeRepository
 }
 
 func (s *OutputDecoderSuite) SetupTest() {
@@ -29,8 +30,18 @@ func (s *OutputDecoderSuite) SetupTest() {
 	if err != nil {
 		panic(err)
 	}
+	s.noticeRepository = &repository.NoticeRepository{
+		Db: *db,
+	}
+	err = s.noticeRepository.CreateTables()
+	if err != nil {
+		panic(err)
+	}
 	s.decoder = &OutputDecoder{
-		convenienceService: *services.NewConvenienceService(s.voucherRepository),
+		convenienceService: *services.NewConvenienceService(
+			s.voucherRepository,
+			s.noticeRepository,
+		),
 	}
 }
 
@@ -40,7 +51,7 @@ func TestDecoderSuite(t *testing.T) {
 
 func (s *OutputDecoderSuite) TestHandleOutput() {
 	ctx := context.Background()
-	err := s.decoder.HandleOutput(ctx, Token, "0x111122", 1, 2)
+	err := s.decoder.HandleOutput(ctx, Token, "0xef615e2f11", 1, 2)
 	if err != nil {
 		panic(err)
 	}
@@ -49,24 +60,24 @@ func (s *OutputDecoderSuite) TestHandleOutput() {
 		panic(err)
 	}
 	s.Equal(Token.String(), voucher.Destination.String())
-	s.Equal("0x111122", voucher.Payload)
+	s.Equal("0x11", voucher.Payload)
 }
 
 func (s *OutputDecoderSuite) TestGetAbiFromEtherscan() {
 	s.T().Skip()
 	address := common.HexToAddress("0x26A61aF89053c847B4bd5084E2caFe7211874a29")
 	abi, err := s.decoder.GetAbi(address)
-	checkError(s, err)
-	selectorBytes, err2 := hex.DecodeString("a9059cbb")
-	checkError(s, err2)
-	abiMethod, err3 := abi.MethodById(selectorBytes)
-	checkError(s, err3)
+	s.NoError(err)
+	selectorBytes, err := hex.DecodeString("a9059cbb")
+	s.NoError(err)
+	abiMethod, err := abi.MethodById(selectorBytes)
+	s.NoError(err)
 	s.Equal("transfer", abiMethod.RawName)
 }
 
 func (s *OutputDecoderSuite) TestCreateVoucherIdempotency() {
 	ctx := context.Background()
-	err := s.decoder.HandleOutput(ctx, Token, "0x3333344", 3, 4)
+	err := s.decoder.HandleOutput(ctx, Token, "0xef615e2f1122", 3, 4)
 	if err != nil {
 		panic(err)
 	}
@@ -78,7 +89,7 @@ func (s *OutputDecoderSuite) TestCreateVoucherIdempotency() {
 
 	s.Equal(1, int(voucherCount))
 
-	err = s.decoder.HandleOutput(ctx, Token, "0x3333344", 3, 4)
+	err = s.decoder.HandleOutput(ctx, Token, "0xef615e2f1122", 3, 4)
 
 	if err != nil {
 		panic(err)
@@ -118,16 +129,10 @@ func (s *OutputDecoderSuite) TestDecode() {
 		"type": "function"
 	}]`
 	abi, err := jsonToAbi(json)
-	checkError(s, err)
-	selectorBytes, err2 := hex.DecodeString("a9059cbb")
-	checkError(s, err2)
-	abiMethod, err3 := abi.MethodById(selectorBytes)
-	checkError(s, err3)
+	s.NoError(err)
+	selectorBytes, err := hex.DecodeString("a9059cbb")
+	s.NoError(err)
+	abiMethod, err := abi.MethodById(selectorBytes)
+	s.NoError(err)
 	s.Equal("transfer", abiMethod.RawName)
-}
-
-func checkError(s *OutputDecoderSuite, err error) {
-	if err != nil {
-		s.T().Fatal(err.Error())
-	}
 }

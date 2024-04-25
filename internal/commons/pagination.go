@@ -1,7 +1,7 @@
 // Copyright (c) Gabriel de Quadros Ligneul
 // SPDX-License-Identifier: Apache-2.0 (see LICENSE)
 
-package repository
+package commons
 
 import (
 	"encoding/base64"
@@ -24,7 +24,7 @@ type PageResult[T any] struct {
 }
 
 // Compute the pagination parameters given the GraphQL connection parameters.
-func computePage(
+func ComputePage(
 	first *int, last *int, after *string, before *string, total int,
 ) (offset int, limit int, err error) {
 	forward := first != nil || after != nil
@@ -54,7 +54,7 @@ func computeForwardPage(first *int, after *string, total int) (offset int, limit
 		limit = DefaultPaginationLimit
 	}
 	if after != nil {
-		offset, err = decodeCursor(*after, total)
+		offset, err = DecodeCursor(*after, total)
 		if err != nil {
 			return 0, 0, err
 		}
@@ -78,7 +78,7 @@ func computeBackwardPage(last *int, before *string, total int) (offset int, limi
 	}
 	var beforeOffset int
 	if before != nil {
-		beforeOffset, err = decodeCursor(*before, total)
+		beforeOffset, err = DecodeCursor(*before, total)
 		if err != nil {
 			return 0, 0, err
 		}
@@ -91,12 +91,12 @@ func computeBackwardPage(last *int, before *string, total int) (offset int, limi
 }
 
 // Encode the integer offset into a base64 string.
-func encodeCursor(offset int) string {
+func EncodeCursor(offset int) string {
 	return base64.StdEncoding.EncodeToString([]byte(fmt.Sprint(offset)))
 }
 
 // Decode the integer offset from a base64 string.
-func decodeCursor(base64Cursor string, total int) (int, error) {
+func DecodeCursor(base64Cursor string, total int) (int, error) {
 	cursorBytes, err := base64.StdEncoding.DecodeString(base64Cursor)
 	if err != nil {
 		return 0, err

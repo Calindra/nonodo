@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/calindra/nonodo/internal/convenience/adapter"
 	"github.com/calindra/nonodo/internal/convenience/decoder"
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/convenience/repository"
@@ -71,9 +72,12 @@ func (x *Synchronizer) VoucherPolling(ctx context.Context) error {
 					voucherIds,
 					fmt.Sprintf("%d:%d", inputIndex, outputIndex),
 				)
+				adapted := adapter.ConvertVoucherPayloadToV2(
+					edge.Node.Payload[2:],
+				)
 				err := x.decoder.HandleOutput(ctx,
 					common.HexToAddress(edge.Node.Destination),
-					edge.Node.Payload,
+					adapted,
 					uint64(inputIndex),
 					uint64(outputIndex),
 				)

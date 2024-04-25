@@ -55,7 +55,7 @@ func (c *SynchronizerRepository) Count(
 	var count int
 	err := c.Db.Get(&count, "SELECT count(*) FROM synchronizer_fetch")
 	if err != nil {
-		return 0, nil
+		return 0, err
 	}
 	return uint64(count), nil
 }

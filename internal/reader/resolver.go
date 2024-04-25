@@ -12,4 +12,5 @@ import (
 type Resolver struct {
 	model              *model.ModelWrapper
 	convenienceService *services.ConvenienceService
+	adapter            Adapter
 }

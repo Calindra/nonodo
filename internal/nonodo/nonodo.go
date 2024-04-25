@@ -118,6 +118,7 @@ func NewSupervisorPoC(opts NonodoOpts) supervisor.SupervisorWorker {
 	container := convenience.NewContainer(*db)
 	decoder := container.GetOutputDecoder()
 	convenienceService := container.GetConvenienceService()
+	adapter := reader.NewAdapterV1(db, convenienceService)
 	synchronizer := container.GetGraphQLSynchronizer()
 	model := model.NewNonodoModel(decoder, db)
 	w.Workers = append(w.Workers, synchronizer)
@@ -138,7 +139,7 @@ func NewSupervisorPoC(opts NonodoOpts) supervisor.SupervisorWorker {
 		Timeout:      HttpTimeout,
 	}))
 	inspect.Register(e, model)
-	reader.Register(e, model, convenienceService)
+	reader.Register(e, model, convenienceService, adapter)
 	w.Workers = append(w.Workers, supervisor.HttpWorker{
 		Address: fmt.Sprintf("%v:%v", opts.HttpAddress, opts.HttpPort),
 		Handler: e,
@@ -154,6 +155,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	container := convenience.NewContainer(*db)
 	decoder := container.GetOutputDecoder()
 	convenienceService := container.GetConvenienceService()
+	adapter := reader.NewAdapterV1(db, convenienceService)
 	model := model.NewNonodoModel(decoder, db)
 	e := echo.New()
 	e.Use(middleware.CORS())
@@ -163,7 +165,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		Timeout:      HttpTimeout,
 	}))
 	inspect.Register(e, model)
-	reader.Register(e, model, convenienceService)
+	reader.Register(e, model, convenienceService, adapter)
 
 	// Start the "internal" http rollup server
 	re := echo.New()

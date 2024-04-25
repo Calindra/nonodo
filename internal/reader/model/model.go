@@ -25,7 +25,7 @@ func (m *ModelWrapper) GetInput(index int) (*Input, error) {
 	if !ok {
 		return nil, fmt.Errorf("input not found")
 	}
-	return convertInput(input), nil
+	return ConvertInput(input), nil
 }
 
 func (m *ModelWrapper) GetVoucher(voucherIndex int, inputIndex int) (*Voucher, error) {
@@ -64,9 +64,9 @@ func (m *ModelWrapper) GetInputs(
 	nodes := m.model.GetInputs(filter, offset, limit)
 	convNodes := make([]*Input, len(nodes))
 	for i := range nodes {
-		convNodes[i] = convertInput(nodes[i])
+		convNodes[i] = ConvertInput(nodes[i])
 	}
-	return newConnection(offset, total, convNodes), nil
+	return NewConnection(offset, total, convNodes), nil
 }
 
 func (m *ModelWrapper) GetVouchers(
@@ -83,7 +83,7 @@ func (m *ModelWrapper) GetVouchers(
 	for i := range nodes {
 		convNodes[i] = convertVoucher(nodes[i])
 	}
-	return newConnection(offset, total, convNodes), nil
+	return NewConnection(offset, total, convNodes), nil
 }
 
 func (m *ModelWrapper) GetNotices(
@@ -100,7 +100,7 @@ func (m *ModelWrapper) GetNotices(
 	for i := range nodes {
 		convNodes[i] = convertNotice(nodes[i])
 	}
-	return newConnection(offset, total, convNodes), nil
+	return NewConnection(offset, total, convNodes), nil
 }
 
 func (m *ModelWrapper) GetReports(
@@ -117,5 +117,5 @@ func (m *ModelWrapper) GetReports(
 	for i := range nodes {
 		convNodes[i] = convertReport(nodes[i])
 	}
-	return newConnection(offset, total, convNodes), nil
+	return NewConnection(offset, total, convNodes), nil
 }
