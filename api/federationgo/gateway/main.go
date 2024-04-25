@@ -58,9 +58,10 @@ func startServer() {
 
 	datasourceWatcher := NewDatasourcePoller(httpClient, DatasourcePollerConfig{
 		Services: []ServiceConfig{
-			{Name: "accounts", URL: "http://localhost:4001/query", Fallback: fallback},
-			{Name: "products", URL: "http://localhost:4002/query", WS: "ws://localhost:4002/query"},
-			{Name: "reviews", URL: "http://localhost:4003/query"},
+			{Name: "nonodo", URL: "http://localhost:8080/graphql"},
+			// {Name: "accounts", URL: "http://localhost:4001/query", Fallback: fallback},
+			// {Name: "products", URL: "http://localhost:4002/query", WS: "ws://localhost:4002/query"},
+			// {Name: "reviews", URL: "http://localhost:4003/query"},
 		},
 		PollingInterval: 30 * time.Second,
 	})
