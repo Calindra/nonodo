@@ -1250,8 +1250,8 @@ input BooleanFilterInput {
 }
 
 input ConvenientFilter {
-  Destination: AddressFilterInput
-  Executed: BooleanFilterInput
+  destination: AddressFilterInput
+  executed: BooleanFilterInput
   # UserData: UserDataFilter
 
   # Logical operators
@@ -8006,22 +8006,22 @@ func (ec *executionContext) unmarshalInputConvenientFilter(ctx context.Context, 
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"Destination", "Executed", "and", "or"}
+	fieldsInOrder := [...]string{"destination", "executed", "and", "or"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
 			continue
 		}
 		switch k {
-		case "Destination":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("Destination"))
+		case "destination":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("destination"))
 			data, err := ec.unmarshalOAddressFilterInput2ᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐAddressFilterInput(ctx, v)
 			if err != nil {
 				return it, err
 			}
 			it.Destination = data
-		case "Executed":
-			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("Executed"))
+		case "executed":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("executed"))
 			data, err := ec.unmarshalOBooleanFilterInput2ᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐBooleanFilterInput(ctx, v)
 			if err != nil {
 				return it, err
