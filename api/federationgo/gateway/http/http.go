@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	log "github.com/jensneuse/abstractlogger"
+
 	"github.com/wundergraph/graphql-go-tools/execution/engine"
 	"github.com/wundergraph/graphql-go-tools/execution/graphql"
 	"github.com/wundergraph/graphql-go-tools/v2/pkg/engine/resolve"

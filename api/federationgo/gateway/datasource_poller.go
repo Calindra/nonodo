@@ -1,4 +1,4 @@
-package federationgo
+package main
 
 import (
 	"bytes"
