@@ -47,13 +47,13 @@ func (r *InputRepository) Create(input AdvanceInput) (*AdvanceInput, error) {
 		timestamp,
 		exception
 	) VALUES (
-		?,
-		?,
-		?,
-		?,
-		?,
-		?,
-		?
+		$1,
+		$2,
+		$3,
+		$4,
+		$5,
+		$6,
+		$7
 	);`
 	_, err := r.Db.Exec(
 		insertSql,
@@ -73,8 +73,8 @@ func (r *InputRepository) Create(input AdvanceInput) (*AdvanceInput, error) {
 
 func (r *InputRepository) Update(input AdvanceInput) (*AdvanceInput, error) {
 	sql := `UPDATE inputs
-		SET status = ?, exception = ? 
-		WHERE input_index = ?`
+		SET status = $1, exception = $2 
+		WHERE input_index = $3`
 	_, err := r.Db.Exec(
 		sql,
 		input.Status,
@@ -95,7 +95,7 @@ func (r *InputRepository) FindByIndex(index int) (*AdvanceInput, error) {
 		payload,
 		block_number,
 		timestamp,
-		exception FROM inputs WHERE input_index = ?`
+		exception FROM inputs WHERE input_index = $1`
 	res, err := r.Db.Queryx(
 		sql,
 		index,
@@ -117,7 +117,7 @@ func (c *InputRepository) Count(
 	filter []*model.ConvenienceFilter,
 ) (uint64, error) {
 	query := `SELECT count(*) FROM inputs `
-	where, args, err := transformToInputQuery(filter)
+	where, args, _, err := transformToInputQuery(filter)
 	if err != nil {
 		slog.Error("Count execution error")
 		return 0, err
@@ -158,7 +158,7 @@ func (c *InputRepository) FindAll(
 		block_number,
 		timestamp,
 		exception FROM inputs `
-	where, args, err := transformToInputQuery(filter)
+	where, args, argsCount, err := transformToInputQuery(filter)
 	if err != nil {
 		slog.Error("database error", "err", err)
 		return nil, err
@@ -169,9 +169,10 @@ func (c *InputRepository) FindAll(
 	if err != nil {
 		return nil, err
 	}
-	query += `LIMIT ? `
+	query += fmt.Sprintf(`LIMIT $%d `, argsCount)
 	args = append(args, limit)
-	query += `OFFSET ? `
+	argsCount += 1
+	query += fmt.Sprintf(`OFFSET $%d `, argsCount)
 	args = append(args, offset)
 
 	slog.Debug("Query", "query", query, "args", args, "total", total)
@@ -202,33 +203,37 @@ func (c *InputRepository) FindAll(
 
 func transformToInputQuery(
 	filter []*model.ConvenienceFilter,
-) (string, []interface{}, error) {
+) (string, []interface{}, int, error) {
 	query := ""
 	if len(filter) > 0 {
 		query += "WHERE "
 	}
 	args := []interface{}{}
 	where := []string{}
+	count := 1
 	for _, filter := range filter {
 		if *filter.Field == INDEX_FIELD {
 			if filter.Eq != nil {
-				where = append(where, "input_index = ?")
+				where = append(where, fmt.Sprintf("input_index = $%d ", count))
 				args = append(args, *filter.Eq)
+				count += 1
 			} else if filter.Gt != nil {
-				where = append(where, "input_index > ?")
+				where = append(where, fmt.Sprintf("input_index > $%d ", count))
 				args = append(args, *filter.Gt)
+				count += 1
 			} else if filter.Lt != nil {
-				where = append(where, "input_index < ?")
+				where = append(where, fmt.Sprintf("input_index < $%d ", count))
 				args = append(args, *filter.Lt)
+				count += 1
 			} else {
-				return "", nil, fmt.Errorf("operation not implemented")
+				return "", nil, 0, fmt.Errorf("operation not implemented")
 			}
 		} else {
-			return "", nil, fmt.Errorf("unexpected field %s", *filter.Field)
+			return "", nil, 0, fmt.Errorf("unexpected field %s", *filter.Field)
 		}
 	}
 	query += strings.Join(where, " and ")
-	return query, args, nil
+	return query, args, count, nil
 }
 
 func parseInput(res *sqlx.Rows) (*AdvanceInput, error) {
