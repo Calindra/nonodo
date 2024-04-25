@@ -18,6 +18,7 @@ type Container struct {
 	syncRepository      *repository.SynchronizerRepository
 	graphQLSynchronizer *synchronizer.Synchronizer
 	voucherFetcher      *synchronizer.VoucherFetcher
+	noticeRepository    *repository.NoticeRepository
 }
 
 func NewContainer(db sqlx.DB) *Container {
@@ -62,11 +63,28 @@ func (c *Container) GetSyncRepository() *repository.SynchronizerRepository {
 	return c.syncRepository
 }
 
+func (c *Container) GetNoticeRepository() *repository.NoticeRepository {
+	if c.syncRepository != nil {
+		return c.noticeRepository
+	}
+	c.noticeRepository = &repository.NoticeRepository{
+		Db: *c.db,
+	}
+	err := c.noticeRepository.CreateTables()
+	if err != nil {
+		panic(err)
+	}
+	return c.noticeRepository
+}
+
 func (c *Container) GetConvenienceService() *services.ConvenienceService {
 	if c.convenienceService != nil {
 		return c.convenienceService
 	}
-	c.convenienceService = services.NewConvenienceService(c.GetRepository())
+	c.convenienceService = services.NewConvenienceService(
+		c.GetRepository(),
+		c.GetNoticeRepository(),
+	)
 	return c.convenienceService
 }
 

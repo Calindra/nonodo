@@ -38,3 +38,11 @@ query State {
     }
   }
 }
+
+query GetVoucher($voucherIndex: Int!, $inputIndex: Int!) {
+  voucher(voucherIndex: $voucherIndex, inputIndex: $inputIndex) {
+    index
+    payload
+    destination
+  }
+}

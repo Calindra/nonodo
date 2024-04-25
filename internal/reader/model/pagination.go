@@ -95,7 +95,7 @@ type Connection[T any] struct {
 }
 
 // Create a new connection for the given slice of elements.
-func newConnection[T any](offset int, total int, nodes []T) *Connection[T] {
+func NewConnection[T any](offset int, total int, nodes []T) *Connection[T] {
 	edges := make([]*Edge[T], len(nodes))
 	for i := range nodes {
 		edges[i] = &Edge[T]{

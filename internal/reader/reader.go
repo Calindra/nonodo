@@ -21,8 +21,13 @@ func Register(
 	e *echo.Echo,
 	nonodomodel *nonodomodel.NonodoModel,
 	convenienceService *services.ConvenienceService,
+	adapter Adapter,
 ) {
-	resolver := Resolver{model.NewModelWrapper(nonodomodel), convenienceService}
+	resolver := Resolver{
+		model.NewModelWrapper(nonodomodel),
+		convenienceService,
+		adapter,
+	}
 	config := graph.Config{Resolvers: &resolver}
 	schema := graph.NewExecutableSchema(config)
 	graphqlHandler := handler.NewDefaultServer(schema)

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 
+	"github.com/calindra/nonodo/internal/convenience/adapter"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
@@ -85,18 +86,21 @@ type rollupsStateAdvance struct {
 	reports          []Report
 	decoder          Decoder
 	reportRepository *ReportRepository
+	inputRepository  *InputRepository
 }
 
 func newRollupsStateAdvance(
 	input *AdvanceInput,
 	decoder Decoder,
 	reportRepository *ReportRepository,
+	inputRepository *InputRepository,
 ) *rollupsStateAdvance {
 	slog.Info("nonodo: processing advance", "index", input.Index)
 	return &rollupsStateAdvance{
 		input:            input,
 		decoder:          decoder,
 		reportRepository: reportRepository,
+		inputRepository:  inputRepository,
 	}
 }
 
@@ -107,10 +111,36 @@ func sendAllInputVouchersToDecoder(decoder Decoder, inputIndex uint64, vouchers 
 	}
 	ctx := context.Background()
 	for _, v := range vouchers {
+		adapted := adapter.ConvertVoucherPayloadToV2(
+			common.Bytes2Hex(v.Payload),
+		)
 		err := decoder.HandleOutput(
 			ctx,
 			v.Destination,
+			adapted,
+			inputIndex,
+			uint64(v.Index),
+		)
+		if err != nil {
+			panic(err)
+		}
+	}
+}
+
+func sendAllInputNoticesToDecoder(decoder Decoder, inputIndex uint64, notices []Notice) {
+	if decoder == nil {
+		slog.Warn("Missing OutputDecoder to send notices")
+		return
+	}
+	ctx := context.Background()
+	for _, v := range notices {
+		adapted := adapter.ConvertNoticePayloadToV2(
 			common.Bytes2Hex(v.Payload),
+		)
+		err := decoder.HandleOutput(
+			ctx,
+			common.Address{},
+			adapted,
 			inputIndex,
 			uint64(v.Index),
 		)
@@ -144,10 +174,15 @@ func (s *rollupsStateAdvance) finish(status CompletionStatus) {
 		s.input.Notices = s.notices
 		if s.decoder != nil {
 			sendAllInputVouchersToDecoder(s.decoder, uint64(s.input.Index), s.vouchers)
+			sendAllInputNoticesToDecoder(s.decoder, uint64(s.input.Index), s.notices)
 		}
 	}
 	s.input.Reports = s.reports
 	saveAllReports(s.reportRepository, s.input.Reports)
+	_, err := s.inputRepository.Update(*s.input)
+	if err != nil {
+		panic(err)
+	}
 	slog.Info("nonodo: finished advance")
 }
 
@@ -193,6 +228,10 @@ func (s *rollupsStateAdvance) registerException(payload []byte) error {
 	s.input.Status = CompletionStatusException
 	s.input.Reports = s.reports
 	s.input.Exception = payload
+	_, err := s.inputRepository.Update(*s.input)
+	if err != nil {
+		panic(err)
+	}
 	slog.Info("nonodo: finished advance with exception")
 	return nil
 }

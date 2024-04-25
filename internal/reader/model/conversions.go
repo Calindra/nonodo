@@ -31,7 +31,7 @@ func convertCompletionStatus(status model.CompletionStatus) CompletionStatus {
 	}
 }
 
-func convertInput(input model.AdvanceInput) *Input {
+func ConvertInput(input model.AdvanceInput) *Input {
 	return &Input{
 		Index:       input.Index,
 		Status:      convertCompletionStatus(input.Status),
@@ -76,6 +76,16 @@ func convertConvenientVoucher(cVoucher convenience.ConvenienceVoucher) *Convenie
 		Destination: cVoucher.Destination.String(),
 		Payload:     cVoucher.Payload,
 		Executed:    &cVoucher.Executed,
+	}
+}
+
+func convertConvenientVoucherV1(cVoucher convenience.ConvenienceVoucher) *Voucher {
+	return &Voucher{
+		Index:       int(cVoucher.OutputIndex),
+		InputIndex:  int(cVoucher.InputIndex),
+		Destination: cVoucher.Destination.String(),
+		Payload:     cVoucher.Payload,
+		// Executed:    &cVoucher.Executed,
 	}
 }
 
@@ -187,7 +197,37 @@ func ConvertToVoucherConnection(
 	for i := range vouchers {
 		convNodes[i] = convertConvenientVoucher(vouchers[i])
 	}
-	return newConnection(offset, total, convNodes), nil
+	return NewConnection(offset, total, convNodes), nil
+}
+
+func ConvertToVoucherConnectionV1(
+	vouchers []convenience.ConvenienceVoucher,
+	offset int, total int,
+) (*VoucherConnection, error) {
+	convNodes := make([]*Voucher, len(vouchers))
+	for i := range vouchers {
+		convNodes[i] = convertConvenientVoucherV1(vouchers[i])
+	}
+	return NewConnection(offset, total, convNodes), nil
+}
+
+func convertConvenientNoticeV1(cNotice convenience.ConvenienceNotice) *Notice {
+	return &Notice{
+		Index:      int(cNotice.OutputIndex),
+		InputIndex: int(cNotice.InputIndex),
+		Payload:    cNotice.Payload,
+	}
+}
+
+func ConvertToNoticeConnectionV1(
+	vouchers []convenience.ConvenienceNotice,
+	offset int, total int,
+) (*NoticeConnection, error) {
+	convNodes := make([]*Notice, len(vouchers))
+	for i := range vouchers {
+		convNodes[i] = convertConvenientNoticeV1(vouchers[i])
+	}
+	return NewConnection(offset, total, convNodes), nil
 }
 
 //

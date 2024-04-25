@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/calindra/nonodo/internal/convenience/adapter"
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/convenience/services"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -31,15 +32,27 @@ func (o *OutputDecoder) HandleOutput(
 	inputIndex uint64,
 	outputIndex uint64,
 ) error {
+	// https://github.com/cartesi/rollups-contracts/issues/42#issuecomment-1694932058
 	// detect the output type Voucher | Notice
-	_, err := o.convenienceService.CreateVoucher(ctx, &model.ConvenienceVoucher{
-		Destination: destination,
-		Payload:     payload,
-		Executed:    false,
-		InputIndex:  inputIndex,
-		OutputIndex: outputIndex,
-	})
-	return err
+	// 0xc258d6e5 for Notice
+	// 0xef615e2f for Vouchers
+	if payload[2:10] == model.VOUCHER_SELECTOR {
+		_, err := o.convenienceService.CreateVoucher(ctx, &model.ConvenienceVoucher{
+			Destination: destination,
+			Payload:     adapter.RemoveSelector(payload),
+			Executed:    false,
+			InputIndex:  inputIndex,
+			OutputIndex: outputIndex,
+		})
+		return err
+	} else {
+		_, err := o.convenienceService.CreateNotice(ctx, &model.ConvenienceNotice{
+			Payload:     adapter.RemoveSelector(payload),
+			InputIndex:  inputIndex,
+			OutputIndex: outputIndex,
+		})
+		return err
+	}
 }
 
 func (o *OutputDecoder) GetAbi(address common.Address) (*abi.ABI, error) {

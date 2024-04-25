@@ -8,12 +8,16 @@ import (
 	"context"
 	"crypto/rand"
 	"fmt"
+	"log/slog"
 	"net/http"
+	"os"
+	"path"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/Khan/genqlient/graphql"
+	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/calindra/nonodo/internal/inspect"
 	"github.com/calindra/nonodo/internal/readerclient"
@@ -32,6 +36,7 @@ type NonodoSuite struct {
 	rpcUrl        string
 	graphqlClient graphql.Client
 	inspectClient *inspect.ClientWithResponses
+	nonce         int
 }
 
 //
@@ -39,55 +44,94 @@ type NonodoSuite struct {
 //
 
 func (s *NonodoSuite) TestItProcessesAdvanceInputs() {
+	// defer s.teardown()
 	opts := NewNonodoOpts()
+	// we are using file cuz there is problem with memory
+	// no such table: reports
+	tempDir, err := os.MkdirTemp("", "")
+	s.NoError(err)
+	sqliteFileName := fmt.Sprintf("test%d.sqlite3", time.Now().UnixMilli())
 	opts.EnableEcho = true
-	s.SetupTest(opts)
-
+	opts.SqliteFile = path.Join(tempDir, sqliteFileName)
+	s.setupTest(opts)
+	defer os.RemoveAll(tempDir)
 	s.T().Log("sending advance inputs")
 	const n = 3
-	payloads := make([][]byte, n)
+	var payloads [n][32]byte
 	for i := 0; i < n; i++ {
 		payloads[i] = s.makePayload()
-		err := devnet.AddInput(s.ctx, s.rpcUrl, payloads[i])
-		s.Require().Nil(err)
+		err := devnet.AddInput(s.ctx, s.rpcUrl, payloads[i][:])
+		s.NoError(err)
 	}
 
 	s.T().Log("waiting until last input is ready")
-	err := s.waitForAdvanceInput(n - 1)
-	s.Require().Nil(err)
+	err = s.waitForAdvanceInput(n - 1)
+	s.NoError(err)
 
 	s.T().Log("verifying node state")
 	response, err := readerclient.State(s.ctx, s.graphqlClient)
-	s.Require().Nil(err)
+	s.NoError(err)
 	for i := 0; i < n; i++ {
 		input := response.Inputs.Edges[i].Node
 		s.Equal(i, input.Index)
-		s.Equal(payloads[i], s.decodeHex(input.Payload))
+		s.Equal(payloads[i][:], s.decodeHex(input.Payload))
 		s.Equal(devnet.SenderAddress, input.MsgSender)
 		voucher := input.Vouchers.Edges[0].Node
-		s.Equal(payloads[i], s.decodeHex(voucher.Payload))
+		s.Equal(payloads[i][:], s.decodeHex(voucher.Payload))
 		s.Equal(devnet.SenderAddress, voucher.Destination)
-		s.Equal(payloads[i], s.decodeHex(input.Notices.Edges[0].Node.Payload))
-		s.Equal(payloads[i], s.decodeHex(input.Reports.Edges[0].Node.Payload))
+		s.Equal(payloads[i][:], s.decodeHex(input.Notices.Edges[0].Node.Payload))
+		s.Equal(payloads[i][:], s.decodeHex(input.Reports.Edges[0].Node.Payload))
 	}
 }
 
+func (s *NonodoSuite) TestGraphQLVoucher() {
+	// defer s.teardown()
+	opts := NewNonodoOpts()
+	// we are using file cuz there is problem with memory
+	// no such table: reports
+	tempDir, err := os.MkdirTemp("", "")
+	s.NoError(err)
+	sqliteFileName := fmt.Sprintf("test%d.sqlite3", time.Now().UnixMilli())
+	opts.EnableEcho = true
+	opts.SqliteFile = path.Join(tempDir, sqliteFileName)
+	s.setupTest(opts)
+	defer os.RemoveAll(tempDir)
+	s.T().Log("sending advance inputs")
+	const n = 3
+	var payloads [n][32]byte
+	for i := 0; i < n; i++ {
+		payloads[i] = s.makePayload()
+		err := devnet.AddInput(s.ctx, s.rpcUrl, payloads[i][:])
+		s.NoError(err)
+	}
+
+	s.T().Log("waiting until last input is ready")
+	err = s.waitForAdvanceInput(n - 1)
+	s.NoError(err)
+
+	s.T().Log("verifying voucher")
+	voucher, err := readerclient.GetVoucher(s.ctx, s.graphqlClient, 0, 1)
+	s.NoError(err)
+	s.Equal(payloads[1][:], s.decodeHex(voucher.Voucher.Payload))
+}
+
 func (s *NonodoSuite) TestItProcessesInspectInputs() {
+	// defer s.teardown()
 	opts := NewNonodoOpts()
 	opts.EnableEcho = true
-	s.SetupTest(opts)
+	s.setupTest(opts)
 
 	s.T().Log("sending inspect inputs")
 	const n = 3
 	for i := 0; i < n; i++ {
 		payload := s.makePayload()
-		response, err := s.sendInspect(payload)
-		s.Nil(err)
+		response, err := s.sendInspect(payload[:])
+		s.NoError(err)
 		s.Equal(http.StatusOK, response.StatusCode())
 		s.Equal("0x", response.JSON200.ExceptionPayload)
 		s.Equal(0, response.JSON200.ProcessedInputCount)
 		s.Len(response.JSON200.Reports, 1)
-		s.Equal(payload, s.decodeHex(response.JSON200.Reports[0].Payload))
+		s.Equal(payload[:], s.decodeHex(response.JSON200.Reports[0].Payload))
 		s.Equal(inspect.Accepted, response.JSON200.Status)
 	}
 }
@@ -101,15 +145,18 @@ func (s *NonodoSuite) TestItWorksWithExternalApplication() {
 		"--endpoint",
 		fmt.Sprintf("http://%v:%v", opts.HttpAddress, opts.HttpRollupsPort),
 	}
-	s.SetupTest(opts)
+	opts.HttpPort = 8090
+	s.setupTest(opts)
+	time.Sleep(100 * time.Millisecond)
 
 	s.T().Log("sending inspect to external application")
 	payload := s.makePayload()
 
-	response, err := s.sendInspect(payload)
-	s.Require().Nil(err)
+	response, err := s.sendInspect(payload[:])
+	s.NoError(err)
+	slog.Debug("response", "body", string(response.Body))
 	s.Require().Equal(http.StatusOK, response.StatusCode())
-	s.Require().Equal(payload, s.decodeHex(response.JSON200.Reports[0].Payload))
+	s.Require().Equal(payload[:], s.decodeHex(response.JSON200.Reports[0].Payload))
 }
 
 //
@@ -118,7 +165,11 @@ func (s *NonodoSuite) TestItWorksWithExternalApplication() {
 
 // Setup the nonodo suite.
 // This method requires the nonodo options, so each test must call it explicitly.
-func (s *NonodoSuite) SetupTest(opts NonodoOpts) {
+func (s *NonodoSuite) setupTest(opts NonodoOpts) {
+	s.nonce += 1
+	opts.AnvilPort += s.nonce
+	opts.HttpPort += s.nonce
+	commons.ConfigureLog(slog.LevelDebug)
 	s.ctx, s.timeoutCancel = context.WithTimeout(context.Background(), testTimeout)
 	s.workerResult = make(chan error)
 
@@ -148,7 +199,7 @@ func (s *NonodoSuite) SetupTest(opts NonodoOpts) {
 	inspectEndpoint := fmt.Sprintf("http://%s:%v/", opts.HttpAddress, opts.HttpPort)
 	var err error
 	s.inspectClient, err = inspect.NewClientWithResponses(inspectEndpoint)
-	s.Nil(err)
+	s.NoError(err)
 }
 
 func (s *NonodoSuite) TearDownTest() {
@@ -157,9 +208,10 @@ func (s *NonodoSuite) TearDownTest() {
 	case <-s.ctx.Done():
 		s.Fail("context error", s.ctx.Err())
 	case err := <-s.workerResult:
-		s.Nil(err)
+		s.NoError(err)
 	}
 	s.timeoutCancel()
+	s.T().Log("teardown ok.")
 }
 
 //
@@ -169,7 +221,8 @@ func (s *NonodoSuite) TearDownTest() {
 // Wait for the given input to be ready.
 func (s *NonodoSuite) waitForAdvanceInput(inputIndex int) error {
 	const pollRetries = 100
-	const pollInterval = 10 * time.Millisecond
+	const pollInterval = 15 * time.Millisecond
+	time.Sleep(100 * time.Millisecond)
 	for i := 0; i < pollRetries; i++ {
 		result, err := readerclient.InputStatus(s.ctx, s.graphqlClient, inputIndex)
 		if err != nil && !strings.Contains(err.Error(), "input not found") {
@@ -188,17 +241,18 @@ func (s *NonodoSuite) waitForAdvanceInput(inputIndex int) error {
 }
 
 // Create a random payload to use in the tests
-func (s *NonodoSuite) makePayload() []byte {
-	payload := make([]byte, 32)
-	_, err := rand.Read(payload)
-	s.Require().Nil(err)
+func (s *NonodoSuite) makePayload() [32]byte {
+	var payload [32]byte
+	_, err := rand.Read(payload[:])
+	s.NoError(err)
+	fmt.Println(payload)
 	return payload
 }
 
 // Decode the hex string into bytes.
 func (s *NonodoSuite) decodeHex(value string) []byte {
 	bytes, err := hexutil.Decode(value)
-	s.Require().Nil(err)
+	s.NoError(err)
 	return bytes
 }
 
@@ -216,5 +270,5 @@ func (s *NonodoSuite) sendInspect(payload []byte) (*inspect.InspectPostResponse,
 //
 
 func TestNonodoSuite(t *testing.T) {
-	suite.Run(t, &NonodoSuite{})
+	suite.Run(t, &NonodoSuite{nonce: 0})
 }

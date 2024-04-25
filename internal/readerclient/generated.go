@@ -21,6 +21,37 @@ const (
 	CompletionStatusPayloadLengthLimitExceeded CompletionStatus = "PAYLOAD_LENGTH_LIMIT_EXCEEDED"
 )
 
+// GetVoucherResponse is returned by GetVoucher on success.
+type GetVoucherResponse struct {
+	// Get a voucher based on its index
+	Voucher GetVoucherVoucher `json:"voucher"`
+}
+
+// GetVoucher returns GetVoucherResponse.Voucher, and is useful for accessing the field via an interface.
+func (v *GetVoucherResponse) GetVoucher() GetVoucherVoucher { return v.Voucher }
+
+// GetVoucherVoucher includes the requested fields of the GraphQL type Voucher.
+// The GraphQL type's documentation follows.
+//
+// Representation of a transaction that can be carried out on the base layer blockchain, such as a transfer of assets
+type GetVoucherVoucher struct {
+	// Voucher index within the context of the input that produced it
+	Index int `json:"index"`
+	// Transaction payload in Ethereum hex binary format, starting with '0x'
+	Payload string `json:"payload"`
+	// Transaction destination address in Ethereum hex binary format (20 bytes), starting with '0x'
+	Destination string `json:"destination"`
+}
+
+// GetIndex returns GetVoucherVoucher.Index, and is useful for accessing the field via an interface.
+func (v *GetVoucherVoucher) GetIndex() int { return v.Index }
+
+// GetPayload returns GetVoucherVoucher.Payload, and is useful for accessing the field via an interface.
+func (v *GetVoucherVoucher) GetPayload() string { return v.Payload }
+
+// GetDestination returns GetVoucherVoucher.Destination, and is useful for accessing the field via an interface.
+func (v *GetVoucherVoucher) GetDestination() string { return v.Destination }
+
 // InputStatusInput includes the requested fields of the GraphQL type Input.
 // The GraphQL type's documentation follows.
 //
@@ -295,6 +326,18 @@ type StateResponse struct {
 // GetInputs returns StateResponse.Inputs, and is useful for accessing the field via an interface.
 func (v *StateResponse) GetInputs() StateInputsInputConnection { return v.Inputs }
 
+// __GetVoucherInput is used internally by genqlient
+type __GetVoucherInput struct {
+	VoucherIndex int `json:"voucherIndex"`
+	InputIndex   int `json:"inputIndex"`
+}
+
+// GetVoucherIndex returns __GetVoucherInput.VoucherIndex, and is useful for accessing the field via an interface.
+func (v *__GetVoucherInput) GetVoucherIndex() int { return v.VoucherIndex }
+
+// GetInputIndex returns __GetVoucherInput.InputIndex, and is useful for accessing the field via an interface.
+func (v *__GetVoucherInput) GetInputIndex() int { return v.InputIndex }
+
 // __InputStatusInput is used internally by genqlient
 type __InputStatusInput struct {
 	Index int `json:"index"`
@@ -302,6 +345,45 @@ type __InputStatusInput struct {
 
 // GetIndex returns __InputStatusInput.Index, and is useful for accessing the field via an interface.
 func (v *__InputStatusInput) GetIndex() int { return v.Index }
+
+// The query or mutation executed by GetVoucher.
+const GetVoucher_Operation = `
+query GetVoucher ($voucherIndex: Int!, $inputIndex: Int!) {
+	voucher(voucherIndex: $voucherIndex, inputIndex: $inputIndex) {
+		index
+		payload
+		destination
+	}
+}
+`
+
+func GetVoucher(
+	ctx context.Context,
+	client graphql.Client,
+	voucherIndex int,
+	inputIndex int,
+) (*GetVoucherResponse, error) {
+	req := &graphql.Request{
+		OpName: "GetVoucher",
+		Query:  GetVoucher_Operation,
+		Variables: &__GetVoucherInput{
+			VoucherIndex: voucherIndex,
+			InputIndex:   inputIndex,
+		},
+	}
+	var err error
+
+	var data GetVoucherResponse
+	resp := &graphql.Response{Data: &data}
+
+	err = client.MakeRequest(
+		ctx,
+		req,
+		resp,
+	)
+
+	return &data, err
+}
 
 // The query or mutation executed by InputStatus.
 const InputStatus_Operation = `
