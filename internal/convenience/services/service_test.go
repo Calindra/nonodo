@@ -149,3 +149,32 @@ func (s *ConvenienceServiceSuite) TestFindAllVouchersByDestination() {
 	s.Equal(1, len(vouchers.Rows))
 	s.Equal(2, int(vouchers.Rows[0].InputIndex))
 }
+
+func (s *ConvenienceServiceSuite) TestCreateVoucherIdempotency() {
+	ctx := context.Background()
+	_, err := s.service.CreateVoucher(ctx, &model.ConvenienceVoucher{
+		InputIndex:  1,
+		OutputIndex: 2,
+	})
+	s.NoError(err)
+	count, err := s.repository.Count(ctx, nil)
+	s.NoError(err)
+	s.Equal(1, int(count))
+
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = s.service.CreateVoucher(ctx, &model.ConvenienceVoucher{
+		InputIndex:  1,
+		OutputIndex: 2,
+	})
+	s.NoError(err)
+	count, err = s.repository.Count(ctx, nil)
+	s.NoError(err)
+	s.Equal(1, int(count))
+
+	if err != nil {
+		panic(err)
+	}
+}
