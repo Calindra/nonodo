@@ -148,6 +148,21 @@ nonodo \
     --rpc-url wss://eth-sepolia.g.alchemy.com/v2/$ALCHEMY_API_KEY
 ```
 
+### Connecting to PostGresDB locally
+
+Start a PostGres instance locally, you can use docker-compose.yml example on root of the project.
+Set PostGres connection details using environment variables
+
+```sh
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_DB=mydatabase
+POSTGRES_USER=myuser
+POSTGRES_PASSWORD=mypassword
+```
+
+When running nonodo, set flag db-implementation with the value postgres
+
 ## Compatibility
 
 NoNodo is compatible with the following version of the Cartesi Rollups.
