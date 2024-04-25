@@ -7,12 +7,12 @@ const FALSE = "false"
 const DESTINATION = "Destination"
 const VOUCHER_SELECTOR = "ef615e2f"
 const NOTICE_SELECTOR = "c258d6e5"
+const INPUT_INDEX = "InputIndex"
 
 type ConvenienceNotice struct {
-	Destination common.Address `db:"Destination"`
-	Payload     string         `db:"Payload"`
-	InputIndex  uint64         `db:"InputIndex"`
-	OutputIndex uint64         `db:"OutputIndex"`
+	Payload     string `db:"payload"`
+	InputIndex  uint64 `db:"input_index"`
+	OutputIndex uint64 `db:"output_index"`
 }
 
 // Voucher metadata type
