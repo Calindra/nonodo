@@ -241,7 +241,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/GioResponse"
+                $ref: "#/components/schemas/GioResponseRollup"
 
         default:
           description: Error response.
@@ -453,7 +453,7 @@ components:
         - domain
         - id
 
-    GioResponse:
+    GioResponseRollup:
       type: object
       properties:
         code:

@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 )
 
 func main() {
@@ -28,7 +29,12 @@ func main() {
 
 	log.Println("OpenAPI downloaded successfully")
 
-	err = os.WriteFile("rollup.yaml", data, 0644)
+	// Replace GioResponse with GioResponseRollup
+	// Because oapi-codegen will generate the same name for both GioResponse from schema and GioResponse from client
+	var str = string(data)
+	str = strings.ReplaceAll(str, "GioResponse", "GioResponseRollup")
+
+	err = os.WriteFile("rollup.yaml", []byte(str), 0644)
 	if err != nil {
 		panic("Failed to write OpenAPI to file: " + err.Error())
 	}

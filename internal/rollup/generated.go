@@ -88,8 +88,8 @@ type GioRequest struct {
 	Id string `json:"id"`
 }
 
-// GioResponse defines model for GioResponse.
-type GioResponse struct {
+// GioResponseRollup defines model for GioResponseRollup.
+type GioResponseRollup struct {
 	// Code A number representing the response code.
 	Code uint16 `json:"code"`
 
@@ -855,7 +855,7 @@ func (r FinishResponse) StatusCode() int {
 type GioResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *GioResponse
+	JSON200      *GioResponseRollup
 }
 
 // Status returns HTTPResponse.Status
@@ -1098,7 +1098,7 @@ func ParseGioResponse(rsp *http.Response) (*GioResponse, error) {
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest GioResponse
+		var dest GioResponseRollup
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
