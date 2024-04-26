@@ -148,9 +148,9 @@ nonodo \
     --rpc-url wss://eth-sepolia.g.alchemy.com/v2/$ALCHEMY_API_KEY
 ```
 
-### Connecting to PostGresDB locally
+### Connecting to PostGresDB and Graphile locally
 
-Start a PostGres instance locally, you can use docker-compose.yml example on root of the project.
+Start a PostGres instance locally, "cd" to db folder and use docker-compose.yml example.
 Set PostGres connection details using environment variables
 
 ```sh
@@ -162,6 +162,8 @@ POSTGRES_PASSWORD=mypassword
 ```
 
 When running nonodo, set flag db-implementation with the value postgres
+
+Graphile can be called using http://localhost:5000/graphql and you can test queries using  http://localhost:5000/graphiql 
 
 ## Compatibility
 
