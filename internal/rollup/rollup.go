@@ -22,13 +22,18 @@ const FinishPollInterval = time.Millisecond * 100
 
 // Register the rollup API to echo
 func Register(e *echo.Echo, model *model.NonodoModel) {
-	rollupAPI := &rollupAPI{model}
+	var rollupAPI ServerInterface = &rollupAPI{model}
 	RegisterHandlersWithBaseURL(e, rollupAPI, "")
 }
 
 // Shared struct for request handlers.
 type rollupAPI struct {
 	model *model.NonodoModel
+}
+
+// Gio implements ServerInterface.
+func (r *rollupAPI) Gio(ctx echo.Context) error {
+	panic("unimplemented")
 }
 
 // Handle requests to /finish.
@@ -200,13 +205,11 @@ func convertInput(input model.Input) RollupRequest {
 	switch input := input.(type) {
 	case model.AdvanceInput:
 		advance := Advance{
-			Metadata: Metadata{
-				BlockNumber: input.BlockNumber,
-				InputIndex:  uint64(input.Index),
-				MsgSender:   hexutil.Encode(input.MsgSender[:]),
-				Timestamp:   uint64(input.Timestamp.Unix()),
-			},
-			Payload: hexutil.Encode(input.Payload),
+			BlockNumber:    input.BlockNumber,
+			InputIndex:     uint64(input.Index),
+			MsgSender:      hexutil.Encode(input.MsgSender[:]),
+			BlockTimestamp: uint64(input.Timestamp.Unix()),
+			Payload:        hexutil.Encode(input.Payload),
 		}
 		err := resp.Data.FromAdvance(advance)
 		if err != nil {
