@@ -32,6 +32,7 @@ func main() {
 	// Replace GioResponse with GioResponseRollup
 	// Because oapi-codegen will generate the same name for
 	// both GioResponse from schema and GioResponse from client
+	// https://github.com/deepmap/oapi-codegen/issues/386
 	var str = string(data)
 	str = strings.ReplaceAll(str, "GioResponse", "GioResponseRollup")
 
