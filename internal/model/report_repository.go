@@ -35,7 +35,7 @@ func (r *ReportRepository) Create(report Report) (Report, error) {
 	insertSql := `INSERT INTO reports (
 		output_index,
 		payload,
-		input_index) VALUES (?, ?, ?)`
+		input_index) VALUES ($1, $2, $3)`
 	r.Db.MustExec(
 		insertSql,
 		report.Index,
@@ -51,7 +51,7 @@ func (r *ReportRepository) FindByInputAndOutputIndex(
 ) (*Report, error) {
 	rows, err := r.Db.Queryx(`
 		SELECT payload FROM reports 
-			WHERE input_index = ? and output_index = ?
+			WHERE input_index = $1 and output_index = $2
 			LIMIT 1`,
 		inputIndex, outputIndex,
 	)
@@ -80,7 +80,7 @@ func (c *ReportRepository) Count(
 	filter []*model.ConvenienceFilter,
 ) (uint64, error) {
 	query := `SELECT count(*) FROM reports `
-	where, args, err := transformToQuery(filter)
+	where, args, _, err := transformToReportQuery(filter)
 	if err != nil {
 		slog.Error("Count execution error")
 		return 0, err
@@ -139,7 +139,7 @@ func (c *ReportRepository) FindAll(
 		return nil, err
 	}
 	query := `SELECT input_index, output_index, payload FROM reports `
-	where, args, err := transformToQuery(filter)
+	where, args, argsCount, err := transformToReportQuery(filter)
 	if err != nil {
 		slog.Error("database error", "err", err)
 		return nil, err
@@ -150,9 +150,10 @@ func (c *ReportRepository) FindAll(
 	if err != nil {
 		return nil, err
 	}
-	query += `LIMIT ? `
+	query += fmt.Sprintf(`LIMIT $%d `, argsCount)
 	args = append(args, limit)
-	query += `OFFSET ? `
+	argsCount += 1
+	query += fmt.Sprintf(`OFFSET $%d `, argsCount)
 	args = append(args, offset)
 
 	slog.Debug("Query", "query", query, "args", args, "total", total)
@@ -188,34 +189,37 @@ func (c *ReportRepository) FindAll(
 	return pageResult, nil
 }
 
-func transformToQuery(
+func transformToReportQuery(
 	filter []*model.ConvenienceFilter,
-) (string, []interface{}, error) {
+) (string, []interface{}, int, error) {
 	query := ""
 	if len(filter) > 0 {
 		query += "WHERE "
 	}
 	args := []interface{}{}
 	where := []string{}
+	count := 1
 	for _, filter := range filter {
 		if *filter.Field == "OutputIndex" {
 			if filter.Eq != nil {
-				where = append(where, "output_index = ?")
+				where = append(where, fmt.Sprintf("output_index = $%d ", count))
 				args = append(args, *filter.Eq)
+				count += 1
 			} else {
-				return "", nil, fmt.Errorf("operation not implemented")
+				return "", nil, 0, fmt.Errorf("operation not implemented")
 			}
 		} else if *filter.Field == INPUT_INDEX {
 			if filter.Eq != nil {
-				where = append(where, "input_index = ?")
+				where = append(where, fmt.Sprintf("input_index = $%d ", count))
 				args = append(args, *filter.Eq)
+				count += 1
 			} else {
-				return "", nil, fmt.Errorf("operation not implemented")
+				return "", nil, 0, fmt.Errorf("operation not implemented")
 			}
 		} else {
-			return "", nil, fmt.Errorf("unexpected field %s", *filter.Field)
+			return "", nil, 0, fmt.Errorf("unexpected field %s", *filter.Field)
 		}
 	}
 	query += strings.Join(where, " and ")
-	return query, args, nil
+	return query, args, count, nil
 }

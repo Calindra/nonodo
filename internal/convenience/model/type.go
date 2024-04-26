@@ -7,21 +7,21 @@ const FALSE = "false"
 const DESTINATION = "Destination"
 const VOUCHER_SELECTOR = "ef615e2f"
 const NOTICE_SELECTOR = "c258d6e5"
+const INPUT_INDEX = "InputIndex"
 
 type ConvenienceNotice struct {
-	Destination common.Address `db:"Destination"`
-	Payload     string         `db:"Payload"`
-	InputIndex  uint64         `db:"InputIndex"`
-	OutputIndex uint64         `db:"OutputIndex"`
+	Payload     string `db:"payload"`
+	InputIndex  uint64 `db:"input_index"`
+	OutputIndex uint64 `db:"output_index"`
 }
 
 // Voucher metadata type
 type ConvenienceVoucher struct {
-	Destination common.Address `db:"Destination"`
-	Payload     string         `db:"Payload"`
-	InputIndex  uint64         `db:"InputIndex"`
-	OutputIndex uint64         `db:"OutputIndex"`
-	Executed    bool           `db:"Executed"`
+	Destination common.Address `db:"destination"`
+	Payload     string         `db:"payload"`
+	InputIndex  uint64         `db:"input_index"`
+	OutputIndex uint64         `db:"output_index"`
+	Executed    bool           `db:"executed"`
 
 	// Proof we can fetch from the original GraphQL
 
@@ -53,9 +53,9 @@ type ConvenienceFilter struct {
 }
 
 type SynchronizerFetch struct {
-	Id             int64  `db:"Id"`
-	TimestampAfter uint64 `db:"TimestampAfter"`
-	IniCursorAfter string `db:"IniCursorAfter"`
-	LogVouchersIds string `db:"LogVouchersIds"`
-	EndCursorAfter string `db:"EndCursorAfter"`
+	Id             int64  `db:"id"`
+	TimestampAfter uint64 `db:"timestamp_after"`
+	IniCursorAfter string `db:"ini_cursor_after"`
+	LogVouchersIds string `db:"log_vouchers_ids"`
+	EndCursorAfter string `db:"end_cursor_after"`
 }

@@ -4,7 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/convenience/model"
@@ -17,10 +19,9 @@ type NoticeRepository struct {
 
 func (c *NoticeRepository) CreateTables() error {
 	schema := `CREATE TABLE IF NOT EXISTS notices (
-		Destination text,
-		Payload 	text,
-		InputIndex 	integer,
-		OutputIndex integer);`
+		payload 		text,
+		input_index		integer,
+		output_index	integer);`
 
 	// execute a query on the server
 	_, err := c.Db.Exec(schema)
@@ -31,13 +32,11 @@ func (c *NoticeRepository) Create(
 	ctx context.Context, data *model.ConvenienceNotice,
 ) (*model.ConvenienceNotice, error) {
 	insertSql := `INSERT INTO notices (
-		Destination,
-		Payload,
-		InputIndex,
-		OutputIndex) VALUES (?, ?, ?, ?)`
+		payload,
+		input_index,
+		output_index) VALUES ($1, $2, $3)`
 	c.Db.MustExec(
 		insertSql,
-		data.Destination,
 		data.Payload,
 		data.InputIndex,
 		data.OutputIndex,
@@ -50,7 +49,7 @@ func (c *NoticeRepository) Count(
 	filter []*model.ConvenienceFilter,
 ) (uint64, error) {
 	query := `SELECT count(*) FROM notices `
-	where, args, err := transformToQuery(filter)
+	where, args, _, err := transformToNoticeQuery(filter)
 	if err != nil {
 		return 0, err
 	}
@@ -81,19 +80,20 @@ func (c *NoticeRepository) FindAllNotices(
 		return nil, err
 	}
 	query := `SELECT * FROM notices `
-	where, args, err := transformToQuery(filter)
+	where, args, argsCount, err := transformToNoticeQuery(filter)
 	if err != nil {
 		return nil, err
 	}
 	query += where
-	query += `ORDER BY InputIndex ASC, OutputIndex ASC `
+	query += `ORDER BY input_index ASC, output_index ASC `
 	offset, limit, err := commons.ComputePage(first, last, after, before, int(total))
 	if err != nil {
 		return nil, err
 	}
-	query += `LIMIT ? `
+	query += fmt.Sprintf("LIMIT $%d ", argsCount)
 	args = append(args, limit)
-	query += `OFFSET ? `
+	argsCount = argsCount + 1
+	query += fmt.Sprintf("OFFSET $%d ", argsCount)
 	args = append(args, offset)
 
 	slog.Debug("Query", "query", query, "args", args, "total", total)
@@ -101,13 +101,13 @@ func (c *NoticeRepository) FindAllNotices(
 	if err != nil {
 		return nil, err
 	}
-	var vouchers []model.ConvenienceNotice
-	err = stmt.Select(&vouchers, args...)
+	var notices []model.ConvenienceNotice
+	err = stmt.Select(&notices, args...)
 	if err != nil {
 		return nil, err
 	}
 	pageResult := &commons.PageResult[model.ConvenienceNotice]{
-		Rows:   vouchers,
+		Rows:   notices,
 		Total:  total,
 		Offset: uint64(offset),
 	}
@@ -117,7 +117,7 @@ func (c *NoticeRepository) FindAllNotices(
 func (c *NoticeRepository) FindByInputAndOutputIndex(
 	ctx context.Context, inputIndex uint64, outputIndex uint64,
 ) (*model.ConvenienceNotice, error) {
-	query := `SELECT * FROM notices WHERE inputIndex = ? and outputIndex = ? LIMIT 1`
+	query := `SELECT * FROM notices WHERE input_index = $1 and output_index = $2 LIMIT 1`
 	stmt, err := c.Db.Preparex(query)
 	if err != nil {
 		return nil, err
@@ -131,4 +131,35 @@ func (c *NoticeRepository) FindByInputAndOutputIndex(
 		return nil, err
 	}
 	return &p, nil
+}
+
+func transformToNoticeQuery(
+	filter []*model.ConvenienceFilter,
+) (string, []interface{}, int, error) {
+	query := ""
+	if len(filter) > 0 {
+		query += "WHERE "
+	}
+	args := []interface{}{}
+	where := []string{}
+	count := 1
+	for _, filter := range filter {
+		if *filter.Field == model.INPUT_INDEX {
+			if filter.Eq != nil {
+				where = append(
+					where,
+					fmt.Sprintf("input_index = $%d ", count),
+				)
+				args = append(args, *filter.Eq)
+				count += 1
+			} else {
+				return "", nil, 0, fmt.Errorf("operation not implemented")
+			}
+		} else {
+			return "", nil, 0, fmt.Errorf("unexpected field %s", *filter.Field)
+		}
+	}
+	query += strings.Join(where, " and ")
+	slog.Debug("Query", "query", query, "args", args)
+	return query, args, count, nil
 }

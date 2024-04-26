@@ -47,7 +47,6 @@ func (o *OutputDecoder) HandleOutput(
 		return err
 	} else {
 		_, err := o.convenienceService.CreateNotice(ctx, &model.ConvenienceNotice{
-			Destination: destination,
 			Payload:     adapter.RemoveSelector(payload),
 			InputIndex:  inputIndex,
 			OutputIndex: outputIndex,

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math/big"
+	"os"
 	"time"
 
 	"github.com/calindra/nonodo/internal/convenience"
@@ -24,6 +25,7 @@ import (
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
+	_ "github.com/lib/pq"
 )
 
 const DefaultHttpPort = 8080
@@ -59,9 +61,10 @@ type NonodoOpts struct {
 	// If set, start application.
 	ApplicationArgs []string
 
-	ConveniencePoC bool
-	SqliteFile     string
-	FromBlock      uint64
+	ConveniencePoC   bool
+	SqliteFile       string
+	FromBlock        uint64
+	DbImplementation string
 }
 
 // Create the options struct with default values.
@@ -84,12 +87,34 @@ func NewNonodoOpts() NonodoOpts {
 		ConveniencePoC:     false,
 		SqliteFile:         ":memory:",
 		FromBlock:          0,
+		DbImplementation:   "sqlite",
 	}
 }
 
 func NewSupervisorPoC(opts NonodoOpts) supervisor.SupervisorWorker {
 	var w supervisor.SupervisorWorker
-	db := sqlx.MustConnect("sqlite3", opts.SqliteFile)
+
+	var db *sqlx.DB
+
+	if opts.DbImplementation == "postgres" {
+		slog.Info("Using PostGres DB ...")
+		postGresHost := os.Getenv("POSTGRES_HOST")
+		postGresPort := os.Getenv("POSTGRES_PORT")
+		postGresDataBase := os.Getenv("POSTGRES_DB")
+		postGresUser := os.Getenv("POSTGRES_USER")
+		postGresPassword := os.Getenv("POSTGRES_PASSWORD")
+
+		connectionString := fmt.Sprintf("host=%s port=%s user=%s "+
+			"dbname=%s password=%s sslmode=disable",
+			postGresHost, postGresPort, postGresUser,
+			postGresDataBase, postGresPassword)
+
+		db = sqlx.MustConnect("postgres", connectionString)
+	} else {
+		slog.Info("Using SQLite ...")
+		db = sqlx.MustConnect("sqlite3", opts.SqliteFile)
+	}
+
 	container := convenience.NewContainer(*db)
 	decoder := container.GetOutputDecoder()
 	convenienceService := container.GetConvenienceService()
