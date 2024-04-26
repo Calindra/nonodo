@@ -42,33 +42,6 @@ func ConvertInput(input model.AdvanceInput) *Input {
 	}
 }
 
-func convertVoucher(voucher model.Voucher) *Voucher {
-	return &Voucher{
-		InputIndex:  voucher.InputIndex,
-		Index:       voucher.Index,
-		Destination: voucher.Destination.String(),
-		Payload:     hexutil.Encode(voucher.Payload),
-		Proof:       nil, // nonodo doesn't compute proofs
-	}
-}
-
-func convertNotice(notice model.Notice) *Notice {
-	return &Notice{
-		InputIndex: notice.InputIndex,
-		Index:      notice.Index,
-		Payload:    hexutil.Encode(notice.Payload),
-		Proof:      nil, // nonodo doesn't compute proofs
-	}
-}
-
-func convertReport(report model.Report) *Report {
-	return &Report{
-		InputIndex: report.InputIndex,
-		Index:      report.Index,
-		Payload:    hexutil.Encode(report.Payload),
-	}
-}
-
 func convertConvenientVoucher(cVoucher convenience.ConvenienceVoucher) *ConvenientVoucher {
 	return &ConvenientVoucher{
 		Index:       int(cVoucher.OutputIndex),
@@ -233,13 +206,3 @@ func ConvertToNoticeConnectionV1(
 //
 // GraphQL -> Nonodo conversions
 //
-
-func convertInputFilter(filter *InputFilter) model.InputFilter {
-	if filter == nil {
-		return model.InputFilter{}
-	}
-	return model.InputFilter{
-		IndexGreaterThan: filter.IndexGreaterThan,
-		IndexLowerThan:   filter.IndexGreaterThan,
-	}
-}

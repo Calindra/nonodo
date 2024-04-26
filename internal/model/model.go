@@ -61,9 +61,12 @@ func (m *NonodoModel) AddAdvanceInput(
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
-	index := len(m.advances)
+	index, err := m.inputRepository.Count(nil)
+	if err != nil {
+		panic(err)
+	}
 	input := AdvanceInput{
-		Index:       index,
+		Index:       int(index),
 		Status:      CompletionStatusUnprocessed,
 		MsgSender:   sender,
 		Payload:     payload,
@@ -71,7 +74,7 @@ func (m *NonodoModel) AddAdvanceInput(
 		BlockNumber: blockNumber,
 	}
 	m.advances = append(m.advances, &input)
-	_, err := m.inputRepository.Create(input)
+	_, err = m.inputRepository.Create(input)
 	if err != nil {
 		panic(err)
 	}
@@ -220,20 +223,6 @@ func (m *NonodoModel) GetAdvanceInput(index int) (AdvanceInput, bool) {
 	return *m.advances[index], true
 }
 
-// Get the voucher for the given index and input index.
-// Return false if not found.
-func (m *NonodoModel) GetVoucher(voucherIndex, inputIndex int) (Voucher, bool) {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	if inputIndex >= len(m.advances) ||
-		voucherIndex >= len(m.advances[inputIndex].Vouchers) {
-		var voucher Voucher
-		return voucher, false
-	}
-	return m.advances[inputIndex].Vouchers[voucherIndex], true
-}
-
 // Get the notice for the given index and input index.
 // Return false if not found.
 func (m *NonodoModel) GetNotice(noticeIndex, inputIndex int) (Notice, bool) {
@@ -246,20 +235,6 @@ func (m *NonodoModel) GetNotice(noticeIndex, inputIndex int) (Notice, bool) {
 		return notice, false
 	}
 	return m.advances[inputIndex].Notices[noticeIndex], true
-}
-
-// Get the report for the given index and input index.
-// Return false if not found.
-func (m *NonodoModel) GetReport(reportIndex, inputIndex int) (Report, bool) {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	if inputIndex >= len(m.advances) ||
-		reportIndex >= len(m.advances[inputIndex].Reports) {
-		var report Report
-		return report, false
-	}
-	return m.advances[inputIndex].Reports[reportIndex], true
 }
 
 // Get the number of inputs given the filter.

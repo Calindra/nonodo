@@ -4,11 +4,17 @@
 package model
 
 import (
+	"context"
 	"errors"
+	"fmt"
+	"os"
+	"path"
 	"testing"
 	"time"
 
 	"github.com/calindra/nonodo/internal/commons"
+	"github.com/calindra/nonodo/internal/convenience"
+	"github.com/calindra/nonodo/internal/convenience/services"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
@@ -21,19 +27,31 @@ import (
 
 type ModelSuite struct {
 	suite.Suite
-	m                *NonodoModel
-	n                int
-	payloads         [][]byte
-	senders          []common.Address
-	blockNumbers     []uint64
-	timestamps       []time.Time
-	reportRepository *ReportRepository
+	m                  *NonodoModel
+	n                  int
+	payloads           [][]byte
+	senders            []common.Address
+	blockNumbers       []uint64
+	timestamps         []time.Time
+	reportRepository   *ReportRepository
+	inputRepository    *InputRepository
+	tempDir            string
+	convenienceService *services.ConvenienceService
 }
 
 func (s *ModelSuite) SetupTest() {
-	db := sqlx.MustConnect("sqlite3", ":memory:")
-	s.m = NewNonodoModel(nil, db)
+	tempDir, err := os.MkdirTemp("", "")
+	s.tempDir = tempDir
+	s.NoError(err)
+	sqliteFileName := fmt.Sprintf("test%d.sqlite3", time.Now().UnixMilli())
+	sqliteFileName = path.Join(tempDir, sqliteFileName)
+	db := sqlx.MustConnect("sqlite3", sqliteFileName)
+	container := convenience.NewContainer(*db)
+	decoder := container.GetOutputDecoder()
+	s.m = NewNonodoModel(decoder, db)
 	s.reportRepository = s.m.reportRepository
+	s.inputRepository = s.m.inputRepository
+	s.convenienceService = container.GetConvenienceService()
 	s.n = 3
 	s.payloads = make([][]byte, s.n)
 	s.senders = make([]common.Address, s.n)
@@ -59,6 +77,7 @@ func TestModelSuite(t *testing.T) {
 //
 
 func (s *ModelSuite) TestItAddsAndGetsAdvanceInputs() {
+	defer s.teardown()
 	// add inputs
 	for i := 0; i < s.n; i++ {
 		s.m.AddAdvanceInput(s.senders[i], s.payloads[i], s.blockNumbers[i], s.timestamps[i])
@@ -87,6 +106,7 @@ func (s *ModelSuite) TestItAddsAndGetsAdvanceInputs() {
 //
 
 func (s *ModelSuite) TestItAddsAndGetsInspectInput() {
+	defer s.teardown()
 	// add inputs
 	for i := 0; i < s.n; i++ {
 		index := s.m.AddInspectInput(s.payloads[i])
@@ -110,11 +130,13 @@ func (s *ModelSuite) TestItAddsAndGetsInspectInput() {
 //
 
 func (s *ModelSuite) TestItGetsNilWhenThereIsNoInput() {
+	defer s.teardown()
 	input := s.m.FinishAndGetNext(true)
 	s.Nil(input)
 }
 
 func (s *ModelSuite) TestItGetsFirstAdvanceInput() {
+	defer s.teardown()
 	// add inputs
 	for i := 0; i < s.n; i++ {
 		s.m.AddAdvanceInput(s.senders[i], s.payloads[i], s.blockNumbers[i], s.timestamps[i])
@@ -129,6 +151,7 @@ func (s *ModelSuite) TestItGetsFirstAdvanceInput() {
 }
 
 func (s *ModelSuite) TestItGetsFirstInspectInput() {
+	defer s.teardown()
 	// add inputs
 	for i := 0; i < s.n; i++ {
 		s.m.AddInspectInput(s.payloads[i])
@@ -143,6 +166,7 @@ func (s *ModelSuite) TestItGetsFirstInspectInput() {
 }
 
 func (s *ModelSuite) TestItGetsInspectBeforeAdvance() {
+	defer s.teardown()
 	// add inputs
 	for i := 0; i < s.n; i++ {
 		s.m.AddInspectInput(s.payloads[i])
@@ -171,32 +195,43 @@ func (s *ModelSuite) TestItGetsInspectBeforeAdvance() {
 }
 
 func (s *ModelSuite) TestItFinishesAdvanceWithAccept() {
+	defer s.teardown()
 	// add input and process it
 	s.m.AddAdvanceInput(s.senders[0], s.payloads[0], s.blockNumbers[0], s.timestamps[0])
 	s.m.FinishAndGetNext(true) // get
 	_, err := s.m.AddVoucher(s.senders[0], s.payloads[0])
-	s.Nil(err)
+	s.NoError(err)
 	_, err = s.m.AddNotice(s.payloads[0])
-	s.Nil(err)
+	s.NoError(err)
 	err = s.m.AddReport(s.payloads[0])
-	s.Nil(err)
+	s.NoError(err)
 	s.m.FinishAndGetNext(true) // finish
 
 	// check input
-	input, ok := s.m.GetAdvanceInput(0)
-	s.True(ok)
+	input, err := s.inputRepository.FindByIndex(0)
+	s.NoError(err)
 	s.Equal(0, input.Index)
 	s.Equal(CompletionStatusAccepted, input.Status)
-	s.Len(input.Vouchers, 1)
-	s.Len(input.Notices, 1)
+
+	// check vouchers
+	ctx := context.Background()
+	vouchers, err := s.convenienceService.FindAllVouchers(ctx, nil, nil, nil, nil, nil)
+	s.NoError(err)
+	s.Len(vouchers.Rows, 1)
+
+	// check notices
+	notices, err := s.convenienceService.FindAllNotices(ctx, nil, nil, nil, nil, nil)
+	s.NoError(err)
+	s.Len(notices.Rows, 1)
 
 	inputIndex := 0
-	page, err := s.reportRepository.FindAllByInputIndex(nil, nil, nil, nil, &inputIndex)
+	reportPage, err := s.reportRepository.FindAllByInputIndex(nil, nil, nil, nil, &inputIndex)
 	s.NoError(err)
-	s.Equal(1, int(page.Total))
+	s.Equal(1, int(reportPage.Total))
 }
 
 func (s *ModelSuite) TestItFinishesAdvanceWithReject() {
+	defer s.teardown()
 	// add input and process it
 	s.m.AddAdvanceInput(s.senders[0], s.payloads[0], s.blockNumbers[0], s.timestamps[0])
 	s.m.FinishAndGetNext(true) // get
@@ -209,14 +244,24 @@ func (s *ModelSuite) TestItFinishesAdvanceWithReject() {
 	s.m.FinishAndGetNext(false) // finish
 
 	// check input
-	input, ok := s.m.GetAdvanceInput(0)
-	s.True(ok)
+	input, err := s.inputRepository.FindByIndex(0)
+	s.NoError(err)
 	s.Equal(0, input.Index)
 	s.Equal(CompletionStatusRejected, input.Status)
-	s.Empty(input.Vouchers)
-	s.Empty(input.Notices)
-
 	s.Empty(input.Exception)
+	s.Empty(input.Notices)  // deprecated
+	s.Empty(input.Vouchers) // deprecated
+
+	// check vouchers
+	ctx := context.Background()
+	vouchers, err := s.convenienceService.FindAllVouchers(ctx, nil, nil, nil, nil, nil)
+	s.NoError(err)
+	s.Len(vouchers.Rows, 0)
+
+	// check notices
+	notices, err := s.convenienceService.FindAllNotices(ctx, nil, nil, nil, nil, nil)
+	s.NoError(err)
+	s.Len(notices.Rows, 0)
 
 	inputIndex := 0
 	page, err := s.reportRepository.FindAllByInputIndex(nil, nil, nil, nil, &inputIndex)
@@ -225,11 +270,12 @@ func (s *ModelSuite) TestItFinishesAdvanceWithReject() {
 }
 
 func (s *ModelSuite) TestItFinishesInspectWithAccept() {
+	defer s.teardown()
 	// add input and finish it
 	s.m.AddInspectInput(s.payloads[0])
 	s.m.FinishAndGetNext(true) // get
 	err := s.m.AddReport(s.payloads[0])
-	s.Nil(err)
+	s.NoError(err)
 	s.m.FinishAndGetNext(true) // finish
 
 	// check input
@@ -243,6 +289,7 @@ func (s *ModelSuite) TestItFinishesInspectWithAccept() {
 }
 
 func (s *ModelSuite) TestItFinishesInspectWithReject() {
+	defer s.teardown()
 	// add input and finish it
 	s.m.AddInspectInput(s.payloads[0])
 	s.m.FinishAndGetNext(true) // get
@@ -261,6 +308,7 @@ func (s *ModelSuite) TestItFinishesInspectWithReject() {
 }
 
 func (s *ModelSuite) TestItComputesProcessedInputCount() {
+	defer s.teardown()
 	// process n advance inputs
 	for i := 0; i < s.n; i++ {
 		s.m.AddAdvanceInput(s.senders[i], s.payloads[i], s.blockNumbers[i], s.timestamps[i])
@@ -284,6 +332,7 @@ func (s *ModelSuite) TestItComputesProcessedInputCount() {
 //
 
 func (s *ModelSuite) TestItAddsVoucher() {
+	defer s.teardown()
 	// add input and get it
 	s.m.AddAdvanceInput(s.senders[0], s.payloads[0], s.blockNumbers[0], s.timestamps[0])
 	s.m.FinishAndGetNext(true)
@@ -296,24 +345,28 @@ func (s *ModelSuite) TestItAddsVoucher() {
 	}
 
 	// check vouchers are not there before finish
-	vouchers := s.m.GetVouchers(OutputFilter{}, 0, 100)
-	s.Empty(vouchers)
+	ctx := context.Background()
+	vouchers, err := s.convenienceService.FindAllVouchers(ctx, nil, nil, nil, nil, nil)
+	s.NoError(err)
+	s.Empty(vouchers.Rows)
 
 	// finish input
 	s.m.FinishAndGetNext(true)
 
 	// check vouchers
-	vouchers = s.m.GetVouchers(OutputFilter{}, 0, 100)
-	s.Len(vouchers, s.n)
+	vouchers, err = s.convenienceService.FindAllVouchers(ctx, nil, nil, nil, nil, nil)
+	s.NoError(err)
+	s.Len(vouchers.Rows, s.n)
 	for i := 0; i < s.n; i++ {
-		s.Equal(0, vouchers[i].InputIndex)
-		s.Equal(i, vouchers[i].Index)
-		s.Equal(s.senders[i], vouchers[i].Destination)
-		s.Equal(s.payloads[i], vouchers[i].Payload)
+		s.Equal(0, int(vouchers.Rows[i].InputIndex))
+		s.Equal(i, int(vouchers.Rows[i].OutputIndex))
+		s.Equal(s.senders[i], vouchers.Rows[i].Destination)
+		s.Equal(s.payloads[i], common.Hex2Bytes(vouchers.Rows[i].Payload[2:]))
 	}
 }
 
 func (s *ModelSuite) TestItFailsToAddVoucherWhenInspect() {
+	defer s.teardown()
 	s.m.AddInspectInput(s.payloads[0])
 	s.m.FinishAndGetNext(true)
 	_, err := s.m.AddVoucher(s.senders[0], s.payloads[0])
@@ -321,6 +374,7 @@ func (s *ModelSuite) TestItFailsToAddVoucherWhenInspect() {
 }
 
 func (s *ModelSuite) TestItFailsToAddVoucherWhenIdle() {
+	defer s.teardown()
 	_, err := s.m.AddVoucher(s.senders[0], s.payloads[0])
 	s.Error(err)
 	s.Equal(errors.New("cannot add voucher in current state"), err)
@@ -331,6 +385,7 @@ func (s *ModelSuite) TestItFailsToAddVoucherWhenIdle() {
 //
 
 func (s *ModelSuite) TestItAddsNotice() {
+	defer s.teardown()
 	// add input and get it
 	s.m.AddAdvanceInput(s.senders[0], s.payloads[0], s.blockNumbers[0], s.timestamps[0])
 	s.m.FinishAndGetNext(true)
@@ -360,6 +415,7 @@ func (s *ModelSuite) TestItAddsNotice() {
 }
 
 func (s *ModelSuite) TestItFailsToAddNoticeWhenInspect() {
+	defer s.teardown()
 	s.m.AddInspectInput(s.payloads[0])
 	s.m.FinishAndGetNext(true)
 	_, err := s.m.AddNotice(s.payloads[0])
@@ -367,6 +423,7 @@ func (s *ModelSuite) TestItFailsToAddNoticeWhenInspect() {
 }
 
 func (s *ModelSuite) TestItFailsToAddNoticeWhenIdle() {
+	defer s.teardown()
 	_, err := s.m.AddNotice(s.payloads[0])
 	s.Error(err)
 	s.Equal(errors.New("cannot add notice in current state"), err)
@@ -377,6 +434,7 @@ func (s *ModelSuite) TestItFailsToAddNoticeWhenIdle() {
 //
 
 func (s *ModelSuite) TestItAddsReportWhenAdvancing() {
+	defer s.teardown()
 	// add input and get it
 	s.m.AddAdvanceInput(s.senders[0], s.payloads[0], s.blockNumbers[0], s.timestamps[0])
 	s.m.FinishAndGetNext(true)
@@ -388,8 +446,9 @@ func (s *ModelSuite) TestItAddsReportWhenAdvancing() {
 	}
 
 	// check reports are not there before finish
-	reports := s.m.GetReports(OutputFilter{}, 0, 100)
-	s.Empty(reports)
+	reports, err := s.reportRepository.FindAll(nil, nil, nil, nil, nil)
+	s.NoError(err)
+	s.Empty(reports.Rows)
 
 	// finish input
 	s.m.FinishAndGetNext(true)
@@ -409,6 +468,7 @@ func (s *ModelSuite) TestItAddsReportWhenAdvancing() {
 }
 
 func (s *ModelSuite) TestItAddsReportWhenInspecting() {
+	defer s.teardown()
 	// add input and get it
 	s.m.AddInspectInput(s.payloads[0])
 	s.m.FinishAndGetNext(true)
@@ -437,6 +497,7 @@ func (s *ModelSuite) TestItAddsReportWhenInspecting() {
 }
 
 func (s *ModelSuite) TestItFailsToAddReportWhenIdle() {
+	defer s.teardown()
 	err := s.m.AddReport(s.payloads[0])
 	s.Error(err)
 	s.Equal(errors.New("cannot add report in current state"), err)
@@ -447,6 +508,7 @@ func (s *ModelSuite) TestItFailsToAddReportWhenIdle() {
 //
 
 func (s *ModelSuite) TestItRegistersExceptionWhenAdvancing() {
+	defer s.teardown()
 	// add input and process it
 	s.m.AddAdvanceInput(s.senders[0], s.payloads[0], s.blockNumbers[0], s.timestamps[0])
 	s.m.FinishAndGetNext(true) // get
@@ -471,6 +533,7 @@ func (s *ModelSuite) TestItRegistersExceptionWhenAdvancing() {
 }
 
 func (s *ModelSuite) TestItRegistersExceptionWhenInspecting() {
+	defer s.teardown()
 	// add input and finish it
 	s.m.AddInspectInput(s.payloads[0])
 	s.m.FinishAndGetNext(true) // get
@@ -490,6 +553,7 @@ func (s *ModelSuite) TestItRegistersExceptionWhenInspecting() {
 }
 
 func (s *ModelSuite) TestItFailsToRegisterExceptionWhenIdle() {
+	defer s.teardown()
 	err := s.m.RegisterException(s.payloads[0])
 	s.Error(err)
 	s.Equal(errors.New("cannot register exception in current state"), err)
@@ -500,6 +564,7 @@ func (s *ModelSuite) TestItFailsToRegisterExceptionWhenIdle() {
 //
 
 func (s *ModelSuite) TestItGetsAdvanceInputs() {
+	defer s.teardown()
 	for i := 0; i < s.n; i++ {
 		s.m.AddAdvanceInput(s.senders[i], s.payloads[i], s.blockNumbers[i], s.timestamps[i])
 		input, ok := s.m.GetAdvanceInput(i)
@@ -514,6 +579,7 @@ func (s *ModelSuite) TestItGetsAdvanceInputs() {
 }
 
 func (s *ModelSuite) TestItFailsToGetAdvanceInput() {
+	defer s.teardown()
 	_, ok := s.m.GetAdvanceInput(0)
 	s.False(ok)
 }
@@ -523,6 +589,8 @@ func (s *ModelSuite) TestItFailsToGetAdvanceInput() {
 //
 
 func (s *ModelSuite) TestItGetsVoucher() {
+	defer s.teardown()
+	ctx := context.Background()
 	for i := 0; i < s.n; i++ {
 		s.m.AddAdvanceInput(s.senders[i], s.payloads[i], s.blockNumbers[i], s.timestamps[i])
 		s.m.FinishAndGetNext(true) // get
@@ -534,27 +602,36 @@ func (s *ModelSuite) TestItGetsVoucher() {
 	}
 	for i := 0; i < s.n; i++ {
 		for j := 0; j < s.n; j++ {
-			voucher, ok := s.m.GetVoucher(j, i)
-			s.True(ok)
-			s.Equal(j, voucher.Index)
-			s.Equal(i, voucher.InputIndex)
-			s.Equal(s.senders[j], voucher.Destination)
-			s.Equal(s.payloads[j], voucher.Payload)
+			voucher, err := s.convenienceService.
+				FindVoucherByInputAndOutputIndex(ctx, uint64(i), uint64(j))
+			s.NoError(err)
+			s.Equal(j, int(voucher.OutputIndex))
+			s.Equal(i, int(voucher.InputIndex))
+			s.Equal(s.senders[j].Hex(), voucher.Destination.Hex())
+			s.Equal(s.payloads[j], common.Hex2Bytes(voucher.Payload[2:]))
 		}
 	}
 }
 
 func (s *ModelSuite) TestItFailsToGetVoucherFromNonExistingInput() {
-	_, ok := s.m.GetVoucher(0, 0)
-	s.False(ok)
+	defer s.teardown()
+	ctx := context.Background()
+	voucher, err := s.convenienceService.
+		FindVoucherByInputAndOutputIndex(ctx, uint64(0), uint64(0))
+	s.NoError(err)
+	s.Nil(voucher)
 }
 
 func (s *ModelSuite) TestItFailsToGetVoucherFromExistingInput() {
+	defer s.teardown()
 	s.m.AddAdvanceInput(s.senders[0], s.payloads[0], s.blockNumbers[0], s.timestamps[0])
 	s.m.FinishAndGetNext(true) // get
 	s.m.FinishAndGetNext(true) // finish
-	_, ok := s.m.GetVoucher(0, 0)
-	s.False(ok)
+	ctx := context.Background()
+	voucher, err := s.convenienceService.
+		FindVoucherByInputAndOutputIndex(ctx, uint64(0), uint64(0))
+	s.NoError(err)
+	s.Nil(voucher)
 }
 
 //
@@ -562,6 +639,7 @@ func (s *ModelSuite) TestItFailsToGetVoucherFromExistingInput() {
 //
 
 func (s *ModelSuite) TestItGetsNotice() {
+	defer s.teardown()
 	for i := 0; i < s.n; i++ {
 		s.m.AddAdvanceInput(s.senders[i], s.payloads[i], s.blockNumbers[i], s.timestamps[i])
 		s.m.FinishAndGetNext(true) // get
@@ -583,11 +661,13 @@ func (s *ModelSuite) TestItGetsNotice() {
 }
 
 func (s *ModelSuite) TestItFailsToGetNoticeFromNonExistingInput() {
+	defer s.teardown()
 	_, ok := s.m.GetNotice(0, 0)
 	s.False(ok)
 }
 
 func (s *ModelSuite) TestItFailsToGetNoticeFromExistingInput() {
+	defer s.teardown()
 	s.m.AddAdvanceInput(s.senders[0], s.payloads[0], s.blockNumbers[0], s.timestamps[0])
 	s.m.FinishAndGetNext(true) // get
 	s.m.FinishAndGetNext(true) // finish
@@ -600,6 +680,7 @@ func (s *ModelSuite) TestItFailsToGetNoticeFromExistingInput() {
 //
 
 func (s *ModelSuite) TestItGetsReport() {
+	defer s.teardown()
 	for i := 0; i < s.n; i++ {
 		s.m.AddAdvanceInput(s.senders[i], s.payloads[i], s.blockNumbers[i], s.timestamps[i])
 		s.m.FinishAndGetNext(true) // get
@@ -624,16 +705,20 @@ func (s *ModelSuite) TestItGetsReport() {
 }
 
 func (s *ModelSuite) TestItFailsToGetReportFromNonExistingInput() {
-	_, ok := s.m.GetReport(0, 0)
-	s.False(ok)
+	defer s.teardown()
+	report, err := s.reportRepository.FindByInputAndOutputIndex(0, 0)
+	s.NoError(err)
+	s.Nil(report)
 }
 
 func (s *ModelSuite) TestItFailsToGetReportFromExistingInput() {
+	defer s.teardown()
 	s.m.AddAdvanceInput(s.senders[0], s.payloads[0], s.blockNumbers[0], s.timestamps[0])
 	s.m.FinishAndGetNext(true) // get
 	s.m.FinishAndGetNext(true) // finish
-	_, ok := s.m.GetReport(0, 0)
-	s.False(ok)
+	report, err := s.reportRepository.FindByInputAndOutputIndex(0, 0)
+	s.NoError(err)
+	s.Nil(report)
 }
 
 //
@@ -641,6 +726,7 @@ func (s *ModelSuite) TestItFailsToGetReportFromExistingInput() {
 //
 
 func (s *ModelSuite) TestItGetsNumInputs() {
+	defer s.teardown()
 	n := s.m.GetNumInputs(InputFilter{})
 	s.Equal(0, n)
 
@@ -666,6 +752,7 @@ func (s *ModelSuite) TestItGetsNumInputs() {
 //
 
 func (s *ModelSuite) TestItGetsNumVouchers() {
+	defer s.teardown()
 	n := s.m.GetNumVouchers(OutputFilter{})
 	s.Equal(0, n)
 
@@ -693,6 +780,7 @@ func (s *ModelSuite) TestItGetsNumVouchers() {
 //
 
 func (s *ModelSuite) TestItGetsNumNotices() {
+	defer s.teardown()
 	n := s.m.GetNumNotices(OutputFilter{})
 	s.Equal(0, n)
 
@@ -720,6 +808,7 @@ func (s *ModelSuite) TestItGetsNumNotices() {
 //
 
 func (s *ModelSuite) TestItGetsNumReports() {
+	defer s.teardown()
 	inputIndex := 0
 	page, err := s.reportRepository.FindAllByInputIndex(nil, nil, nil, nil, nil)
 	s.NoError(err)
@@ -746,11 +835,13 @@ func (s *ModelSuite) TestItGetsNumReports() {
 //
 
 func (s *ModelSuite) TestItGetsNoInputs() {
+	defer s.teardown()
 	inputs := s.m.GetInputs(InputFilter{}, 0, 100)
 	s.Empty(inputs)
 }
 
 func (s *ModelSuite) TestItGetsInputs() {
+	defer s.teardown()
 	for i := 0; i < s.n; i++ {
 		s.m.AddAdvanceInput(s.senders[i], s.payloads[i], s.blockNumbers[i], s.timestamps[i])
 	}
@@ -763,6 +854,7 @@ func (s *ModelSuite) TestItGetsInputs() {
 }
 
 func (s *ModelSuite) TestItGetsInputsWithFilter() {
+	defer s.teardown()
 	for i := 0; i < s.n; i++ {
 		s.m.AddAdvanceInput(s.senders[i], s.payloads[i], s.blockNumbers[i], s.timestamps[i])
 	}
@@ -778,6 +870,7 @@ func (s *ModelSuite) TestItGetsInputsWithFilter() {
 }
 
 func (s *ModelSuite) TestItGetsInputsWithOffset() {
+	defer s.teardown()
 	for i := 0; i < s.n; i++ {
 		s.m.AddAdvanceInput(s.senders[i], s.payloads[i], s.blockNumbers[i], s.timestamps[i])
 	}
@@ -788,6 +881,7 @@ func (s *ModelSuite) TestItGetsInputsWithOffset() {
 }
 
 func (s *ModelSuite) TestItGetsInputsWithLimit() {
+	defer s.teardown()
 	for i := 0; i < s.n; i++ {
 		s.m.AddAdvanceInput(s.senders[i], s.payloads[i], s.blockNumbers[i], s.timestamps[i])
 	}
@@ -798,6 +892,7 @@ func (s *ModelSuite) TestItGetsInputsWithLimit() {
 }
 
 func (s *ModelSuite) TestItGetsNoInputsWithZeroLimit() {
+	defer s.teardown()
 	for i := 0; i < s.n; i++ {
 		s.m.AddAdvanceInput(s.senders[i], s.payloads[i], s.blockNumbers[i], s.timestamps[i])
 	}
@@ -806,6 +901,7 @@ func (s *ModelSuite) TestItGetsNoInputsWithZeroLimit() {
 }
 
 func (s *ModelSuite) TestItGetsNoInputsWhenOffsetIsGreaterThanInputs() {
+	defer s.teardown()
 	for i := 0; i < s.n; i++ {
 		s.m.AddAdvanceInput(s.senders[i], s.payloads[i], s.blockNumbers[i], s.timestamps[i])
 	}
@@ -818,11 +914,13 @@ func (s *ModelSuite) TestItGetsNoInputsWhenOffsetIsGreaterThanInputs() {
 //
 
 func (s *ModelSuite) TestItGetsNoVouchers() {
+	defer s.teardown()
 	inputs := s.m.GetVouchers(OutputFilter{}, 0, 100)
 	s.Empty(inputs)
 }
 
 func (s *ModelSuite) TestItGetsVouchers() {
+	defer s.teardown()
 	for i := 0; i < s.n; i++ {
 		s.m.AddAdvanceInput(s.senders[i], s.payloads[i], s.blockNumbers[i], s.timestamps[i])
 		s.m.FinishAndGetNext(true) // get
@@ -846,6 +944,7 @@ func (s *ModelSuite) TestItGetsVouchers() {
 }
 
 func (s *ModelSuite) TestItGetsVouchersWithFilter() {
+	defer s.teardown()
 	for i := 0; i < s.n; i++ {
 		s.m.AddAdvanceInput(s.senders[i], s.payloads[i], s.blockNumbers[i], s.timestamps[i])
 		s.m.FinishAndGetNext(true) // get
@@ -870,6 +969,7 @@ func (s *ModelSuite) TestItGetsVouchersWithFilter() {
 }
 
 func (s *ModelSuite) TestItGetsVouchersWithOffset() {
+	defer s.teardown()
 	s.m.AddAdvanceInput(s.senders[0], s.payloads[0], s.blockNumbers[0], s.timestamps[0])
 	s.m.FinishAndGetNext(true) // get
 	for i := 0; i < s.n; i++ {
@@ -885,6 +985,7 @@ func (s *ModelSuite) TestItGetsVouchersWithOffset() {
 }
 
 func (s *ModelSuite) TestItGetsVouchersWithLimit() {
+	defer s.teardown()
 	s.m.AddAdvanceInput(s.senders[0], s.payloads[0], s.blockNumbers[0], s.timestamps[0])
 	s.m.FinishAndGetNext(true) // get
 	for i := 0; i < s.n; i++ {
@@ -900,6 +1001,7 @@ func (s *ModelSuite) TestItGetsVouchersWithLimit() {
 }
 
 func (s *ModelSuite) TestItGetsNoVouchersWithZeroLimit() {
+	defer s.teardown()
 	s.m.AddAdvanceInput(s.senders[0], s.payloads[0], s.blockNumbers[0], s.timestamps[0])
 	s.m.FinishAndGetNext(true) // get
 	for i := 0; i < s.n; i++ {
@@ -913,6 +1015,7 @@ func (s *ModelSuite) TestItGetsNoVouchersWithZeroLimit() {
 }
 
 func (s *ModelSuite) TestItGetsNoVouchersWhenOffsetIsGreaterThanInputs() {
+	defer s.teardown()
 	s.m.AddAdvanceInput(s.senders[0], s.payloads[0], s.blockNumbers[0], s.timestamps[0])
 	s.m.FinishAndGetNext(true) // get
 	for i := 0; i < s.n; i++ {
@@ -930,11 +1033,13 @@ func (s *ModelSuite) TestItGetsNoVouchersWhenOffsetIsGreaterThanInputs() {
 //
 
 func (s *ModelSuite) TestItGetsNoNotices() {
+	defer s.teardown()
 	inputs := s.m.GetNotices(OutputFilter{}, 0, 100)
 	s.Empty(inputs)
 }
 
 func (s *ModelSuite) TestItGetsNotices() {
+	defer s.teardown()
 	for i := 0; i < s.n; i++ {
 		s.m.AddAdvanceInput(s.senders[i], s.payloads[i], s.blockNumbers[i], s.timestamps[i])
 		s.m.FinishAndGetNext(true) // get
@@ -957,6 +1062,7 @@ func (s *ModelSuite) TestItGetsNotices() {
 }
 
 func (s *ModelSuite) TestItGetsNoticesWithFilter() {
+	defer s.teardown()
 	for i := 0; i < s.n; i++ {
 		s.m.AddAdvanceInput(s.senders[i], s.payloads[i], s.blockNumbers[i], s.timestamps[i])
 		s.m.FinishAndGetNext(true) // get
@@ -980,6 +1086,7 @@ func (s *ModelSuite) TestItGetsNoticesWithFilter() {
 }
 
 func (s *ModelSuite) TestItGetsNoticesWithOffset() {
+	defer s.teardown()
 	s.m.AddAdvanceInput(s.senders[0], s.payloads[0], s.blockNumbers[0], s.timestamps[0])
 	s.m.FinishAndGetNext(true) // get
 	for i := 0; i < s.n; i++ {
@@ -995,6 +1102,7 @@ func (s *ModelSuite) TestItGetsNoticesWithOffset() {
 }
 
 func (s *ModelSuite) TestItGetsNoticesWithLimit() {
+	defer s.teardown()
 	s.m.AddAdvanceInput(s.senders[0], s.payloads[0], s.blockNumbers[0], s.timestamps[0])
 	s.m.FinishAndGetNext(true) // get
 	for i := 0; i < s.n; i++ {
@@ -1010,6 +1118,7 @@ func (s *ModelSuite) TestItGetsNoticesWithLimit() {
 }
 
 func (s *ModelSuite) TestItGetsNoNoticesWithZeroLimit() {
+	defer s.teardown()
 	s.m.AddAdvanceInput(s.senders[0], s.payloads[0], s.blockNumbers[0], s.timestamps[0])
 	s.m.FinishAndGetNext(true) // get
 	for i := 0; i < s.n; i++ {
@@ -1023,6 +1132,7 @@ func (s *ModelSuite) TestItGetsNoNoticesWithZeroLimit() {
 }
 
 func (s *ModelSuite) TestItGetsNoNoticesWhenOffsetIsGreaterThanInputs() {
+	defer s.teardown()
 	s.m.AddAdvanceInput(s.senders[0], s.payloads[0], s.blockNumbers[0], s.timestamps[0])
 	s.m.FinishAndGetNext(true) // get
 	for i := 0; i < s.n; i++ {
@@ -1040,11 +1150,14 @@ func (s *ModelSuite) TestItGetsNoNoticesWhenOffsetIsGreaterThanInputs() {
 //
 
 func (s *ModelSuite) TestItGetsNoReports() {
-	inputs := s.m.GetReports(OutputFilter{}, 0, 100)
-	s.Empty(inputs)
+	defer s.teardown()
+	reports, err := s.reportRepository.FindAll(nil, nil, nil, nil, nil)
+	s.NoError(err)
+	s.Empty(reports.Rows)
 }
 
 func (s *ModelSuite) TestItGetsReports() {
+	defer s.teardown()
 	for i := 0; i < s.n; i++ {
 		s.m.AddAdvanceInput(s.senders[i], s.payloads[i], s.blockNumbers[i], s.timestamps[i])
 		s.m.FinishAndGetNext(true) // get
@@ -1068,6 +1181,7 @@ func (s *ModelSuite) TestItGetsReports() {
 }
 
 func (s *ModelSuite) TestItGetsReportsWithFilter() {
+	defer s.teardown()
 	for i := 0; i < s.n; i++ {
 		s.m.AddAdvanceInput(s.senders[i], s.payloads[i], s.blockNumbers[i], s.timestamps[i])
 		s.m.FinishAndGetNext(true) // get
@@ -1089,6 +1203,7 @@ func (s *ModelSuite) TestItGetsReportsWithFilter() {
 }
 
 func (s *ModelSuite) TestItGetsReportsWithOffset() {
+	defer s.teardown()
 	s.m.AddAdvanceInput(s.senders[0], s.payloads[0], s.blockNumbers[0], s.timestamps[0])
 	s.m.FinishAndGetNext(true) // get
 	for i := 0; i < s.n*2; i++ {
@@ -1106,6 +1221,7 @@ func (s *ModelSuite) TestItGetsReportsWithOffset() {
 }
 
 func (s *ModelSuite) TestItGetsReportsWithLimit() {
+	defer s.teardown()
 	s.m.AddAdvanceInput(s.senders[0], s.payloads[0], s.blockNumbers[0], s.timestamps[0])
 	s.m.FinishAndGetNext(true) // get
 	for i := 0; i < s.n; i++ {
@@ -1123,19 +1239,22 @@ func (s *ModelSuite) TestItGetsReportsWithLimit() {
 }
 
 func (s *ModelSuite) TestItGetsNoReportsWithZeroLimit() {
+	defer s.teardown()
 	s.m.AddAdvanceInput(s.senders[0], s.payloads[0], s.blockNumbers[0], s.timestamps[0])
 	s.m.FinishAndGetNext(true) // get
 	for i := 0; i < s.n; i++ {
 		err := s.m.AddReport(s.payloads[i])
-		s.Nil(err)
+		s.NoError(err)
 	}
 	s.m.FinishAndGetNext(true) // finish
-
-	reports := s.m.GetReports(OutputFilter{}, 0, 0)
-	s.Empty(reports)
+	firstLimit := 0
+	reports, err := s.reportRepository.FindAll(&firstLimit, nil, nil, nil, nil)
+	s.NoError(err)
+	s.Empty(reports.Rows)
 }
 
 func (s *ModelSuite) TestItGetsNoReportsWhenOffsetIsGreaterThanInputs() {
+	defer s.teardown()
 	s.m.AddAdvanceInput(s.senders[0], s.payloads[0], s.blockNumbers[0], s.timestamps[0])
 	s.m.FinishAndGetNext(true) // get
 	for i := 0; i < s.n; i++ {
@@ -1144,6 +1263,13 @@ func (s *ModelSuite) TestItGetsNoReportsWhenOffsetIsGreaterThanInputs() {
 	}
 	s.m.FinishAndGetNext(true) // finish
 
-	reports := s.m.GetReports(OutputFilter{}, 0, 0)
-	s.Empty(reports)
+	afterOffset := commons.EncodeCursor(2)
+	firstLimit := 10
+	reports, err := s.reportRepository.FindAll(&firstLimit, nil, &afterOffset, nil, nil)
+	s.NoError(err)
+	s.Empty(reports.Rows)
+}
+
+func (s *ModelSuite) teardown() {
+	defer os.RemoveAll(s.tempDir)
 }
