@@ -30,11 +30,14 @@ func main() {
 	log.Println("OpenAPI downloaded successfully")
 
 	// Replace GioResponse with GioResponseRollup
-	// Because oapi-codegen will generate the same name for both GioResponse from schema and GioResponse from client
+	// Because oapi-codegen will generate the same name for
+	// both GioResponse from schema and GioResponse from client
 	var str = string(data)
 	str = strings.ReplaceAll(str, "GioResponse", "GioResponseRollup")
 
-	err = os.WriteFile("rollup.yaml", []byte(str), 0644)
+	var filemode os.FileMode = 0644
+
+	err = os.WriteFile("rollup.yaml", []byte(str), filemode)
 	if err != nil {
 		panic("Failed to write OpenAPI to file: " + err.Error())
 	}
