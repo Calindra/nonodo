@@ -13,5 +13,15 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
 
+  postgraphile:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    restart: always
+    depends_on:
+      - db
+    ports:
+      - "5000:5000"
+
 volumes:
   pgdata:
