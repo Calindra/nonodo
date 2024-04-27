@@ -223,20 +223,6 @@ func (m *NonodoModel) GetAdvanceInput(index int) (AdvanceInput, bool) {
 	return *m.advances[index], true
 }
 
-// Get the notice for the given index and input index.
-// Return false if not found.
-func (m *NonodoModel) GetNotice(noticeIndex, inputIndex int) (Notice, bool) {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	if inputIndex >= len(m.advances) ||
-		noticeIndex >= len(m.advances[inputIndex].Notices) {
-		var notice Notice
-		return notice, false
-	}
-	return m.advances[inputIndex].Notices[noticeIndex], true
-}
-
 // Get the number of inputs given the filter.
 func (m *NonodoModel) GetNumInputs(filter InputFilter) int {
 	m.mutex.Lock()
@@ -246,54 +232,6 @@ func (m *NonodoModel) GetNumInputs(filter InputFilter) int {
 	for _, input := range m.advances {
 		if !filter.Filter(input) {
 			n++
-		}
-	}
-	return n
-}
-
-// Get the number of vouchers given the filter.
-func (m *NonodoModel) GetNumVouchers(filter OutputFilter) int {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	n := 0
-	for _, input := range m.advances {
-		for _, voucher := range input.Vouchers {
-			if !filter.Filter(voucher) {
-				n++
-			}
-		}
-	}
-	return n
-}
-
-// Get the number of notices given the filter.
-func (m *NonodoModel) GetNumNotices(filter OutputFilter) int {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	n := 0
-	for _, input := range m.advances {
-		for _, notice := range input.Notices {
-			if !filter.Filter(notice) {
-				n++
-			}
-		}
-	}
-	return n
-}
-
-// Get the number of reports given the filter.
-func (m *NonodoModel) GetNumReports(filter OutputFilter) int {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	n := 0
-	for _, input := range m.advances {
-		for _, report := range input.Reports {
-			if !filter.Filter(report) {
-				n++
-			}
 		}
 	}
 	return n
@@ -311,54 +249,6 @@ func (m *NonodoModel) GetInputs(filter InputFilter, offset int, limit int) []Adv
 		}
 	}
 	return paginate(inputs, offset, limit)
-}
-
-// Get the vouchers given the filter and pagination parameters.
-func (m *NonodoModel) GetVouchers(filter OutputFilter, offset int, limit int) []Voucher {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	var vouchers []Voucher
-	for _, input := range m.advances {
-		for _, voucher := range input.Vouchers {
-			if !filter.Filter(voucher) {
-				vouchers = append(vouchers, voucher)
-			}
-		}
-	}
-	return paginate(vouchers, offset, limit)
-}
-
-// Get the notices given the filter and pagination parameters.
-func (m *NonodoModel) GetNotices(filter OutputFilter, offset int, limit int) []Notice {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	var notices []Notice
-	for _, input := range m.advances {
-		for _, notice := range input.Notices {
-			if !filter.Filter(notice) {
-				notices = append(notices, notice)
-			}
-		}
-	}
-	return paginate(notices, offset, limit)
-}
-
-// Get the reports given the filter and pagination parameters.
-func (m *NonodoModel) GetReports(filter OutputFilter, offset int, limit int) []Report {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	var reports []Report
-	for _, input := range m.advances {
-		for _, report := range input.Reports {
-			if !filter.Filter(report) {
-				reports = append(reports, report)
-			}
-		}
-	}
-	return paginate(reports, offset, limit)
 }
 
 //

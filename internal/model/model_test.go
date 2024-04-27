@@ -12,12 +12,15 @@ import (
 	"testing"
 	"time"
 
+	cModel "github.com/calindra/nonodo/internal/convenience/model"
+
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/convenience"
 	"github.com/calindra/nonodo/internal/convenience/services"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
+
 	"github.com/stretchr/testify/suite"
 )
 
@@ -398,19 +401,22 @@ func (s *ModelSuite) TestItAddsNotice() {
 	}
 
 	// check notices are not there before finish
-	notices := s.m.GetNotices(OutputFilter{}, 0, 100)
-	s.Empty(notices)
+	ctx := context.Background()
+	notices, err := s.convenienceService.FindAllNotices(ctx, nil, nil, nil, nil, nil)
+	s.NoError(err)
+	s.Empty(notices.Rows)
 
 	// finish input
 	s.m.FinishAndGetNext(true)
 
 	// check notices
-	notices = s.m.GetNotices(OutputFilter{}, 0, 100)
-	s.Len(notices, s.n)
+	notices, err = s.convenienceService.FindAllNotices(ctx, nil, nil, nil, nil, nil)
+	s.NoError(err)
+	s.Len(notices.Rows, s.n)
 	for i := 0; i < s.n; i++ {
-		s.Equal(0, notices[i].InputIndex)
-		s.Equal(i, notices[i].Index)
-		s.Equal(s.payloads[i], notices[i].Payload)
+		s.Equal(0, int(notices.Rows[i].InputIndex))
+		s.Equal(i, int(notices.Rows[i].OutputIndex))
+		s.Equal(s.payloads[i], common.Hex2Bytes(notices.Rows[i].Payload[2:]))
 	}
 }
 
@@ -651,19 +657,18 @@ func (s *ModelSuite) TestItGetsNotice() {
 	}
 	for i := 0; i < s.n; i++ {
 		for j := 0; j < s.n; j++ {
-			notice, ok := s.m.GetNotice(j, i)
-			s.True(ok)
-			s.Equal(j, notice.Index)
-			s.Equal(i, notice.InputIndex)
-			s.Equal(s.payloads[j], notice.Payload)
+			notice := s.getNotice(i, j)
+			s.Equal(j, int(notice.OutputIndex))
+			s.Equal(i, int(notice.InputIndex))
+			s.Equal(s.payloads[j], common.Hex2Bytes(notice.Payload[2:]))
 		}
 	}
 }
 
 func (s *ModelSuite) TestItFailsToGetNoticeFromNonExistingInput() {
 	defer s.teardown()
-	_, ok := s.m.GetNotice(0, 0)
-	s.False(ok)
+	notice := s.getNotice(0, 0)
+	s.Nil(notice)
 }
 
 func (s *ModelSuite) TestItFailsToGetNoticeFromExistingInput() {
@@ -671,8 +676,8 @@ func (s *ModelSuite) TestItFailsToGetNoticeFromExistingInput() {
 	s.m.AddAdvanceInput(s.senders[0], s.payloads[0], s.blockNumbers[0], s.timestamps[0])
 	s.m.FinishAndGetNext(true) // get
 	s.m.FinishAndGetNext(true) // finish
-	_, ok := s.m.GetNotice(0, 0)
-	s.False(ok)
+	notice := s.getNotice(0, 0)
+	s.Nil(notice)
 }
 
 //
@@ -753,8 +758,8 @@ func (s *ModelSuite) TestItGetsNumInputs() {
 
 func (s *ModelSuite) TestItGetsNumVouchers() {
 	defer s.teardown()
-	n := s.m.GetNumVouchers(OutputFilter{})
-	s.Equal(0, n)
+	vouchers := s.getAllVouchers(0, 100, nil)
+	s.Len(vouchers, 0)
 
 	for i := 0; i < s.n; i++ {
 		s.m.AddAdvanceInput(s.senders[i], s.payloads[i], s.blockNumbers[i], s.timestamps[i])
@@ -764,15 +769,12 @@ func (s *ModelSuite) TestItGetsNumVouchers() {
 		s.m.FinishAndGetNext(true) // finish
 	}
 
-	n = s.m.GetNumVouchers(OutputFilter{})
-	s.Equal(s.n, n)
+	vouchers = s.getAllVouchers(0, 100, nil)
+	s.Len(vouchers, s.n)
 
 	inputIndex := 0
-	filter := OutputFilter{
-		InputIndex: &inputIndex,
-	}
-	n = s.m.GetNumVouchers(filter)
-	s.Equal(1, n)
+	vouchers = s.getAllVouchers(0, 100, &inputIndex)
+	s.Len(vouchers, 1)
 }
 
 //
@@ -781,8 +783,8 @@ func (s *ModelSuite) TestItGetsNumVouchers() {
 
 func (s *ModelSuite) TestItGetsNumNotices() {
 	defer s.teardown()
-	n := s.m.GetNumNotices(OutputFilter{})
-	s.Equal(0, n)
+	n := s.getAllNotices(0, 100, nil)
+	s.Equal(0, len(n))
 
 	for i := 0; i < s.n; i++ {
 		s.m.AddAdvanceInput(s.senders[i], s.payloads[i], s.blockNumbers[i], s.timestamps[i])
@@ -792,15 +794,12 @@ func (s *ModelSuite) TestItGetsNumNotices() {
 		s.m.FinishAndGetNext(true) // finish
 	}
 
-	n = s.m.GetNumNotices(OutputFilter{})
-	s.Equal(s.n, n)
+	n = s.getAllNotices(0, 100, nil)
+	s.Equal(s.n, len(n))
 
 	inputIndex := 0
-	filter := OutputFilter{
-		InputIndex: &inputIndex,
-	}
-	n = s.m.GetNumNotices(filter)
-	s.Equal(1, n)
+	n = s.getAllNotices(0, 100, &inputIndex)
+	s.Equal(1, len(n))
 }
 
 //
@@ -915,8 +914,8 @@ func (s *ModelSuite) TestItGetsNoInputsWhenOffsetIsGreaterThanInputs() {
 
 func (s *ModelSuite) TestItGetsNoVouchers() {
 	defer s.teardown()
-	inputs := s.m.GetVouchers(OutputFilter{}, 0, 100)
-	s.Empty(inputs)
+	vouchers := s.getAllVouchers(0, 100, nil)
+	s.Empty(vouchers)
 }
 
 func (s *ModelSuite) TestItGetsVouchers() {
@@ -930,15 +929,15 @@ func (s *ModelSuite) TestItGetsVouchers() {
 		}
 		s.m.FinishAndGetNext(true) // finish
 	}
-	vouchers := s.m.GetVouchers(OutputFilter{}, 0, 100)
+	vouchers := s.getAllVouchers(0, 100, nil)
 	s.Len(vouchers, s.n*s.n)
 	for i := 0; i < s.n; i++ {
 		for j := 0; j < s.n; j++ {
 			idx := s.n*i + j
-			s.Equal(j, vouchers[idx].Index)
-			s.Equal(i, vouchers[idx].InputIndex)
+			s.Equal(j, int(vouchers[idx].OutputIndex))
+			s.Equal(i, int(vouchers[idx].InputIndex))
 			s.Equal(s.senders[j], vouchers[idx].Destination)
-			s.Equal(s.payloads[j], vouchers[idx].Payload)
+			s.Equal(s.payloads[j], common.Hex2Bytes(vouchers[idx].Payload[2:]))
 		}
 	}
 }
@@ -955,16 +954,23 @@ func (s *ModelSuite) TestItGetsVouchersWithFilter() {
 		s.m.FinishAndGetNext(true) // finish
 	}
 	inputIndex := 1
-	filter := OutputFilter{
-		InputIndex: &inputIndex,
-	}
-	vouchers := s.m.GetVouchers(filter, 0, 100)
+	filters := []*cModel.ConvenienceFilter{}
+	field := INPUT_INDEX
+	value := fmt.Sprintf("%d", inputIndex)
+	filters = append(filters, &cModel.ConvenienceFilter{
+		Field: &field,
+		Eq:    &value,
+	})
+	ctx := context.Background()
+	vPage, err := s.convenienceService.FindAllVouchers(ctx, nil, nil, nil, nil, filters)
+	s.NoError(err)
+	vouchers := vPage.Rows
 	s.Len(vouchers, s.n)
 	for i := 0; i < s.n; i++ {
-		s.Equal(i, vouchers[i].Index)
-		s.Equal(inputIndex, vouchers[i].InputIndex)
+		s.Equal(i, int(vouchers[i].OutputIndex))
+		s.Equal(inputIndex, int(vouchers[i].InputIndex))
 		s.Equal(s.senders[i], vouchers[i].Destination)
-		s.Equal(s.payloads[i], vouchers[i].Payload)
+		s.Equal(s.payloads[i], common.Hex2Bytes(vouchers[i].Payload[2:]))
 	}
 }
 
@@ -978,10 +984,10 @@ func (s *ModelSuite) TestItGetsVouchersWithOffset() {
 	}
 	s.m.FinishAndGetNext(true) // finish
 
-	vouchers := s.m.GetVouchers(OutputFilter{}, 1, 100)
+	vouchers := s.getAllVouchers(1, 100, nil)
 	s.Len(vouchers, 2)
-	s.Equal(1, vouchers[0].Index)
-	s.Equal(2, vouchers[1].Index)
+	s.Equal(1, int(vouchers[0].OutputIndex))
+	s.Equal(2, int(vouchers[1].OutputIndex))
 }
 
 func (s *ModelSuite) TestItGetsVouchersWithLimit() {
@@ -994,10 +1000,10 @@ func (s *ModelSuite) TestItGetsVouchersWithLimit() {
 	}
 	s.m.FinishAndGetNext(true) // finish
 
-	vouchers := s.m.GetVouchers(OutputFilter{}, 0, 2)
+	vouchers := s.getAllVouchers(0, 2, nil)
 	s.Len(vouchers, 2)
-	s.Equal(0, vouchers[0].Index)
-	s.Equal(1, vouchers[1].Index)
+	s.Equal(0, int(vouchers[0].OutputIndex))
+	s.Equal(1, int(vouchers[1].OutputIndex))
 }
 
 func (s *ModelSuite) TestItGetsNoVouchersWithZeroLimit() {
@@ -1010,7 +1016,7 @@ func (s *ModelSuite) TestItGetsNoVouchersWithZeroLimit() {
 	}
 	s.m.FinishAndGetNext(true) // finish
 
-	vouchers := s.m.GetVouchers(OutputFilter{}, 0, 0)
+	vouchers := s.getAllVouchers(0, 0, nil)
 	s.Empty(vouchers)
 }
 
@@ -1024,7 +1030,7 @@ func (s *ModelSuite) TestItGetsNoVouchersWhenOffsetIsGreaterThanInputs() {
 	}
 	s.m.FinishAndGetNext(true) // finish
 
-	vouchers := s.m.GetVouchers(OutputFilter{}, 0, 0)
+	vouchers := s.getAllVouchers(0, 0, nil)
 	s.Empty(vouchers)
 }
 
@@ -1034,8 +1040,10 @@ func (s *ModelSuite) TestItGetsNoVouchersWhenOffsetIsGreaterThanInputs() {
 
 func (s *ModelSuite) TestItGetsNoNotices() {
 	defer s.teardown()
-	inputs := s.m.GetNotices(OutputFilter{}, 0, 100)
-	s.Empty(inputs)
+	ctx := context.Background()
+	notices, err := s.convenienceService.FindAllNotices(ctx, nil, nil, nil, nil, nil)
+	s.NoError(err)
+	s.Empty(notices.Rows)
 }
 
 func (s *ModelSuite) TestItGetsNotices() {
@@ -1049,14 +1057,17 @@ func (s *ModelSuite) TestItGetsNotices() {
 		}
 		s.m.FinishAndGetNext(true) // finish
 	}
-	notices := s.m.GetNotices(OutputFilter{}, 0, 100)
+	ctx := context.Background()
+	noticesPage, err := s.convenienceService.FindAllNotices(ctx, nil, nil, nil, nil, nil)
+	s.NoError(err)
+	notices := noticesPage.Rows
 	s.Len(notices, s.n*s.n)
 	for i := 0; i < s.n; i++ {
 		for j := 0; j < s.n; j++ {
 			idx := s.n*i + j
-			s.Equal(j, notices[idx].Index)
-			s.Equal(i, notices[idx].InputIndex)
-			s.Equal(s.payloads[j], notices[idx].Payload)
+			s.Equal(j, int(notices[idx].OutputIndex))
+			s.Equal(i, int(notices[idx].InputIndex))
+			s.Equal(s.payloads[j], common.Hex2Bytes(notices[idx].Payload[2:]))
 		}
 	}
 }
@@ -1073,15 +1084,22 @@ func (s *ModelSuite) TestItGetsNoticesWithFilter() {
 		s.m.FinishAndGetNext(true) // finish
 	}
 	inputIndex := 1
-	filter := OutputFilter{
-		InputIndex: &inputIndex,
-	}
-	notices := s.m.GetNotices(filter, 0, 100)
+	filters := []*cModel.ConvenienceFilter{}
+	field := INPUT_INDEX
+	value := fmt.Sprintf("%d", inputIndex)
+	filters = append(filters, &cModel.ConvenienceFilter{
+		Field: &field,
+		Eq:    &value,
+	})
+	ctx := context.Background()
+	noticesPage, err := s.convenienceService.FindAllNotices(ctx, nil, nil, nil, nil, filters)
+	s.NoError(err)
+	notices := noticesPage.Rows
 	s.Len(notices, s.n)
 	for i := 0; i < s.n; i++ {
-		s.Equal(i, notices[i].Index)
-		s.Equal(inputIndex, notices[i].InputIndex)
-		s.Equal(s.payloads[i], notices[i].Payload)
+		s.Equal(i, int(notices[i].OutputIndex))
+		s.Equal(inputIndex, int(notices[i].InputIndex))
+		s.Equal(s.payloads[i], common.Hex2Bytes(notices[i].Payload[2:]))
 	}
 }
 
@@ -1095,10 +1113,15 @@ func (s *ModelSuite) TestItGetsNoticesWithOffset() {
 	}
 	s.m.FinishAndGetNext(true) // finish
 
-	notices := s.m.GetNotices(OutputFilter{}, 1, 100)
+	afterOffset := commons.EncodeCursor(0)
+	ctx := context.Background()
+	noticesPage, err := s.convenienceService.
+		FindAllNotices(ctx, nil, nil, &afterOffset, nil, nil)
+	s.NoError(err)
+	notices := noticesPage.Rows
 	s.Len(notices, 2)
-	s.Equal(1, notices[0].Index)
-	s.Equal(2, notices[1].Index)
+	s.Equal(1, int(notices[0].OutputIndex))
+	s.Equal(2, int(notices[1].OutputIndex))
 }
 
 func (s *ModelSuite) TestItGetsNoticesWithLimit() {
@@ -1111,10 +1134,15 @@ func (s *ModelSuite) TestItGetsNoticesWithLimit() {
 	}
 	s.m.FinishAndGetNext(true) // finish
 
-	notices := s.m.GetNotices(OutputFilter{}, 0, 2)
+	firstLimit := 2
+	ctx := context.Background()
+	noticesPage, err := s.convenienceService.
+		FindAllNotices(ctx, &firstLimit, nil, nil, nil, nil)
+	s.NoError(err)
+	notices := noticesPage.Rows
 	s.Len(notices, 2)
-	s.Equal(0, notices[0].Index)
-	s.Equal(1, notices[1].Index)
+	s.Equal(0, int(notices[0].OutputIndex))
+	s.Equal(1, int(notices[1].OutputIndex))
 }
 
 func (s *ModelSuite) TestItGetsNoNoticesWithZeroLimit() {
@@ -1127,7 +1155,12 @@ func (s *ModelSuite) TestItGetsNoNoticesWithZeroLimit() {
 	}
 	s.m.FinishAndGetNext(true) // finish
 
-	notices := s.m.GetNotices(OutputFilter{}, 0, 0)
+	firstLimit := 0
+	ctx := context.Background()
+	noticesPage, err := s.convenienceService.
+		FindAllNotices(ctx, &firstLimit, nil, nil, nil, nil)
+	s.NoError(err)
+	notices := noticesPage.Rows
 	s.Empty(notices)
 }
 
@@ -1141,8 +1174,19 @@ func (s *ModelSuite) TestItGetsNoNoticesWhenOffsetIsGreaterThanInputs() {
 	}
 	s.m.FinishAndGetNext(true) // finish
 
-	notices := s.m.GetNotices(OutputFilter{}, 0, 0)
+	firstLimit := 0
+	afterOffset := commons.EncodeCursor(0)
+	ctx := context.Background()
+	noticesPage, err := s.convenienceService.
+		FindAllNotices(ctx, &firstLimit, nil, &afterOffset, nil, nil)
+	s.NoError(err)
+	notices := noticesPage.Rows
 	s.Empty(notices)
+
+	afterOffset = commons.EncodeCursor(999)
+	_, err = s.convenienceService.
+		FindAllNotices(ctx, nil, nil, &afterOffset, nil, nil)
+	s.Errorf(err, "invalid pagination cursor")
 }
 
 //
@@ -1272,4 +1316,69 @@ func (s *ModelSuite) TestItGetsNoReportsWhenOffsetIsGreaterThanInputs() {
 
 func (s *ModelSuite) teardown() {
 	defer os.RemoveAll(s.tempDir)
+}
+
+func (s *ModelSuite) getAllVouchers(
+	offset int, limit int, inputIndex *int,
+) []cModel.ConvenienceVoucher {
+	ctx := context.Background()
+	filters := []*cModel.ConvenienceFilter{}
+	if inputIndex != nil {
+		field := INPUT_INDEX
+		value := fmt.Sprintf("%d", *inputIndex)
+		filters = append(filters, &cModel.ConvenienceFilter{
+			Field: &field,
+			Eq:    &value,
+		})
+	}
+	if offset != 0 {
+		afterOffset := commons.EncodeCursor(offset - 1)
+		vouchers, err := s.convenienceService.
+			FindAllVouchers(ctx, &limit, nil, &afterOffset, nil, filters)
+		s.NoError(err)
+		return vouchers.Rows
+	} else {
+		vouchers, err := s.convenienceService.
+			FindAllVouchers(ctx, &limit, nil, nil, nil, filters)
+		s.NoError(err)
+		return vouchers.Rows
+	}
+}
+
+func (s *ModelSuite) getAllNotices(
+	offset int, limit int, inputIndex *int,
+) []cModel.ConvenienceNotice {
+	ctx := context.Background()
+	filters := []*cModel.ConvenienceFilter{}
+	if inputIndex != nil {
+		field := INPUT_INDEX
+		value := fmt.Sprintf("%d", *inputIndex)
+		filters = append(filters, &cModel.ConvenienceFilter{
+			Field: &field,
+			Eq:    &value,
+		})
+	}
+	if offset != 0 {
+		afterOffset := commons.EncodeCursor(offset - 1)
+		notices, err := s.convenienceService.
+			FindAllNotices(ctx, &limit, nil, &afterOffset, nil, filters)
+		s.NoError(err)
+		return notices.Rows
+	} else {
+		notices, err := s.convenienceService.
+			FindAllNotices(ctx, &limit, nil, nil, nil, filters)
+		s.NoError(err)
+		return notices.Rows
+	}
+}
+
+func (s *ModelSuite) getNotice(i, j int) *cModel.ConvenienceNotice {
+	ctx := context.Background()
+	notice, err := s.convenienceService.FindNoticeByInputAndOutputIndex(
+		ctx,
+		uint64(i),
+		uint64(j),
+	)
+	s.NoError(err)
+	return notice
 }
