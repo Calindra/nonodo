@@ -232,6 +232,7 @@ func (s *rollupsStateAdvance) registerException(payload []byte) error {
 	if err != nil {
 		panic(err)
 	}
+	saveAllReports(s.reportRepository, s.reports)
 	slog.Info("nonodo: finished advance with exception")
 	return nil
 }

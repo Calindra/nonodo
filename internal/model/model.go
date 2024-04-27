@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/jmoiron/sqlx"
@@ -144,16 +145,18 @@ func (m *NonodoModel) FinishAndGetNext(accepted bool) Input {
 	}
 
 	// try to get first unprocessed advance
-	for _, input := range m.advances {
-		if input.Status == CompletionStatusUnprocessed {
-			m.state = newRollupsStateAdvance(
-				input,
-				m.decoder,
-				m.reportRepository,
-				m.inputRepository,
-			)
-			return *input
-		}
+	input, err := m.inputRepository.FindByStatus(CompletionStatusUnprocessed)
+	if err != nil {
+		panic(err)
+	}
+	if input != nil {
+		m.state = newRollupsStateAdvance(
+			input,
+			m.decoder,
+			m.reportRepository,
+			m.inputRepository,
+		)
+		return *input
 	}
 
 	// if no input was found, set state to idle
@@ -256,14 +259,18 @@ func (m *NonodoModel) GetInputs(filter InputFilter, offset int, limit int) []Adv
 //
 
 func (m *NonodoModel) getProcessedInputCount() int {
-	n := 0
-	for _, input := range m.advances {
-		if input.Status == CompletionStatusUnprocessed {
-			break
-		}
-		n++
+	filter := []*model.ConvenienceFilter{}
+	field := "Status"
+	value := fmt.Sprintf("%d", CompletionStatusUnprocessed)
+	filter = append(filter, &model.ConvenienceFilter{
+		Field: &field,
+		Ne:    &value,
+	})
+	total, err := m.inputRepository.Count(filter)
+	if err != nil {
+		panic(err)
 	}
-	return n
+	return int(total)
 }
 
 func paginate[T any](slice []T, offset int, limit int) []T {

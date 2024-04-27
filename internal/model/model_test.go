@@ -528,14 +528,18 @@ func (s *ModelSuite) TestItRegistersExceptionWhenAdvancing() {
 	s.Nil(err)
 
 	// check input
-	input, ok := s.m.GetAdvanceInput(0)
-	s.True(ok)
+	input, err := s.inputRepository.FindByIndex(0)
+	s.NoError(err)
 	s.Equal(0, input.Index)
 	s.Equal(CompletionStatusException, input.Status)
 	s.Empty(input.Vouchers)
 	s.Empty(input.Notices)
-	s.Len(input.Reports, 1)
+	s.Empty(input.Reports)
 	s.Equal(s.payloads[0], input.Exception)
+
+	total, err := s.reportRepository.Count(nil)
+	s.NoError(err)
+	s.Equal(1, int(total))
 }
 
 func (s *ModelSuite) TestItRegistersExceptionWhenInspecting() {
