@@ -210,51 +210,6 @@ func (m *NonodoModel) RegisterException(payload []byte) error {
 }
 
 //
-// Methods for Reader
-//
-
-// Get the advance input for the given index.
-// Return false if not found.
-func (m *NonodoModel) GetAdvanceInput(index int) (AdvanceInput, bool) {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	if index >= len(m.advances) {
-		var input AdvanceInput
-		return input, false
-	}
-	return *m.advances[index], true
-}
-
-// Get the number of inputs given the filter.
-func (m *NonodoModel) GetNumInputs(filter InputFilter) int {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	n := 0
-	for _, input := range m.advances {
-		if !filter.Filter(input) {
-			n++
-		}
-	}
-	return n
-}
-
-// Get the inputs given the filter and pagination parameters.
-func (m *NonodoModel) GetInputs(filter InputFilter, offset int, limit int) []AdvanceInput {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	var inputs []AdvanceInput
-	for _, input := range m.advances {
-		if !filter.Filter(input) {
-			inputs = append(inputs, *input)
-		}
-	}
-	return paginate(inputs, offset, limit)
-}
-
-//
 // Auxiliary Methods
 //
 
@@ -271,15 +226,4 @@ func (m *NonodoModel) getProcessedInputCount() int {
 		panic(err)
 	}
 	return int(total)
-}
-
-func paginate[T any](slice []T, offset int, limit int) []T {
-	if offset >= len(slice) {
-		return nil
-	}
-	upperBound := offset + limit
-	if upperBound > len(slice) {
-		upperBound = len(slice)
-	}
-	return slice[offset:upperBound]
 }

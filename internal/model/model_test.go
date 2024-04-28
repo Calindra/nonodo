@@ -87,7 +87,7 @@ func (s *ModelSuite) TestItAddsAndGetsAdvanceInputs() {
 	}
 
 	// get inputs
-	inputs := s.m.GetInputs(InputFilter{}, 0, 100)
+	inputs := s.getAllInputs(0, 100)
 	s.Len(inputs, s.n)
 	for i := 0; i < s.n; i++ {
 		input := inputs[i]
@@ -96,7 +96,7 @@ func (s *ModelSuite) TestItAddsAndGetsAdvanceInputs() {
 		s.Equal(s.senders[i], input.MsgSender)
 		s.Equal(s.payloads[i], input.Payload)
 		s.Equal(s.blockNumbers[i], input.BlockNumber)
-		s.Equal(s.timestamps[i], input.Timestamp)
+		s.Equal(s.timestamps[i].UnixMilli(), input.Timestamp.UnixMilli())
 		s.Empty(input.Vouchers)
 		s.Empty(input.Notices)
 		s.Empty(input.Reports)
@@ -577,21 +577,22 @@ func (s *ModelSuite) TestItGetsAdvanceInputs() {
 	defer s.teardown()
 	for i := 0; i < s.n; i++ {
 		s.m.AddAdvanceInput(s.senders[i], s.payloads[i], s.blockNumbers[i], s.timestamps[i])
-		input, ok := s.m.GetAdvanceInput(i)
-		s.True(ok)
+		input, err := s.inputRepository.FindByIndex(i)
+		s.NoError(err)
 		s.Equal(i, input.Index)
 		s.Equal(CompletionStatusUnprocessed, input.Status)
 		s.Equal(s.senders[i], input.MsgSender)
 		s.Equal(s.payloads[i], input.Payload)
 		s.Equal(s.blockNumbers[i], input.BlockNumber)
-		s.Equal(s.timestamps[i], input.Timestamp)
+		s.Equal(s.timestamps[i].UnixMilli(), input.Timestamp.UnixMilli())
 	}
 }
 
 func (s *ModelSuite) TestItFailsToGetAdvanceInput() {
 	defer s.teardown()
-	_, ok := s.m.GetAdvanceInput(0)
-	s.False(ok)
+	input, err := s.inputRepository.FindByIndex(0)
+	s.NoError(err)
+	s.Nil(input)
 }
 
 //
@@ -736,24 +737,33 @@ func (s *ModelSuite) TestItFailsToGetReportFromExistingInput() {
 
 func (s *ModelSuite) TestItGetsNumInputs() {
 	defer s.teardown()
-	n := s.m.GetNumInputs(InputFilter{})
-	s.Equal(0, n)
+	n, err := s.inputRepository.Count(nil)
+	s.NoError(err)
+	s.Equal(0, int(n))
 
 	for i := 0; i < s.n; i++ {
 		s.m.AddAdvanceInput(s.senders[i], s.payloads[i], s.blockNumbers[i], s.timestamps[i])
 	}
 
-	n = s.m.GetNumInputs(InputFilter{})
-	s.Equal(s.n, n)
+	n, err = s.inputRepository.Count(nil)
+	s.NoError(err)
+	s.Equal(s.n, int(n))
 
-	indexGreaterThan := 0
-	indexLowerThan := 2
-	filter := InputFilter{
-		IndexGreaterThan: &indexGreaterThan,
-		IndexLowerThan:   &indexLowerThan,
-	}
-	n = s.m.GetNumInputs(filter)
-	s.Equal(1, n)
+	indexGreaterThan := "0"
+	indexLowerThan := "2"
+	filter := []*cModel.ConvenienceFilter{}
+	field := "Index"
+	filter = append(filter, &cModel.ConvenienceFilter{
+		Field: &field,
+		Gt:    &indexGreaterThan,
+	})
+	filter = append(filter, &cModel.ConvenienceFilter{
+		Field: &field,
+		Lt:    &indexLowerThan,
+	})
+	n, err = s.inputRepository.Count(filter)
+	s.NoError(err)
+	s.Equal(1, int(n))
 }
 
 //
@@ -839,7 +849,7 @@ func (s *ModelSuite) TestItGetsNumReports() {
 
 func (s *ModelSuite) TestItGetsNoInputs() {
 	defer s.teardown()
-	inputs := s.m.GetInputs(InputFilter{}, 0, 100)
+	inputs := s.getAllInputs(0, 100)
 	s.Empty(inputs)
 }
 
@@ -848,7 +858,7 @@ func (s *ModelSuite) TestItGetsInputs() {
 	for i := 0; i < s.n; i++ {
 		s.m.AddAdvanceInput(s.senders[i], s.payloads[i], s.blockNumbers[i], s.timestamps[i])
 	}
-	inputs := s.m.GetInputs(InputFilter{}, 0, 100)
+	inputs := s.getAllInputs(0, 100)
 	s.Len(inputs, s.n)
 	for i := 0; i < s.n; i++ {
 		input := inputs[i]
@@ -861,13 +871,21 @@ func (s *ModelSuite) TestItGetsInputsWithFilter() {
 	for i := 0; i < s.n; i++ {
 		s.m.AddAdvanceInput(s.senders[i], s.payloads[i], s.blockNumbers[i], s.timestamps[i])
 	}
-	indexGreaterThan := 0
-	indexLowerThan := 2
-	filter := InputFilter{
-		IndexGreaterThan: &indexGreaterThan,
-		IndexLowerThan:   &indexLowerThan,
-	}
-	inputs := s.m.GetInputs(filter, 0, 100)
+	indexGreaterThan := "0"
+	indexLowerThan := "2"
+	filter := []*cModel.ConvenienceFilter{}
+	field := "Index"
+	filter = append(filter, &cModel.ConvenienceFilter{
+		Field: &field,
+		Gt:    &indexGreaterThan,
+	})
+	filter = append(filter, &cModel.ConvenienceFilter{
+		Field: &field,
+		Lt:    &indexLowerThan,
+	})
+	page, err := s.inputRepository.FindAll(nil, nil, nil, nil, filter)
+	s.NoError(err)
+	inputs := page.Rows
 	s.Len(inputs, 1)
 	s.Equal(1, inputs[0].Index)
 }
@@ -877,7 +895,7 @@ func (s *ModelSuite) TestItGetsInputsWithOffset() {
 	for i := 0; i < s.n; i++ {
 		s.m.AddAdvanceInput(s.senders[i], s.payloads[i], s.blockNumbers[i], s.timestamps[i])
 	}
-	inputs := s.m.GetInputs(InputFilter{}, 1, 100)
+	inputs := s.getAllInputs(1, 100)
 	s.Len(inputs, 2)
 	s.Equal(1, inputs[0].Index)
 	s.Equal(2, inputs[1].Index)
@@ -888,7 +906,7 @@ func (s *ModelSuite) TestItGetsInputsWithLimit() {
 	for i := 0; i < s.n; i++ {
 		s.m.AddAdvanceInput(s.senders[i], s.payloads[i], s.blockNumbers[i], s.timestamps[i])
 	}
-	inputs := s.m.GetInputs(InputFilter{}, 0, 2)
+	inputs := s.getAllInputs(0, 2)
 	s.Len(inputs, 2)
 	s.Equal(0, inputs[0].Index)
 	s.Equal(1, inputs[1].Index)
@@ -899,7 +917,7 @@ func (s *ModelSuite) TestItGetsNoInputsWithZeroLimit() {
 	for i := 0; i < s.n; i++ {
 		s.m.AddAdvanceInput(s.senders[i], s.payloads[i], s.blockNumbers[i], s.timestamps[i])
 	}
-	inputs := s.m.GetInputs(InputFilter{}, 0, 0)
+	inputs := s.getAllInputs(0, 0)
 	s.Empty(inputs)
 }
 
@@ -908,7 +926,7 @@ func (s *ModelSuite) TestItGetsNoInputsWhenOffsetIsGreaterThanInputs() {
 	for i := 0; i < s.n; i++ {
 		s.m.AddAdvanceInput(s.senders[i], s.payloads[i], s.blockNumbers[i], s.timestamps[i])
 	}
-	inputs := s.m.GetInputs(InputFilter{}, 3, 0)
+	inputs := s.getAllInputs(3, 100)
 	s.Empty(inputs)
 }
 
@@ -1320,6 +1338,20 @@ func (s *ModelSuite) TestItGetsNoReportsWhenOffsetIsGreaterThanInputs() {
 
 func (s *ModelSuite) teardown() {
 	defer os.RemoveAll(s.tempDir)
+}
+
+func (s *ModelSuite) getAllInputs(offset int, limit int) []AdvanceInput {
+	if offset != 0 {
+		afterOffset := commons.EncodeCursor(offset - 1)
+		vouchers, err := s.inputRepository.
+			FindAll(&limit, nil, &afterOffset, nil, nil)
+		s.NoError(err)
+		return vouchers.Rows
+	} else {
+		page, err := s.inputRepository.FindAll(&limit, nil, nil, nil, nil)
+		s.NoError(err)
+		return page.Rows
+	}
 }
 
 func (s *ModelSuite) getAllVouchers(
