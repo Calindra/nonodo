@@ -73,7 +73,10 @@ func init() {
 	cmd.Flags().BoolVar(&color, "enable-color", true, "If set, enables logs color")
 	cmd.Flags().BoolVar(&opts.EnableEcho, "enable-echo", opts.EnableEcho,
 		"If set, nonodo starts a built-in echo application")
-	cmd.Flags().BoolVar(&opts.LegacyMode, "enable-legacy", false, "If set, enables legacy based in 0.7.1 (branch 0.7.3) rollups interface")
+	cmd.Flags().BoolVar(&opts.LegacyMode,
+		"enable-legacy",
+		false,
+		"If set, enables legacy based in 0.7.1 (branch 0.7.3) rollups interface")
 
 	// disable-*
 	cmd.Flags().BoolVar(&opts.DisableDevnet, "disable-devnet", opts.DisableDevnet,
