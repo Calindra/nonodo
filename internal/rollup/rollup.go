@@ -7,6 +7,7 @@ package rollup
 //go:generate go run github.com/deepmap/oapi-codegen/v2/cmd/oapi-codegen -config=oapi.yaml ../../api/rollup.yaml
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -33,7 +34,7 @@ type rollupAPI struct {
 
 // Gio implements ServerInterface.
 func (r *rollupAPI) Gio(ctx echo.Context) error {
-	panic("unimplemented")
+	return fmt.Errorf("not implemented")
 }
 
 // Handle requests to /finish.
