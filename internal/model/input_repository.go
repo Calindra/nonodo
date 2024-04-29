@@ -87,6 +87,34 @@ func (r *InputRepository) Update(input AdvanceInput) (*AdvanceInput, error) {
 	return &input, nil
 }
 
+func (r *InputRepository) FindByStatus(status CompletionStatus) (*AdvanceInput, error) {
+	sql := `SELECT 
+		input_index,
+		status,
+		msg_sender,
+		payload,
+		block_number,
+		timestamp,
+		exception FROM inputs WHERE status = $1
+		ORDER BY input_index ASC`
+	res, err := r.Db.Queryx(
+		sql,
+		status,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Close()
+	if res.Next() {
+		input, err := parseInput(res)
+		if err != nil {
+			return nil, err
+		}
+		return input, nil
+	}
+	return nil, nil
+}
+
 func (r *InputRepository) FindByIndex(index int) (*AdvanceInput, error) {
 	sql := `SELECT 
 		input_index,
@@ -103,6 +131,7 @@ func (r *InputRepository) FindByIndex(index int) (*AdvanceInput, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer res.Close()
 	if res.Next() {
 		input, err := parseInput(res)
 		if err != nil {
@@ -224,6 +253,14 @@ func transformToInputQuery(
 			} else if filter.Lt != nil {
 				where = append(where, fmt.Sprintf("input_index < $%d ", count))
 				args = append(args, *filter.Lt)
+				count += 1
+			} else {
+				return "", nil, 0, fmt.Errorf("operation not implemented")
+			}
+		} else if *filter.Field == "Status" {
+			if filter.Ne != nil {
+				where = append(where, fmt.Sprintf("status <> $%d ", count))
+				args = append(args, *filter.Ne)
 				count += 1
 			} else {
 				return "", nil, 0, fmt.Errorf("operation not implemented")
