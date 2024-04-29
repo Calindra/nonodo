@@ -25,10 +25,10 @@ const FinishPollInterval = time.Millisecond * 100
 func Register(e *echo.Echo, model *model.NonodoModel, legacy bool) {
 	if legacy {
 		var rollupAPI v1.ServerInterface = &rollupAPI{model}
-		v1.RegisterHandlersWithBaseURL(e, rollupAPI, "")
+		v1.RegisterHandlers(e, rollupAPI)
 	} else {
 		var rollupAPI ServerInterface = &rollupAPI{model}
-		RegisterHandlersWithBaseURL(e, rollupAPI, "")
+		RegisterHandlers(e, rollupAPI)
 	}
 }
 
