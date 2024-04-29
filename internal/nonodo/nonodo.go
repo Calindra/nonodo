@@ -20,6 +20,7 @@ import (
 	"github.com/calindra/nonodo/internal/model"
 	"github.com/calindra/nonodo/internal/reader"
 	"github.com/calindra/nonodo/internal/rollup"
+	v1 "github.com/calindra/nonodo/internal/rollup/v1"
 	"github.com/calindra/nonodo/internal/supervisor"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
@@ -179,7 +180,12 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		ErrorMessage: "Request timed out",
 		Timeout:      HttpTimeout,
 	}))
-	rollup.Register(re, model, opts.LegacyMode)
+
+	if opts.LegacyMode {
+		v1.Register(re, model)
+	} else {
+		rollup.Register(re, model)
+	}
 
 	if opts.RpcUrl == "" && !opts.DisableDevnet {
 		w.Workers = append(w.Workers, devnet.AnvilWorker{

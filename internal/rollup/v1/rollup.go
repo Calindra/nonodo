@@ -22,8 +22,8 @@ const FinishPollInterval = time.Millisecond * 100
 
 // Register the rollup API to echo
 func Register(e *echo.Echo, model *model.NonodoModel) {
-	rollupAPI := &rollupAPI{model}
-	RegisterHandlersWithBaseURL(e, rollupAPI, "")
+	var rollupAPI ServerInterface = &rollupAPI{model}
+	RegisterHandlers(e, rollupAPI)
 }
 
 // Shared struct for request handlers.
