@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"sync"
 	"time"
+	"unsafe"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -411,3 +412,15 @@ func paginate[T any](slice []T, offset int, limit int) []T {
 	}
 	return slice[offset:upperBound]
 }
+
+// Methods for Gio
+type CmtGio struct {
+	Domain             uint16         // domain for the gio request
+	IdLength           uint32         // length of id
+	Id                 unsafe.Pointer // id for the request
+	ResponseCode       uint16         // response
+	ResponseDataLength uint32         // length of response data
+	ResponseData       unsafe.Pointer // response data
+}
+
+// func gio_request() {}

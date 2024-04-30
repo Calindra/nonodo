@@ -34,6 +34,27 @@ type rollupAPI struct {
 
 // Gio implements ServerInterface.
 func (r *rollupAPI) Gio(ctx echo.Context) error {
+	if !checkContentType(ctx) {
+		return ctx.String(http.StatusUnsupportedMediaType, "invalid content type")
+	}
+
+	// parse body
+	var request GioJSONRequestBody
+	if err := ctx.Bind(&request); err != nil {
+		return err
+	}
+
+	payload, err := hexutil.Decode(request.Id)
+	if err != nil {
+		return ctx.String(
+			http.StatusBadRequest,
+			"Error decoding gio request payload,"+
+				"payload must be in Ethereum hex binary format",
+		)
+	}
+
+	fmt.Println("Gio request received with payload:", payload)
+
 	return fmt.Errorf("not implemented")
 }
 
