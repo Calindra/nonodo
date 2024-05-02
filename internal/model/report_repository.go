@@ -92,6 +92,7 @@ func (c *ReportRepository) Count(
 		slog.Error("Count execution error")
 		return 0, err
 	}
+	defer stmt.Close()
 	var count uint64
 	err = stmt.Get(&count, args...)
 	if err != nil {
@@ -161,6 +162,7 @@ func (c *ReportRepository) FindAll(
 	if err != nil {
 		return nil, err
 	}
+	defer stmt.Close()
 	var reports []Report
 	rows, err := stmt.Queryx(args...)
 	if err != nil {

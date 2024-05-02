@@ -158,6 +158,7 @@ func (c *InputRepository) Count(
 		slog.Error("Count execution error")
 		return 0, err
 	}
+	defer stmt.Close()
 	var count uint64
 	err = stmt.Get(&count, args...)
 	if err != nil {
@@ -209,6 +210,7 @@ func (c *InputRepository) FindAll(
 	if err != nil {
 		return nil, err
 	}
+	defer stmt.Close()
 	var inputs []AdvanceInput
 	rows, err := stmt.Queryx(args...)
 	if err != nil {

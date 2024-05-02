@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/jmoiron/sqlx"
 )
@@ -68,6 +69,7 @@ func (c *SynchronizerRepository) GetLastFetched(
 	if err != nil {
 		return nil, err
 	}
+	defer stmt.Close()
 	var p model.SynchronizerFetch
 	err = stmt.Get(&p)
 	if err != nil {
