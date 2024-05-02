@@ -113,6 +113,7 @@ func (c *VoucherRepository) FindVoucherByInputAndOutputIndex(
 		}
 		return nil, err
 	}
+	defer stmt.Close()
 
 	p := convertToConvenienceVoucher(row)
 
@@ -143,6 +144,7 @@ func (c *VoucherRepository) Count(
 	if err != nil {
 		return 0, err
 	}
+	defer stmt.Close()
 	var count uint64
 	err = stmt.Get(&count, args...)
 	if err != nil {
@@ -188,6 +190,7 @@ func (c *VoucherRepository) FindAllVouchers(
 	if err != nil {
 		return nil, err
 	}
+	defer stmt.Close()
 	var rows []voucherRow
 	err = stmt.Select(&rows, args...)
 	if err != nil {
