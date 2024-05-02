@@ -18,6 +18,9 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+//#include "../../machine-emulator-tools/sys-utils/libcmt/src/rollup.h"
+import "C"
+
 const FinishRetries = 50
 const FinishPollInterval = time.Millisecond * 100
 
@@ -52,6 +55,15 @@ func (r *rollupAPI) Gio(ctx echo.Context) error {
 				"payload must be in Ethereum hex binary format",
 		)
 	}
+
+	data := make([]byte, len(payload))
+	copy(data, payload)
+
+	// gio := C.cmt_gio_t{
+	// 	domain:    C.uint16_t(request.Domain),
+	// 	// id:        (*C.)(&data[0]),
+	// 	id_length: C.uint(len(payload)),
+	// }
 
 	fmt.Println("Gio request received with payload:", payload)
 
