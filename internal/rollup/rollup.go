@@ -8,6 +8,7 @@ package rollup
 
 import (
 	"fmt"
+	"log/slog"
 	"math/big"
 	"net/http"
 	"os"
@@ -73,11 +74,12 @@ func fetchInputBoxNumber(inputIndex *big.Int) (*big.Int, error) {
 
 func FetchCurrentInput() (*big.Int, error) {
 	// retrieve total number of inputs
+
 	return nil, nil
 }
 
 func waitForBlock(blockNumber *big.Int) error {
-	fmt.Println("Waiting for block", blockNumber)
+	slog.Info("Waiting for block", blockNumber)
 
 	// poll until block is reached
 
@@ -85,7 +87,6 @@ func waitForBlock(blockNumber *big.Int) error {
 }
 
 func getEpochDuration() (*big.Int, error) {
-
 	EPOCH_DURATION := os.Getenv("EPOCH_DURATION")
 	var epochDuration *big.Int
 	if EPOCH_DURATION != "" {
@@ -152,11 +153,11 @@ func FetchContext(blockNumber *big.Int) <-chan FetchInputBoxContextOrError {
 func FetchInputBox(id string) (*FetchResponse, error) {
 	if len(id) != INPUT_BOX_SIZE || id[:2] != "0x" {
 		error := fmt.Sprintf("Invalid id %s box id", id)
-		fmt.Println(error)
+		slog.Error(error)
 		return &FetchResponse{status: http.StatusNotFound, data: nil}, nil
 	}
 	maxBlockNumber := big.NewInt(0).SetBytes([]byte(id[2:66]))
-	inputIndex := big.NewInt(0).SetBytes([]byte(id[66:130]))
+	// inputIndex := big.NewInt(0).SetBytes([]byte(id[66:130]))
 
 	contextCh := <-FetchContext(maxBlockNumber)
 	if contextCh.err != nil {
@@ -166,8 +167,13 @@ func FetchInputBox(id string) (*FetchResponse, error) {
 
 	// check if out of epoch's scope
 	if context.epoch.Cmp(&context.currentEpoch) == 1 {
-		error := fmt.Sprintf("Requested data beyond current epoch '%s' (data estimated to belong to epoch '%s')", context.currentEpoch.String(), context.epoch.String())
-		fmt.Println(error)
+		error := fmt.Sprintf(
+			"Requested data beyond current epoch '%s'"+
+				" (data estimated to belong to epoch '%s')",
+			context.currentEpoch.String(),
+			context.epoch.String(),
+		)
+		slog.Error(error)
 		return &FetchResponse{status: http.StatusForbidden, data: nil}, nil
 	}
 
@@ -196,21 +202,21 @@ func (r *rollupAPI) Gio(ctx echo.Context) error {
 		return err
 	}
 
-	payload, err := hexutil.Decode(request.Id)
-	if err != nil {
-		return ctx.String(
-			http.StatusBadRequest,
-			"Error decoding gio request payload,"+
-				"payload must be in Ethereum hex binary format",
-		)
-	}
+	// payload, err := hexutil.Decode(request.Id)
+	// if err != nil {
+	// 	return ctx.String(
+	// 		http.StatusBadRequest,
+	// 		"Error decoding gio request payload,"+
+	// 			"payload must be in Ethereum hex binary format",
+	// 	)
+	// }
 
 	// data := make([]byte, len(payload))
 	// copy(data, payload)
 
-	fmt.Println("Gio request received with payload:", payload)
+	// slog.Info("Gio request received with payload:", payload)
 
-	return fmt.Errorf("not implemented")
+	return nil
 }
 
 // Handle requests to /finish.
