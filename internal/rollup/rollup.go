@@ -67,7 +67,7 @@ func computeEpoch(blockNumber *big.Int, epochDuration *big.Int) (*big.Int, error
 	}
 }
 
-func fecthInputBoxNumber(inputIndex *big.Int) (*big.Int, error) {
+func fetchInputBoxNumber(inputIndex *big.Int) (*big.Int, error) {
 	return nil, nil
 }
 
@@ -117,7 +117,7 @@ func FetchContext(blockNumber *big.Int) <-chan FetchInputBoxContextOrError {
 		return result
 	}
 
-	currentInputBlockNumber, err := fecthInputBoxNumber(currentInput)
+	currentInputBlockNumber, err := fetchInputBoxNumber(currentInput)
 	if err != nil {
 		result <- FetchInputBoxContextOrError{context: nil, err: err}
 		return result
