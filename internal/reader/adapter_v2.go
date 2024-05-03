@@ -119,7 +119,7 @@ func (a AdapterV2) GetReport(reportIndex int, inputIndex int) (*graphql.Report, 
 	}
 
 	if len(reportByIdResponse.Data.Reports.Edges) > 0 {
-		return convertReport(reportByIdResponse)
+		return convertReport(reportByIdResponse.Data.Reports.Edges[0].Node)
 	}
 	return nil, nil
 }
@@ -138,16 +138,165 @@ func (a AdapterV2) GetReports(first *int, last *int, after *string, before *stri
 	}
 
 	if forward {
-		//TODO setar query aqui
-		requestBody := []byte(fmt.Sprintf(``, first, after))
+		requestBody := []byte(fmt.Sprintf(`{
+			"query": "query MyQuery($first: Int, $after: String, $inputIndex: Int) { reports(first: $first, after: $after, condition: {inputIndex: $inputIndex}) { edges { cursor node { index inputIndex blob } } } }",
+			"variables": {
+			  "first": %d,
+			  "after": %s,
+              "inputIndex": %d
+			}
+		  }`, first, *after, inputIndex))
 
 		req, err := http.NewRequest("POST", "http://localhost:5000/graphql", bytes.NewBuffer(requestBody))
+
+		if err != nil {
+			slog.Error("Error creating request", err)
+			return nil, err
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		client := &http.Client{}
+		resp, err := client.Do(req)
+
+		if err != nil {
+			fmt.Println("Error executing request:", err)
+			return nil, err
+		}
+
+		defer resp.Body.Close()
+
+		// Lê o corpo da resposta
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			fmt.Println("Erro ao ler o corpo da resposta:", err)
+			return nil, err
+		}
+
+		var reportByIdResponse ReportByIdResponse
+		err = json.Unmarshal(body, &reportByIdResponse)
+
+		if err != nil {
+			fmt.Println("Erro ao decodificar JSON:", err)
+			return nil, err
+		}
+
+		if len(reportByIdResponse.Data.Reports.Edges) > 0 {
+			reports := make([]*graphql.Report, len(reportByIdResponse.Data.Reports.Edges))
+
+			for i := range reportByIdResponse.Data.Reports.Edges {
+				convertedReport, err := convertReport(reportByIdResponse.Data.Reports.Edges[i].Node)
+
+				if err != nil {
+					return nil, err
+				}
+
+				reports = append(reports, convertedReport)
+			}
+
+			var offset int
+
+			if after != nil {
+				offset, err = commons.DecodeCursor(*after, len(reportByIdResponse.Data.Reports.Edges))
+				if err != nil {
+					return nil, err
+				}
+				offset = offset + 1
+			} else {
+				offset = 0
+			}
+
+			return graphql.NewConnection(offset, len(reportByIdResponse.Data.Reports.Edges), reports), nil
+
+		}
+
+		return nil, nil
 
 	} else {
-		//TODO setar query aqui
-		requestBody := []byte(fmt.Sprintf(``, last, before))
+		requestBody := []byte(fmt.Sprintf(`{
+			"query": "query MyQuery($last: Int, $before: String, $inputIndex: Int) { reports(last: $last, before: $before, condition: {inputIndex: $inputIndex}) { edges { cursor node { index inputIndex blob } } } }",
+			"variables": {
+			  "last": %d,
+			  "before": %s,
+              "inputIndex": %d
+			}
+		  }`, last, *before, inputIndex))
 
 		req, err := http.NewRequest("POST", "http://localhost:5000/graphql", bytes.NewBuffer(requestBody))
+
+		if err != nil {
+			slog.Error("Error creating request", err)
+			return nil, err
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		client := &http.Client{}
+		resp, err := client.Do(req)
+
+		if err != nil {
+			fmt.Println("Error executing request:", err)
+			return nil, err
+		}
+
+		defer resp.Body.Close()
+
+		// Lê o corpo da resposta
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			fmt.Println("Erro ao ler o corpo da resposta:", err)
+			return nil, err
+		}
+
+		var reportByIdResponse ReportByIdResponse
+		err = json.Unmarshal(body, &reportByIdResponse)
+
+		if err != nil {
+			fmt.Println("Erro ao decodificar JSON:", err)
+			return nil, err
+		}
+
+		if len(reportByIdResponse.Data.Reports.Edges) > 0 {
+			reports := make([]*graphql.Report, len(reportByIdResponse.Data.Reports.Edges))
+
+			for i := range reportByIdResponse.Data.Reports.Edges {
+				convertedReport, err := convertReport(reportByIdResponse.Data.Reports.Edges[i].Node)
+
+				if err != nil {
+					return nil, err
+				}
+
+				reports = append(reports, convertedReport)
+			}
+
+			var beforeOffset int
+			total := len(reportByIdResponse.Data.Reports.Edges)
+
+			var limit int
+			if last != nil {
+				if *last < 0 {
+					return nil, commons.ErrInvalidLimit
+				}
+				limit = *last
+			} else {
+				limit = commons.DefaultPaginationLimit
+			}
+
+			var offset int
+
+			if before != nil {
+				beforeOffset, err = commons.DecodeCursor(*before, total)
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				beforeOffset = total
+			}
+			offset = max(0, beforeOffset-limit)
+
+			return graphql.NewConnection(offset, len(reportByIdResponse.Data.Reports.Edges), reports), nil
+
+		}
+
+		return nil, nil
 	}
 }
 
@@ -165,17 +314,164 @@ func (a AdapterV2) GetInputs(first *int, last *int, after *string, before *strin
 	}
 
 	if forward {
-		//TODO setar query aqui
-		requestBody := []byte(fmt.Sprintf(``, first, after))
+		requestBody := []byte(fmt.Sprintf(`{
+		"query": "query MyQuery($first: Int, $after: String) { inputs(first: $first, after: $after) { edges { cursor node { index blob status } } } }",
+		"variables": {
+		  "first": %d,
+		  "after": %s
+		}
+	  }`, first, *after))
 
 		req, err := http.NewRequest("POST", "http://localhost:5000/graphql", bytes.NewBuffer(requestBody))
+
+		if err != nil {
+			slog.Error("Error creating request", err)
+			return nil, err
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		client := &http.Client{}
+		resp, err := client.Do(req)
+
+		if err != nil {
+			fmt.Println("Error executing request:", err)
+			return nil, err
+		}
+
+		defer resp.Body.Close()
+
+		// Lê o corpo da resposta
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			fmt.Println("Erro ao ler o corpo da resposta:", err)
+			return nil, err
+		}
+
+		var inputByIdResponse InputByIdResponse
+		err = json.Unmarshal(body, &inputByIdResponse)
+
+		if err != nil {
+			fmt.Println("Erro ao decodificar JSON:", err)
+			return nil, err
+		}
+
+		if len(inputByIdResponse.Data.Inputs.Edges) > 0 {
+			inputs := make([]*graphql.Input, len(inputByIdResponse.Data.Inputs.Edges))
+
+			for i := range inputByIdResponse.Data.Inputs.Edges {
+				convertedInput, err := convertInput(inputByIdResponse.Data.Inputs.Edges[i].Node)
+
+				if err != nil {
+					return nil, err
+				}
+
+				inputs = append(inputs, convertedInput)
+			}
+
+			var offset int
+
+			if after != nil {
+				offset, err = commons.DecodeCursor(*after, len(inputByIdResponse.Data.Inputs.Edges))
+				if err != nil {
+					return nil, err
+				}
+				offset = offset + 1
+			} else {
+				offset = 0
+			}
+
+			return graphql.NewConnection(offset, len(inputByIdResponse.Data.Inputs.Edges), inputs), nil
+
+		}
+
+		return nil, nil
 
 	} else {
-		//TODO setar query aqui
-		requestBody := []byte(fmt.Sprintf(``, last, before))
+		requestBody := []byte(fmt.Sprintf(`{
+		"query": "query MyQuery($last: Int, $before: String) { inputs(last: $last, before: $before) { edges { cursor node { index blob status } } } }",
+		"variables": {
+		  "last": %d,
+		  "before": %s
+		}
+	  }`, last, *before))
 
 		req, err := http.NewRequest("POST", "http://localhost:5000/graphql", bytes.NewBuffer(requestBody))
+
+		if err != nil {
+			slog.Error("Error creating request", err)
+			return nil, err
+		}
+		req.Header.Set("Content-Type", "application/json")
+
+		client := &http.Client{}
+		resp, err := client.Do(req)
+
+		if err != nil {
+			fmt.Println("Error executing request:", err)
+			return nil, err
+		}
+
+		defer resp.Body.Close()
+
+		// Lê o corpo da resposta
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			fmt.Println("Erro ao ler o corpo da resposta:", err)
+			return nil, err
+		}
+
+		var inputByIdResponse InputByIdResponse
+		err = json.Unmarshal(body, &inputByIdResponse)
+
+		if err != nil {
+			fmt.Println("Erro ao decodificar JSON:", err)
+			return nil, err
+		}
+
+		if len(inputByIdResponse.Data.Inputs.Edges) > 0 {
+			inputs := make([]*graphql.Input, len(inputByIdResponse.Data.Inputs.Edges))
+
+			for i := range inputByIdResponse.Data.Inputs.Edges {
+				convertedInput, err := convertInput(inputByIdResponse.Data.Inputs.Edges[i].Node)
+
+				if err != nil {
+					return nil, err
+				}
+
+				inputs = append(inputs, convertedInput)
+			}
+
+			var beforeOffset int
+			total := len(inputByIdResponse.Data.Inputs.Edges)
+
+			var limit int
+			if last != nil {
+				if *last < 0 {
+					return nil, commons.ErrInvalidLimit
+				}
+				limit = *last
+			} else {
+				limit = commons.DefaultPaginationLimit
+			}
+
+			var offset int
+
+			if before != nil {
+				beforeOffset, err = commons.DecodeCursor(*before, total)
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				beforeOffset = total
+			}
+			offset = max(0, beforeOffset-limit)
+
+			return graphql.NewConnection(offset, len(inputByIdResponse.Data.Inputs.Edges), inputs), nil
+
+		}
 	}
+
+	return nil, nil
 }
 
 func (a AdapterV2) GetInput(index int) (*graphql.Input, error) {
@@ -187,6 +483,7 @@ func (a AdapterV2) GetInput(index int) (*graphql.Input, error) {
     }`, index))
 
 	req, err := http.NewRequest("POST", "http://localhost:5000/graphql", bytes.NewBuffer(requestBody))
+
 	if err != nil {
 		slog.Error("Error creating request", err)
 		return nil, err
@@ -219,11 +516,10 @@ func (a AdapterV2) GetInput(index int) (*graphql.Input, error) {
 	}
 
 	if len(inputByIdResponse.Data.Inputs.Edges) > 0 {
-		return convertInput(inputByIdResponse)
+		return convertInput(inputByIdResponse.Data.Inputs.Edges[0].Node)
 	}
 
 	return nil, nil
-
 }
 
 func (a AdapterV2) GetNotice(noticeIndex int, inputIndex int) (*model.Notice, error) {
@@ -323,21 +619,27 @@ func (a AdapterV2) GetVouchers(first *int, last *int, after *string, before *str
 	)
 }
 
-func convertInput(response InputByIdResponse) (*graphql.Input, error) {
-	//TODO completar conversão
-	node := response.Data.Inputs.Edges[0].Node
+// TODO finalize convert
+func convertInput(node struct {
+	Index  int    `json:"index"`
+	Blob   string `json:"blob"`
+	Status string `json:"status"`
+}) (*graphql.Input, error) {
 	return &graphql.Input{
 		Index:       node.Index,
 		Status:      convertCompletionStatus(node.Status),
 		MsgSender:   "",
 		Timestamp:   "",
 		BlockNumber: "",
-		Payload:     node.Blob,
+		Payload:     "",
 	}, nil
 }
 
-func convertReport(response ReportByIdResponse) (*graphql.Report, error) {
-	node := response.Data.Reports.Edges[0].Node
+func convertReport(node struct {
+	Index      int    `json:"index"`
+	Blob       string `json:"blob"`
+	InputIndex int    `json:"inputIndex"`
+}) (*graphql.Report, error) {
 	return &graphql.Report{
 		Index:      node.Index,
 		Payload:    node.Blob,
