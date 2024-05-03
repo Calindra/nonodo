@@ -82,7 +82,7 @@ func handleAdvance(
 
 	// add voucher
 	voucherReq := rollup.Voucher{
-		Destination: advance.Metadata.MsgSender,
+		Destination: advance.MsgSender,
 		Payload:     advance.Payload,
 	}
 	voucherResp, err := client.AddVoucher(ctx, voucherReq)

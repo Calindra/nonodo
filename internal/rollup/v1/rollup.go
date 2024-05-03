@@ -4,10 +4,9 @@
 // This package contains the bindings for the rollup OpenAPI spec.
 package rollup
 
-//go:generate go run github.com/deepmap/oapi-codegen/v2/cmd/oapi-codegen -config=oapi.yaml ../../api/rollup.yaml
+//go:generate go run github.com/deepmap/oapi-codegen/v2/cmd/oapi-codegen -config=../oapi.yaml ../../../api/rollup-v1.yaml
 
 import (
-	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -30,11 +29,6 @@ func Register(e *echo.Echo, model *model.NonodoModel) {
 // Shared struct for request handlers.
 type rollupAPI struct {
 	model *model.NonodoModel
-}
-
-// Gio implements ServerInterface.
-func (r *rollupAPI) Gio(ctx echo.Context) error {
-	return fmt.Errorf("not implemented")
 }
 
 // Handle requests to /finish.
@@ -206,11 +200,13 @@ func convertInput(input model.Input) RollupRequest {
 	switch input := input.(type) {
 	case model.AdvanceInput:
 		advance := Advance{
-			BlockNumber:    input.BlockNumber,
-			InputIndex:     uint64(input.Index),
-			MsgSender:      hexutil.Encode(input.MsgSender[:]),
-			BlockTimestamp: uint64(input.Timestamp.Unix()),
-			Payload:        hexutil.Encode(input.Payload),
+			Metadata: Metadata{
+				BlockNumber: input.BlockNumber,
+				InputIndex:  uint64(input.Index),
+				MsgSender:   hexutil.Encode(input.MsgSender[:]),
+				Timestamp:   uint64(input.Timestamp.Unix()),
+			},
+			Payload: hexutil.Encode(input.Payload),
 		}
 		err := resp.Data.FromAdvance(advance)
 		if err != nil {
