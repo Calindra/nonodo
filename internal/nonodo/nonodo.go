@@ -20,6 +20,7 @@ import (
 	"github.com/calindra/nonodo/internal/model"
 	"github.com/calindra/nonodo/internal/reader"
 	"github.com/calindra/nonodo/internal/rollup"
+	v1 "github.com/calindra/nonodo/internal/rollup/v1"
 	"github.com/calindra/nonodo/internal/supervisor"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
@@ -65,6 +66,9 @@ type NonodoOpts struct {
 	SqliteFile       string
 	FromBlock        uint64
 	DbImplementation string
+
+	// If set, enables legacy mode.
+	LegacyMode bool
 }
 
 // Create the options struct with default values.
@@ -88,6 +92,7 @@ func NewNonodoOpts() NonodoOpts {
 		SqliteFile:         "file:memory1?mode=memory&cache=shared",
 		FromBlock:          0,
 		DbImplementation:   "sqlite",
+		LegacyMode:         false,
 	}
 }
 
@@ -175,7 +180,12 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		ErrorMessage: "Request timed out",
 		Timeout:      HttpTimeout,
 	}))
-	rollup.Register(re, model)
+
+	if opts.LegacyMode {
+		v1.Register(re, model)
+	} else {
+		rollup.Register(re, model)
+	}
 
 	if opts.RpcUrl == "" && !opts.DisableDevnet {
 		w.Workers = append(w.Workers, devnet.AnvilWorker{

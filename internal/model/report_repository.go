@@ -50,7 +50,7 @@ func (r *ReportRepository) FindByInputAndOutputIndex(
 	outputIndex uint64,
 ) (*Report, error) {
 	rows, err := r.Db.Queryx(`
-		SELECT payload FROM reports 
+		SELECT payload FROM reports
 			WHERE input_index = $1 and output_index = $2
 			LIMIT 1`,
 		inputIndex, outputIndex,

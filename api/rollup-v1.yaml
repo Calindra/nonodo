@@ -2,7 +2,7 @@ openapi: 3.0.0
 
 info:
   title: Cartesi Rollup HTTP API
-  version: 0.8.0
+  version: 0.7.1
   license:
     name: Apache-2.0
     url: https://www.apache.org/licenses/LICENSE-2.0.html
@@ -221,35 +221,6 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
-  /gio:
-    post:
-      operationId: gio
-      summary: Generic Input/Output
-      description: |
-        The DApp can call this method to perform a generic input/output request.
-
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/GioRequest"
-        required: true
-
-      responses:
-        "200":
-          description: Request performed successfully.
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/GioResponseRollup"
-
-        default:
-          description: Error response.
-          content:
-            text/plain:
-              schema:
-                $ref: "#/components/schemas/Error"
-
   /exception:
     post:
       operationId: registerException
@@ -313,17 +284,17 @@ components:
     Advance:
       type: object
       properties:
-        chain_id:
-          type: integer
-          format: uint64
-          description: Network identifier.
-          example: 42
-        app_contract:
-          type: string
-          description: 20-byte address of the application contract.
-          example: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
-          pattern: "^0x([0-9a-fA-F]{40})$"
-          format: address
+        metadata:
+          $ref: "#/components/schemas/Metadata"
+        payload:
+          $ref: "#/components/schemas/Payload"
+      required:
+        - metadata
+        - payload
+
+    Metadata:
+      type: object
+      properties:
         msg_sender:
           type: string
           description: 20-byte address of the account that submitted the input.
@@ -345,22 +316,17 @@ components:
           format: uint64
           description: Block number when input was posted.
           example: 10000000
-        block_timestamp:
+        timestamp:
           type: integer
           format: uint64
           description: Unix timestamp of block in milliseconds.
           example: 1588598533000
-        payload:
-          $ref: "#/components/schemas/Payload"
       required:
-        - chain_id
-        - app_contract
         - msg_sender
         - epoch_index
         - input_index
         - block_number
-        - block_timestamp
-        - payload
+        - timestamp
 
     Payload:
       type: string
@@ -377,15 +343,7 @@ components:
       type: object
       properties:
         payload:
-          type: string
-          description: |
-            The payload contains arbitrary hex-encoded binary data.
-            The first two characters are '0x' followed by pairs of hexadecimal numbers that correspond to one byte.
-            For instance, '0xdeadbeef' corresponds to a payload with length 4 and bytes 222, 173, 190, 175.
-            An empty payload is represented by the string '0x'.
-          example: "0xdeadbeef"
-          pattern: "^0x([0-9a-fA-F]{2})*$"
-          format: hex
+          $ref: "#/components/schemas/Payload"
       required:
         - payload
 
@@ -398,12 +356,6 @@ components:
           example: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
           pattern: "^0x([0-9a-fA-F]{40})$"
           format: address
-        value:
-          type: string
-          description: A big-endian 32-byte unsigned integer in hex.
-          example: "0x0000000000000000000000000000000000000000000000000000000000000001"
-          pattern: "^0x([0-9a-fA-F]{64})$"
-          format: hex
         payload:
           type: string
           description: |
@@ -417,7 +369,6 @@ components:
           format: hex
       required:
         - destination
-        - value
         - payload
 
     Notice:
@@ -435,40 +386,6 @@ components:
           $ref: "#/components/schemas/Payload"
       required:
         - payload
-
-    GioRequest:
-      type: object
-      properties:
-        domain:
-          type: integer
-          format: uint16
-          description: An arbitrary number representing the request domain.
-          example: 8
-        id:
-          type: string
-          format: hex
-          description: Domain-specific information identifying the request.
-          example: "0xdeadbeef"
-      required:
-        - domain
-        - id
-
-    GioResponseRollup:
-      type: object
-      properties:
-        code:
-          type: integer
-          format: uint16
-          description: A number representing the response code.
-          example: 8
-        data:
-          type: string
-          format: hex
-          description: The response data.
-          example: "0xdeadbeef"
-      required:
-        - code
-        - data
 
     Exception:
       type: object
