@@ -26,7 +26,7 @@ func (r *ReportRepository) CreateTables() error {
 	if err == nil {
 		slog.Debug("Reports table created")
 	} else {
-		slog.Error("Create table error", err)
+		slog.Error("Create table error", "error", err)
 	}
 	return err
 }

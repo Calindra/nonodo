@@ -32,7 +32,7 @@ func (r *InputRepository) CreateTables() error {
 	if err == nil {
 		slog.Debug("Inputs table created")
 	} else {
-		slog.Error("Create table error", err)
+		slog.Error("Create table error", "error", err)
 	}
 	return err
 }
