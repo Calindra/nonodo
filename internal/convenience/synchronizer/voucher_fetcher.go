@@ -119,13 +119,13 @@ func (v *VoucherFetcher) Fetch() (*VoucherResponse, error) {
 	body, err := io.ReadAll(resp.Body)
 	resp.Body.Close()
 	if err != nil {
-		slog.Error("Error reading response:", err)
+		slog.Error("Error reading response:", slog.String("Error", err.Error()))
 		return nil, err
 	}
 
 	var response VoucherResponse
 	if err := json.Unmarshal(body, &response); err != nil {
-		slog.Error("Error parsing JSON:", err)
+		slog.Error("Error parsing JSON:", slog.String("Error", err.Error()))
 		return nil, err
 	}
 	return &response, nil
