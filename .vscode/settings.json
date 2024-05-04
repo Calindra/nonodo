@@ -4,6 +4,7 @@
         "codegen",
         "czvf",
         "darwin",
+        "dbname",
         "deepmap",
         "devnet",
         "echoapp",
@@ -11,6 +12,7 @@
         "ethclient",
         "execlistener",
         "exitf",
+        "exts",
         "genqlient",
         "getsourcecode",
         "github",
@@ -33,6 +35,7 @@
         "oapi",
         "outputdecoder",
         "posix",
+        "postgres",
         "Preparex",
         "Queryx",
         "readerclient",
@@ -41,9 +44,11 @@
         "softprops",
         "sqlite",
         "sqlx",
+        "sslmode",
         "stretchr",
         "unmarshal",
         "versioninfo",
-        "wangyoucao"
+        "wangyoucao",
+        "watchexec"
     ]
 }

@@ -103,16 +103,16 @@ func NewSupervisorPoC(opts NonodoOpts) supervisor.SupervisorWorker {
 
 	if opts.DbImplementation == "postgres" {
 		slog.Info("Using PostGres DB ...")
-		postGresHost := os.Getenv("POSTGRES_HOST")
-		postGresPort := os.Getenv("POSTGRES_PORT")
-		postGresDataBase := os.Getenv("POSTGRES_DB")
-		postGresUser := os.Getenv("POSTGRES_USER")
-		postGresPassword := os.Getenv("POSTGRES_PASSWORD")
+		postgresHost := os.Getenv("POSTGRES_HOST")
+		postgresPort := os.Getenv("POSTGRES_PORT")
+		postgresDataBase := os.Getenv("POSTGRES_DB")
+		postgresUser := os.Getenv("POSTGRES_USER")
+		postgresPassword := os.Getenv("POSTGRES_PASSWORD")
 
 		connectionString := fmt.Sprintf("host=%s port=%s user=%s "+
 			"dbname=%s password=%s sslmode=disable",
-			postGresHost, postGresPort, postGresUser,
-			postGresDataBase, postGresPassword)
+			postgresHost, postgresPort, postgresUser,
+			postgresDataBase, postgresPassword)
 
 		db = sqlx.MustConnect("postgres", connectionString)
 	} else {
