@@ -75,7 +75,7 @@ func init() {
 		"If set, nonodo starts a built-in echo application")
 	cmd.Flags().BoolVar(&opts.LegacyMode,
 		"enable-legacy",
-		false,
+		opts.LegacyMode,
 		"If set, enables legacy based in 0.7.1 (branch 0.7.3) rollups interface")
 
 	// disable-*
