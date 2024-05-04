@@ -86,14 +86,14 @@ func (v *VoucherFetcher) Fetch() (*VoucherResponse, error) {
 		"variables":     variables,
 	})
 	if err != nil {
-		slog.Error("Error marshalling JSON:", err)
+		slog.Error("Error marshalling JSON:", slog.String("Error", err.Error()))
 		return nil, err
 	}
 
 	// Make a POST request to the GraphQL endpoint
 	req, err := http.NewRequest("POST", v.Url, bytes.NewBuffer(payload))
 	if err != nil {
-		slog.Error("Error creating request:", err)
+		slog.Error("Error creating request:", slog.String("Error", err.Error()))
 		return nil, err
 	}
 
@@ -104,7 +104,7 @@ func (v *VoucherFetcher) Fetch() (*VoucherResponse, error) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		slog.Error("Error sending request:", err)
+		slog.Error("Error sending request:", slog.String("Error", err.Error()))
 		fmt.Println(
 			strings.Replace(
 				ErrorSendingRequest,
