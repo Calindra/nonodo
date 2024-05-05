@@ -161,7 +161,7 @@ func (a AdapterV1) GetVouchers(
 
 func (a AdapterV1) GetNotice(noticeIndex int, inputIndex int) (*graphql.Notice, error) {
 	ctx := context.Background()
-	notice, err := a.convenienceService.FindVoucherByInputAndOutputIndex(
+	notice, err := a.convenienceService.FindNoticeByInputAndOutputIndex(
 		ctx,
 		uint64(inputIndex),
 		uint64(noticeIndex),
