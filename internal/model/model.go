@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/jmoiron/sqlx"
@@ -61,9 +62,12 @@ func (m *NonodoModel) AddAdvanceInput(
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
-	index := len(m.advances)
+	index, err := m.inputRepository.Count(nil)
+	if err != nil {
+		panic(err)
+	}
 	input := AdvanceInput{
-		Index:       index,
+		Index:       int(index),
 		Status:      CompletionStatusUnprocessed,
 		MsgSender:   sender,
 		Payload:     payload,
@@ -71,7 +75,7 @@ func (m *NonodoModel) AddAdvanceInput(
 		BlockNumber: blockNumber,
 	}
 	m.advances = append(m.advances, &input)
-	_, err := m.inputRepository.Create(input)
+	_, err = m.inputRepository.Create(input)
 	if err != nil {
 		panic(err)
 	}
@@ -141,16 +145,18 @@ func (m *NonodoModel) FinishAndGetNext(accepted bool) Input {
 	}
 
 	// try to get first unprocessed advance
-	for _, input := range m.advances {
-		if input.Status == CompletionStatusUnprocessed {
-			m.state = newRollupsStateAdvance(
-				input,
-				m.decoder,
-				m.reportRepository,
-				m.inputRepository,
-			)
-			return *input
-		}
+	input, err := m.inputRepository.FindByStatus(CompletionStatusUnprocessed)
+	if err != nil {
+		panic(err)
+	}
+	if input != nil {
+		m.state = newRollupsStateAdvance(
+			input,
+			m.decoder,
+			m.reportRepository,
+			m.inputRepository,
+		)
+		return *input
 	}
 
 	// if no input was found, set state to idle
@@ -204,210 +210,20 @@ func (m *NonodoModel) RegisterException(payload []byte) error {
 }
 
 //
-// Methods for Reader
-//
-
-// Get the advance input for the given index.
-// Return false if not found.
-func (m *NonodoModel) GetAdvanceInput(index int) (AdvanceInput, bool) {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	if index >= len(m.advances) {
-		var input AdvanceInput
-		return input, false
-	}
-	return *m.advances[index], true
-}
-
-// Get the voucher for the given index and input index.
-// Return false if not found.
-func (m *NonodoModel) GetVoucher(voucherIndex, inputIndex int) (Voucher, bool) {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	if inputIndex >= len(m.advances) ||
-		voucherIndex >= len(m.advances[inputIndex].Vouchers) {
-		var voucher Voucher
-		return voucher, false
-	}
-	return m.advances[inputIndex].Vouchers[voucherIndex], true
-}
-
-// Get the notice for the given index and input index.
-// Return false if not found.
-func (m *NonodoModel) GetNotice(noticeIndex, inputIndex int) (Notice, bool) {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	if inputIndex >= len(m.advances) ||
-		noticeIndex >= len(m.advances[inputIndex].Notices) {
-		var notice Notice
-		return notice, false
-	}
-	return m.advances[inputIndex].Notices[noticeIndex], true
-}
-
-// Get the report for the given index and input index.
-// Return false if not found.
-func (m *NonodoModel) GetReport(reportIndex, inputIndex int) (Report, bool) {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	if inputIndex >= len(m.advances) ||
-		reportIndex >= len(m.advances[inputIndex].Reports) {
-		var report Report
-		return report, false
-	}
-	return m.advances[inputIndex].Reports[reportIndex], true
-}
-
-// Get the number of inputs given the filter.
-func (m *NonodoModel) GetNumInputs(filter InputFilter) int {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	n := 0
-	for _, input := range m.advances {
-		if !filter.Filter(input) {
-			n++
-		}
-	}
-	return n
-}
-
-// Get the number of vouchers given the filter.
-func (m *NonodoModel) GetNumVouchers(filter OutputFilter) int {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	n := 0
-	for _, input := range m.advances {
-		for _, voucher := range input.Vouchers {
-			if !filter.Filter(voucher) {
-				n++
-			}
-		}
-	}
-	return n
-}
-
-// Get the number of notices given the filter.
-func (m *NonodoModel) GetNumNotices(filter OutputFilter) int {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	n := 0
-	for _, input := range m.advances {
-		for _, notice := range input.Notices {
-			if !filter.Filter(notice) {
-				n++
-			}
-		}
-	}
-	return n
-}
-
-// Get the number of reports given the filter.
-func (m *NonodoModel) GetNumReports(filter OutputFilter) int {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	n := 0
-	for _, input := range m.advances {
-		for _, report := range input.Reports {
-			if !filter.Filter(report) {
-				n++
-			}
-		}
-	}
-	return n
-}
-
-// Get the inputs given the filter and pagination parameters.
-func (m *NonodoModel) GetInputs(filter InputFilter, offset int, limit int) []AdvanceInput {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	var inputs []AdvanceInput
-	for _, input := range m.advances {
-		if !filter.Filter(input) {
-			inputs = append(inputs, *input)
-		}
-	}
-	return paginate(inputs, offset, limit)
-}
-
-// Get the vouchers given the filter and pagination parameters.
-func (m *NonodoModel) GetVouchers(filter OutputFilter, offset int, limit int) []Voucher {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	var vouchers []Voucher
-	for _, input := range m.advances {
-		for _, voucher := range input.Vouchers {
-			if !filter.Filter(voucher) {
-				vouchers = append(vouchers, voucher)
-			}
-		}
-	}
-	return paginate(vouchers, offset, limit)
-}
-
-// Get the notices given the filter and pagination parameters.
-func (m *NonodoModel) GetNotices(filter OutputFilter, offset int, limit int) []Notice {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	var notices []Notice
-	for _, input := range m.advances {
-		for _, notice := range input.Notices {
-			if !filter.Filter(notice) {
-				notices = append(notices, notice)
-			}
-		}
-	}
-	return paginate(notices, offset, limit)
-}
-
-// Get the reports given the filter and pagination parameters.
-func (m *NonodoModel) GetReports(filter OutputFilter, offset int, limit int) []Report {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-
-	var reports []Report
-	for _, input := range m.advances {
-		for _, report := range input.Reports {
-			if !filter.Filter(report) {
-				reports = append(reports, report)
-			}
-		}
-	}
-	return paginate(reports, offset, limit)
-}
-
-//
 // Auxiliary Methods
 //
 
 func (m *NonodoModel) getProcessedInputCount() int {
-	n := 0
-	for _, input := range m.advances {
-		if input.Status == CompletionStatusUnprocessed {
-			break
-		}
-		n++
+	filter := []*model.ConvenienceFilter{}
+	field := "Status"
+	value := fmt.Sprintf("%d", CompletionStatusUnprocessed)
+	filter = append(filter, &model.ConvenienceFilter{
+		Field: &field,
+		Ne:    &value,
+	})
+	total, err := m.inputRepository.Count(filter)
+	if err != nil {
+		panic(err)
 	}
-	return n
-}
-
-func paginate[T any](slice []T, offset int, limit int) []T {
-	if offset >= len(slice) {
-		return nil
-	}
-	upperBound := offset + limit
-	if upperBound > len(slice) {
-		upperBound = len(slice)
-	}
-	return slice[offset:upperBound]
+	return int(total)
 }

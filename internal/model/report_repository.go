@@ -26,7 +26,7 @@ func (r *ReportRepository) CreateTables() error {
 	if err == nil {
 		slog.Debug("Reports table created")
 	} else {
-		slog.Error("Create table error", err)
+		slog.Error("Create table error", slog.String("Error", err.Error()))
 	}
 	return err
 }
@@ -50,7 +50,7 @@ func (r *ReportRepository) FindByInputAndOutputIndex(
 	outputIndex uint64,
 ) (*Report, error) {
 	rows, err := r.Db.Queryx(`
-		SELECT payload FROM reports 
+		SELECT payload FROM reports
 			WHERE input_index = $1 and output_index = $2
 			LIMIT 1`,
 		inputIndex, outputIndex,
@@ -92,6 +92,7 @@ func (c *ReportRepository) Count(
 		slog.Error("Count execution error")
 		return 0, err
 	}
+	defer stmt.Close()
 	var count uint64
 	err = stmt.Get(&count, args...)
 	if err != nil {
@@ -161,6 +162,7 @@ func (c *ReportRepository) FindAll(
 	if err != nil {
 		return nil, err
 	}
+	defer stmt.Close()
 	var reports []Report
 	rows, err := stmt.Queryx(args...)
 	if err != nil {

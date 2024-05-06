@@ -1,7 +1,11 @@
 package model
 
 import (
+	"fmt"
 	"log/slog"
+	"math/rand"
+	"os"
+	"path"
 	"testing"
 	"time"
 
@@ -16,28 +20,38 @@ import (
 type InputRepositorySuite struct {
 	suite.Suite
 	inputRepository *InputRepository
+	tempDir         string
 }
 
 func (s *InputRepositorySuite) SetupTest() {
 	commons.ConfigureLog(slog.LevelDebug)
-	db := sqlx.MustConnect("sqlite3", ":memory:")
+	tempDir, err := os.MkdirTemp("", "")
+	s.tempDir = tempDir
+	s.NoError(err)
+	sqliteFileName := fmt.Sprintf("input%d.sqlite3", rand.Intn(1000))
+	sqliteFileName = path.Join(tempDir, sqliteFileName)
+	// db := sqlx.MustConnect("sqlite3", ":memory:")
+	db := sqlx.MustConnect("sqlite3", sqliteFileName)
 	s.inputRepository = &InputRepository{
 		Db: db,
 	}
-	err := s.inputRepository.CreateTables()
+	err = s.inputRepository.CreateTables()
 	s.NoError(err)
 }
 
 func TestInputRepositorySuite(t *testing.T) {
+	// t.Parallel()
 	suite.Run(t, new(InputRepositorySuite))
 }
 
 func (s *InputRepositorySuite) TestCreateTables() {
+	defer s.teardown()
 	err := s.inputRepository.CreateTables()
 	s.NoError(err)
 }
 
 func (s *InputRepositorySuite) TestCreateInput() {
+	defer s.teardown()
 	input, err := s.inputRepository.Create(AdvanceInput{
 		Index:       0,
 		Status:      CompletionStatusUnprocessed,
@@ -51,6 +65,7 @@ func (s *InputRepositorySuite) TestCreateInput() {
 }
 
 func (s *InputRepositorySuite) TestCreateAndFindInputByIndex() {
+	defer s.teardown()
 	input, err := s.inputRepository.Create(AdvanceInput{
 		Index:       123,
 		Status:      CompletionStatusUnprocessed,
@@ -73,6 +88,7 @@ func (s *InputRepositorySuite) TestCreateAndFindInputByIndex() {
 }
 
 func (s *InputRepositorySuite) TestCreateInputAndUpdateStatus() {
+	defer s.teardown()
 	input, err := s.inputRepository.Create(AdvanceInput{
 		Index:       2222,
 		Status:      CompletionStatusUnprocessed,
@@ -93,7 +109,38 @@ func (s *InputRepositorySuite) TestCreateInputAndUpdateStatus() {
 	s.Equal(CompletionStatusAccepted, input2.Status)
 }
 
+func (s *InputRepositorySuite) TestCreateInputFindByStatus() {
+	defer s.teardown()
+	input, err := s.inputRepository.Create(AdvanceInput{
+		Index:       2222,
+		Status:      CompletionStatusUnprocessed,
+		MsgSender:   common.Address{},
+		Payload:     common.Hex2Bytes("0x1122"),
+		BlockNumber: 1,
+		Timestamp:   time.Now(),
+	})
+	s.NoError(err)
+	s.Equal(2222, input.Index)
+
+	input2, err := s.inputRepository.FindByStatus(CompletionStatusUnprocessed)
+	s.NoError(err)
+	s.Equal(2222, input2.Index)
+
+	input.Status = CompletionStatusAccepted
+	_, err = s.inputRepository.Update(*input)
+	s.NoError(err)
+
+	input2, err = s.inputRepository.FindByStatus(CompletionStatusUnprocessed)
+	s.NoError(err)
+	s.Nil(input2)
+
+	input2, err = s.inputRepository.FindByStatus(CompletionStatusAccepted)
+	s.NoError(err)
+	s.Equal(2222, input2.Index)
+}
+
 func (s *InputRepositorySuite) TestFindByIndexGt() {
+	defer s.teardown()
 	for i := 0; i < 5; i++ {
 		input, err := s.inputRepository.Create(AdvanceInput{
 			Index:       i,
@@ -119,6 +166,7 @@ func (s *InputRepositorySuite) TestFindByIndexGt() {
 }
 
 func (s *InputRepositorySuite) TestFindByIndexLt() {
+	defer s.teardown()
 	for i := 0; i < 5; i++ {
 		input, err := s.inputRepository.Create(AdvanceInput{
 			Index:       i,
@@ -141,4 +189,8 @@ func (s *InputRepositorySuite) TestFindByIndexLt() {
 	resp, err := s.inputRepository.FindAll(nil, nil, nil, nil, filters)
 	s.NoError(err)
 	s.Equal(3, int(resp.Total))
+}
+
+func (s *InputRepositorySuite) teardown() {
+	defer os.RemoveAll(s.tempDir)
 }

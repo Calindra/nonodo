@@ -105,7 +105,7 @@ func (x *Synchronizer) VoucherPolling(ctx context.Context) error {
 		// Wait a little before doing another request
 		case <-time.After(time.Duration(sleepInSeconds) * time.Second):
 		case <-ctx.Done():
-			slog.Debug("Synchronizer canceled:", ctx.Err())
+			slog.Debug("Synchronizer canceled:", "Error", ctx.Err().Error())
 			return nil
 		}
 	}

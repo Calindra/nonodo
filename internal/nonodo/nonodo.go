@@ -89,7 +89,7 @@ func NewNonodoOpts() NonodoOpts {
 		DisableAdvance:     false,
 		ApplicationArgs:    nil,
 		ConveniencePoC:     false,
-		SqliteFile:         ":memory:",
+		SqliteFile:         "file:memory1?mode=memory&cache=shared",
 		FromBlock:          0,
 		DbImplementation:   "sqlite",
 		LegacyMode:         false,

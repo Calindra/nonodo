@@ -203,7 +203,7 @@ func (a AdapterV1) GetReports(
 		first, last, after, before, inputIndex,
 	)
 	if err != nil {
-		slog.Error("Adapter GetReports error", err)
+		slog.Error("Adapter GetReports error", slog.String("Error", err.Error()))
 		return nil, err
 	}
 	return a.convertToReportConnection(

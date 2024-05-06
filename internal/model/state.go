@@ -177,8 +177,8 @@ func (s *rollupsStateAdvance) finish(status CompletionStatus) {
 			sendAllInputNoticesToDecoder(s.decoder, uint64(s.input.Index), s.notices)
 		}
 	}
-	s.input.Reports = s.reports
-	saveAllReports(s.reportRepository, s.input.Reports)
+	// s.input.Reports = s.reports
+	saveAllReports(s.reportRepository, s.reports)
 	_, err := s.inputRepository.Update(*s.input)
 	if err != nil {
 		panic(err)
@@ -232,6 +232,7 @@ func (s *rollupsStateAdvance) registerException(payload []byte) error {
 	if err != nil {
 		panic(err)
 	}
+	saveAllReports(s.reportRepository, s.reports)
 	slog.Info("nonodo: finished advance with exception")
 	return nil
 }

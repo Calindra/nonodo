@@ -59,6 +59,7 @@ func (c *NoticeRepository) Count(
 	if err != nil {
 		return 0, err
 	}
+	defer stmt.Close()
 	var count uint64
 	err = stmt.Get(&count, args...)
 	if err != nil {
@@ -101,6 +102,7 @@ func (c *NoticeRepository) FindAllNotices(
 	if err != nil {
 		return nil, err
 	}
+	defer stmt.Close()
 	var notices []model.ConvenienceNotice
 	err = stmt.Select(&notices, args...)
 	if err != nil {
@@ -122,6 +124,7 @@ func (c *NoticeRepository) FindByInputAndOutputIndex(
 	if err != nil {
 		return nil, err
 	}
+	defer stmt.Close()
 	var p model.ConvenienceNotice
 	err = stmt.Get(&p, inputIndex, outputIndex)
 	if err != nil {
