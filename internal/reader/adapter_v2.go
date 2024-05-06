@@ -16,6 +16,7 @@ import (
 type AdapterV2 struct {
 	convenienceService *services.ConvenienceService
 	httpClient         HttpClient
+	InputBlobAdapter   InputBlobAdapter
 }
 
 type InputByIdResponse struct {
@@ -49,22 +50,35 @@ type ReportByIdResponse struct {
 func NewAdapterV2(
 	convenienceService *services.ConvenienceService,
 	httpClient HttpClient,
+	inputBlobAdapter InputBlobAdapter,
 ) Adapter {
 	slog.Debug("NewAdapterV2")
 	return AdapterV2{
 		convenienceService: convenienceService,
 		httpClient:         httpClient,
+		InputBlobAdapter:   inputBlobAdapter,
 	}
 }
 
 func (a AdapterV2) GetReport(reportIndex int, inputIndex int) (*graphql.Report, error) {
-	requestBody := []byte(fmt.Sprintf(`{
-    "query": "query Reports($index: Int, $inputIndex: Int) { reports(condition: {index: $index, inputIndex: $inputIndex}) { edges { node { index blob inputIndex } } } }",
-    "variables": {
-      "index": %d,
-      "inputIndex": %d
-    }
-  }`, reportIndex, inputIndex))
+	requestBody := []byte(fmt.Sprintf(`
+    {
+        "query": "query Reports($index: Int, $inputIndex: Int) {
+            reports(condition: {index: $index, inputIndex: $inputIndex}) {
+                edges {
+                    node {
+                        index
+                        blob
+                        inputIndex
+                    }
+                }
+            }
+        }",
+        "variables": {
+            "index": %d,
+            "inputIndex": %d
+        }
+    }`, reportIndex, inputIndex))
 
 	response, err := a.httpClient.Post(requestBody)
 
@@ -87,7 +101,13 @@ func (a AdapterV2) GetReport(reportIndex int, inputIndex int) (*graphql.Report, 
 	return nil, nil
 }
 
-func (a AdapterV2) GetReports(first *int, last *int, after *string, before *string, inputIndex *int) (*model.ReportConnection, error) {
+func (a AdapterV2) GetReports(
+	first *int,
+	last *int,
+	after *string,
+	before *string,
+	inputIndex *int) (*model.ReportConnection, error) {
+
 	forward := first != nil || after != nil
 	backward := last != nil || before != nil
 
@@ -107,14 +127,26 @@ func (a AdapterV2) GetReports(first *int, last *int, after *string, before *stri
 			afterValue = *after
 		}
 
-		requestBody := []byte(fmt.Sprintf(`{
-			"query": "query MyQuery($first: Int, $after: String, $inputIndex: Int) { reports(first: $first, after: $after, condition: {inputIndex: $inputIndex}) { edges { cursor node { index inputIndex blob } } } }",
-			"variables": {
-			  "first": %d,
-			  "after": %s,
-              "inputIndex": %d
-			}
-		  }`, first, afterValue, inputIndex))
+		requestBody := []byte(fmt.Sprintf(`
+    {
+        "query": "query MyQuery($first: Int, $after: String, $inputIndex: Int) {
+            reports(first: $first, after: $after, condition: {inputIndex: $inputIndex}) {
+                edges {
+                    cursor
+                    node {
+                        index
+                        inputIndex
+                        blob
+                    }
+                }
+            }
+        }",
+        "variables": {
+            "first": %d,
+            "after": %s,
+            "inputIndex": %d
+        }
+    }`, first, afterValue, inputIndex))
 
 		response, err := a.httpClient.Post(requestBody)
 
@@ -134,7 +166,9 @@ func (a AdapterV2) GetReports(first *int, last *int, after *string, before *stri
 		reports := make([]*graphql.Report, len(reportByIdResponse.Data.Reports.Edges))
 
 		for i := range reportByIdResponse.Data.Reports.Edges {
-			convertedReport, err := convertReport(reportByIdResponse.Data.Reports.Edges[i].Node)
+			convertedReport, err :=
+				convertReport(
+					reportByIdResponse.Data.Reports.Edges[i].Node)
 
 			if err != nil {
 				return nil, err
@@ -146,7 +180,10 @@ func (a AdapterV2) GetReports(first *int, last *int, after *string, before *stri
 		var offset int
 
 		if after != nil {
-			offset, err = commons.DecodeCursor(*after, len(reportByIdResponse.Data.Reports.Edges))
+			offset, err = commons.DecodeCursor(
+				*after,
+				len(reportByIdResponse.Data.Reports.Edges))
+
 			if err != nil {
 				return nil, err
 			}
@@ -155,7 +192,10 @@ func (a AdapterV2) GetReports(first *int, last *int, after *string, before *stri
 			offset = 0
 		}
 
-		return graphql.NewConnection(offset, len(reportByIdResponse.Data.Reports.Edges), reports), nil
+		return graphql.NewConnection(
+			offset,
+			len(reportByIdResponse.Data.Reports.Edges),
+			reports), nil
 
 	} else {
 		var beforeValue string
@@ -164,14 +204,26 @@ func (a AdapterV2) GetReports(first *int, last *int, after *string, before *stri
 			beforeValue = *before
 		}
 
-		requestBody := []byte(fmt.Sprintf(`{
-			"query": "query MyQuery($last: Int, $before: String, $inputIndex: Int) { reports(last: $last, before: $before, condition: {inputIndex: $inputIndex}) { edges { cursor node { index inputIndex blob } } } }",
-			"variables": {
-			  "last": %d,
-			  "before": %s,
-              "inputIndex": %d
-			}
-		  }`, last, beforeValue, inputIndex))
+		requestBody := []byte(fmt.Sprintf(`
+    {
+        "query": "query MyQuery($last: Int, $before: String, $inputIndex: Int) {
+            reports(last: $last, before: $before, condition: {inputIndex: $inputIndex}) {
+                edges {
+                    cursor
+                    node {
+                        index
+                        inputIndex
+                        blob
+                    }
+                }
+            }
+        }",
+        "variables": {
+            "last": %d,
+            "before": %s,
+            "inputIndex": %d
+        }
+    }`, last, beforeValue, inputIndex))
 
 		response, err := a.httpClient.Post(requestBody)
 
@@ -191,7 +243,9 @@ func (a AdapterV2) GetReports(first *int, last *int, after *string, before *stri
 		reports := make([]*graphql.Report, len(reportByIdResponse.Data.Reports.Edges))
 
 		for i := range reportByIdResponse.Data.Reports.Edges {
-			convertedReport, err := convertReport(reportByIdResponse.Data.Reports.Edges[i].Node)
+			convertedReport, err :=
+				convertReport(
+					reportByIdResponse.Data.Reports.Edges[i].Node)
 
 			if err != nil {
 				return nil, err
@@ -225,12 +279,21 @@ func (a AdapterV2) GetReports(first *int, last *int, after *string, before *stri
 		}
 		offset = max(0, beforeOffset-limit)
 
-		return graphql.NewConnection(offset, len(reportByIdResponse.Data.Reports.Edges), reports), nil
+		return graphql.NewConnection(
+			offset,
+			len(reportByIdResponse.Data.Reports.Edges),
+			reports), nil
 
 	}
 }
 
-func (a AdapterV2) GetInputs(first *int, last *int, after *string, before *string, where *model.InputFilter) (*model.InputConnection, error) {
+func (a AdapterV2) GetInputs(
+	first *int,
+	last *int,
+	after *string,
+	before *string,
+	where *model.InputFilter) (*model.InputConnection, error) {
+
 	forward := first != nil || after != nil
 	backward := last != nil || before != nil
 
@@ -244,19 +307,9 @@ func (a AdapterV2) GetInputs(first *int, last *int, after *string, before *strin
 	}
 
 	if forward {
-		var afterValue string
+		query := getInputForwardQuery(first, after, where)
 
-		if after != nil {
-			afterValue = *after
-		}
-
-		requestBody := []byte(fmt.Sprintf(`{
-		"query": "query MyQuery($first: Int, $after: String) { inputs(first: $first, after: $after) { edges { cursor node { index blob status } } } }",
-		"variables": {
-		  "first": %d,
-		  "after": %s
-		}
-	  }`, first, afterValue))
+		requestBody := []byte(query)
 
 		response, err := a.httpClient.Post(requestBody)
 
@@ -276,7 +329,9 @@ func (a AdapterV2) GetInputs(first *int, last *int, after *string, before *strin
 		inputs := make([]*graphql.Input, len(inputByIdResponse.Data.Inputs.Edges))
 
 		for i := range inputByIdResponse.Data.Inputs.Edges {
-			convertedInput, err := convertInput(inputByIdResponse.Data.Inputs.Edges[i].Node)
+			convertedInput, err :=
+				a.InputBlobAdapter.Adapt(
+					inputByIdResponse.Data.Inputs.Edges[i].Node)
 
 			if err != nil {
 				return nil, err
@@ -288,7 +343,10 @@ func (a AdapterV2) GetInputs(first *int, last *int, after *string, before *strin
 		var offset int
 
 		if after != nil {
-			offset, err = commons.DecodeCursor(*after, len(inputByIdResponse.Data.Inputs.Edges))
+			offset, err = commons.DecodeCursor(
+				*after,
+				len(inputByIdResponse.Data.Inputs.Edges))
+
 			if err != nil {
 				return nil, err
 			}
@@ -297,22 +355,15 @@ func (a AdapterV2) GetInputs(first *int, last *int, after *string, before *strin
 			offset = 0
 		}
 
-		return graphql.NewConnection(offset, len(inputByIdResponse.Data.Inputs.Edges), inputs), nil
+		return graphql.NewConnection(
+			offset,
+			len(inputByIdResponse.Data.Inputs.Edges),
+			inputs), nil
 
 	} else {
-		var beforeValue string
+		query := getInputBackwardQuery(last, before, where)
 
-		if before != nil {
-			beforeValue = *before
-		}
-
-		requestBody := []byte(fmt.Sprintf(`{
-		"query": "query MyQuery($last: Int, $before: String) { inputs(last: $last, before: $before) { edges { cursor node { index blob status } } } }",
-		"variables": {
-		  "last": %d,
-		  "before": %s
-		}
-	  }`, last, beforeValue))
+		requestBody := []byte(query)
 
 		response, err := a.httpClient.Post(requestBody)
 
@@ -332,7 +383,9 @@ func (a AdapterV2) GetInputs(first *int, last *int, after *string, before *strin
 		inputs := make([]*graphql.Input, len(inputByIdResponse.Data.Inputs.Edges))
 
 		for i := range inputByIdResponse.Data.Inputs.Edges {
-			convertedInput, err := convertInput(inputByIdResponse.Data.Inputs.Edges[i].Node)
+			convertedInput, err :=
+				a.InputBlobAdapter.Adapt(
+					inputByIdResponse.Data.Inputs.Edges[i].Node)
 
 			if err != nil {
 				return nil, err
@@ -366,19 +419,202 @@ func (a AdapterV2) GetInputs(first *int, last *int, after *string, before *strin
 		}
 		offset = max(0, beforeOffset-limit)
 
-		return graphql.NewConnection(offset, len(inputByIdResponse.Data.Inputs.Edges), inputs), nil
+		return graphql.NewConnection(
+			offset,
+			len(inputByIdResponse.Data.Inputs.Edges),
+			inputs), nil
+	}
+}
+
+func getInputBackwardQuery(last *int, before *string, where *graphql.InputFilter) string {
+	var beforeValue string
+
+	if before != nil {
+		beforeValue = *before
 	}
 
-	return nil, nil
+	if where != nil {
+		if where.IndexLowerThan != nil {
+			return fmt.Sprintf(`
+    {
+        "query": "query MyQuery($filter: InputFilter, $last: Int, $before: String) {
+            inputs(filter: $filter, last: $last, before: $before) {
+                edges {
+                    cursor
+                    node {
+                        index
+                        blob
+                        status
+                    }
+                }
+            }
+        }",
+        "variables": {
+            "filter": {
+                "index": {
+                    "lessThan": %d
+                }
+            },
+            "last": %d,
+            "before": %s
+        }
+    }`, *where.IndexLowerThan, last, beforeValue)
+
+		}
+
+		if where.IndexGreaterThan != nil {
+			return fmt.Sprintf(`
+    {
+        "query": "query MyQuery($filter: InputFilter, $last: Int, $before: String) {
+            inputs(filter: $filter, last: $last, before: $before) {
+                edges {
+                    cursor
+                    node {
+                        index
+                        blob
+                        status
+                    }
+                }
+            }
+        }",
+        "variables": {
+            "filter": {
+                "index": {
+                    "greaterThan": %d
+                }
+            },
+            "last": %d,
+            "before": %s
+        }
+    }`, *where.IndexGreaterThan, last, beforeValue)
+
+		}
+	}
+
+	return fmt.Sprintf(`
+    {
+        "query": "query MyQuery($last: Int, $before: String) {
+            inputs(last: $last, before: $before) {
+                edges {
+                    cursor
+                    node {
+                        index
+                        blob
+                        status
+                    }
+                }
+            }
+        }",
+        "variables": {
+            "last": %d,
+            "before": %s
+        }
+    }`, last, beforeValue)
+
+}
+
+func getInputForwardQuery(first *int, after *string, where *graphql.InputFilter) string {
+	var afterValue string
+
+	if after != nil {
+		afterValue = *after
+	}
+
+	if where != nil {
+		if where.IndexLowerThan != nil {
+			return fmt.Sprintf(`
+    {
+        "query": "query MyQuery($filter: InputFilter, $first: Int, $after: String) {
+            inputs(filter: $filter, first: $first, after: $after) {
+                edges {
+                    cursor
+                    node {
+                        index
+                        blob
+                        status
+                    }
+                }
+            }
+        }",
+        "variables": {
+            "filter": {
+                "index": {
+                    "lessThan": %d
+                }
+            },
+            "first": %d,
+            "after": %s
+        }
+    }`, *where.IndexLowerThan, first, afterValue)
+		}
+
+		if where.IndexGreaterThan != nil {
+			return fmt.Sprintf(`
+    {
+        "query": "query MyQuery($filter: InputFilter, $first: Int, $after: String) {
+            inputs(filter: $filter, first: $first, after: $after) {
+                edges {
+                    cursor
+                    node {
+                        index
+                        blob
+                        status
+                    }
+                }
+            }
+        }",
+        "variables": {
+            "filter": {
+                "index": {
+                    "greaterThan": %d
+                }
+            },
+            "first": %d,
+            "after": %s
+        }
+    }`, *where.IndexGreaterThan, first, afterValue)
+		}
+	}
+
+	return fmt.Sprintf(`
+	   {
+			"query": "query MyQuery($first: Int, $after: String) {
+				inputs(first: $first, after: $after) {
+					edges {
+						cursor
+						node {
+							index
+							blob
+							status
+						}
+					}
+				}
+			}",
+			"variables": {
+				"first": %d,
+				"after": %s
+			}
+		}`, first, afterValue)
 }
 
 func (a AdapterV2) GetInput(index int) (*graphql.Input, error) {
 	requestBody := []byte(fmt.Sprintf(`{
-        "query": "query Inputs($index: Int) { inputs(condition: {index: $index}) { edges { node { index blob status } } } }",
-        "variables": {
-            "index":%d
-        }
-    }`, index))
+       {
+			"query": "query Inputs($index: Int) { 
+				inputs(condition: {index: $index}) {
+					edges {
+						node {
+							index
+							blob
+							status
+						}
+					}
+				}
+			}",
+			"variables": {
+				"index": %d
+			}
+    	}`, index))
 
 	response, err := a.httpClient.Post(requestBody)
 
@@ -396,7 +632,7 @@ func (a AdapterV2) GetInput(index int) (*graphql.Input, error) {
 	}
 
 	if len(inputByIdResponse.Data.Inputs.Edges) > 0 {
-		return convertInput(inputByIdResponse.Data.Inputs.Edges[0].Node)
+		return a.InputBlobAdapter.Adapt(inputByIdResponse.Data.Inputs.Edges[0].Node)
 	}
 
 	return nil, nil
@@ -423,7 +659,12 @@ func (a AdapterV2) GetNotice(noticeIndex int, inputIndex int) (*model.Notice, er
 	}, nil
 }
 
-func (a AdapterV2) GetNotices(first *int, last *int, after *string, before *string, inputIndex *int) (*model.NoticeConnection, error) {
+func (a AdapterV2) GetNotices(
+	first *int,
+	last *int,
+	after *string,
+	before *string,
+	inputIndex *int) (*model.NoticeConnection, error) {
 	filters := []*convenience.ConvenienceFilter{}
 	if inputIndex != nil {
 		field := repos.INPUT_INDEX
@@ -470,7 +711,13 @@ func (a AdapterV2) GetVoucher(voucherIndex int, inputIndex int) (*model.Voucher,
 	}, nil
 }
 
-func (a AdapterV2) GetVouchers(first *int, last *int, after *string, before *string, inputIndex *int) (*model.VoucherConnection, error) {
+func (a AdapterV2) GetVouchers(
+	first *int,
+	last *int,
+	after *string,
+	before *string,
+	inputIndex *int) (*model.VoucherConnection, error) {
+
 	filters := []*convenience.ConvenienceFilter{}
 	if inputIndex != nil {
 		field := repos.INPUT_INDEX
@@ -499,22 +746,6 @@ func (a AdapterV2) GetVouchers(first *int, last *int, after *string, before *str
 	)
 }
 
-// TODO finalize convert
-func convertInput(node struct {
-	Index  int    `json:"index"`
-	Blob   string `json:"blob"`
-	Status string `json:"status"`
-}) (*graphql.Input, error) {
-	return &graphql.Input{
-		Index:       node.Index,
-		Status:      convertCompletionStatus(node.Status),
-		MsgSender:   "",
-		Timestamp:   "",
-		BlockNumber: "",
-		Payload:     "",
-	}, nil
-}
-
 func convertReport(node struct {
 	Index      int    `json:"index"`
 	Blob       string `json:"blob"`
@@ -525,19 +756,4 @@ func convertReport(node struct {
 		Payload:    node.Blob,
 		InputIndex: node.InputIndex,
 	}, nil
-}
-
-func convertCompletionStatus(status string) graphql.CompletionStatus {
-	switch status {
-	case model.CompletionStatusUnprocessed.String():
-		return graphql.CompletionStatusUnprocessed
-	case model.CompletionStatusAccepted.String():
-		return graphql.CompletionStatusAccepted
-	case model.CompletionStatusRejected.String():
-		return graphql.CompletionStatusRejected
-	case model.CompletionStatusException.String():
-		return graphql.CompletionStatusException
-	default:
-		panic("invalid completion status")
-	}
 }
