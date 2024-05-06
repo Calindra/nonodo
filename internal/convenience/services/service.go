@@ -34,6 +34,16 @@ func (s *ConvenienceService) CreateNotice(
 	ctx context.Context,
 	notice *model.ConvenienceNotice,
 ) (*model.ConvenienceNotice, error) {
+	noticeInDb, err := s.noticeRepository.FindByInputAndOutputIndex(
+		ctx, notice.InputIndex, notice.OutputIndex,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if noticeInDb != nil {
+		return s.noticeRepository.Update(ctx, notice)
+	}
 	return s.noticeRepository.Create(ctx, notice)
 }
 func (s *ConvenienceService) CreateVoucher(

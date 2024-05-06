@@ -31,26 +31,7 @@ const (
 
 // Advance defines model for Advance.
 type Advance struct {
-	// AppContract 20-byte address of the application contract.
-	AppContract string `json:"app_contract"`
-
-	// BlockNumber Block number when input was posted.
-	BlockNumber uint64 `json:"block_number"`
-
-	// BlockTimestamp Unix timestamp of block in milliseconds.
-	BlockTimestamp uint64 `json:"block_timestamp"`
-
-	// ChainId Network identifier.
-	ChainId uint64 `json:"chain_id"`
-
-	// EpochIndex Deprecated. Always receives 0.
-	EpochIndex uint64 `json:"epoch_index"`
-
-	// InputIndex Input index starting from genesis.
-	InputIndex uint64 `json:"input_index"`
-
-	// MsgSender 20-byte address of the account that submitted the input.
-	MsgSender string `json:"msg_sender"`
+	Metadata Metadata `json:"metadata"`
 
 	// Payload The payload is in the Ethereum hex binary format.
 	// The first two characters are '0x' followed by pairs of hexadecimal numbers that correspond to one byte.
@@ -79,24 +60,6 @@ type Finish struct {
 // FinishStatus defines model for Finish.Status.
 type FinishStatus string
 
-// GioRequest defines model for GioRequest.
-type GioRequest struct {
-	// Domain An arbitrary number representing the request domain.
-	Domain uint16 `json:"domain"`
-
-	// Id Domain-specific information identifying the request.
-	Id string `json:"id"`
-}
-
-// GioResponseRollup defines model for GioResponseRollup.
-type GioResponseRollup struct {
-	// Code A number representing the response code.
-	Code uint16 `json:"code"`
-
-	// Data The response data.
-	Data string `json:"data"`
-}
-
 // IndexResponse defines model for IndexResponse.
 type IndexResponse struct {
 	// Index Position in the Merkle tree.
@@ -105,11 +68,29 @@ type IndexResponse struct {
 
 // Inspect defines model for Inspect.
 type Inspect struct {
-	// Payload The payload contains arbitrary hex-encoded binary data.
+	// Payload The payload is in the Ethereum hex binary format.
 	// The first two characters are '0x' followed by pairs of hexadecimal numbers that correspond to one byte.
 	// For instance, '0xdeadbeef' corresponds to a payload with length 4 and bytes 222, 173, 190, 175.
 	// An empty payload is represented by the string '0x'.
-	Payload string `json:"payload"`
+	Payload Payload `json:"payload"`
+}
+
+// Metadata defines model for Metadata.
+type Metadata struct {
+	// BlockNumber Block number when input was posted.
+	BlockNumber uint64 `json:"block_number"`
+
+	// EpochIndex Deprecated. Always receives 0.
+	EpochIndex uint64 `json:"epoch_index"`
+
+	// InputIndex Input index starting from genesis.
+	InputIndex uint64 `json:"input_index"`
+
+	// MsgSender 20-byte address of the account that submitted the input.
+	MsgSender string `json:"msg_sender"`
+
+	// Timestamp Unix timestamp of block in milliseconds.
+	Timestamp uint64 `json:"timestamp"`
 }
 
 // Notice defines model for Notice.
@@ -162,9 +143,6 @@ type Voucher struct {
 	// by its ABI-encoded arguments.
 	// ref: https://docs.soliditylang.org/en/v0.8.19/abi-spec.html
 	Payload string `json:"payload"`
-
-	// Value A big-endian 32-byte unsigned integer in hex.
-	Value string `json:"value"`
 }
 
 // RegisterExceptionJSONRequestBody defines body for RegisterException for application/json ContentType.
@@ -172,9 +150,6 @@ type RegisterExceptionJSONRequestBody = Exception
 
 // FinishJSONRequestBody defines body for Finish for application/json ContentType.
 type FinishJSONRequestBody = Finish
-
-// GioJSONRequestBody defines body for Gio for application/json ContentType.
-type GioJSONRequestBody = GioRequest
 
 // AddNoticeJSONRequestBody defines body for AddNotice for application/json ContentType.
 type AddNoticeJSONRequestBody = Notice
@@ -330,11 +305,6 @@ type ClientInterface interface {
 
 	Finish(ctx context.Context, body FinishJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// GioWithBody request with any body
-	GioWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	Gio(ctx context.Context, body GioJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
-
 	// AddNoticeWithBody request with any body
 	AddNoticeWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -389,30 +359,6 @@ func (c *Client) FinishWithBody(ctx context.Context, contentType string, body io
 
 func (c *Client) Finish(ctx context.Context, body FinishJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewFinishRequest(c.Server, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) GioWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGioRequestWithBody(c.Server, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) Gio(ctx context.Context, body GioJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewGioRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -556,46 +502,6 @@ func NewFinishRequestWithBody(server string, contentType string, body io.Reader)
 	}
 
 	operationPath := fmt.Sprintf("/finish")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", queryURL.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
-
-	return req, nil
-}
-
-// NewGioRequest calls the generic Gio builder with application/json body
-func NewGioRequest(server string, body GioJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewGioRequestWithBody(server, "application/json", bodyReader)
-}
-
-// NewGioRequestWithBody generates requests for Gio with any type of body
-func NewGioRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/gio")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -788,11 +694,6 @@ type ClientWithResponsesInterface interface {
 
 	FinishWithResponse(ctx context.Context, body FinishJSONRequestBody, reqEditors ...RequestEditorFn) (*FinishResponse, error)
 
-	// GioWithBodyWithResponse request with any body
-	GioWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*GioResponse, error)
-
-	GioWithResponse(ctx context.Context, body GioJSONRequestBody, reqEditors ...RequestEditorFn) (*GioResponse, error)
-
 	// AddNoticeWithBodyWithResponse request with any body
 	AddNoticeWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AddNoticeResponse, error)
 
@@ -846,28 +747,6 @@ func (r FinishResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r FinishResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type GioResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *GioResponseRollup
-}
-
-// Status returns HTTPResponse.Status
-func (r GioResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r GioResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -973,23 +852,6 @@ func (c *ClientWithResponses) FinishWithResponse(ctx context.Context, body Finis
 	return ParseFinishResponse(rsp)
 }
 
-// GioWithBodyWithResponse request with arbitrary body returning *GioResponse
-func (c *ClientWithResponses) GioWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*GioResponse, error) {
-	rsp, err := c.GioWithBody(ctx, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseGioResponse(rsp)
-}
-
-func (c *ClientWithResponses) GioWithResponse(ctx context.Context, body GioJSONRequestBody, reqEditors ...RequestEditorFn) (*GioResponse, error) {
-	rsp, err := c.Gio(ctx, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseGioResponse(rsp)
-}
-
 // AddNoticeWithBodyWithResponse request with arbitrary body returning *AddNoticeResponse
 func (c *ClientWithResponses) AddNoticeWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AddNoticeResponse, error) {
 	rsp, err := c.AddNoticeWithBody(ctx, contentType, body, reqEditors...)
@@ -1083,32 +945,6 @@ func ParseFinishResponse(rsp *http.Response) (*FinishResponse, error) {
 	return response, nil
 }
 
-// ParseGioResponse parses an HTTP response from a GioWithResponse call
-func ParseGioResponse(rsp *http.Response) (*GioResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &GioResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest GioResponseRollup
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	}
-
-	return response, nil
-}
-
 // ParseAddNoticeResponse parses an HTTP response from a AddNoticeWithResponse call
 func ParseAddNoticeResponse(rsp *http.Response) (*AddNoticeResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -1185,9 +1021,6 @@ type ServerInterface interface {
 	// Finish and get next request
 	// (POST /finish)
 	Finish(ctx echo.Context) error
-	// Generic Input/Output
-	// (POST /gio)
-	Gio(ctx echo.Context) error
 	// Add a new notice
 	// (POST /notice)
 	AddNotice(ctx echo.Context) error
@@ -1219,15 +1052,6 @@ func (w *ServerInterfaceWrapper) Finish(ctx echo.Context) error {
 
 	// Invoke the callback with all the unmarshaled arguments
 	err = w.Handler.Finish(ctx)
-	return err
-}
-
-// Gio converts echo context to params.
-func (w *ServerInterfaceWrapper) Gio(ctx echo.Context) error {
-	var err error
-
-	// Invoke the callback with all the unmarshaled arguments
-	err = w.Handler.Gio(ctx)
 	return err
 }
 
@@ -1288,7 +1112,6 @@ func RegisterHandlersWithBaseURL(router EchoRouter, si ServerInterface, baseURL 
 
 	router.POST(baseURL+"/exception", wrapper.RegisterException)
 	router.POST(baseURL+"/finish", wrapper.Finish)
-	router.POST(baseURL+"/gio", wrapper.Gio)
 	router.POST(baseURL+"/notice", wrapper.AddNotice)
 	router.POST(baseURL+"/report", wrapper.AddReport)
 	router.POST(baseURL+"/voucher", wrapper.AddVoucher)

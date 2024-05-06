@@ -20,6 +20,7 @@ import (
 	"github.com/calindra/nonodo/internal/model"
 	"github.com/calindra/nonodo/internal/reader"
 	"github.com/calindra/nonodo/internal/rollup"
+	v1 "github.com/calindra/nonodo/internal/rollup/v1"
 	"github.com/calindra/nonodo/internal/supervisor"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
@@ -65,6 +66,9 @@ type NonodoOpts struct {
 	SqliteFile       string
 	FromBlock        uint64
 	DbImplementation string
+
+	// If set, enables legacy mode.
+	LegacyMode bool
 }
 
 // Create the options struct with default values.
@@ -85,9 +89,10 @@ func NewNonodoOpts() NonodoOpts {
 		DisableAdvance:     false,
 		ApplicationArgs:    nil,
 		ConveniencePoC:     false,
-		SqliteFile:         ":memory:",
+		SqliteFile:         "file:memory1?mode=memory&cache=shared",
 		FromBlock:          0,
 		DbImplementation:   "sqlite",
+		LegacyMode:         true,
 	}
 }
 
@@ -98,16 +103,16 @@ func NewSupervisorPoC(opts NonodoOpts) supervisor.SupervisorWorker {
 
 	if opts.DbImplementation == "postgres" {
 		slog.Info("Using PostGres DB ...")
-		postGresHost := os.Getenv("POSTGRES_HOST")
-		postGresPort := os.Getenv("POSTGRES_PORT")
-		postGresDataBase := os.Getenv("POSTGRES_DB")
-		postGresUser := os.Getenv("POSTGRES_USER")
-		postGresPassword := os.Getenv("POSTGRES_PASSWORD")
+		postgresHost := os.Getenv("POSTGRES_HOST")
+		postgresPort := os.Getenv("POSTGRES_PORT")
+		postgresDataBase := os.Getenv("POSTGRES_DB")
+		postgresUser := os.Getenv("POSTGRES_USER")
+		postgresPassword := os.Getenv("POSTGRES_PASSWORD")
 
 		connectionString := fmt.Sprintf("host=%s port=%s user=%s "+
 			"dbname=%s password=%s sslmode=disable",
-			postGresHost, postGresPort, postGresUser,
-			postGresDataBase, postGresPassword)
+			postgresHost, postgresPort, postgresUser,
+			postgresDataBase, postgresPassword)
 
 		db = sqlx.MustConnect("postgres", connectionString)
 	} else {
@@ -175,7 +180,12 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		ErrorMessage: "Request timed out",
 		Timeout:      HttpTimeout,
 	}))
-	rollup.Register(re, model)
+
+	if opts.LegacyMode {
+		v1.Register(re, model)
+	} else {
+		rollup.Register(re, model)
+	}
 
 	if opts.RpcUrl == "" && !opts.DisableDevnet {
 		w.Workers = append(w.Workers, devnet.AnvilWorker{

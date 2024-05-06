@@ -6,6 +6,8 @@ package devnet
 // Input box address in devnet.
 const InputBoxAddress = "0x59b22D57D4f067708AB0c00552767405926dc768"
 
+const ApplicationContractName = "CartesiDApp"
+
 // Application address in devnet.
 // sunodo v0.10.4
 // const ApplicationAddress = "0x70ac08179605AF2D9e75782b8DEcDD3c22aA4D0C"
