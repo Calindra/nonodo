@@ -32,7 +32,7 @@ func (r *InputRepository) CreateTables() error {
 	if err == nil {
 		slog.Debug("Inputs table created")
 	} else {
-		slog.Error("Create table error", err)
+		slog.Error("Create table error", "error", err)
 	}
 	return err
 }
@@ -73,7 +73,7 @@ func (r *InputRepository) Create(input AdvanceInput) (*AdvanceInput, error) {
 
 func (r *InputRepository) Update(input AdvanceInput) (*AdvanceInput, error) {
 	sql := `UPDATE inputs
-		SET status = $1, exception = $2 
+		SET status = $1, exception = $2
 		WHERE input_index = $3`
 	_, err := r.Db.Exec(
 		sql,
@@ -88,7 +88,7 @@ func (r *InputRepository) Update(input AdvanceInput) (*AdvanceInput, error) {
 }
 
 func (r *InputRepository) FindByStatus(status CompletionStatus) (*AdvanceInput, error) {
-	sql := `SELECT 
+	sql := `SELECT
 		input_index,
 		status,
 		msg_sender,
@@ -116,7 +116,7 @@ func (r *InputRepository) FindByStatus(status CompletionStatus) (*AdvanceInput, 
 }
 
 func (r *InputRepository) FindByIndex(index int) (*AdvanceInput, error) {
-	sql := `SELECT 
+	sql := `SELECT
 		input_index,
 		status,
 		msg_sender,
@@ -158,6 +158,7 @@ func (c *InputRepository) Count(
 		slog.Error("Count execution error")
 		return 0, err
 	}
+	defer stmt.Close()
 	var count uint64
 	err = stmt.Get(&count, args...)
 	if err != nil {
@@ -179,7 +180,7 @@ func (c *InputRepository) FindAll(
 		slog.Error("database error", "err", err)
 		return nil, err
 	}
-	query := `SELECT 
+	query := `SELECT
 		input_index,
 		status,
 		msg_sender,
@@ -209,6 +210,7 @@ func (c *InputRepository) FindAll(
 	if err != nil {
 		return nil, err
 	}
+	defer stmt.Close()
 	var inputs []AdvanceInput
 	rows, err := stmt.Queryx(args...)
 	if err != nil {

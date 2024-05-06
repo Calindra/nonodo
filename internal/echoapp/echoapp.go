@@ -10,7 +10,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/calindra/nonodo/internal/rollup"
+	"github.com/calindra/nonodo/internal/rollup/v1"
 )
 
 // This worker uses the rollup API to implement an echo application.
@@ -95,7 +95,7 @@ func handleAdvance(
 
 	// add notice
 	noticeReq := rollup.Notice{
-		Payload: advance.Payload,
+		Payload: fmt.Sprintf("%sff", advance.Payload),
 	}
 	noticeResp, err := client.AddNotice(ctx, noticeReq)
 	if err != nil {

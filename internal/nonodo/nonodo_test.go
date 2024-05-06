@@ -21,6 +21,7 @@ import (
 	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/calindra/nonodo/internal/inspect"
 	"github.com/calindra/nonodo/internal/readerclient"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/stretchr/testify/suite"
 )
@@ -79,13 +80,13 @@ func (s *NonodoSuite) TestItProcessesAdvanceInputs() {
 		voucher := input.Vouchers.Edges[0].Node
 		s.Equal(payloads[i][:], s.decodeHex(voucher.Payload))
 		s.Equal(devnet.SenderAddress, voucher.Destination)
-		s.Equal(payloads[i][:], s.decodeHex(input.Notices.Edges[0].Node.Payload))
+		s.Equal(common.Bytes2Hex(payloads[i][:])+"ff",
+			input.Notices.Edges[0].Node.Payload[2:])
 		s.Equal(payloads[i][:], s.decodeHex(input.Reports.Edges[0].Node.Payload))
 	}
 }
 
 func (s *NonodoSuite) TestGraphQLVoucher() {
-	// defer s.teardown()
 	opts := NewNonodoOpts()
 	// we are using file cuz there is problem with memory
 	// no such table: reports
@@ -113,6 +114,37 @@ func (s *NonodoSuite) TestGraphQLVoucher() {
 	voucher, err := readerclient.GetVoucher(s.ctx, s.graphqlClient, 0, 1)
 	s.NoError(err)
 	s.Equal(payloads[1][:], s.decodeHex(voucher.Voucher.Payload))
+}
+
+func (s *NonodoSuite) TestGraphQLNotice() {
+	opts := NewNonodoOpts()
+	// we are using file cuz there is problem with memory
+	// no such table: reports
+	tempDir, err := os.MkdirTemp("", "")
+	s.NoError(err)
+	sqliteFileName := fmt.Sprintf("test%d.sqlite3", time.Now().UnixMilli())
+	opts.EnableEcho = true
+	opts.SqliteFile = path.Join(tempDir, sqliteFileName)
+	s.setupTest(opts)
+	defer os.RemoveAll(tempDir)
+	s.T().Log("sending advance inputs")
+	const n = 3
+	var payloads [n][32]byte
+	for i := 0; i < n; i++ {
+		payloads[i] = s.makePayload()
+		err := devnet.AddInput(s.ctx, s.rpcUrl, payloads[i][:])
+		s.NoError(err)
+	}
+
+	s.T().Log("waiting until last input is ready")
+	err = s.waitForAdvanceInput(n - 1)
+	s.NoError(err)
+
+	s.T().Log("verifying voucher")
+	notice, err := readerclient.GetNotice(s.ctx, s.graphqlClient, 0, 1)
+	s.NoError(err)
+	s.Equal(common.Bytes2Hex(payloads[1][:])+"ff",
+		notice.Notice.Payload[2:])
 }
 
 func (s *NonodoSuite) TestItProcessesInspectInputs() {
@@ -168,7 +200,8 @@ func (s *NonodoSuite) TestItWorksWithExternalApplication() {
 func (s *NonodoSuite) setupTest(opts NonodoOpts) {
 	s.nonce += 1
 	opts.AnvilPort += s.nonce
-	opts.HttpPort += s.nonce
+	opts.HttpPort += s.nonce + 100
+	s.T().Log("ports", "http", opts.HttpPort, "anvil", opts.AnvilPort)
 	commons.ConfigureLog(slog.LevelDebug)
 	s.ctx, s.timeoutCancel = context.WithTimeout(context.Background(), testTimeout)
 	s.workerResult = make(chan error)

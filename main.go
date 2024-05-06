@@ -73,6 +73,10 @@ func init() {
 	cmd.Flags().BoolVar(&color, "enable-color", true, "If set, enables logs color")
 	cmd.Flags().BoolVar(&opts.EnableEcho, "enable-echo", opts.EnableEcho,
 		"If set, nonodo starts a built-in echo application")
+	cmd.Flags().BoolVar(&opts.LegacyMode,
+		"enable-legacy",
+		opts.LegacyMode,
+		"If set, enables legacy based in 0.7.1 (branch 0.7.3) rollups interface")
 
 	// disable-*
 	cmd.Flags().BoolVar(&opts.DisableDevnet, "disable-devnet", opts.DisableDevnet,
@@ -104,7 +108,7 @@ func init() {
 		"The beginning of the queried range for events")
 
 	cmd.Flags().StringVar(&opts.DbImplementation, "db-implementation", opts.DbImplementation,
-		"DB to use. PostGres or SQLite")
+		"DB to use. PostgreSQL or SQLite")
 }
 
 func run(cmd *cobra.Command, args []string) {
