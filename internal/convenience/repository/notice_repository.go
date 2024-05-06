@@ -21,7 +21,8 @@ func (c *NoticeRepository) CreateTables() error {
 	schema := `CREATE TABLE IF NOT EXISTS notices (
 		payload 		text,
 		input_index		integer,
-		output_index	integer);`
+		output_index	integer,
+		PRIMARY KEY (input_index, output_index));`
 
 	// execute a query on the server
 	_, err := c.Db.Exec(schema)
@@ -44,6 +45,24 @@ func (c *NoticeRepository) Create(
 	return data, nil
 }
 
+func (c *NoticeRepository) Update(
+	ctx context.Context, data *model.ConvenienceNotice,
+) (*model.ConvenienceNotice, error) {
+	sqlUpdate := `UPDATE notices SET 
+		payload = $1
+		WHERE input_index = $2 and output_index = $3`
+	_, err := c.Db.Exec(
+		sqlUpdate,
+		data.Payload,
+		data.InputIndex,
+		data.OutputIndex,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
 func (c *NoticeRepository) Count(
 	ctx context.Context,
 	filter []*model.ConvenienceFilter,
@@ -59,6 +78,7 @@ func (c *NoticeRepository) Count(
 	if err != nil {
 		return 0, err
 	}
+	defer stmt.Close()
 	var count uint64
 	err = stmt.Get(&count, args...)
 	if err != nil {
@@ -101,6 +121,7 @@ func (c *NoticeRepository) FindAllNotices(
 	if err != nil {
 		return nil, err
 	}
+	defer stmt.Close()
 	var notices []model.ConvenienceNotice
 	err = stmt.Select(&notices, args...)
 	if err != nil {
@@ -122,6 +143,7 @@ func (c *NoticeRepository) FindByInputAndOutputIndex(
 	if err != nil {
 		return nil, err
 	}
+	defer stmt.Close()
 	var p model.ConvenienceNotice
 	err = stmt.Get(&p, inputIndex, outputIndex)
 	if err != nil {

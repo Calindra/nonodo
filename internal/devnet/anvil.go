@@ -62,6 +62,12 @@ func ShowAddresses() {
 	for name := range contracts.Contracts {
 		names = append(names, name)
 	}
+	names = append(names, ApplicationContractName)
+	contracts.Contracts[ApplicationContractName] = struct {
+		Address string "json:\"address\""
+	}{
+		Address: ApplicationAddress,
+	}
 	sort.Strings(names)
 	space := 28
 	addressSpace := 42

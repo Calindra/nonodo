@@ -2,8 +2,10 @@ package services
 
 import (
 	"context"
+	"log/slog"
 	"testing"
 
+	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/ethereum/go-ethereum/common"
@@ -14,19 +16,28 @@ import (
 
 type ConvenienceServiceSuite struct {
 	suite.Suite
-	repository *repository.VoucherRepository
-	service    *ConvenienceService
+	repository       *repository.VoucherRepository
+	noticeRepository *repository.NoticeRepository
+	service          *ConvenienceService
 }
 
 func (s *ConvenienceServiceSuite) SetupTest() {
+	commons.ConfigureLog(slog.LevelDebug)
 	db := sqlx.MustConnect("sqlite3", ":memory:")
 	s.repository = &repository.VoucherRepository{
 		Db: *db,
 	}
 	err := s.repository.CreateTables()
 	s.NoError(err)
+
+	s.noticeRepository = &repository.NoticeRepository{
+		Db: *db,
+	}
+	err = s.noticeRepository.CreateTables()
+	s.NoError(err)
 	s.service = &ConvenienceService{
 		voucherRepository: s.repository,
+		noticeRepository:  s.noticeRepository,
 	}
 }
 
@@ -177,4 +188,34 @@ func (s *ConvenienceServiceSuite) TestCreateVoucherIdempotency() {
 	if err != nil {
 		panic(err)
 	}
+}
+
+func (s *ConvenienceServiceSuite) TestCreateNoticeIdempotency() {
+	ctx := context.Background()
+	_, err := s.service.CreateNotice(ctx, &model.ConvenienceNotice{
+		InputIndex:  1,
+		OutputIndex: 2,
+	})
+	s.NoError(err)
+	count, err := s.noticeRepository.Count(ctx, nil)
+	s.NoError(err)
+	s.Equal(1, int(count))
+
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = s.service.CreateNotice(ctx, &model.ConvenienceNotice{
+		InputIndex:  1,
+		OutputIndex: 2,
+		Payload:     "1122",
+	})
+	s.NoError(err)
+	count, err = s.noticeRepository.Count(ctx, nil)
+	s.NoError(err)
+	s.Equal(1, int(count))
+	notice, err := s.service.FindNoticeByInputAndOutputIndex(ctx, 1, 2)
+	s.NoError(err)
+	s.NotNil(notice)
+	s.Equal("1122", notice.Payload)
 }

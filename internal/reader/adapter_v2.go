@@ -4,13 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
+
 	"github.com/calindra/nonodo/internal/commons"
 	convenience "github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/convenience/services"
 	repos "github.com/calindra/nonodo/internal/model"
 	"github.com/calindra/nonodo/internal/reader/model"
 	graphql "github.com/calindra/nonodo/internal/reader/model"
-	"log/slog"
 )
 
 type AdapterV2 struct {
@@ -83,7 +84,7 @@ func (a AdapterV2) GetReport(reportIndex int, inputIndex int) (*graphql.Report, 
 	response, err := a.httpClient.Post(requestBody)
 
 	if err != nil {
-		slog.Error("Error calling Graphile Reports", err)
+		slog.Error("Error calling Graphile Reports", "error", err)
 		return nil, err
 	}
 
@@ -91,7 +92,7 @@ func (a AdapterV2) GetReport(reportIndex int, inputIndex int) (*graphql.Report, 
 	err = json.Unmarshal(response, &reportByIdResponse)
 
 	if err != nil {
-		slog.Error("Error decoding JSON:", err)
+		slog.Error("Error decoding JSON:", "error", err)
 		return nil, err
 	}
 
@@ -151,7 +152,7 @@ func (a AdapterV2) GetReports(
 		response, err := a.httpClient.Post(requestBody)
 
 		if err != nil {
-			slog.Error("Error calling Graphile Reports", err)
+			slog.Error("Error calling Graphile Reports", "error", err)
 			return nil, err
 		}
 
@@ -159,7 +160,7 @@ func (a AdapterV2) GetReports(
 		err = json.Unmarshal(response, &reportByIdResponse)
 
 		if err != nil {
-			slog.Error("Error decoding JSON", err)
+			slog.Error("Error decoding JSON", "error", err)
 			return nil, err
 		}
 
@@ -228,7 +229,7 @@ func (a AdapterV2) GetReports(
 		response, err := a.httpClient.Post(requestBody)
 
 		if err != nil {
-			slog.Error("Error calling Graphile Reports", err)
+			slog.Error("Error calling Graphile Reports", "error", err)
 			return nil, err
 		}
 
@@ -236,7 +237,7 @@ func (a AdapterV2) GetReports(
 		err = json.Unmarshal(response, &reportByIdResponse)
 
 		if err != nil {
-			slog.Error("Error decoding JSON", err)
+			slog.Error("Error decoding JSON", "error", err)
 			return nil, err
 		}
 
@@ -314,7 +315,7 @@ func (a AdapterV2) GetInputs(
 		response, err := a.httpClient.Post(requestBody)
 
 		if err != nil {
-			slog.Error("Error calling Graphile Inouts", err)
+			slog.Error("Error calling Graphile Inouts", "error", err)
 			return nil, err
 		}
 
@@ -322,7 +323,7 @@ func (a AdapterV2) GetInputs(
 		err = json.Unmarshal(response, &inputByIdResponse)
 
 		if err != nil {
-			slog.Error("Error decoding JSON", err)
+			slog.Error("Error decoding JSON", "error", err)
 			return nil, err
 		}
 
@@ -368,7 +369,7 @@ func (a AdapterV2) GetInputs(
 		response, err := a.httpClient.Post(requestBody)
 
 		if err != nil {
-			slog.Error("Error calling Graphile Inouts", err)
+			slog.Error("Error calling Graphile Inouts", "error", err)
 			return nil, err
 		}
 
@@ -376,7 +377,7 @@ func (a AdapterV2) GetInputs(
 		err = json.Unmarshal(response, &inputByIdResponse)
 
 		if err != nil {
-			slog.Error("Error decoding JSON", err)
+			slog.Error("Error decoding JSON", "error", err)
 			return nil, err
 		}
 
@@ -619,7 +620,7 @@ func (a AdapterV2) GetInput(index int) (*graphql.Input, error) {
 	response, err := a.httpClient.Post(requestBody)
 
 	if err != nil {
-		slog.Error("Error calling Graphile Inouts", err)
+		slog.Error("Error calling Graphile Inouts", "error", err)
 		return nil, err
 	}
 
@@ -627,7 +628,7 @@ func (a AdapterV2) GetInput(index int) (*graphql.Input, error) {
 	err = json.Unmarshal(response, &inputByIdResponse)
 
 	if err != nil {
-		slog.Error("Error decoding JSON", err)
+		slog.Error("Error decoding JSON", "error", err)
 		return nil, err
 	}
 
