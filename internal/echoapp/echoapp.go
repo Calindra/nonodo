@@ -95,7 +95,7 @@ func handleAdvance(
 
 	// add notice
 	noticeReq := rollup.Notice{
-		Payload: advance.Payload,
+		Payload: fmt.Sprintf("%sff", advance.Payload),
 	}
 	noticeResp, err := client.AddNotice(ctx, noticeReq)
 	if err != nil {
