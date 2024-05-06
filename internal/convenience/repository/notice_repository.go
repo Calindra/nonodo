@@ -21,7 +21,8 @@ func (c *NoticeRepository) CreateTables() error {
 	schema := `CREATE TABLE IF NOT EXISTS notices (
 		payload 		text,
 		input_index		integer,
-		output_index	integer);`
+		output_index	integer,
+		PRIMARY KEY (input_index, output_index));`
 
 	// execute a query on the server
 	_, err := c.Db.Exec(schema)
@@ -35,12 +36,34 @@ func (c *NoticeRepository) Create(
 		payload,
 		input_index,
 		output_index) VALUES ($1, $2, $3)`
-	c.Db.MustExec(
+	_, err := c.Db.ExecContext(ctx,
 		insertSql,
 		data.Payload,
 		data.InputIndex,
 		data.OutputIndex,
 	)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
+func (c *NoticeRepository) Update(
+	ctx context.Context, data *model.ConvenienceNotice,
+) (*model.ConvenienceNotice, error) {
+	sqlUpdate := `UPDATE notices SET 
+		payload = $1
+		WHERE input_index = $2 and output_index = $3`
+	_, err := c.Db.ExecContext(
+		ctx,
+		sqlUpdate,
+		data.Payload,
+		data.InputIndex,
+		data.OutputIndex,
+	)
+	if err != nil {
+		return nil, err
+	}
 	return data, nil
 }
 
@@ -61,7 +84,7 @@ func (c *NoticeRepository) Count(
 	}
 	defer stmt.Close()
 	var count uint64
-	err = stmt.Get(&count, args...)
+	err = stmt.GetContext(ctx, &count, args...)
 	if err != nil {
 		return 0, err
 	}
@@ -104,7 +127,7 @@ func (c *NoticeRepository) FindAllNotices(
 	}
 	defer stmt.Close()
 	var notices []model.ConvenienceNotice
-	err = stmt.Select(&notices, args...)
+	err = stmt.SelectContext(ctx, &notices, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +149,7 @@ func (c *NoticeRepository) FindByInputAndOutputIndex(
 	}
 	defer stmt.Close()
 	var p model.ConvenienceNotice
-	err = stmt.Get(&p, inputIndex, outputIndex)
+	err = stmt.GetContext(ctx, &p, inputIndex, outputIndex)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
