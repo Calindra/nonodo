@@ -20,6 +20,7 @@
         "golangci",
         "gqlgen",
         "hexutil",
+        "Idempotency",
         "inputter",
         "Inputter",
         "isatty",

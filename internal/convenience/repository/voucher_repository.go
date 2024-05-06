@@ -52,7 +52,8 @@ func (c *VoucherRepository) CreateVoucher(
 		executed,
 		input_index,
 		output_index) VALUES ($1, $2, $3, $4, $5)`
-	c.Db.MustExec(
+	_, err := c.Db.ExecContext(
+		ctx,
 		insertVoucher,
 		voucher.Destination.Hex(),
 		voucher.Payload,
@@ -60,6 +61,9 @@ func (c *VoucherRepository) CreateVoucher(
 		voucher.InputIndex,
 		voucher.OutputIndex,
 	)
+	if err != nil {
+		return nil, err
+	}
 	return voucher, nil
 }
 
@@ -72,7 +76,8 @@ func (c *VoucherRepository) UpdateVoucher(
 		executed = $3
 		WHERE input_index = $4 and output_index = $5`
 
-	c.Db.MustExec(
+	_, err := c.Db.ExecContext(
+		ctx,
 		updateVoucher,
 		voucher.Destination.Hex(),
 		voucher.Payload,
@@ -80,6 +85,9 @@ func (c *VoucherRepository) UpdateVoucher(
 		voucher.InputIndex,
 		voucher.OutputIndex,
 	)
+	if err != nil {
+		return nil, err
+	}
 
 	return voucher, nil
 }
@@ -88,7 +96,7 @@ func (c *VoucherRepository) VoucherCount(
 	ctx context.Context,
 ) (uint64, error) {
 	var count int
-	err := c.Db.Get(&count, "SELECT count(*) FROM vouchers")
+	err := c.Db.GetContext(ctx, &count, "SELECT count(*) FROM vouchers")
 	if err != nil {
 		return 0, nil
 	}
@@ -106,7 +114,7 @@ func (c *VoucherRepository) FindVoucherByInputAndOutputIndex(
 		return nil, err
 	}
 	var row voucherRow
-	err = stmt.Get(&row, inputIndex, outputIndex)
+	err = stmt.GetContext(ctx, &row, inputIndex, outputIndex)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
@@ -125,7 +133,10 @@ func (c *VoucherRepository) UpdateExecuted(
 	executedValue bool,
 ) error {
 	query := `UPDATE vouchers SET executed = $1 WHERE input_index = $2 and output_index = $3`
-	c.Db.MustExec(query, executedValue, inputIndex, outputIndex)
+	_, err := c.Db.ExecContext(ctx, query, executedValue, inputIndex, outputIndex)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -146,7 +157,7 @@ func (c *VoucherRepository) Count(
 	}
 	defer stmt.Close()
 	var count uint64
-	err = stmt.Get(&count, args...)
+	err = stmt.GetContext(ctx, &count, args...)
 	if err != nil {
 		return 0, err
 	}
@@ -192,7 +203,7 @@ func (c *VoucherRepository) FindAllVouchers(
 	}
 	defer stmt.Close()
 	var rows []voucherRow
-	err = stmt.Select(&rows, args...)
+	err = stmt.SelectContext(ctx, &rows, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -204,7 +215,6 @@ func (c *VoucherRepository) FindAllVouchers(
 	}
 
 	pageResult := &commons.PageResult[model.ConvenienceVoucher]{
-
 		Rows:   vouchers,
 		Total:  total,
 		Offset: uint64(offset),
