@@ -56,26 +56,33 @@ type FetchInputBoxContextOrError struct {
 
 const (
 	INPUT_BOX_SIZE = 130
+	INPUT_FETCH    = 130
 )
 
-func computeEpoch(blockNumber *big.Int, epochDuration *big.Int) (*big.Int, error) {
+var EPOCH_DURATION = getEpochDuration()
+
+func computeEpoch(blockNumber *big.Int) (*big.Int, error) {
 	// TODO: try to mimic current Authority epoch computation
-	if epochDuration == nil {
+	if EPOCH_DURATION == nil {
 		return nil, fmt.Errorf("Invalid epochDuration")
 	} else {
-		result := new(big.Int).Div(blockNumber, epochDuration)
+		result := new(big.Int).Div(blockNumber, EPOCH_DURATION)
 		return result, nil
 	}
 }
 
-func fetchInputBoxNumber(inputIndex *big.Int) (*big.Int, error) {
-	return nil, nil
-}
-
-func FetchCurrentInput() (*big.Int, error) {
+func (r *rollupAPI) fetchCurrentInput() (*model.AdvanceInput, error) {
 	// retrieve total number of inputs
+	if r.model == nil {
+		return nil, fmt.Errorf("Model is nil")
+	}
+	input := r.model.GetInputRepository()
+	currInput, err := input.FindByStatusNeDesc(model.CompletionStatusUnprocessed)
+	if err != nil {
+		return nil, err
+	}
 
-	return nil, nil
+	return currInput, nil
 }
 
 func waitForBlock(blockNumber *big.Int) error {
@@ -86,112 +93,146 @@ func waitForBlock(blockNumber *big.Int) error {
 	return nil
 }
 
-func getEpochDuration() (*big.Int, error) {
+func getEpochDuration() *big.Int {
 	EPOCH_DURATION := os.Getenv("EPOCH_DURATION")
 	var epochDuration *big.Int
 	if EPOCH_DURATION != "" {
 		i, err := strconv.ParseInt(EPOCH_DURATION, 10, 64)
 		if err != nil {
-			return nil, err
+			panic(err)
 		}
 		epochDuration = big.NewInt(i)
 	} else {
 		epochDuration = big.NewInt(86400)
 	}
 
-	return epochDuration, nil
+	return epochDuration
 }
 
-func FetchContext(blockNumber *big.Int) <-chan FetchInputBoxContextOrError {
-	result := make(chan FetchInputBoxContextOrError)
-	defer close(result)
-
-	epochDuration, err := getEpochDuration()
-	if err != nil {
-		panic(err)
-	}
-
-	currentInput, err := FetchCurrentInput()
+func (r *rollupAPI) fetchContext(blockNumber *big.Int) (*FetchInputBoxContext, error) {
+	currentInput, err := r.fetchCurrentInput()
+	currentInputIndex := big.NewInt(0).SetInt64(int64(currentInput.Index))
 
 	if err != nil {
-		result <- FetchInputBoxContextOrError{context: nil, err: err}
-		return result
+		return nil, err
 	}
 
-	currentInputBlockNumber, err := fetchInputBoxNumber(currentInput)
+	currentInputBlockNumber := big.NewInt(0).SetInt64(int64(currentInput.BlockNumber))
+
+	currentEpoch, err := computeEpoch(currentInputBlockNumber)
 	if err != nil {
-		result <- FetchInputBoxContextOrError{context: nil, err: err}
-		return result
+		return nil, err
 	}
-	currentEpoch, err := computeEpoch(currentInputBlockNumber, epochDuration)
+	epoch, err := computeEpoch(blockNumber)
 	if err != nil {
-		result <- FetchInputBoxContextOrError{context: nil, err: err}
-		return result
+		return nil, err
 	}
-	epoch, err := computeEpoch(blockNumber, epochDuration)
-	if err != nil {
-		result <- FetchInputBoxContextOrError{context: nil, err: err}
-		return result
+
+	if epoch.Cmp(currentEpoch) != 1 {
+		err := fmt.Sprintf(
+			"Requested data beyond current epoch '%s'"+
+				" (data estimated to belong to epoch '%s')",
+			currentEpoch.String(),
+			epoch.String(),
+		)
+		slog.Error(err)
+		return nil, fmt.Errorf(err)
 	}
 
 	var context FetchInputBoxContext = FetchInputBoxContext{
 		blockNumber:             *blockNumber,
 		epoch:                   *epoch,
-		currentInput:            *currentInput,
+		currentInput:            *currentInputIndex,
 		currentInputBlockNumber: *currentInputBlockNumber,
 		currentEpoch:            *currentEpoch,
 	}
 
-	if epoch.Cmp(currentEpoch) != 1 {
-		waitForBlock(blockNumber)
-	}
-
-	result <- FetchInputBoxContextOrError{context: &context, err: nil}
-	return result
+	return &context, nil
 }
 
-func FetchInputBox(id string) (*FetchResponse, error) {
-	if len(id) != INPUT_BOX_SIZE || id[:2] != "0x" {
-		error := fmt.Sprintf("Invalid id %s box id", id)
-		slog.Error(error)
-		return &FetchResponse{status: http.StatusNotFound, data: nil}, nil
+// func FetchInputBox(id string) (*FetchResponse, error) {
+// 	if len(id) != INPUT_BOX_SIZE || id[:2] != "0x" {
+// 		error := fmt.Sprintf("Invalid id %s box id", id)
+// 		slog.Error(error)
+// 		return &FetchResponse{status: http.StatusNotFound, data: nil}, nil
+// 	}
+// 	maxBlockNumber := big.NewInt(0).SetBytes([]byte(id[2:66]))
+// 	// inputIndex := big.NewInt(0).SetBytes([]byte(id[66:130]))
+
+// 	contextCh := <-FetchContext(maxBlockNumber)
+// 	if contextCh.err != nil {
+// 		return nil, contextCh.err
+// 	}
+// 	context := contextCh.context
+
+// 	// check if out of epoch's scope
+// 	if context.epoch.Cmp(&context.currentEpoch) == 1 {
+// 		error := fmt.Sprintf(
+// 			"Requested data beyond current epoch '%s'"+
+// 				" (data estimated to belong to epoch '%s')",
+// 			context.currentEpoch.String(),
+// 			context.epoch.String(),
+// 		)
+// 		slog.Error(error)
+// 		return &FetchResponse{status: http.StatusForbidden, data: nil}, nil
+// 	}
+
+// 	// check if input exists at specified block
+
+// 	// fetch specified input
+// 	// - input is already known to exist: poll GraphQL until we find it there
+
+// 	return nil, nil
+// }
+
+type HttpCustomError struct {
+	status uint
+	body   *string
+}
+
+func (m *HttpCustomError) Error() string {
+	return "HTTP error with status " + strconv.Itoa(int(m.status)) + " and body " + *m.body
+}
+func (m *HttpCustomError) Status() uint {
+	return m.status
+}
+func (m *HttpCustomError) Body() *string {
+	return m.body
+}
+
+func (r *rollupAPI) fetchExpresso(id string) (*string, *HttpCustomError) {
+	if len(id) != INPUT_FETCH || id[:2] != "0x" {
+		err := fmt.Sprintf("Invalid id %s: : must be a hex string with 32 bytes for maxBlockNumber and 32 bytes for espressoBlockHeight", id)
+		slog.Error(err)
+		return nil, &HttpCustomError{status: http.StatusBadRequest}
 	}
+
 	maxBlockNumber := big.NewInt(0).SetBytes([]byte(id[2:66]))
-	// inputIndex := big.NewInt(0).SetBytes([]byte(id[66:130]))
+	espressoBlockHeight := big.NewInt(0).SetBytes([]byte(id[66:130]))
 
-	contextCh := <-FetchContext(maxBlockNumber)
-	if contextCh.err != nil {
-		return nil, contextCh.err
+	context, err := r.fetchContext(maxBlockNumber)
+
+	if err != nil {
+		return nil, &HttpCustomError{status: http.StatusInternalServerError}
 	}
-	context := contextCh.context
-
-	// check if out of epoch's scope
-	if context.epoch.Cmp(&context.currentEpoch) == 1 {
-		error := fmt.Sprintf(
-			"Requested data beyond current epoch '%s'"+
-				" (data estimated to belong to epoch '%s')",
-			context.currentEpoch.String(),
-			context.epoch.String(),
-		)
-		slog.Error(error)
-		return &FetchResponse{status: http.StatusForbidden, data: nil}, nil
-	}
-
-	// check if input exists at specified block
-
-	// fetch specified input
-	// - input is already known to exist: poll GraphQL until we find it there
 
 	return nil, nil
 }
 
-func (r *rollupAPI) Fetcher(request GioJSONRequestBody) (*FetchResponse, error) {
+func (r *rollupAPI) Fetcher(request GioJSONRequestBody) (*string, *HttpCustomError) {
+	var expresso uint16 = 2222
 
-	return nil, fmt.Errorf("Unsupported domain")
+	if request.Domain == expresso {
+		return r.fetchExpresso(request.Id)
+	}
+
+	unsupported := "Unsupported domain"
+	return nil, &HttpCustomError{status: http.StatusBadRequest, body: &unsupported}
 }
 
 // Gio implements ServerInterface.
 func (r *rollupAPI) Gio(ctx echo.Context) error {
+
 	if !checkContentType(ctx) {
 		return ctx.String(http.StatusUnsupportedMediaType, "invalid content type")
 	}
@@ -202,19 +243,11 @@ func (r *rollupAPI) Gio(ctx echo.Context) error {
 		return err
 	}
 
-	// payload, err := hexutil.Decode(request.Id)
-	// if err != nil {
-	// 	return ctx.String(
-	// 		http.StatusBadRequest,
-	// 		"Error decoding gio request payload,"+
-	// 			"payload must be in Ethereum hex binary format",
-	// 	)
-	// }
+	fetch, err := r.Fetcher(request)
 
-	// data := make([]byte, len(payload))
-	// copy(data, payload)
-
-	// slog.Info("Gio request received with payload:", payload)
+	if err != nil {
+		return ctx.String(int(err.Status()), err.Error())
+	}
 
 	return nil
 }

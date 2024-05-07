@@ -28,6 +28,10 @@ type NonodoModel struct {
 	inputRepository  *InputRepository
 }
 
+func (m *NonodoModel) GetInputRepository() InputRepository {
+	return *m.inputRepository
+}
+
 // Create a new model.
 func NewNonodoModel(decoder Decoder, db *sqlx.DB) *NonodoModel {
 	reportRepository := ReportRepository{Db: db}
