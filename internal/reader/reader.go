@@ -8,6 +8,7 @@ package reader
 
 import (
 	"github.com/99designs/gqlgen/graphql/handler"
+	"github.com/99designs/gqlgen/graphql/handler/debug"
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/calindra/nonodo/internal/convenience/services"
 	nonodomodel "github.com/calindra/nonodo/internal/model"
@@ -32,6 +33,8 @@ func Register(
 	schema := graph.NewExecutableSchema(config)
 	graphqlHandler := handler.NewDefaultServer(schema)
 	playgroundHandler := playground.Handler("GraphQL", "/graphql")
+	// Enable tracing
+	graphqlHandler.Use(&debug.Tracer{})
 	e.POST("/graphql", func(c echo.Context) error {
 		graphqlHandler.ServeHTTP(c.Response(), c.Request())
 		return nil
