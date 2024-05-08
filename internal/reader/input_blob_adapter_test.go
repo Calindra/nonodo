@@ -112,7 +112,7 @@ func GenerateBlob() string {
 	payload := common.Hex2Bytes("11223344556677889900")
 	appContract := common.HexToAddress("0xab7528bb862fb57e8a2bcd567a2e929a0be56a5e")
 	msgSender := common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
-	inputData, err := abiParsed.Pack("EvmAdvance",
+	inputData, _ := abiParsed.Pack("EvmAdvance",
 		&chainId,
 		&appContract,
 		&msgSender,
