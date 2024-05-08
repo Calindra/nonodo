@@ -50,9 +50,7 @@ type ReportByIdResponse struct {
 
 type ProofByIndexes struct {
 	Data struct {
-		Proof struct {
-			InputIndex int `json:"inputIndex"`
-		}
+		Proof graphql.Proof
 	}
 }
 
@@ -115,9 +113,7 @@ func (a AdapterV2) GetProof(ctx context.Context, inputIndex int, outputIndex int
 		return nil, err
 	}
 
-	return &graphql.Proof{
-		InputIndex: theProof.Data.Proof.InputIndex,
-	}, nil
+	return &theProof.Data.Proof, nil
 }
 
 func (a AdapterV2) GetReport(reportIndex int, inputIndex int) (*graphql.Report, error) {
