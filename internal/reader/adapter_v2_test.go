@@ -358,3 +358,13 @@ func (s *AdapterV2TestSuite) TestGetInputsFound() {
 	s.NotNil(inputs)
 	s.Equal(inputs.TotalCount, 1)
 }
+
+func (s *AdapterV2TestSuite) TestGetProof() {
+	ctx := context.Background()
+	httpClient := HTTPClientImpl{}
+	inputBlobAdapter := InputBlobAdapter{}
+	s.adapter = AdapterV2{nil, &httpClient, inputBlobAdapter}
+	proof, err := s.adapter.GetProof(ctx, 0, 0)
+	s.NoError(err)
+	s.NotNil(proof)
+}

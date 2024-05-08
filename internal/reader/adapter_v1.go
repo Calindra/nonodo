@@ -19,6 +19,12 @@ type AdapterV1 struct {
 	convenienceService *services.ConvenienceService
 }
 
+// GetProof implements Adapter.
+func (a AdapterV1) GetProof(ctx context.Context, inputIndex int, outputIndex int) (*graphql.Proof, error) {
+	// nonodo v1 does not have proofs
+	return nil, nil
+}
+
 func NewAdapterV1(
 	db *sqlx.DB,
 	convenienceService *services.ConvenienceService,
@@ -150,7 +156,6 @@ func (a AdapterV1) GetNotice(noticeIndex int, inputIndex int) (*graphql.Notice, 
 		Index:      noticeIndex,
 		InputIndex: inputIndex,
 		Payload:    notice.Payload,
-		Proof:      nil,
 	}, nil
 }
 

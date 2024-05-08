@@ -39,26 +39,6 @@ type InputFilter struct {
 	IndexGreaterThan *int `json:"indexGreaterThan,omitempty"`
 }
 
-// Validity proof for an output
-type OutputValidityProof struct {
-	// Local input index within the context of the related epoch
-	InputIndexWithinEpoch int `json:"inputIndexWithinEpoch"`
-	// Output index within the context of the input that produced it
-	OutputIndexWithinInput int `json:"outputIndexWithinInput"`
-	// Merkle root of all output hashes of the related input, given in Ethereum hex binary format (32 bytes), starting with '0x'
-	OutputHashesRootHash string `json:"outputHashesRootHash"`
-	// Merkle root of all voucher hashes of the related epoch, given in Ethereum hex binary format (32 bytes), starting with '0x'
-	VouchersEpochRootHash string `json:"vouchersEpochRootHash"`
-	// Merkle root of all notice hashes of the related epoch, given in Ethereum hex binary format (32 bytes), starting with '0x'
-	NoticesEpochRootHash string `json:"noticesEpochRootHash"`
-	// Hash of the machine state claimed for the related epoch, given in Ethereum hex binary format (32 bytes), starting with '0x'
-	MachineStateHash string `json:"machineStateHash"`
-	// Proof that this output hash is in the output-hashes merkle tree. This array of siblings is bottom-up ordered (from the leaf to the root). Each hash is given in Ethereum hex binary format (32 bytes), starting with '0x'.
-	OutputHashInOutputHashesSiblings []string `json:"outputHashInOutputHashesSiblings"`
-	// Proof that this output-hashes root hash is in epoch's output merkle tree. This array of siblings is bottom-up ordered (from the leaf to the root). Each hash is given in Ethereum hex binary format (32 bytes), starting with '0x'.
-	OutputHashesInEpochSiblings []string `json:"outputHashesInEpochSiblings"`
-}
-
 // Page metadata for the cursor-based Connection pagination pattern
 type PageInfo struct {
 	// Cursor pointing to the first entry of the page
@@ -73,10 +53,21 @@ type PageInfo struct {
 
 // Data that can be used as proof to validate notices and execute vouchers on the base layer blockchain
 type Proof struct {
-	// Validity proof for an output
-	Validity *OutputValidityProof `json:"validity"`
-	// Data that allows the validity proof to be contextualized within submitted claims, given as a payload in Ethereum hex binary format, starting with '0x'
-	Context string `json:"context"`
+	FirstIndex int `json:"firstIndex"`
+	// Reads a single `Input` that is related to this `Proof`.
+	InputByInputIndex *Input `json:"inputByInputIndex,omitempty"`
+	InputIndex        int    `json:"inputIndex"`
+	LastInput         int    `json:"lastInput"`
+	// A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+	NodeID                                   string    `json:"nodeId"`
+	OutputIndex                              int       `json:"outputIndex"`
+	ValidityInputIndexWithinEpoch            int       `json:"validityInputIndexWithinEpoch"`
+	ValidityMachineStateHash                 string    `json:"validityMachineStateHash"`
+	ValidityOutputEpochRootHash              string    `json:"validityOutputEpochRootHash"`
+	ValidityOutputHashInOutputHashesSiblings []*string `json:"validityOutputHashInOutputHashesSiblings"`
+	ValidityOutputHashesInEpochSiblings      []*string `json:"validityOutputHashesInEpochSiblings"`
+	ValidityOutputHashesRootHash             string    `json:"validityOutputHashesRootHash"`
+	ValidityOutputIndexWithinInput           int       `json:"validityOutputIndexWithinInput"`
 }
 
 type CompletionStatus string
