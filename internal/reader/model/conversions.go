@@ -193,12 +193,12 @@ func convertConvenientNoticeV1(cNotice convenience.ConvenienceNotice) *Notice {
 }
 
 func ConvertToNoticeConnectionV1(
-	vouchers []convenience.ConvenienceNotice,
+	notices []convenience.ConvenienceNotice,
 	offset int, total int,
 ) (*NoticeConnection, error) {
-	convNodes := make([]*Notice, len(vouchers))
-	for i := range vouchers {
-		convNodes[i] = convertConvenientNoticeV1(vouchers[i])
+	convNodes := make([]*Notice, len(notices))
+	for i := range notices {
+		convNodes[i] = convertConvenientNoticeV1(notices[i])
 	}
 	return NewConnection(offset, total, convNodes), nil
 }
