@@ -7,6 +7,7 @@ package rollup
 //go:generate go run github.com/deepmap/oapi-codegen/v2/cmd/oapi-codegen -config=oapi.yaml ../../api/rollup.yaml
 
 import (
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"math/big"
@@ -16,6 +17,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/calindra/nonodo/internal/model"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -60,6 +62,7 @@ const (
 )
 
 var EPOCH_DURATION = getEpochDuration()
+var VM_ID = devnet.ApplicationAddress[0:18]
 
 func computeEpoch(blockNumber *big.Int) (*big.Int, error) {
 	// TODO: try to mimic current Authority epoch computation
@@ -83,14 +86,6 @@ func (r *rollupAPI) fetchCurrentInput() (*model.AdvanceInput, error) {
 	}
 
 	return currInput, nil
-}
-
-func waitForBlock(blockNumber *big.Int) error {
-	slog.Info("Waiting for block", blockNumber)
-
-	// poll until block is reached
-
-	return nil
 }
 
 func getEpochDuration() *big.Int {
@@ -150,41 +145,6 @@ func (r *rollupAPI) fetchContext(blockNumber *big.Int) (*FetchInputBoxContext, e
 	return &context, nil
 }
 
-// func FetchInputBox(id string) (*FetchResponse, error) {
-// 	if len(id) != INPUT_BOX_SIZE || id[:2] != "0x" {
-// 		error := fmt.Sprintf("Invalid id %s box id", id)
-// 		slog.Error(error)
-// 		return &FetchResponse{status: http.StatusNotFound, data: nil}, nil
-// 	}
-// 	maxBlockNumber := big.NewInt(0).SetBytes([]byte(id[2:66]))
-// 	// inputIndex := big.NewInt(0).SetBytes([]byte(id[66:130]))
-
-// 	contextCh := <-FetchContext(maxBlockNumber)
-// 	if contextCh.err != nil {
-// 		return nil, contextCh.err
-// 	}
-// 	context := contextCh.context
-
-// 	// check if out of epoch's scope
-// 	if context.epoch.Cmp(&context.currentEpoch) == 1 {
-// 		error := fmt.Sprintf(
-// 			"Requested data beyond current epoch '%s'"+
-// 				" (data estimated to belong to epoch '%s')",
-// 			context.currentEpoch.String(),
-// 			context.epoch.String(),
-// 		)
-// 		slog.Error(error)
-// 		return &FetchResponse{status: http.StatusForbidden, data: nil}, nil
-// 	}
-
-// 	// check if input exists at specified block
-
-// 	// fetch specified input
-// 	// - input is already known to exist: poll GraphQL until we find it there
-
-// 	return nil, nil
-// }
-
 type HttpCustomError struct {
 	status uint
 	body   *string
@@ -200,13 +160,13 @@ func (m *HttpCustomError) Body() *string {
 	return m.body
 }
 
-func (r *rollupAPI) fetchExpresso(id string) (*string, *HttpCustomError) {
+func (r *rollupAPI) fetchEspresso(id string) (*string, *HttpCustomError) {
+	// check if id is valid and parse id as maxBlockNumber and espressoBlockHeight
 	if len(id) != INPUT_FETCH_SIZE || id[:2] != "0x" {
 		err := fmt.Sprintf("Invalid id %s: : must be a hex string with 32 bytes for maxBlockNumber and 32 bytes for espressoBlockHeight", id)
 		slog.Error(err)
 		return nil, &HttpCustomError{status: http.StatusBadRequest}
 	}
-
 	maxBlockNumber := big.NewInt(0).SetBytes([]byte(id[2:66]))
 	espressoBlockHeight := big.NewInt(0).SetBytes([]byte(id[66:130]))
 
@@ -216,15 +176,91 @@ func (r *rollupAPI) fetchExpresso(id string) (*string, *HttpCustomError) {
 		return nil, &HttpCustomError{status: http.StatusInternalServerError}
 	}
 
-	return nil, nil
+	// check if out of epoch's scope
+	if context.epoch.Cmp(&context.currentEpoch) == 1 {
+		error := fmt.Sprintf(
+			"Requested data beyond current epoch '%s'"+
+				" (data estimated to belong to epoch '%s')",
+			context.currentEpoch.String(),
+			context.epoch.String(),
+		)
+		slog.Error(error)
+		return nil, &HttpCustomError{status: http.StatusForbidden}
+	}
+
+	espressoService := &ExpressoService{}
+
+	for {
+		lastEspressoBlockHeight, err := espressoService.GetLatestBlockHeight()
+		if err != nil {
+			msg := fmt.Sprintf("Failed to get latest block height: %s", err)
+			slog.Error(msg)
+			return nil, &HttpCustomError{status: http.StatusInternalServerError}
+		}
+		if espressoBlockHeight.Cmp(lastEspressoBlockHeight) == 1 {
+			// requested Espresso block not available yet: just check if we are still within L1 blockNumber scope
+			header, err := espressoService.GetHeaderByBlockByHeight(lastEspressoBlockHeight)
+			if err != nil {
+				msg := fmt.Sprintf("Failed to get header by block height: %s", err)
+				slog.Error(msg)
+				return nil, &HttpCustomError{status: http.StatusInternalServerError}
+			}
+
+			l1Finalized := header.L1Finalized.Number
+			if l1Finalized.Cmp(maxBlockNumber) == 1 {
+				msg := fmt.Sprintf("Espresso block height %s is not finalized", espressoBlockHeight)
+				slog.Error(msg)
+				return nil, &HttpCustomError{status: http.StatusNotFound}
+			}
+
+			// call again at some later time to see if we reach the block
+			time.Sleep(500 * time.Millisecond)
+		} else {
+			// requested Espresso block available: fetch it
+			block, err := espressoService.GetBlockByHeight(espressoBlockHeight)
+			if err != nil {
+				msg := fmt.Sprintf("Failed to get block by height: %s", err)
+				slog.Error(msg)
+				return nil, &HttpCustomError{status: http.StatusInternalServerError}
+			}
+
+			// check if within L1 blockNumber scope
+			l1Finalized := block.Header.L1Finalized.Number
+			if l1Finalized == nil {
+				msg := fmt.Sprintf("Espresso block %s with undefined L1 blockNumber", espressoBlockHeight)
+				slog.Error(msg)
+				return nil, &HttpCustomError{status: http.StatusNotFound}
+			}
+
+			if l1Finalized.Cmp(maxBlockNumber) == 1 {
+				msg := fmt.Sprintf("Espresso block height %s beyond requested L1 blockNumber", espressoBlockHeight)
+				slog.Error(msg)
+				return nil, &HttpCustomError{status: http.StatusNotFound}
+			}
+
+			// filter block data considering DApp's VM ID
+			blockFiltered := block.filterByVM(VM_ID)
+            // return filtered block data
+			blockJSON, err := json.Marshal(blockFiltered)
+			if err != nil {
+				msg := fmt.Sprintf("Failed to marshal block: %s", err)
+				slog.Error(msg)
+				return nil, &HttpCustomError{status: http.StatusInternalServerError}
+			}
+			blockHex := hexutil.Encode(blockJSON)
+			nTransactions := len(blockFiltered.Payload.TransactionNMT)
+			slog.Info(fmt.Sprintf("Fetched Espresso block %s with %d transactions", espressoBlockHeight, nTransactions))
+			return &blockHex, nil
+		}
+	}
 }
 
 func (r *rollupAPI) Fetcher(request GioJSONRequestBody) (*string, *HttpCustomError) {
-	var expresso uint16 = 2222
+	var espresso uint16 = 2222
 
 	switch request.Domain {
-	case expresso:
-		return r.fetchExpresso(request.Id)
+	case espresso:
+		return r.fetchEspresso(request.Id)
 	default:
 		unsupported := "Unsupported domain"
 		return nil, &HttpCustomError{status: http.StatusBadRequest, body: &unsupported}

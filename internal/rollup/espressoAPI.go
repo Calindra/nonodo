@@ -6,12 +6,25 @@ import (
 
 type ExpressoHeader struct {
 	L1Finalized struct {
-		Number int `json:"number"`
+		Number *big.Int `json:"number"`
 	} `json:"l1_finalized"`
 }
 
 type EspressoBlock struct {
 	Header ExpressoHeader `json:"header"`
+}
+
+type BlockVM struct {
+	Payload struct {
+		TransactionNMT  []any `json:"transaction_nmt"`
+	} `json:"payload"`
+	Header struct {
+		Height *big.Int `json:"height"`
+	} `json:"header"`
+}
+
+func (b *EspressoBlock) filterByVM(vmId string) *BlockVM {
+	return nil
 }
 
 type EspressoAPI interface {
