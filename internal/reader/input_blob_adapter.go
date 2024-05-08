@@ -1,28 +1,15 @@
 package reader
 
 import (
-	"encoding/json"
 	graphql "github.com/calindra/nonodo/internal/reader/model"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"log/slog"
+	"math/big"
 	"strings"
 )
 
-type InputBlobAdapter struct {
-	abiParsed abi.ABI
-}
-
-func NewInputBlobAdapter() (*InputBlobAdapter, error) {
-	dec := json.NewDecoder(strings.NewReader(abiJSON))
-
-	var abiParsed abi.ABI
-	if err := dec.Decode(&abiParsed); err != nil {
-		return nil, err
-	}
-
-	return &InputBlobAdapter{abiParsed}, nil
-}
+type InputBlobAdapter struct{}
 
 const abiJSON = `
 [
@@ -82,7 +69,14 @@ func (i *InputBlobAdapter) Adapt(node struct {
 	Blob   string `json:"blob"`
 	Status string `json:"status"`
 }) (*graphql.Input, error) {
-	unpacked, err := i.abiParsed.Unpack("EvmAdvance", common.Hex2Bytes(node.Blob))
+	abiParsed, err := abi.JSON(strings.NewReader(abiJSON))
+
+	if err != nil {
+		slog.Error("Error parsing abi", "err", err)
+		return nil, err
+	}
+
+	values, err := abiParsed.Methods["EvmAdvance"].Inputs.UnpackValues(common.Hex2Bytes(node.Blob[10:]))
 
 	if err != nil {
 		slog.Error("Error unpacking blob.", "err", err)
@@ -92,10 +86,10 @@ func (i *InputBlobAdapter) Adapt(node struct {
 	return &graphql.Input{
 		Index:       node.Index,
 		Status:      convertCompletionStatus(node.Status),
-		MsgSender:   unpacked[2].(common.Address).Hex(),
-		Timestamp:   unpacked[4].(string),
-		BlockNumber: unpacked[3].(string),
-		Payload:     unpacked[7].(string),
+		MsgSender:   values[2].(common.Address).Hex(),
+		Timestamp:   values[4].(*big.Int).String(),
+		BlockNumber: values[3].(*big.Int).String(),
+		Payload:     string(values[7].([]uint8)),
 	}, nil
 }
 
