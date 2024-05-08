@@ -67,24 +67,6 @@ func (c *NoticeRepository) Update(
 	return data, nil
 }
 
-func (c *NoticeRepository) Update(
-	ctx context.Context, data *model.ConvenienceNotice,
-) (*model.ConvenienceNotice, error) {
-	sqlUpdate := `UPDATE notices SET 
-		payload = $1
-		WHERE input_index = $2 and output_index = $3`
-	_, err := c.Db.Exec(
-		sqlUpdate,
-		data.Payload,
-		data.InputIndex,
-		data.OutputIndex,
-	)
-	if err != nil {
-		return nil, err
-	}
-	return data, nil
-}
-
 func (c *NoticeRepository) Count(
 	ctx context.Context,
 	filter []*model.ConvenienceFilter,
