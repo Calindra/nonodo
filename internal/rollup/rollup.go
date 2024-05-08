@@ -55,8 +55,8 @@ type FetchInputBoxContextOrError struct {
 }
 
 const (
-	INPUT_BOX_SIZE = 130
-	INPUT_FETCH    = 130
+	INPUT_BOX_SIZE   = 130
+	INPUT_FETCH_SIZE = 130
 )
 
 var EPOCH_DURATION = getEpochDuration()
@@ -201,7 +201,7 @@ func (m *HttpCustomError) Body() *string {
 }
 
 func (r *rollupAPI) fetchExpresso(id string) (*string, *HttpCustomError) {
-	if len(id) != INPUT_FETCH || id[:2] != "0x" {
+	if len(id) != INPUT_FETCH_SIZE || id[:2] != "0x" {
 		err := fmt.Sprintf("Invalid id %s: : must be a hex string with 32 bytes for maxBlockNumber and 32 bytes for espressoBlockHeight", id)
 		slog.Error(err)
 		return nil, &HttpCustomError{status: http.StatusBadRequest}
@@ -222,12 +222,13 @@ func (r *rollupAPI) fetchExpresso(id string) (*string, *HttpCustomError) {
 func (r *rollupAPI) Fetcher(request GioJSONRequestBody) (*string, *HttpCustomError) {
 	var expresso uint16 = 2222
 
-	if request.Domain == expresso {
+	switch request.Domain {
+	case expresso:
 		return r.fetchExpresso(request.Id)
+	default:
+		unsupported := "Unsupported domain"
+		return nil, &HttpCustomError{status: http.StatusBadRequest, body: &unsupported}
 	}
-
-	unsupported := "Unsupported domain"
-	return nil, &HttpCustomError{status: http.StatusBadRequest, body: &unsupported}
 }
 
 // Gio implements ServerInterface.
@@ -249,7 +250,11 @@ func (r *rollupAPI) Gio(ctx echo.Context) error {
 		return ctx.String(int(err.Status()), err.Error())
 	}
 
-	return nil
+	if fetch == nil {
+		return ctx.String(http.StatusNotFound, "Not found")
+	}
+
+	return ctx.String(http.StatusOK, *fetch)
 }
 
 // Handle requests to /finish.
