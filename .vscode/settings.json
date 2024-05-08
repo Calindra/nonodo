@@ -33,6 +33,7 @@
         "mattn",
         "merkle",
         "Merkle",
+        "nolint",
         "nonodomodel",
         "oapi",
         "outputdecoder",
