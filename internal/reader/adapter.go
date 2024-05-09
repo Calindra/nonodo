@@ -29,3 +29,4 @@ type Adapter interface {
 		first *int, last *int, after *string, before *string, inputIndex *int,
 	) (*graphql.VoucherConnection, error)
 }
+
