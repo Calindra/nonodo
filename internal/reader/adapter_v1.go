@@ -22,7 +22,7 @@ type AdapterV1 struct {
 // GetProof implements Adapter.
 func (a AdapterV1) GetProof(ctx context.Context, inputIndex int, outputIndex int) (*graphql.Proof, error) {
 	// nonodo v1 does not have proofs
-	return nil, nil
+	return nil, fmt.Errorf("proofs are not supported in nonodo v1")
 }
 
 func NewAdapterV1(
