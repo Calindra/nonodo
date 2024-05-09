@@ -711,7 +711,6 @@ func (a AdapterV2) GetNotice(noticeIndex int, inputIndex int) (*model.Notice, er
 		Index:      noticeIndex,
 		InputIndex: inputIndex,
 		Payload:    notice.Payload,
-		// Proof:      nil,
 	}, nil
 }
 
