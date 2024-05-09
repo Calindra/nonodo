@@ -361,10 +361,46 @@ func (s *AdapterV2TestSuite) TestGetInputsFound() {
 
 func (s *AdapterV2TestSuite) TestGetProof() {
 	ctx := context.Background()
-	httpClient := HTTPClientImpl{}
-	inputBlobAdapter := InputBlobAdapter{}
-	s.adapter = AdapterV2{nil, &httpClient, inputBlobAdapter}
+	s.httpClient.PostFunc = func(body []byte) ([]byte, error) {
+		return []byte(`{
+			"data": {
+				"proof": {
+					"nodeId":"WyJwcm9vZnMiLDAsMF0=",
+					"inputIndex":0,
+					"outputIndex":0,
+					"firstInput":0,
+					"lastInput":0,
+					"validityInputIndexWithinEpoch":0,
+					"validityOutputIndexWithinInput":0,
+					"validityOutputHashesRootHash":"\\xdeadbeef",
+					"validityOutputEpochRootHash":"\\xdeadbeef",
+					"validityMachineStateHash":"\\xdeadbeef",
+					"validityOutputHashInOutputHashesSiblings":["\\xdeadbeef"],
+					"validityOutputHashesInEpochSiblings":["\\xdeadbeef"]
+				}
+			}
+		}
+	`), nil
+	}
+	hitTheRealServer := false
+	if hitTheRealServer {
+		httpClient := HTTPClientImpl{}
+		inputBlobAdapter := InputBlobAdapter{}
+		s.adapter = AdapterV2{nil, &httpClient, inputBlobAdapter}
+	}
 	proof, err := s.adapter.GetProof(ctx, 0, 0)
 	s.NoError(err)
 	s.NotNil(proof)
+	s.Equal("WyJwcm9vZnMiLDAsMF0=", proof.NodeID)
+	s.Equal(0, proof.InputIndex)
+	s.Equal(0, proof.OutputIndex)
+	s.Equal(0, proof.FirstIndex)
+	s.Equal(0, proof.LastInput)
+	s.Equal(0, proof.ValidityInputIndexWithinEpoch)
+	s.Equal(0, proof.ValidityOutputIndexWithinInput)
+	s.Equal("\\xdeadbeef", proof.ValidityOutputHashesRootHash)
+	s.Equal("\\xdeadbeef", proof.ValidityOutputEpochRootHash)
+	s.Equal("\\xdeadbeef", proof.ValidityMachineStateHash)
+	s.Equal("\\xdeadbeef", *proof.ValidityOutputHashInOutputHashesSiblings[0])
+	s.Equal("\\xdeadbeef", *proof.ValidityOutputHashesInEpochSiblings[0])
 }

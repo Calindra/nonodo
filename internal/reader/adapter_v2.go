@@ -100,7 +100,7 @@ func (a AdapterV2) GetProof(ctx context.Context, inputIndex int, outputIndex int
 		return nil, err
 	}
 	response, err := a.httpClient.Post(payload)
-
+	slog.Debug("Proof", "response", string(response))
 	if err != nil {
 		slog.Error("Error calling Graphile Reports", "error", err)
 		return nil, err

@@ -23,17 +23,17 @@ SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
 
-DROP DATABASE postgres;
+-- DROP DATABASE mydatabase;
 --
 -- Name: postgres; Type: DATABASE; Schema: -; Owner: postgres
 --
 
-CREATE DATABASE postgres WITH TEMPLATE = template0 ENCODING = 'UTF8' LC_COLLATE = 'en_US.UTF-8' LC_CTYPE = 'en_US.UTF-8';
+-- CREATE DATABASE mydatabase WITH TEMPLATE = template0 ENCODING = 'UTF8' LC_COLLATE = 'en_US.UTF-8' LC_CTYPE = 'en_US.UTF-8';
 
 
-ALTER DATABASE postgres OWNER TO myuser;
+ALTER DATABASE mydatabase OWNER TO myuser;
 
-\connect postgres
+\connect mydatabase
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -50,7 +50,7 @@ SET row_security = off;
 -- Name: DATABASE postgres; Type: COMMENT; Schema: -; Owner: postgres
 --
 
-COMMENT ON DATABASE postgres IS 'default administrative connection database';
+COMMENT ON DATABASE mydatabase IS 'default administrative connection database';
 
 
 --
