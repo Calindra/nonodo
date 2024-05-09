@@ -12,6 +12,8 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./restore.sql:/docker-entrypoint-initdb.d/restore.sql
+      - ./data_files/:/docker-entrypoint-initdb.d/data_files
 
   postgraphile:
     build:
@@ -21,7 +23,7 @@ services:
     depends_on:
       - db
     ports:
-      - "5000:5000"
+      - "5001:5000"
 
 volumes:
   pgdata:

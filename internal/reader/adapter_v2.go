@@ -48,6 +48,12 @@ type ReportByIdResponse struct {
 	} `json:"data"`
 }
 
+type ProofByIndexes struct {
+	Data struct {
+		Proof graphql.Proof
+	}
+}
+
 func NewAdapterV2(
 	convenienceService *services.ConvenienceService,
 	httpClient HttpClient,
@@ -59,6 +65,55 @@ func NewAdapterV2(
 		httpClient:         httpClient,
 		InputBlobAdapter:   inputBlobAdapter,
 	}
+}
+
+// GetProof implements Adapter.
+func (a AdapterV2) GetProof(ctx context.Context, inputIndex int, outputIndex int) (*graphql.Proof, error) {
+	query := `
+	query ProofQuery($inputIndex: Int!, $outputIndex: Int!) {
+		proof(inputIndex: $inputIndex, outputIndex: $outputIndex) {
+			nodeId
+			inputIndex
+			outputIndex
+			firstInput
+			lastInput
+			validityInputIndexWithinEpoch
+			validityOutputIndexWithinInput
+			validityOutputHashesRootHash
+			validityOutputEpochRootHash
+			validityMachineStateHash
+			validityOutputHashInOutputHashesSiblings
+			validityOutputHashesInEpochSiblings
+		}
+	}`
+	variables := map[string]interface{}{
+		"inputIndex":  inputIndex,
+		"outputIndex": outputIndex,
+	}
+	payload, err := json.Marshal(map[string]interface{}{
+		"operationName": nil,
+		"query":         query,
+		"variables":     variables,
+	})
+	if err != nil {
+		slog.Error("Error marshalling JSON:", "error", err)
+		return nil, err
+	}
+	response, err := a.httpClient.Post(payload)
+	slog.Debug("Proof", "response", string(response))
+	if err != nil {
+		slog.Error("Error calling Graphile Reports", "error", err)
+		return nil, err
+	}
+	var theProof ProofByIndexes
+	err = json.Unmarshal(response, &theProof)
+
+	if err != nil {
+		slog.Error("Error decoding JSON:", "error", err)
+		return nil, err
+	}
+
+	return &theProof.Data.Proof, nil
 }
 
 func (a AdapterV2) GetReport(reportIndex int, inputIndex int) (*graphql.Report, error) {
@@ -656,7 +711,6 @@ func (a AdapterV2) GetNotice(noticeIndex int, inputIndex int) (*model.Notice, er
 		Index:      noticeIndex,
 		InputIndex: inputIndex,
 		Payload:    notice.Payload,
-		Proof:      nil,
 	}, nil
 }
 
