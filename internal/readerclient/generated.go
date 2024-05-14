@@ -21,6 +21,32 @@ const (
 	CompletionStatusPayloadLengthLimitExceeded CompletionStatus = "PAYLOAD_LENGTH_LIMIT_EXCEEDED"
 )
 
+// GetNoticeNotice includes the requested fields of the GraphQL type Notice.
+// The GraphQL type's documentation follows.
+//
+// Informational statement that can be validated in the base layer blockchain
+type GetNoticeNotice struct {
+	// Notice index within the context of the input that produced it
+	Index int `json:"index"`
+	// Notice data as a payload in Ethereum hex binary format, starting with '0x'
+	Payload string `json:"payload"`
+}
+
+// GetIndex returns GetNoticeNotice.Index, and is useful for accessing the field via an interface.
+func (v *GetNoticeNotice) GetIndex() int { return v.Index }
+
+// GetPayload returns GetNoticeNotice.Payload, and is useful for accessing the field via an interface.
+func (v *GetNoticeNotice) GetPayload() string { return v.Payload }
+
+// GetNoticeResponse is returned by GetNotice on success.
+type GetNoticeResponse struct {
+	// Get a notice based on its index
+	Notice GetNoticeNotice `json:"notice"`
+}
+
+// GetNotice returns GetNoticeResponse.Notice, and is useful for accessing the field via an interface.
+func (v *GetNoticeResponse) GetNotice() GetNoticeNotice { return v.Notice }
+
 // GetVoucherResponse is returned by GetVoucher on success.
 type GetVoucherResponse struct {
 	// Get a voucher based on its index
@@ -326,6 +352,18 @@ type StateResponse struct {
 // GetInputs returns StateResponse.Inputs, and is useful for accessing the field via an interface.
 func (v *StateResponse) GetInputs() StateInputsInputConnection { return v.Inputs }
 
+// __GetNoticeInput is used internally by genqlient
+type __GetNoticeInput struct {
+	NoticeIndex int `json:"noticeIndex"`
+	InputIndex  int `json:"inputIndex"`
+}
+
+// GetNoticeIndex returns __GetNoticeInput.NoticeIndex, and is useful for accessing the field via an interface.
+func (v *__GetNoticeInput) GetNoticeIndex() int { return v.NoticeIndex }
+
+// GetInputIndex returns __GetNoticeInput.InputIndex, and is useful for accessing the field via an interface.
+func (v *__GetNoticeInput) GetInputIndex() int { return v.InputIndex }
+
 // __GetVoucherInput is used internally by genqlient
 type __GetVoucherInput struct {
 	VoucherIndex int `json:"voucherIndex"`
@@ -345,6 +383,44 @@ type __InputStatusInput struct {
 
 // GetIndex returns __InputStatusInput.Index, and is useful for accessing the field via an interface.
 func (v *__InputStatusInput) GetIndex() int { return v.Index }
+
+// The query or mutation executed by GetNotice.
+const GetNotice_Operation = `
+query GetNotice ($noticeIndex: Int!, $inputIndex: Int!) {
+	notice(noticeIndex: $noticeIndex, inputIndex: $inputIndex) {
+		index
+		payload
+	}
+}
+`
+
+func GetNotice(
+	ctx context.Context,
+	client graphql.Client,
+	noticeIndex int,
+	inputIndex int,
+) (*GetNoticeResponse, error) {
+	req := &graphql.Request{
+		OpName: "GetNotice",
+		Query:  GetNotice_Operation,
+		Variables: &__GetNoticeInput{
+			NoticeIndex: noticeIndex,
+			InputIndex:  inputIndex,
+		},
+	}
+	var err error
+
+	var data GetNoticeResponse
+	resp := &graphql.Response{Data: &data}
+
+	err = client.MakeRequest(
+		ctx,
+		req,
+		resp,
+	)
+
+	return &data, err
+}
 
 // The query or mutation executed by GetVoucher.
 const GetVoucher_Operation = `

@@ -46,3 +46,10 @@ query GetVoucher($voucherIndex: Int!, $inputIndex: Int!) {
     destination
   }
 }
+
+query GetNotice($noticeIndex: Int!, $inputIndex: Int!) {
+  notice(noticeIndex: $noticeIndex, inputIndex: $inputIndex) {
+    index
+    payload
+  }
+}

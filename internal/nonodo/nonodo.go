@@ -92,7 +92,7 @@ func NewNonodoOpts() NonodoOpts {
 		SqliteFile:         "file:memory1?mode=memory&cache=shared",
 		FromBlock:          0,
 		DbImplementation:   "sqlite",
-		LegacyMode:         false,
+		LegacyMode:         true,
 	}
 }
 
@@ -103,16 +103,16 @@ func NewSupervisorPoC(opts NonodoOpts) supervisor.SupervisorWorker {
 
 	if opts.DbImplementation == "postgres" {
 		slog.Info("Using PostGres DB ...")
-		postGresHost := os.Getenv("POSTGRES_HOST")
-		postGresPort := os.Getenv("POSTGRES_PORT")
-		postGresDataBase := os.Getenv("POSTGRES_DB")
-		postGresUser := os.Getenv("POSTGRES_USER")
-		postGresPassword := os.Getenv("POSTGRES_PASSWORD")
+		postgresHost := os.Getenv("POSTGRES_HOST")
+		postgresPort := os.Getenv("POSTGRES_PORT")
+		postgresDataBase := os.Getenv("POSTGRES_DB")
+		postgresUser := os.Getenv("POSTGRES_USER")
+		postgresPassword := os.Getenv("POSTGRES_PASSWORD")
 
 		connectionString := fmt.Sprintf("host=%s port=%s user=%s "+
 			"dbname=%s password=%s sslmode=disable",
-			postGresHost, postGresPort, postGresUser,
-			postGresDataBase, postGresPassword)
+			postgresHost, postgresPort, postgresUser,
+			postgresDataBase, postgresPassword)
 
 		db = sqlx.MustConnect("postgres", connectionString)
 	} else {
@@ -219,12 +219,12 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 			Command: opts.ApplicationArgs[0],
 			Args:    opts.ApplicationArgs[1:],
 			Env: []string{fmt.Sprintf("ROLLUP_HTTP_SERVER_URL=http://%s:%v/rollup",
-				opts.HttpAddress, opts.HttpPort)},
+				opts.HttpAddress, opts.HttpRollupsPort)},
 		})
 	} else if opts.EnableEcho {
 		fmt.Println("Starting echo app")
 		w.Workers = append(w.Workers, echoapp.EchoAppWorker{
-			RollupEndpoint: fmt.Sprintf("http://127.0.0.1:%v", opts.HttpRollupsPort),
+			RollupEndpoint: fmt.Sprintf("http://%s:%v", opts.HttpAddress, opts.HttpRollupsPort),
 		})
 	}
 	return w
