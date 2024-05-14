@@ -1,0 +1,25 @@
+name: K6 Load Test
+
+on:
+  push:
+    branches:
+      - develop
+  pull_request:
+    branches:
+      - develop
+
+jobs:
+  k6-test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Set up Docker Compose
+      uses: docker/compose-action@v2
+      with:
+        version: latest
+
+    - name: Run K6 Load Test
+      run: docker-compose up --abort-on-container-exit
