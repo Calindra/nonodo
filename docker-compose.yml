@@ -24,7 +24,8 @@ services:
       - "5000:5000"
   k6:
     image: loadimpact/k6
-    depends_on: postgraphile
+    depends_on: 
+      - postgraphile
     volumes:
       - ./test.js:/test/test.js
     command: run /test/test.js
