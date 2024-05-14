@@ -9,55 +9,8 @@ import (
 	"github.com/EspressoSystems/espresso-sequencer-go/types"
 )
 
-// https://docs.espressosys.com/sequencer/api-reference/sequencer-api#tagged-base-64
-// type Tagged = string
-
-// type EspressoL1Finalized struct {
-// 	Number    *big.Int `json:"number"`
-// 	Timestamp string   `json:"timestamp"`
-// 	Hash      string   `json:"hash"`
-// }
-
-// https://docs.espressosys.com/sequencer/api-reference/sequencer-api#header
-// type EspressoHeader struct {
-// 	Height      big.Int              `json:"height"`
-// 	Timestamp   big.Int              `json:"timestamp"`
-// 	L1Head      big.Int              `json:"l1_head"`
-// 	L1Finalized *EspressoL1Finalized `json:"l1_finalized"`
-// }
-
 type EspressoHeader = types.Header
 type EspressoBlockResponse = client.TransactionsInBlock
-
-// type EspressoTransactionNMT struct {
-// 	VM string `json:"vm"`
-// }
-
-// type EspressoPayload struct {
-// 	TransactionNMT []EspressoTransactionNMT `json:"transaction_nmt"`
-// }
-
-// https://docs.espressosys.com/sequencer/api-reference/sequencer-api/availability-api#blockresponse
-// type EspressoBlockResponse struct {
-// 	Header  EspressoHeader  `json:"header"`
-// 	Payload EspressoPayload `json:"payload"`
-// 	Hash    string          `json:"hash"`
-// }
-
-// func (b *EspressoBlockResponse) filterByVM(vmId string) EspressoBlockResponse {
-// 	filteredTransactions := []EspressoTransactionNMT{}
-// 	for _, transaction := range b.Payload.TransactionNMT {
-// 		if transaction.VM == vmId {
-// 			filteredTransactions = append(filteredTransactions, transaction)
-// 		}
-// 	}
-
-// 	return EspressoBlockResponse{
-// 		Header:  b.Header,
-// 		Payload: EspressoPayload{TransactionNMT: filteredTransactions},
-// 		Hash:    b.Hash,
-// 	}
-// }
 
 type EspressoAPI interface {
 	GetLatestBlockHeight() (*big.Int, error)
@@ -135,12 +88,16 @@ func (s *ExpressoService) GetHeaderByBlockByHeight(height *big.Int) (*EspressoHe
  * GET /availability/block/:height/namespace/:namespace
  * https://docs.espressosys.com/sequencer/api-reference/sequencer-api/availability-api#get-availability-block-height-namespace-namespace
  */
-func (s *ExpressoService) GetTransactionByNamespaceHeight(height *big.Int) (*EspressoBlockResponse, error) {
+func (s *ExpressoService) GetTransactionByHeight(height *big.Int) (*EspressoBlockResponse, error) {
 	if s.client == nil {
-		return nil, nil
+		return &EspressoBlockResponse{
+			Transactions: nil,
+			Proof:        nil,
+		}, nil
 	}
 
 	h := height.Uint64()
+	// Always fixed in first 16 bits of App Address
 	namespace, err := strconv.ParseUint(VM_ID, 10, 64)
 
 	res, err := s.client.FetchTransactionsInBlock(s.context, h, namespace)

@@ -218,44 +218,48 @@ func (r *rollupAPI) fetchEspresso(ctx echo.Context, id string) (*string, *HttpCu
 			// call again at some later time to see if we reach the block
 			time.Sleep(500 * time.Millisecond)
 		} else {
-			// FIX: CHECK IF THIS IS THE RIGHT WAY TO DO IT
 			// requested Espresso block available: fetch it
-			blockFiltered, err := espressoService.GetTransactionByNamespaceHeight(espressoBlockHeight)
+			filteredBlock, err := espressoService.GetTransactionByHeight(espressoBlockHeight)
 			if err != nil {
 				msg := fmt.Sprintf("Failed to get block by height: %s", err)
 				slog.Error(msg)
 				return nil, &HttpCustomError{status: http.StatusInternalServerError}
 			}
 
+			header, err := espressoService.GetHeaderByBlockByHeight(espressoBlockHeight)
+
+			if err != nil {
+				msg := fmt.Sprintf("Failed to get header by block height: %s", err)
+				slog.Error(msg)
+				return nil, &HttpCustomError{status: http.StatusInternalServerError}
+			}
+
 			// check if within L1 blockNumber scope
-			// l1FinalizedNumber := block.Header.L1Finalized.Number
-			// l1Finalized := big.NewInt(0).SetUint64(l1FinalizedNumber)
-			// if l1Finalized == nil {
-			// 	msg := fmt.Sprintf("Espresso block %s with undefined L1 blockNumber", espressoBlockHeight)
-			// 	slog.Error(msg)
-			// 	return nil, &HttpCustomError{status: http.StatusNotFound}
-			// }
+			l1FinalizedNumber := header.L1Finalized.Number
+			l1Finalized := big.NewInt(0).SetUint64(l1FinalizedNumber)
+			if l1Finalized == nil {
+				msg := fmt.Sprintf("Espresso block %s with undefined L1 blockNumber", espressoBlockHeight)
+				slog.Error(msg)
+				return nil, &HttpCustomError{status: http.StatusNotFound}
+			}
 
-			// if l1Finalized.Cmp(maxBlockNumber) == 1 {
-			// 	msg := fmt.Sprintf("Espresso block height %s beyond requested L1 blockNumber", espressoBlockHeight)
-			// 	slog.Error(msg)
-			// 	return nil, &HttpCustomError{status: http.StatusNotFound}
-			// }
+			if l1Finalized.Cmp(maxBlockNumber) == 1 {
+				msg := fmt.Sprintf("Espresso block height %s beyond requested L1 blockNumber", espressoBlockHeight)
+				slog.Error(msg)
+				return nil, &HttpCustomError{status: http.StatusNotFound}
+			}
 
-			// filter block data considering DApp's VM ID
-			// blockFiltered := block.filterByVM(VM_ID)
-			// return filtered block data
-			blockJSON, err := json.Marshal(blockFiltered)
+			serializedBlock, err := json.Marshal(filteredBlock)
 			if err != nil {
 				msg := fmt.Sprintf("Failed to marshal block: %s", err)
 				slog.Error(msg)
 				return nil, &HttpCustomError{status: http.StatusInternalServerError}
 			}
-			blockHex := hexutil.Encode(blockJSON)
+			encodedBlockHex := hexutil.Encode(serializedBlock)
 			// nTransactions := len(blockFiltered.Payload.TransactionNMT)
-			nTransactions := len(blockFiltered.Transactions)
+			nTransactions := len(filteredBlock.Transactions)
 			slog.Info(fmt.Sprintf("Fetched Espresso block %s with %d transactions", espressoBlockHeight, nTransactions))
-			return &blockHex, nil
+			return &encodedBlockHex, nil
 		}
 	}
 }
