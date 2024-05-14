@@ -45,7 +45,8 @@ func NewExpressoService(ctx context.Context, url *string) *ExpressoService {
 func (s *ExpressoService) GetLatestBlockHeight() (*big.Int, error) {
 	// This is a mock implementation
 	if s.client == nil {
-		return big.NewInt(32644), nil
+		mock := 32644
+		return big.NewInt(int64(mock)), nil
 	}
 
 	res, err := s.client.FetchLatestBlockHeight(s.context)
@@ -65,12 +66,12 @@ func (s *ExpressoService) GetLatestBlockHeight() (*big.Int, error) {
  */
 func (s *ExpressoService) GetHeaderByBlockByHeight(height *big.Int) (*EspressoHeader, error) {
 	if s.client == nil {
-		rd := uint64(32644)
+		mock := 32644
 
 		return &EspressoHeader{
-			Height: rd,
+			Height: uint64(mock),
 			L1Finalized: &types.L1BlockInfo{
-				Number: rd,
+				Number: uint64(mock),
 			},
 		}, nil
 	}
@@ -99,6 +100,10 @@ func (s *ExpressoService) GetTransactionByHeight(height *big.Int) (*EspressoBloc
 	h := height.Uint64()
 	// Always fixed in first 16 bits of App Address
 	namespace, err := strconv.ParseUint(VM_ID, 10, 64)
+
+	if err != nil {
+		return nil, err
+	}
 
 	res, err := s.client.FetchTransactionsInBlock(s.context, h, namespace)
 

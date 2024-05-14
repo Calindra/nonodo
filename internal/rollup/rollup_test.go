@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/calindra/nonodo/internal/commons"
-	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -15,7 +14,6 @@ import (
 
 type RollupSuite struct {
 	suite.Suite
-	echo *echo.Echo
 }
 
 func (s *RollupSuite) SetupTest() {

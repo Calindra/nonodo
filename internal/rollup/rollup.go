@@ -38,10 +38,10 @@ type rollupAPI struct {
 	model *model.NonodoModel
 }
 
-type FetchResponse struct {
-	status uint
-	data   *string
-}
+// type FetchResponse struct {
+// 	status uint
+// 	data   *string
+// }
 
 type FetchInputBoxContext struct {
 	blockNumber             big.Int
@@ -51,10 +51,10 @@ type FetchInputBoxContext struct {
 	currentEpoch            big.Int
 }
 
-type FetchInputBoxContextOrError struct {
-	context *FetchInputBoxContext
-	err     error
-}
+// type FetchInputBoxContextOrError struct {
+// 	context *FetchInputBoxContext
+// 	err     error
+// }
 
 const (
 	INPUT_BOX_SIZE   = 130
@@ -65,7 +65,7 @@ var EPOCH_DURATION = getEpochDuration()
 var VM_ID = devnet.ApplicationAddress[0:18]
 
 func computeEpoch(blockNumber *big.Int) (*big.Int, error) {
-	// TODO: try to mimic current Authority epoch computation
+	// try to mimic current Authority epoch computation
 	if EPOCH_DURATION == nil {
 		return nil, fmt.Errorf("Invalid epochDuration")
 	} else {
@@ -98,7 +98,8 @@ func getEpochDuration() *big.Int {
 		}
 		epochDuration = big.NewInt(i)
 	} else {
-		epochDuration = big.NewInt(86400)
+		oneDay := 86400
+		epochDuration = big.NewInt(int64(oneDay))
 	}
 
 	return epochDuration
@@ -216,7 +217,8 @@ func (r *rollupAPI) fetchEspresso(ctx echo.Context, id string) (*string, *HttpCu
 			}
 
 			// call again at some later time to see if we reach the block
-			time.Sleep(500 * time.Millisecond)
+			var timeInMs time.Duration = 500
+			time.Sleep(timeInMs * time.Millisecond)
 		} else {
 			// requested Espresso block available: fetch it
 			filteredBlock, err := espressoService.GetTransactionByHeight(espressoBlockHeight)
