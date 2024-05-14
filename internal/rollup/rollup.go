@@ -160,7 +160,7 @@ func (m *HttpCustomError) Body() *string {
 	return m.body
 }
 
-func (r *rollupAPI) fetchEspresso(id string) (*string, *HttpCustomError) {
+func (r *rollupAPI) fetchEspresso(ctx echo.Context, id string) (*string, *HttpCustomError) {
 	// check if id is valid and parse id as maxBlockNumber and espressoBlockHeight
 	if len(id) != INPUT_FETCH_SIZE || id[:2] != "0x" {
 		err := fmt.Sprintf("Invalid id %s: : must be a hex string with 32 bytes for maxBlockNumber and 32 bytes for espressoBlockHeight", id)
@@ -188,7 +188,8 @@ func (r *rollupAPI) fetchEspresso(id string) (*string, *HttpCustomError) {
 		return nil, &HttpCustomError{status: http.StatusForbidden}
 	}
 
-	espressoService := &ExpressoService{}
+	ctxHttp := ctx.Request().Context()
+	espressoService := NewExpressoService(ctxHttp, nil)
 
 	for {
 		lastEspressoBlockHeight, err := espressoService.GetLatestBlockHeight()
@@ -206,7 +207,8 @@ func (r *rollupAPI) fetchEspresso(id string) (*string, *HttpCustomError) {
 				return nil, &HttpCustomError{status: http.StatusInternalServerError}
 			}
 
-			l1Finalized := header.L1Finalized.Number
+			l1FinalizedNumber := header.L1Finalized.Number
+			l1Finalized := big.NewInt(0).SetUint64(l1FinalizedNumber)
 			if l1Finalized.Cmp(maxBlockNumber) == 1 {
 				msg := fmt.Sprintf("Espresso block height %s is not finalized", espressoBlockHeight)
 				slog.Error(msg)
@@ -216,8 +218,9 @@ func (r *rollupAPI) fetchEspresso(id string) (*string, *HttpCustomError) {
 			// call again at some later time to see if we reach the block
 			time.Sleep(500 * time.Millisecond)
 		} else {
+			// FIX: CHECK IF THIS IS THE RIGHT WAY TO DO IT
 			// requested Espresso block available: fetch it
-			block, err := espressoService.GetBlockByHeight(espressoBlockHeight)
+			blockFiltered, err := espressoService.GetTransactionByNamespaceHeight(espressoBlockHeight)
 			if err != nil {
 				msg := fmt.Sprintf("Failed to get block by height: %s", err)
 				slog.Error(msg)
@@ -225,22 +228,23 @@ func (r *rollupAPI) fetchEspresso(id string) (*string, *HttpCustomError) {
 			}
 
 			// check if within L1 blockNumber scope
-			l1Finalized := block.Header.L1Finalized.Number
-			if l1Finalized == nil {
-				msg := fmt.Sprintf("Espresso block %s with undefined L1 blockNumber", espressoBlockHeight)
-				slog.Error(msg)
-				return nil, &HttpCustomError{status: http.StatusNotFound}
-			}
+			// l1FinalizedNumber := block.Header.L1Finalized.Number
+			// l1Finalized := big.NewInt(0).SetUint64(l1FinalizedNumber)
+			// if l1Finalized == nil {
+			// 	msg := fmt.Sprintf("Espresso block %s with undefined L1 blockNumber", espressoBlockHeight)
+			// 	slog.Error(msg)
+			// 	return nil, &HttpCustomError{status: http.StatusNotFound}
+			// }
 
-			if l1Finalized.Cmp(maxBlockNumber) == 1 {
-				msg := fmt.Sprintf("Espresso block height %s beyond requested L1 blockNumber", espressoBlockHeight)
-				slog.Error(msg)
-				return nil, &HttpCustomError{status: http.StatusNotFound}
-			}
+			// if l1Finalized.Cmp(maxBlockNumber) == 1 {
+			// 	msg := fmt.Sprintf("Espresso block height %s beyond requested L1 blockNumber", espressoBlockHeight)
+			// 	slog.Error(msg)
+			// 	return nil, &HttpCustomError{status: http.StatusNotFound}
+			// }
 
 			// filter block data considering DApp's VM ID
-			blockFiltered := block.filterByVM(VM_ID)
-            // return filtered block data
+			// blockFiltered := block.filterByVM(VM_ID)
+			// return filtered block data
 			blockJSON, err := json.Marshal(blockFiltered)
 			if err != nil {
 				msg := fmt.Sprintf("Failed to marshal block: %s", err)
@@ -248,19 +252,20 @@ func (r *rollupAPI) fetchEspresso(id string) (*string, *HttpCustomError) {
 				return nil, &HttpCustomError{status: http.StatusInternalServerError}
 			}
 			blockHex := hexutil.Encode(blockJSON)
-			nTransactions := len(blockFiltered.Payload.TransactionNMT)
+			// nTransactions := len(blockFiltered.Payload.TransactionNMT)
+			nTransactions := len(blockFiltered.Transactions)
 			slog.Info(fmt.Sprintf("Fetched Espresso block %s with %d transactions", espressoBlockHeight, nTransactions))
 			return &blockHex, nil
 		}
 	}
 }
 
-func (r *rollupAPI) Fetcher(request GioJSONRequestBody) (*string, *HttpCustomError) {
+func (r *rollupAPI) Fetcher(ctx echo.Context, request GioJSONRequestBody) (*string, *HttpCustomError) {
 	var espresso uint16 = 2222
 
 	switch request.Domain {
 	case espresso:
-		return r.fetchEspresso(request.Id)
+		return r.fetchEspresso(ctx, request.Id)
 	default:
 		unsupported := "Unsupported domain"
 		return nil, &HttpCustomError{status: http.StatusBadRequest, body: &unsupported}
@@ -280,7 +285,7 @@ func (r *rollupAPI) Gio(ctx echo.Context) error {
 		return err
 	}
 
-	fetch, err := r.Fetcher(request)
+	fetch, err := r.Fetcher(ctx, request)
 
 	if err != nil {
 		return ctx.String(int(err.Status()), err.Error())

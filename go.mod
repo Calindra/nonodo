@@ -20,7 +20,10 @@ require (
 	github.com/vektah/gqlparser/v2 v2.5.10
 )
 
+require github.com/sigurn/crc8 v0.0.0-20220107193325-2243fe600f9f // indirect
+
 require (
+	github.com/EspressoSystems/espresso-sequencer-go v0.0.16
 	github.com/Microsoft/go-winio v0.6.1 // indirect
 	github.com/StackExchange/wmi v1.2.1 // indirect
 	github.com/agnivade/levenshtein v1.1.1 // indirect
