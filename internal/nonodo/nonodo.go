@@ -218,7 +218,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 			Name:    "app",
 			Command: opts.ApplicationArgs[0],
 			Args:    opts.ApplicationArgs[1:],
-			Env: []string{fmt.Sprintf("ROLLUP_HTTP_SERVER_URL=http://%s:%v/rollup",
+			Env: []string{fmt.Sprintf("ROLLUP_HTTP_SERVER_URL=http://%s:%v",
 				opts.HttpAddress, opts.HttpRollupsPort)},
 		})
 	} else if opts.EnableEcho {
