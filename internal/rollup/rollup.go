@@ -259,7 +259,7 @@ func (r *rollupAPI) fetchEspresso(ctx echo.Context, id string) (*string, *model.
 
 func (r *rollupAPI) Fetcher(ctx echo.Context, request GioJSONRequestBody) (*string, *model.HttpCustomError) {
 	var espresso uint16 = 2222
-	var syscoin uint16 = 2223
+	var syscoin uint16 = 5700
 
 	switch request.Domain {
 	case espresso:
