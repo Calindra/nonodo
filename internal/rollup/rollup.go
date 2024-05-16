@@ -265,7 +265,8 @@ func (r *rollupAPI) Fetcher(ctx echo.Context, request GioJSONRequestBody) (*stri
 	case espresso:
 		return r.fetchEspresso(ctx, request.Id)
 	case syscoin:
-		return model.FetchSyscoinPoDa(ctx, request.Id)
+		// return model.FetchSyscoinPoDa(ctx, request.Id)
+		fallthrough
 	default:
 		unsupported := "Unsupported domain"
 		return nil, model.NewHttpCustomError(http.StatusBadRequest, &unsupported)
