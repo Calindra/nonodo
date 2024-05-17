@@ -1,12 +1,14 @@
 package model
 
 import (
+	"io"
+	"log/slog"
 	"net/http"
-	"os"
 
 	// opt_client "github.com/ethereum-optimism/optimism/op-service/client"
 	// eth_log "github.com/ethereum/go-ethereum/log"
 	// nxt_log "golang.org/x/exp/slog"
+
 	"github.com/labstack/echo/v4"
 )
 
@@ -41,14 +43,28 @@ func NewSyscoinClient() *SyscoinClient {
 // }
 
 func FetchSyscoinPoDa(ctx echo.Context, id string) (*string, *HttpCustomError) {
-	// Read of file
-	file, err := os.ReadFile("syscoin-poda.json")
+	slog.Info("Called FetchSyscoinPoDa")
+
+	full_url := "https://poda.syscoin.org/vh/" + id
+
+	res, err := http.Get(full_url)
+
 	if err != nil {
-		return nil, NewHttpCustomError(http.StatusNotFound, nil)
+		return nil, NewHttpCustomError(http.StatusInternalServerError, nil)
 	}
 
-	// Convert to string
-	str := string(file)
+	defer res.Body.Close()
+
+	// Read the response body
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, NewHttpCustomError(http.StatusInternalServerError, nil)
+	}
+
+	// Convert the body to string
+	str := string(body)
+
+	slog.Debug("Response from syscoin PoDa: ", "response", str)
 
 	return &str, nil
 }

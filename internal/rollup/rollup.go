@@ -31,15 +31,6 @@ const FinishPollInterval = time.Millisecond * 100
 func Register(e *echo.Echo, model *model.NonodoModel) {
 	var rollupAPI ServerInterface = &rollupAPI{model}
 	RegisterHandlers(e, rollupAPI)
-
-	routers, err := json.Marshal(e.Routers())
-
-	if err != nil {
-		slog.Error("Failed to marshal routers")
-		return
-	}
-
-	fmt.Println("Rollup API registered", string(routers))
 }
 
 // Shared struct for request handlers.
@@ -266,15 +257,37 @@ func (r *rollupAPI) fetchEspresso(ctx echo.Context, id string) (*string, *model.
 	}
 }
 
-func (r *rollupAPI) Fetcher(ctx echo.Context, request GioJSONRequestBody) (*string, *model.HttpCustomError) {
+func (r *rollupAPI) Fetcher(ctx echo.Context, request GioJSONRequestBody) (*GioResponseRollup, *model.HttpCustomError) {
 	var espresso uint16 = 2222
 	var syscoin uint16 = 5700
 
+	deb, err := json.Marshal(request)
+
+	if err != nil {
+		slog.Error("Failed to marshal request", "error", err)
+	} else {
+		slog.Info("Fetcher called", "json", string(deb))
+	}
+
 	switch request.Domain {
 	case espresso:
-		return r.fetchEspresso(ctx, request.Id)
+		data, err := r.fetchEspresso(ctx, request.Id)
+
+		if err != nil {
+			return nil, err
+		}
+		var its_ok uint16 = 200
+
+		return &GioResponseRollup{Data: *data, Code: its_ok}, nil
 	case syscoin:
-		return model.FetchSyscoinPoDa(ctx, request.Id)
+		data, err := model.FetchSyscoinPoDa(ctx, request.Id)
+
+		if err != nil {
+			return nil, err
+		}
+		var its_ok uint16 = 200
+
+		return &GioResponseRollup{Data: *data, Code: its_ok}, nil
 	default:
 		unsupported := "Unsupported domain"
 		return nil, model.NewHttpCustomError(http.StatusBadRequest, &unsupported)
@@ -304,7 +317,8 @@ func (r *rollupAPI) Gio(ctx echo.Context) error {
 		return ctx.String(http.StatusNotFound, "Not found")
 	}
 
-	return ctx.String(http.StatusOK, *fetch)
+	// return ctx.String(http.StatusOK, *fetch)
+	return nil
 }
 
 // Handle requests to /finish.
