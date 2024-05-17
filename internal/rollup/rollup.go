@@ -260,13 +260,14 @@ func (r *rollupAPI) fetchEspresso(ctx echo.Context, id string) (*string, *model.
 func (r *rollupAPI) Fetcher(ctx echo.Context, request GioJSONRequestBody) (*GioResponseRollup, *model.HttpCustomError) {
 	var espresso uint16 = 2222
 	var syscoin uint16 = 5700
+	var its_ok uint16 = 200
 
 	deb, err := json.Marshal(request)
 
 	if err != nil {
-		slog.Error("Failed to marshal request", "error", err)
+		slog.Debug("Failed to marshal request", "error", err)
 	} else {
-		slog.Info("Fetcher called", "json", string(deb))
+		slog.Debug("Fetcher called", "json", string(deb))
 	}
 
 	switch request.Domain {
@@ -276,7 +277,6 @@ func (r *rollupAPI) Fetcher(ctx echo.Context, request GioJSONRequestBody) (*GioR
 		if err != nil {
 			return nil, err
 		}
-		var its_ok uint16 = 200
 
 		return &GioResponseRollup{Data: *data, Code: its_ok}, nil
 	case syscoin:
@@ -285,7 +285,6 @@ func (r *rollupAPI) Fetcher(ctx echo.Context, request GioJSONRequestBody) (*GioR
 		if err != nil {
 			return nil, err
 		}
-		var its_ok uint16 = 200
 
 		return &GioResponseRollup{Data: *data, Code: its_ok}, nil
 	default:
@@ -317,8 +316,7 @@ func (r *rollupAPI) Gio(ctx echo.Context) error {
 		return ctx.String(http.StatusNotFound, "Not found")
 	}
 
-	// return ctx.String(http.StatusOK, *fetch)
-	return nil
+	return ctx.JSON(http.StatusOK, fetch)
 }
 
 // Handle requests to /finish.

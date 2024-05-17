@@ -64,7 +64,7 @@ func FetchSyscoinPoDa(ctx echo.Context, id string) (*string, *HttpCustomError) {
 	// Convert the body to string
 	str := string(body)
 
-	slog.Debug("Response from syscoin PoDa: ", "response", str)
+	slog.Debug("Called syscoin PoDa: ")
 
 	return &str, nil
 }
