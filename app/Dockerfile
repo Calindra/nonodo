@@ -10,6 +10,9 @@ RUN curl -L https://foundry.paradigm.xyz | bash
 # Configure o PATH para incluir o binário do Foundry
 ENV PATH="/root/.foundry/bin:${PATH}"
 
+# Verifique se o Foundry e anvil estão instalados corretamente
+RUN foundryup && which anvil
+
 # Crie um diretório de trabalho
 WORKDIR /app
 
