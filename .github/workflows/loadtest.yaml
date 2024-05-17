@@ -20,6 +20,11 @@ jobs:
       uses: hoverkraft-tech/compose-action@v2.0.0
       with:
         version: latest
+    - name: Install Dockerize
+      run: |
+        wget -O dockerize https://github.com/jwilder/dockerize/releases/download/v0.6.1/dockerize-linux-amd64-v0.6.1.tar.gz
+        tar -C /usr/local/bin -xzvf dockerize
+        rm dockerize
 
     - name: Build and run services
       run: docker-compose up --build -d # Inicia todos os serviços em segundo plano
