@@ -260,7 +260,7 @@ func (r *rollupAPI) fetchEspresso(ctx echo.Context, id string) (*string, *model.
 func (r *rollupAPI) Fetcher(ctx echo.Context, request GioJSONRequestBody) (*GioResponseRollup, *model.HttpCustomError) {
 	var espresso uint16 = 2222
 	var syscoin uint16 = 5700
-	var its_ok uint16 = 200
+	var its_ok uint16 = 42
 
 	deb, err := json.Marshal(request)
 

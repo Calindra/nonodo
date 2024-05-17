@@ -43,7 +43,7 @@ func NewSyscoinClient() *SyscoinClient {
 // }
 
 func FetchSyscoinPoDa(ctx echo.Context, id string) (*string, *HttpCustomError) {
-	slog.Info("Called FetchSyscoinPoDa")
+	slog.Debug("Called FetchSyscoinPoDa")
 
 	full_url := "https://poda.syscoin.org/vh/" + id
 
