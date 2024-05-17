@@ -21,5 +21,19 @@ jobs:
       with:
         version: latest
 
+    - name: Build and run services
+      run: docker-compose up --build -d # Inicia todos os serviços em segundo plano
+
+    - name: Wait for services to be ready
+      run: |
+        echo "Waiting for services to be ready..."
+        # Adicione comandos para verificar a disponibilidade dos serviços, por exemplo:
+        dockerize -wait tcp://db:5432 -timeout 60s
+        dockerize -wait tcp://postgraphile:5000 -timeout 60s
+        dockerize -wait tcp://app:8080 -timeout 60s
+
     - name: Run K6 Load Test
-      run: docker-compose up --abort-on-container-exit
+      run: docker-compose run k6
+
+    - name: Shutdown services
+      run: docker-compose down
