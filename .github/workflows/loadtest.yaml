@@ -33,9 +33,9 @@ jobs:
       run: |
         echo "Waiting for services to be ready..."
         # Adicione comandos para verificar a disponibilidade dos serviços, por exemplo:
-        dockerize -wait tcp://db:5432 -timeout 60s
-        dockerize -wait tcp://postgraphile:5000 -timeout 60s
-        dockerize -wait tcp://app:8080 -timeout 60s
+        dockerize -wait tcp://db:5432 -timeout 120s
+        dockerize -wait tcp://postgraphile:5000 -timeout 120s
+        dockerize -wait tcp://app:8080 -timeout 120s
 
     - name: Run K6 Load Test
       run: docker-compose run k6
