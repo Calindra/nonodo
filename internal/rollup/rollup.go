@@ -31,6 +31,15 @@ const FinishPollInterval = time.Millisecond * 100
 func Register(e *echo.Echo, model *model.NonodoModel) {
 	var rollupAPI ServerInterface = &rollupAPI{model}
 	RegisterHandlers(e, rollupAPI)
+
+	routers, err := json.Marshal(e.Routers())
+
+	if err != nil {
+		slog.Error("Failed to marshal routers")
+		return
+	}
+
+	fmt.Println("Rollup API registered", string(routers))
 }
 
 // Shared struct for request handlers.
@@ -265,8 +274,7 @@ func (r *rollupAPI) Fetcher(ctx echo.Context, request GioJSONRequestBody) (*stri
 	case espresso:
 		return r.fetchEspresso(ctx, request.Id)
 	case syscoin:
-		// return model.FetchSyscoinPoDa(ctx, request.Id)
-		fallthrough
+		return model.FetchSyscoinPoDa(ctx, request.Id)
 	default:
 		unsupported := "Unsupported domain"
 		return nil, model.NewHttpCustomError(http.StatusBadRequest, &unsupported)

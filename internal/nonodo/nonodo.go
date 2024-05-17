@@ -182,8 +182,10 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	}))
 
 	if opts.LegacyMode {
+		slog.Info("Using legacy mode")
 		v1.Register(re, model)
 	} else {
+		slog.Info("Using new mode")
 		rollup.Register(re, model)
 	}
 
