@@ -151,7 +151,7 @@ jobs:
           TAG_NO_V=$(echo "$TAG" | sed 's/^v//')
           sed -i "s/\"version\": \".*\"/\"version\": \"$TAG_NO_V\"/" package.json
           echo "Updated version to $TAG_NO_V in package.json"
-          cp package.json ..
+          cp package-lock.json ..
           cat package.json
 
       # Setup .npmrc file to publish to npm
