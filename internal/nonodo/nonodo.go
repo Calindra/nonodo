@@ -189,14 +189,6 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		rollup.Register(re, model)
 	}
 
-	// routers, err := json.Marshal(re.Routers())
-
-	// if err != nil {
-	// 	slog.Error("Failed to marshal routers")
-	// } else {
-	// 	fmt.Println("Rollup API registered", string(routers))
-	// }
-
 	if opts.RpcUrl == "" && !opts.DisableDevnet {
 		w.Workers = append(w.Workers, devnet.AnvilWorker{
 			Address: opts.AnvilAddress,
