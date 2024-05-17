@@ -16,6 +16,7 @@ type SyscoinClient struct {
 }
 
 func NewSyscoinClient() *SyscoinClient {
+	// example: https://poda.syscoin.org/vh/06310294ee0af7f1ae4c8e19fa509264565fa82ba8c82a7a9074b2abf12a15d9
 	url := "https://poda.syscoin.org/vh"
 
 	return &SyscoinClient{
