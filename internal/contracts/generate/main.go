@@ -50,6 +50,11 @@ var bindings = []contractBinding{
 		typeName: "Inputs",
 		outFile:  "inputs.go",
 	},
+	{
+		jsonPath: baseContractsPath + "dapp/Application.sol/Application.json",
+		typeName: "Application",
+		outFile:  "application.go",
+	},
 }
 
 func main() {

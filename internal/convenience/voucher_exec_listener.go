@@ -6,8 +6,8 @@ import (
 	"log"
 	"log/slog"
 	"math/big"
-	"strings"
 
+	"github.com/calindra/nonodo/internal/contracts"
 	"github.com/calindra/nonodo/internal/convenience/services"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -19,7 +19,6 @@ import (
 type VoucherExecListener struct {
 	Provider           string
 	ApplicationAddress common.Address
-	AbiString          string
 	EventName          string
 	ConvenienceService *services.ConvenienceService
 	FromBlock          *big.Int
@@ -36,23 +35,7 @@ func NewExecListener(
 		ConvenienceService: convenienceService,
 		Provider:           provider,
 		ApplicationAddress: applicationAddress,
-		EventName:          "VoucherExecuted",
-		// Todo: ABI check
-		AbiString: `[
-			{
-			  "anonymous": false,
-			  "inputs": [
-				{
-				  "indexed": false,
-				  "internalType": "uint256",
-				  "name": "voucherId",
-				  "type": "uint256"
-				}
-			  ],
-			  "name": "VoucherExecuted",
-			  "type": "event"
-			}
-		]`,
+		EventName:          "ApplicationOutputExecuted",
 	}
 }
 
@@ -109,10 +92,15 @@ func (x VoucherExecListener) Start(ctx context.Context, ready chan<- struct{}) e
 func (x *VoucherExecListener) WatchExecutions(ctx context.Context, client *ethclient.Client) error {
 
 	// ABI of your contract
-	contractABI, err := abi.JSON(strings.NewReader(x.AbiString))
+	abi, err := contracts.ApplicationMetaData.GetAbi()
+
+	if abi == nil {
+		return fmt.Errorf("error parsing abi")
+	}
 	if err != nil {
 		slog.Error(err.Error())
 	}
+	contractABI := *abi
 
 	slog.Debug("Reading executions", "FromBlock", x.FromBlock)
 
