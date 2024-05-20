@@ -9,7 +9,7 @@ export let options = {
 };
 
 export default function () {
-    const url = 'http://localhost:5000/graphql'; 
+    const url = 'http://0.0.0.0:8080/graphql'; 
     const payload = JSON.stringify({
         query: "query { voucher(voucherIndex: 0, inputIndex: 0) { index }}"
     });
