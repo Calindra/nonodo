@@ -13,6 +13,8 @@ services:
     volumes:
       - ./db/restore.sql:/docker-entrypoint-initdb.d/restore.sql
       - ./db/data_files/:/docker-entrypoint-initdb.d/data_files
+    networks:
+      - mynetwork
   postgraphile:
     build:
       context: .
@@ -22,16 +24,24 @@ services:
       - db
     ports:
       - "5000:5000"
+    networks:
+      - mynetwork
   app:
     build:
       context: .
       dockerfile: ./app/Dockerfile 
+    environment:
+      POSTGRES_DB: mydatabase
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: mypassword
     restart: always
     depends_on:
       - postgraphile
     ports:
       - "8080:8080"
     command: ./nonodo
+    networks:
+      - mynetwork
 
   k6:
     image: loadimpact/k6
@@ -42,6 +52,12 @@ services:
     command: run /test/test.js
     deploy:
       replicas: 0 # Don't auto start service on docker up command
+    networks:
+      - mynetwork
 
 volumes:
   pgdata:
+
+networks:
+  mynetwork:
+    driver: bridge
