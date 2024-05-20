@@ -22,7 +22,7 @@ export default function () {
 
     const response = http.post(url, payload, params);
 
-    check(res, {
+    check(response, {
         'is status 200': (r) => r.status === 200,
         'response body contains expected content': (r) => r.body.includes('voucher not found'), 
     });
