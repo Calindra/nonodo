@@ -3,75 +3,20 @@ package reader
 import (
 	"log/slog"
 	"math/big"
-	"strings"
 
+	"github.com/calindra/nonodo/internal/contracts"
 	graphql "github.com/calindra/nonodo/internal/reader/model"
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 )
 
 type InputBlobAdapter struct{}
-
-// Todo: check this
-const abiJSON = `
-[
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "chainId",
-                "type": "uint256"
-            },
-            {
-                "internalType": "address",
-                "name": "appContract",
-                "type": "address"
-            },
-            {
-                "internalType": "address",
-                "name": "msgSender",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "blockNumber",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "blockTimestamp",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "prevRandao",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "index",
-                "type": "uint256"
-            },
-            {
-                "internalType": "bytes",
-                "name": "payload",
-                "type": "bytes"
-            }
-        ],
-        "name": "EvmAdvance",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    }
-]
-`
 
 func (i *InputBlobAdapter) Adapt(node struct {
 	Index  int    `json:"index"`
 	Blob   string `json:"blob"`
 	Status string `json:"status"`
 }) (*graphql.Input, error) {
-	abiParsed, err := abi.JSON(strings.NewReader(abiJSON))
+	abiParsed, err := contracts.InputsMetaData.GetAbi()
 
 	if err != nil {
 		slog.Error("Error parsing abi", "err", err)
