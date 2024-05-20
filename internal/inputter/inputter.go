@@ -125,19 +125,41 @@ func (w InputterWorker) addInput(
 		return fmt.Errorf("inputter: failed to get tx header: %w", err)
 	}
 	timestamp := time.Unix(int64(header.Time), 0)
+
+	// use abi to decode the input
+	eventInput := event.Input[4:]
+	abi, err := contracts.InputsMetaData.GetAbi()
+
+	if err != nil {
+		slog.Error("Error parsing abi", "err", err)
+		return err
+	}
+
+	values, err := abi.Methods["EvmAdvance"].Inputs.UnpackValues(eventInput)
+
+	if err != nil {
+		slog.Error("Error parsing abi", "err", err)
+		return err
+	}
+
+	msgSender := values[2].(common.Address)
+	payload := values[7].([]uint8)
+
 	slog.Debug("inputter: read event",
-		"dapp", event.Dapp,
-		"input.index", event.InputIndex,
-		"sender", event.Sender,
+		"dapp", event.AppContract,
+		"input.index", event.Index,
+		"sender", msgSender,
 		"input", event.Input,
+		"payload", payload,
 		slog.Group("block",
 			"number", header.Number,
 			"timestamp", timestamp,
 		),
 	)
+
 	w.Model.AddAdvanceInput(
-		event.Sender,
-		event.Input,
+		msgSender,
+		payload,
 		event.Raw.BlockNumber,
 		timestamp,
 	)

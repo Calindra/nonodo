@@ -1,16 +1,18 @@
 package reader
 
 import (
-	graphql "github.com/calindra/nonodo/internal/reader/model"
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/common"
 	"log/slog"
 	"math/big"
 	"strings"
+
+	graphql "github.com/calindra/nonodo/internal/reader/model"
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 type InputBlobAdapter struct{}
 
+// Todo: check this
 const abiJSON = `
 [
     {

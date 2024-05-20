@@ -37,6 +37,7 @@ func NewExecListener(
 		Provider:           provider,
 		ApplicationAddress: applicationAddress,
 		EventName:          "VoucherExecuted",
+		// Todo: ABI check
 		AbiString: `[
 			{
 			  "anonymous": false,

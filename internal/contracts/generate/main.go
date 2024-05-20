@@ -28,7 +28,7 @@ import (
 )
 
 const (
-	rollupsContractsUrl = "https://registry.npmjs.org/@cartesi/rollups/-/rollups-1.4.0.tgz"
+	rollupsContractsUrl = "https://registry.npmjs.org/@cartesi/rollups/-/rollups-2.0.0-rc.3.tgz"
 	baseContractsPath   = "package/export/artifacts/contracts/"
 	bindingPkg          = "contracts"
 )
@@ -44,6 +44,11 @@ var bindings = []contractBinding{
 		jsonPath: baseContractsPath + "inputs/InputBox.sol/InputBox.json",
 		typeName: "InputBox",
 		outFile:  "input_box.go",
+	},
+	{
+		jsonPath: baseContractsPath + "common/Inputs.sol/Inputs.json",
+		typeName: "Inputs",
+		outFile:  "inputs.go",
 	},
 }
 
