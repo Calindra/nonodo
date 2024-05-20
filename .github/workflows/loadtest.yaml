@@ -23,7 +23,7 @@ jobs:
         version: latest
   
     - name: Build and run services
-      run: docker-compose up --build -d # Inicia todos os serviços em segundo plano
+      run: docker-compose up --build -d # Start all services on background
 
     - name: Wait services to be ready
       run: sleep 60s  
