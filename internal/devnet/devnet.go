@@ -4,7 +4,8 @@
 package devnet
 
 // Input box address in devnet.
-const InputBoxAddress = "0x59b22D57D4f067708AB0c00552767405926dc768"
+// const InputBoxAddress = "0x59b22D57D4f067708AB0c00552767405926dc768"
+const InputBoxAddress = "0x58Df21fE097d4bE5dCf61e01d9ea3f6B81c2E1dB"
 
 const ApplicationContractName = "CartesiDApp"
 
