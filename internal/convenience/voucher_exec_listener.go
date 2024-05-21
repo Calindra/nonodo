@@ -35,7 +35,7 @@ func NewExecListener(
 		ConvenienceService: convenienceService,
 		Provider:           provider,
 		ApplicationAddress: applicationAddress,
-		EventName:          "ApplicationOutputExecuted",
+		EventName:          "OutputExecuted",
 	}
 }
 
