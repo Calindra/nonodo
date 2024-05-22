@@ -29,7 +29,7 @@ jobs:
       run: |
         curl -sSfL https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh -o wait-for-it.sh
         chmod +x wait-for-it.sh
-        ./wait-for-it.sh 0.0.0.0:80 --timeout=120 --strict -- echo "App is up"
+        ./wait-for-it.sh 0.0.0.0:8080 --timeout=120 --strict -- echo "App is up"
 
 
     - name: Run K6 Load Test
