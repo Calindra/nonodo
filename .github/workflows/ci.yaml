@@ -191,8 +191,8 @@ jobs:
           TAG="${{ steps.extract_tag.outputs.tag }}"
           TAG_NO_V=$(echo "$TAG" | sed 's/^v//')
           sed -i "s/\"version\": \".*\"/\"version\": \"$TAG_NO_V\"/" package.json
-          sed -i '' "s/\"name\": \".*\"/\"name\": \"brunodo\"/" package.json
-          sed -i '' "s/\"nonodo\": \".*\"/\"brunodo\": \".\/src\/nonodo.js\"/" package.json
+          sed -i "s/\"name\": \".*\"/\"name\": \"brunodo\"/" package.json
+          sed -i "s/\"nonodo\": \".*\"/\"brunodo\": \".\/src\/nonodo.js\"/" package.json
           echo "Updated version to $TAG_NO_V in package.json"
           cp package-lock.json ..
           cat package.json
