@@ -35,7 +35,7 @@ services:
       - postgraphile
     ports:
       - "8080:8080"
-    command: ./nonodo
+    command: ./nonodo --http-address=0.0.0.0
 
   k6:
     image: loadimpact/k6

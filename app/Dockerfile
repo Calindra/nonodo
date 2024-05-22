@@ -26,4 +26,4 @@ RUN go build -o nonodo
 EXPOSE 8080
 
 # Comando para rodar a aplicação
-CMD ["./nonodo"]
+CMD ["./nonodo", "--http-address=0.0.0.0"]
