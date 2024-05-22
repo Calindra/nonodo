@@ -43,17 +43,6 @@ services:
     command: ./nonodo
     networks:
       - mynetwork
-  
-  nginx:
-    image: nginx
-    depends_on:
-      - app
-    ports:
-      - "8081:80"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf
-    networks:
-      - mynetwork
 
   k6:
     image: loadimpact/k6
