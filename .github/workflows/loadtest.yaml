@@ -31,7 +31,12 @@ jobs:
         chmod +x wait-for-it.sh
         ./wait-for-it.sh app:8080 --timeout=120 --strict -- echo "App is up"
 
+    - name: Show running containers
+      run: docker-compose ps
 
+    - name: Show logs for app service
+      run: docker-compose logs app
+      
     - name: Run K6 Load Test
       run: docker-compose run k6
 
