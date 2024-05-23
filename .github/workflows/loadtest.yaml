@@ -17,7 +17,7 @@ jobs:
       postgres:
         image: postgres
         restart: always
-        environment:
+        env:
           POSTGRES_DB: mydatabase
           POSTGRES_USER: myuser
           POSTGRES_PASSWORD: mypassword
@@ -33,7 +33,6 @@ jobs:
         build:
           context: .
           dockerfile: ./db/Dockerfile
-        restart: always
         depends_on:
           - db
         ports:
