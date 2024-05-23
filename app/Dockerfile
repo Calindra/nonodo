@@ -16,6 +16,12 @@ RUN foundryup && which anvil
 # Crie um diretório de trabalho
 WORKDIR /app
 
+# Copie os arquivos go.mod e go.sum para o diretório de trabalho
+COPY go.mod go.sum ./
+
+# Baixe as dependências
+RUN go mod download
+
 # Copie os arquivos do projeto para o diretório de trabalho
 COPY . .
 
