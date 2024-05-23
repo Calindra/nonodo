@@ -43,7 +43,7 @@ jobs:
         run: docker run -d -p 5000:5000 --name postgraphile-custom postgraphile-custom
       
       - name: Build nonodo Docker image
-        run: docker build -t nonodo-app ./app/
+        run: docker build -t nonodo-app .
       
       - name: Run nonodo application
         run: docker run -d -p 8080:8080 --name nonodo nonodo-app
