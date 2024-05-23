@@ -19,6 +19,8 @@ WORKDIR /app
 # Copie todos os arquivos do projeto para o diretório de trabalho
 COPY ../. .
 
+RUN ls
+
 # Execute o build da aplicação
 RUN go build -o nonodo
 
