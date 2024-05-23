@@ -14,7 +14,7 @@ ENV PATH="/root/.foundry/bin:${PATH}"
 RUN foundryup && which anvil
 
 # Copie todos os arquivos do projeto para o diretório de trabalho
-COPY ../. .
+COPY . .
 
 RUN ls
 
