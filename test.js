@@ -9,7 +9,7 @@ export let options = {
 };
 
 export default function () {
-    const url = 'http://app:8080/graphql'; 
+    const url = 'http://nonodo_app_1:8080/graphql'; 
     const payload = JSON.stringify({
         query: "query { voucher(voucherIndex: 0, inputIndex: 0) { index }}"
     });
