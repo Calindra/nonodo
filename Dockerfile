@@ -13,10 +13,17 @@ ENV PATH="/root/.foundry/bin:${PATH}"
 # Verifique se o Foundry e anvil estão instalados corretamente
 RUN foundryup && which anvil
 
-# Copie todos os arquivos do projeto para o diretório de trabalho
-COPY . .
+# Crie um diretório de trabalho fora do GOPATH
+WORKDIR /app
 
-RUN ls
+# Copie os arquivos go.mod e go.sum para o diretório de trabalho
+COPY ../go.mod ../go.sum ./
+
+# Baixe as dependências
+RUN go mod download
+
+# Copie o resto dos arquivos do projeto para o diretório de trabalho
+COPY ../ ./
 
 # Execute o build da aplicação
 RUN go build -o nonodo
