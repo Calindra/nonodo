@@ -25,26 +25,39 @@ jobs:
         volumes:
           - ./db/restore.sql:/docker-entrypoint-initdb.d/restore.sql
           - ./db/data_files/:/docker-entrypoint-initdb.d/data_files
-        networks:
-          - mynetwork
-      
-      postgraphile:
-        build:
-          context: .
-          dockerfile: ./db/Dockerfile
-        depends_on:
-          - db
-        ports:
-          - "5000:5000"
-        networks:
-          - mynetwork
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v2
+      - name: Checkout repository
+        uses: actions/checkout@v2
 
-    - name: Wait for services to be ready
-      run: |
-        curl -sSfL https://raw.githubusercontent.com/vishnubob/wait-for-it/master/wait-for-it.sh -o wait-for-it.sh
-        chmod +x wait-for-it.sh
-        ./wait-for-it.sh postgres:5432 --timeout=120 --strict -- echo "App is up"
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      
+      - name: Build PostGraphile Docker image
+        run: docker build -t postgraphile-custom ./db/
+      
+      - name: Run PostGraphile service
+        run: docker run -d -p 5000:5000 --name postgraphile-custom postgraphile-custom
+      
+      - name: Build nonodo Docker image
+        run: docker build -t nonodo-app ./app/
+      
+      - name: Run nonodo application
+        run: docker run -d -p 8080:8080 --name nonodo nonodo-app
+      
+      - name: Wait for services to be ready
+        run: |
+          for i in {1.630}; do
+            curl -sSf http://localhost:5000 && break
+            sleep 1
+          done
+          for i in {1..60}; do
+            curl -sSf http://localhost:8080 && break
+            sleep 1
+          done
+          
+      - name: Install k6
+        run: sudo apt-get install -y k6
+
+      - name: Run k6 tests
+        run: k6 run test.js
