@@ -13,9 +13,6 @@ ENV PATH="/root/.foundry/bin:${PATH}"
 # Verifique se o Foundry e anvil estão instalados corretamente
 RUN foundryup && which anvil
 
-# Crie um diretório de trabalho
-WORKDIR /app
-
 # Copie todos os arquivos do projeto para o diretório de trabalho
 COPY ../. .
 
