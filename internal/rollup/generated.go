@@ -31,26 +31,7 @@ const (
 
 // Advance defines model for Advance.
 type Advance struct {
-	// AppContract 20-byte address of the application contract.
-	AppContract string `json:"app_contract"`
-
-	// BlockNumber Block number when input was posted.
-	BlockNumber uint64 `json:"block_number"`
-
-	// BlockTimestamp Unix timestamp of block in milliseconds.
-	BlockTimestamp uint64 `json:"block_timestamp"`
-
-	// ChainId Network identifier.
-	ChainId uint64 `json:"chain_id"`
-
-	// EpochIndex Deprecated. Always receives 0.
-	EpochIndex uint64 `json:"epoch_index"`
-
-	// InputIndex Input index starting from genesis.
-	InputIndex uint64 `json:"input_index"`
-
-	// MsgSender 20-byte address of the account that submitted the input.
-	MsgSender string `json:"msg_sender"`
+	Metadata Metadata `json:"metadata"`
 
 	// Payload The payload is in the Ethereum hex binary format.
 	// The first two characters are '0x' followed by pairs of hexadecimal numbers that correspond to one byte.
@@ -110,6 +91,33 @@ type Inspect struct {
 	// For instance, '0xdeadbeef' corresponds to a payload with length 4 and bytes 222, 173, 190, 175.
 	// An empty payload is represented by the string '0x'.
 	Payload string `json:"payload"`
+}
+
+// Metadata defines model for Metadata.
+type Metadata struct {
+	// AppContract 20-byte address of the application contract.
+	AppContract string `json:"app_contract"`
+
+	// BlockNumber Block number when input was posted.
+	BlockNumber uint64 `json:"block_number"`
+
+	// BlockTimestamp Unix timestamp of block in milliseconds.
+	BlockTimestamp uint64 `json:"block_timestamp"`
+
+	// ChainId Network identifier.
+	ChainId uint64 `json:"chain_id"`
+
+	// EpochIndex Deprecated. Always receives 0.
+	EpochIndex uint64 `json:"epoch_index"`
+
+	// InputIndex Input index starting from genesis.
+	InputIndex uint64 `json:"input_index"`
+
+	// MsgSender 20-byte address of the account that submitted the input.
+	MsgSender string `json:"msg_sender"`
+
+	// PrevRandao The latest RANDAO mix of the post beacon state of the previous block.
+	PrevRandao uint64 `json:"prev_randao"`
 }
 
 // Notice defines model for Notice.
@@ -877,7 +885,7 @@ func (r GioResponse) StatusCode() int {
 type AddNoticeResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *IndexResponse
+	JSON201      *IndexResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -920,7 +928,7 @@ func (r AddReportResponse) StatusCode() int {
 type AddVoucherResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *IndexResponse
+	JSON201      *IndexResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -1123,12 +1131,12 @@ func ParseAddNoticeResponse(rsp *http.Response) (*AddNoticeResponse, error) {
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
 		var dest IndexResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON200 = &dest
+		response.JSON201 = &dest
 
 	}
 
@@ -1165,12 +1173,12 @@ func ParseAddVoucherResponse(rsp *http.Response) (*AddVoucherResponse, error) {
 	}
 
 	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
 		var dest IndexResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}
-		response.JSON200 = &dest
+		response.JSON201 = &dest
 
 	}
 

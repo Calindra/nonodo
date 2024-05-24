@@ -23,13 +23,31 @@ const FinishPollInterval = time.Millisecond * 100
 
 // Register the rollup API to echo
 func Register(e *echo.Echo, model *model.NonodoModel) {
-	var rollupAPI ServerInterface = &rollupAPI{model}
+	sequencer := InputBoxSequencer{model: model}
+	var rollupAPI ServerInterface = &rollupAPI{model, &sequencer}
 	RegisterHandlers(e, rollupAPI)
 }
 
 // Shared struct for request handlers.
 type rollupAPI struct {
+	model     *model.NonodoModel
+	sequencer Sequencer
+}
+
+type InputBoxSequencer struct {
 	model *model.NonodoModel
+}
+
+type EspressoSequencer struct {
+	//??
+}
+
+func (ibs *InputBoxSequencer) FinishAndGetNext(accept bool) model.Input {
+	return ibs.model.FinishAndGetNext(accept)
+}
+
+type Sequencer interface {
+	FinishAndGetNext(accept bool) model.Input
 }
 
 // Gio implements ServerInterface.
@@ -62,7 +80,12 @@ func (r *rollupAPI) Finish(c echo.Context) error {
 
 	// talk to model
 	for i := 0; i < FinishRetries; i++ {
-		input := r.model.FinishAndGetNext(accepted)
+		// input := r.model.FinishAndGetNext(accepted)
+		// if input != nil {
+		// 	resp := convertInput(input)
+		// 	return c.JSON(http.StatusOK, &resp)
+		// }
+		input := r.sequencer.FinishAndGetNext(accepted)
 		if input != nil {
 			resp := convertInput(input)
 			return c.JSON(http.StatusOK, &resp)
@@ -206,11 +229,13 @@ func convertInput(input model.Input) RollupRequest {
 	switch input := input.(type) {
 	case model.AdvanceInput:
 		advance := Advance{
-			BlockNumber:    input.BlockNumber,
-			InputIndex:     uint64(input.Index),
-			MsgSender:      hexutil.Encode(input.MsgSender[:]),
-			BlockTimestamp: uint64(input.BlockTimestamp.Unix()),
-			Payload:        hexutil.Encode(input.Payload),
+			Metadata: Metadata{
+				BlockNumber:    input.BlockNumber,
+				InputIndex:     uint64(input.Index),
+				MsgSender:      hexutil.Encode(input.MsgSender[:]),
+				BlockTimestamp: uint64(input.BlockTimestamp.Unix()),
+			},
+			Payload: hexutil.Encode(input.Payload),
 		}
 		err := resp.Data.FromAdvance(advance)
 		if err != nil {
