@@ -23,11 +23,12 @@ SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
 
+-- DROP DATABASE mydatabase;
 --
 -- Name: postgres; Type: DATABASE; Schema: -; Owner: postgres
 --
 
-CREATE DATABASE mydatabase WITH TEMPLATE = template0 ENCODING = 'UTF8' LC_COLLATE = 'en_US.UTF-8' LC_CTYPE = 'en_US.UTF-8';
+-- CREATE DATABASE mydatabase WITH TEMPLATE = template0 ENCODING = 'UTF8' LC_COLLATE = 'en_US.UTF-8' LC_CTYPE = 'en_US.UTF-8';
 
 
 ALTER DATABASE mydatabase OWNER TO myuser;
@@ -79,9 +80,9 @@ SET default_table_access_method = heap;
 --
 
 CREATE TABLE public.inputs (
-                               index integer NOT NULL,
-                               blob bytea NOT NULL,
-                               status public."CompletionStatus" NOT NULL
+    index integer NOT NULL,
+    blob bytea NOT NULL,
+    status public."CompletionStatus" NOT NULL
 );
 
 
@@ -92,9 +93,9 @@ ALTER TABLE public.inputs OWNER TO myuser;
 --
 
 CREATE TABLE public.outputs (
-                                input_index integer NOT NULL,
-                                index integer NOT NULL,
-                                blob bytea NOT NULL
+    input_index integer NOT NULL,
+    index integer NOT NULL,
+    blob bytea NOT NULL
 );
 
 
@@ -105,17 +106,17 @@ ALTER TABLE public.outputs OWNER TO myuser;
 --
 
 CREATE TABLE public.proofs (
-                               input_index integer NOT NULL,
-                               output_index integer NOT NULL,
-                               first_input integer NOT NULL,
-                               last_input integer NOT NULL,
-                               validity_input_index_within_epoch integer NOT NULL,
-                               validity_output_index_within_input integer NOT NULL,
-                               validity_output_hashes_root_hash bytea NOT NULL,
-                               validity_output_epoch_root_hash bytea NOT NULL,
-                               validity_machine_state_hash bytea NOT NULL,
-                               validity_output_hash_in_output_hashes_siblings bytea[] NOT NULL,
-                               validity_output_hashes_in_epoch_siblings bytea[] NOT NULL
+    input_index integer NOT NULL,
+    output_index integer NOT NULL,
+    first_input integer NOT NULL,
+    last_input integer NOT NULL,
+    validity_input_index_within_epoch integer NOT NULL,
+    validity_output_index_within_input integer NOT NULL,
+    validity_output_hashes_root_hash bytea NOT NULL,
+    validity_output_epoch_root_hash bytea NOT NULL,
+    validity_machine_state_hash bytea NOT NULL,
+    validity_output_hash_in_output_hashes_siblings bytea[] NOT NULL,
+    validity_output_hashes_in_epoch_siblings bytea[] NOT NULL
 );
 
 
@@ -126,9 +127,9 @@ ALTER TABLE public.proofs OWNER TO myuser;
 --
 
 CREATE TABLE public.reports (
-                                input_index integer NOT NULL,
-                                index integer NOT NULL,
-                                blob bytea NOT NULL
+    input_index integer NOT NULL,
+    index integer NOT NULL,
+    blob bytea NOT NULL
 );
 
 
@@ -139,8 +140,8 @@ ALTER TABLE public.reports OWNER TO myuser;
 --
 
 CREATE TABLE public.schema_migrations (
-                                          version bigint NOT NULL,
-                                          dirty boolean NOT NULL
+    version bigint NOT NULL,
+    dirty boolean NOT NULL
 );
 
 

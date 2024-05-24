@@ -2,14 +2,14 @@ package reader
 
 import (
 	"fmt"
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/stretchr/testify/suite"
 	"log"
 	"log/slog"
 	"math/big"
-	"strings"
 	"testing"
+
+	"github.com/calindra/nonodo/internal/contracts"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/stretchr/testify/suite"
 )
 
 type InputBlobAdapterTestSuite struct {
@@ -44,61 +44,8 @@ func (s *InputBlobAdapterTestSuite) TestAdapt() {
 }
 
 func GenerateBlob() string {
-	abiJSON := `
-	[
-		{
-			"inputs": [
-			{
-				"internalType": "uint256",
-				"name": "chainId",
-				"type": "uint256"
-			},
-			{
-				"internalType": "address",
-				"name": "appContract",
-				"type": "address"
-			},
-			{
-				"internalType": "address",
-				"name": "msgSender",
-				"type": "address"
-			},
-			{
-				"internalType": "uint256",
-				"name": "blockNumber",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "blockTimestamp",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "prevRandao",
-				"type": "uint256"
-			},
-			{
-				"internalType": "uint256",
-				"name": "index",
-				"type": "uint256"
-			},
-			{
-				"internalType": "bytes",
-				"name": "payload",
-				"type": "bytes"
-			}
-			],
-			"name": "EvmAdvance",
-			"outputs": [],
-			"stateMutability": "nonpayable",
-			"type": "function"
-		}
-	]
-	`
-
 	// Parse the ABI JSON
-	abiParsed, err := abi.JSON(strings.NewReader(abiJSON))
+	abiParsed, err := contracts.InputsMetaData.GetAbi()
 
 	if err != nil {
 		log.Fatal(err)

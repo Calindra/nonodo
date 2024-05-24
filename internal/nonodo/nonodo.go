@@ -218,13 +218,13 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 			Name:    "app",
 			Command: opts.ApplicationArgs[0],
 			Args:    opts.ApplicationArgs[1:],
-			Env: []string{fmt.Sprintf("ROLLUP_HTTP_SERVER_URL=http://%s:%v/rollup",
-				opts.HttpAddress, opts.HttpPort)},
+			Env: []string{fmt.Sprintf("ROLLUP_HTTP_SERVER_URL=http://%s:%v",
+				opts.HttpAddress, opts.HttpRollupsPort)},
 		})
 	} else if opts.EnableEcho {
 		fmt.Println("Starting echo app")
 		w.Workers = append(w.Workers, echoapp.EchoAppWorker{
-			RollupEndpoint: fmt.Sprintf("http://127.0.0.1:%v", opts.HttpRollupsPort),
+			RollupEndpoint: fmt.Sprintf("http://%s:%v", opts.HttpAddress, opts.HttpRollupsPort),
 		})
 	}
 	return w

@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/calindra/nonodo/internal/contracts"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/suite"
 )
@@ -56,7 +57,17 @@ func (s *AnvilSuite) TestAnvilWorker() {
 	events, err := GetInputAdded(ctx, rpcUrl)
 	s.NoError(err)
 	s.Equal(1, len(events))
-	s.Equal(payload, events[0].Input)
+
+	// check input
+	abi, err := contracts.InputsMetaData.GetAbi()
+	s.NoError(err)
+
+	values, err := abi.Methods["EvmAdvance"].Inputs.UnpackValues(events[0].Input[4:])
+	s.NoError(err)
+
+	receivedPayload := values[7].([]byte)
+
+	s.Equal(payload, receivedPayload)
 
 	// stop worker
 	workerCancel()

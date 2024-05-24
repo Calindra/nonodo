@@ -15,9 +15,15 @@ NoNodo is a valuable development workflow help, but there are some [caveats](#ca
 NoNodo uses the Anvil as the underlying Ethereum node.
 To install Anvil, read the instructions on the [Foundry book](https://book.getfoundry.sh/getting-started/installation).
 
+### Installing from npm
+
+```sh
+npm i -g nonodo
+```
+
 ### Binaries
 
-Download the binaries from the [relase page](https://github.com/gligneul/nonodo/releases).
+Download the binaries from the [relase page](https://github.com/calindra/nonodo/releases).
 
 ### Installing from source
 
@@ -26,7 +32,7 @@ To use this command, install Go following the instructions on the [Go website](h
 Then, run the command below to install NoNodo.
 
 ```sh
-go install github.com/gligneul/nonodo@latest
+go install github.com/calindra/nonodo@latest
 ```
 
 The command above installs NoNodo into the `bin` directory inside the directory defined by the `GOPATH` environment variable.
