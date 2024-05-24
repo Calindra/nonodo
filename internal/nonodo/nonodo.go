@@ -69,6 +69,9 @@ type NonodoOpts struct {
 
 	// If set, enables legacy mode.
 	LegacyMode bool
+
+	// If set, uses the sequencer.
+	Sequencer string
 }
 
 // Create the options struct with default values.
@@ -93,6 +96,7 @@ func NewNonodoOpts() NonodoOpts {
 		FromBlock:          0,
 		DbImplementation:   "sqlite",
 		LegacyMode:         true,
+		Sequencer:          "inputbox",
 	}
 }
 

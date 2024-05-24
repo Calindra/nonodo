@@ -175,7 +175,8 @@ func (r *rollupAPI) fetchEspresso(ctx echo.Context, id string) (*string, *model.
 	}
 
 	ctxHttp := ctx.Request().Context()
-	espressoService := NewExpressoService(ctxHttp, nil)
+	urlBase := "https://query.cappuccino.testnet.espresso.network/"
+	espressoService := NewExpressoService(ctxHttp, &urlBase)
 
 	for {
 		lastEspressoBlockHeight, err := espressoService.GetLatestBlockHeight()
