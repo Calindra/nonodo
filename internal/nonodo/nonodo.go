@@ -21,6 +21,7 @@ import (
 	"github.com/calindra/nonodo/internal/reader"
 	"github.com/calindra/nonodo/internal/rollup"
 	v1 "github.com/calindra/nonodo/internal/rollup/v1"
+	"github.com/calindra/nonodo/internal/sequencers/espresso"
 	"github.com/calindra/nonodo/internal/supervisor"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
@@ -202,13 +203,19 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		opts.RpcUrl = fmt.Sprintf("ws://%s:%v", opts.AnvilAddress, opts.AnvilPort)
 	}
 	if !opts.DisableAdvance {
-		w.Workers = append(w.Workers, inputter.InputterWorker{
-			Model:              model,
-			Provider:           opts.RpcUrl,
-			InputBoxAddress:    common.HexToAddress(opts.InputBoxAddress),
-			InputBoxBlock:      opts.InputBoxBlock,
-			ApplicationAddress: common.HexToAddress(opts.ApplicationAddress),
-		})
+		if opts.Sequencer == "inputbox" {
+			w.Workers = append(w.Workers, inputter.InputterWorker{
+				Model:              model,
+				Provider:           opts.RpcUrl,
+				InputBoxAddress:    common.HexToAddress(opts.InputBoxAddress),
+				InputBoxBlock:      opts.InputBoxBlock,
+				ApplicationAddress: common.HexToAddress(opts.ApplicationAddress),
+			})
+		} else if opts.Sequencer == "espresso" {
+			w.Workers = append(w.Workers, espresso.EspressoListener{})
+		} else {
+			panic("sequencer not supported")
+		}
 	}
 	w.Workers = append(w.Workers, supervisor.HttpWorker{
 		Address: fmt.Sprintf("%v:%v", opts.HttpAddress, opts.HttpRollupsPort),
