@@ -26,7 +26,8 @@ func (r *InputRepository) CreateTables() error {
 		msg_sender	 	text,
 		payload			text,
 		block_number	integer,
-		timestamp		integer,
+		block_timestamp	integer,
+		prev_randao		integer,
 		exception		text);`
 	_, err := r.Db.Exec(schema)
 	if err == nil {
@@ -44,7 +45,8 @@ func (r *InputRepository) Create(input AdvanceInput) (*AdvanceInput, error) {
 		msg_sender,
 		payload,
 		block_number,
-		timestamp,
+		block_timestamp,
+		prev_randao,
 		exception
 	) VALUES (
 		$1,
@@ -53,7 +55,8 @@ func (r *InputRepository) Create(input AdvanceInput) (*AdvanceInput, error) {
 		$4,
 		$5,
 		$6,
-		$7
+		$7,
+		$8
 	);`
 	_, err := r.Db.Exec(
 		insertSql,
@@ -62,7 +65,8 @@ func (r *InputRepository) Create(input AdvanceInput) (*AdvanceInput, error) {
 		input.MsgSender.Hex(),
 		common.Bytes2Hex(input.Payload),
 		input.BlockNumber,
-		input.Timestamp.UnixMilli(),
+		input.BlockTimestamp.UnixMilli(),
+		input.PrevRandao,
 		common.Bytes2Hex(input.Exception),
 	)
 	if err != nil {
@@ -116,13 +120,16 @@ func (r *InputRepository) FindByStatusNeDesc(status CompletionStatus) (*AdvanceI
 }
 
 func (r *InputRepository) FindByStatus(status CompletionStatus) (*AdvanceInput, error) {
+	slog.Info("FindByStatus", "status", status)
+
 	sql := `SELECT
 		input_index,
 		status,
 		msg_sender,
 		payload,
 		block_number,
-		timestamp,
+		block_timestamp,
+		prev_randao,
 		exception FROM inputs WHERE status = $1
 		ORDER BY input_index ASC`
 	res, err := r.Db.Queryx(
@@ -150,7 +157,8 @@ func (r *InputRepository) FindByIndex(index int) (*AdvanceInput, error) {
 		msg_sender,
 		payload,
 		block_number,
-		timestamp,
+		block_timestamp,
+		prev_randao,
 		exception FROM inputs WHERE input_index = $1`
 	res, err := r.Db.Queryx(
 		sql,
@@ -214,7 +222,8 @@ func (c *InputRepository) FindAll(
 		msg_sender,
 		payload,
 		block_number,
-		timestamp,
+		block_timestamp,
+		prev_randao,
 		exception FROM inputs `
 	where, args, argsCount, err := transformToInputQuery(filter)
 	if err != nil {
@@ -304,18 +313,22 @@ func transformToInputQuery(
 }
 
 func parseInput(res *sqlx.Rows) (*AdvanceInput, error) {
-	var input AdvanceInput
-	var msgSender string
-	var payload string
-	var exception string
-	var timestamp int64
+	var (
+		input          AdvanceInput
+		msgSender      string
+		payload        string
+		blockTimestamp int64
+		prevRandao     uint64
+		exception      string
+	)
 	err := res.Scan(
 		&input.Index,
 		&input.Status,
 		&msgSender,
 		&payload,
 		&input.BlockNumber,
-		&timestamp,
+		&blockTimestamp,
+		&prevRandao,
 		&exception,
 	)
 	if err != nil {
@@ -323,7 +336,8 @@ func parseInput(res *sqlx.Rows) (*AdvanceInput, error) {
 	}
 	input.Payload = common.Hex2Bytes(payload)
 	input.MsgSender = common.HexToAddress(msgSender)
-	input.Timestamp = time.UnixMilli(timestamp)
+	input.BlockTimestamp = time.UnixMilli(blockTimestamp)
+	input.PrevRandao = prevRandao
 	input.Exception = common.Hex2Bytes(exception)
 	return &input, nil
 }
