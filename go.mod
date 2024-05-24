@@ -4,6 +4,7 @@ go 1.21.1
 
 require (
 	github.com/99designs/gqlgen v0.17.41
+	github.com/EspressoSystems/espresso-sequencer-go v0.0.16
 	github.com/Khan/genqlient v0.6.0
 	github.com/carlmjohnson/versioninfo v0.22.5
 	github.com/deepmap/oapi-codegen/v2 v2.0.0
@@ -61,6 +62,7 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/shirou/gopsutil v3.21.4-0.20210419000835-c7a38de76ee5+incompatible // indirect
+	github.com/sigurn/crc8 v0.0.0-20220107193325-2243fe600f9f // indirect
 	github.com/sosodev/duration v1.1.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/stretchr/objx v0.5.0 // indirect
