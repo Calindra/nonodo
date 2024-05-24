@@ -68,7 +68,8 @@ type NonodoOpts struct {
 	DbImplementation string
 
 	// If set, enables legacy mode.
-	LegacyMode bool
+	LegacyMode  bool
+	NodeVersion string
 }
 
 // Create the options struct with default values.
@@ -77,7 +78,7 @@ func NewNonodoOpts() NonodoOpts {
 		AnvilAddress:       devnet.AnvilDefaultAddress,
 		AnvilPort:          devnet.AnvilDefaultPort,
 		AnvilVerbose:       false,
-		HttpAddress:        "0.0.0.0",
+		HttpAddress:        "127.0.0.1",
 		HttpPort:           DefaultHttpPort,
 		HttpRollupsPort:    DefaultRollupsPort,
 		InputBoxAddress:    devnet.InputBoxAddress,
@@ -93,6 +94,7 @@ func NewNonodoOpts() NonodoOpts {
 		FromBlock:          0,
 		DbImplementation:   "sqlite",
 		LegacyMode:         true,
+		NodeVersion:        "v1",
 	}
 }
 
@@ -123,7 +125,17 @@ func NewSupervisorPoC(opts NonodoOpts) supervisor.SupervisorWorker {
 	container := convenience.NewContainer(*db)
 	decoder := container.GetOutputDecoder()
 	convenienceService := container.GetConvenienceService()
-	adapter := reader.NewAdapterV1(db, convenienceService)
+
+	var adapter reader.Adapter
+
+	if opts.NodeVersion == "v1" {
+		adapter = reader.NewAdapterV1(db, convenienceService)
+	} else {
+		httpClient := reader.HTTPClientImpl{}
+		inputBlobAdapter := reader.InputBlobAdapter{}
+		adapter = reader.NewAdapterV2(convenienceService, &httpClient, inputBlobAdapter)
+	}
+
 	synchronizer := container.GetGraphQLSynchronizer()
 	model := model.NewNonodoModel(decoder, db)
 	w.Workers = append(w.Workers, synchronizer)
