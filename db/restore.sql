@@ -262,4 +262,3 @@ ALTER TABLE ONLY public.reports
 --
 -- PostgreSQL database dump complete
 --
-

@@ -77,7 +77,7 @@ func NewNonodoOpts() NonodoOpts {
 		AnvilAddress:       devnet.AnvilDefaultAddress,
 		AnvilPort:          devnet.AnvilDefaultPort,
 		AnvilVerbose:       false,
-		HttpAddress:        "127.0.0.1",
+		HttpAddress:        "0.0.0.0",
 		HttpPort:           DefaultHttpPort,
 		HttpRollupsPort:    DefaultRollupsPort,
 		InputBoxAddress:    devnet.InputBoxAddress,
