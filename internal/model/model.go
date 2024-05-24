@@ -129,6 +129,8 @@ func (m *NonodoModel) FinishAndGetNext(accepted bool) Input {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
+	// IMPROVE: Get the next input from Inputbox or Espresso
+
 	// finish current input
 	var status CompletionStatus
 	if accepted {

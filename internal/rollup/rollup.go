@@ -76,9 +76,6 @@ func computeEpoch(blockNumber *big.Int) (*big.Int, error) {
 
 func (r *rollupAPI) fetchCurrentInput() (*model.AdvanceInput, error) {
 	// retrieve total number of inputs
-	if r.model == nil {
-		return nil, fmt.Errorf("Model is nil")
-	}
 	input := r.model.GetInputRepository()
 	currInput, err := input.FindByStatusNeDesc(model.CompletionStatusUnprocessed)
 	if err != nil {
