@@ -3,10 +3,10 @@ name: K6 Load Test
 on:
   push:
     branches:
-      - develop
+      - main
   pull_request:
     branches:
-      - develop
+      - main
 
 jobs:
   k6-test:
