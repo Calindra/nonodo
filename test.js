@@ -6,6 +6,9 @@ export let options = {
         { duration: '30s', target: 10 },
         { duration: '10s', target: 0 },
     ],
+    thresholds: {
+        checks: ['rate>0.9'],
+    }
 };
 
 export default function () {
