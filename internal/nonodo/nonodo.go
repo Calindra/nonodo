@@ -67,9 +67,10 @@ type NonodoOpts struct {
 	FromBlock        uint64
 	DbImplementation string
 
-	// If set, enables legacy mode.
 	LegacyMode  bool
 	NodeVersion string
+
+	Sequencer string
 }
 
 // Create the options struct with default values.
@@ -95,6 +96,7 @@ func NewNonodoOpts() NonodoOpts {
 		DbImplementation:   "sqlite",
 		LegacyMode:         true,
 		NodeVersion:        "v1",
+		Sequencer:          "inputbox",
 	}
 }
 
@@ -194,8 +196,10 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	}))
 
 	if opts.LegacyMode {
+		slog.Info("Using legacy mode")
 		v1.Register(re, model)
 	} else {
+		slog.Info("Using new mode")
 		rollup.Register(re, model)
 	}
 

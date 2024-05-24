@@ -78,6 +78,9 @@ func init() {
 		opts.LegacyMode,
 		"If set, enables legacy based in 0.7.1 (branch 0.7.3) rollups interface")
 
+	cmd.Flags().StringVar(&opts.Sequencer, "sequencer", opts.Sequencer,
+		"Set the sequencer (inputbox[default] or espresso)")
+
 	// disable-*
 	cmd.Flags().BoolVar(&opts.DisableDevnet, "disable-devnet", opts.DisableDevnet,
 		"If set, nonodo won't start a local devnet")
