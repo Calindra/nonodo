@@ -70,4 +70,9 @@ jobs:
           sudo apt-get install -y k6
 
       - name: Run k6 tests
-        run: k6 run test.js
+        run: k6 run --summary-export=summary.json test.js
+      
+      - name: Check k6 test results
+        run: |
+          cat summary.json
+          jq -e '.metrics.checks.passes == 0' summary.json && exit 1 || exit 0

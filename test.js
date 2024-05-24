@@ -24,6 +24,6 @@ export default function () {
 
     check(response, {
         'is status 200': (r) => r.status === 200,
-        'response body contains expected content': (r) => r.body.includes('blabla not found'), 
+        'response body contains expected content': (r) => r.body.includes('voucher not found'), 
     });
 }
