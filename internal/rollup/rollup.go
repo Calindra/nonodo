@@ -209,7 +209,7 @@ func convertInput(input model.Input) RollupRequest {
 			BlockNumber:    input.BlockNumber,
 			InputIndex:     uint64(input.Index),
 			MsgSender:      hexutil.Encode(input.MsgSender[:]),
-			BlockTimestamp: uint64(input.Timestamp.Unix()),
+			BlockTimestamp: uint64(input.BlockTimestamp.Unix()),
 			Payload:        hexutil.Encode(input.Payload),
 		}
 		err := resp.Data.FromAdvance(advance)

@@ -66,12 +66,12 @@ func (m *NonodoModel) AddAdvanceInput(
 		panic(err)
 	}
 	input := AdvanceInput{
-		Index:       int(index),
-		Status:      CompletionStatusUnprocessed,
-		MsgSender:   sender,
-		Payload:     payload,
-		Timestamp:   timestamp,
-		BlockNumber: blockNumber,
+		Index:          int(index),
+		Status:         CompletionStatusUnprocessed,
+		MsgSender:      sender,
+		Payload:        payload,
+		BlockTimestamp: timestamp,
+		BlockNumber:    blockNumber,
 	}
 	_, err = m.inputRepository.Create(input)
 	if err != nil {
