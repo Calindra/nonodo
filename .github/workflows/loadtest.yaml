@@ -75,4 +75,4 @@ jobs:
       - name: Check k6 test results
         run: |
           cat summary.json
-          jq -e '.metrics.checks.passes == 0' summary.json && exit 1 || exit 0
+          jq -e '.metrics.checks.value <= 0.01' summary.json && exit 1 || exit 0
