@@ -36,7 +36,7 @@ func ConvertInput(input model.AdvanceInput) *Input {
 		Index:       input.Index,
 		Status:      convertCompletionStatus(input.Status),
 		MsgSender:   input.MsgSender.String(),
-		Timestamp:   fmt.Sprint(input.Timestamp.Unix()),
+		Timestamp:   fmt.Sprint(input.BlockTimestamp.Unix()),
 		BlockNumber: fmt.Sprint(input.BlockNumber),
 		Payload:     hexutil.Encode(input.Payload),
 	}

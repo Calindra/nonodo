@@ -32,9 +32,6 @@ type Voucher struct {
 	Destination string `json:"destination"`
 	// Transaction payload in Ethereum hex binary format, starting with '0x'
 	Payload string `json:"payload"`
-	// Proof object that allows this voucher to be validated and executed on the base layer
-	// blockchain
-	Proof *Proof `json:"proof,omitempty"`
 
 	Executed bool
 }
@@ -57,8 +54,6 @@ type Notice struct {
 	InputIndex int
 	// Notice data as a payload in Ethereum hex binary format, starting with '0x'
 	Payload string `json:"payload"`
-	// Proof object that allows this notice to be validated by the base layer blockchain
-	Proof *Proof `json:"proof,omitempty"`
 }
 
 type ConvenientVoucher struct {

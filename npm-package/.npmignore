@@ -1,0 +1,5 @@
+.github
+.vscode
+
+# npm packages
+*.tgz
