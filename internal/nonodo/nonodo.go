@@ -15,12 +15,13 @@ import (
 	"github.com/calindra/nonodo/internal/convenience"
 	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/calindra/nonodo/internal/echoapp"
-	"github.com/calindra/nonodo/internal/inputter"
 	"github.com/calindra/nonodo/internal/inspect"
 	"github.com/calindra/nonodo/internal/model"
 	"github.com/calindra/nonodo/internal/reader"
 	"github.com/calindra/nonodo/internal/rollup"
 	v1 "github.com/calindra/nonodo/internal/rollup/v1"
+	"github.com/calindra/nonodo/internal/sequencers/espresso"
+	"github.com/calindra/nonodo/internal/sequencers/inputter"
 	"github.com/calindra/nonodo/internal/supervisor"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
@@ -69,6 +70,9 @@ type NonodoOpts struct {
 
 	// If set, enables legacy mode.
 	LegacyMode bool
+
+	// If set, uses the sequencer.
+	Sequencer string
 }
 
 // Create the options struct with default values.
@@ -77,7 +81,7 @@ func NewNonodoOpts() NonodoOpts {
 		AnvilAddress:       devnet.AnvilDefaultAddress,
 		AnvilPort:          devnet.AnvilDefaultPort,
 		AnvilVerbose:       false,
-		HttpAddress:        "127.0.0.1",
+		HttpAddress:        "0.0.0.0",
 		HttpPort:           DefaultHttpPort,
 		HttpRollupsPort:    DefaultRollupsPort,
 		InputBoxAddress:    devnet.InputBoxAddress,
@@ -93,6 +97,7 @@ func NewNonodoOpts() NonodoOpts {
 		FromBlock:          0,
 		DbImplementation:   "sqlite",
 		LegacyMode:         false,
+		Sequencer:          "inputbox",
 	}
 }
 
@@ -182,8 +187,10 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	}))
 
 	if opts.LegacyMode {
+		slog.Info("Using legacy mode")
 		v1.Register(re, model)
 	} else {
+		slog.Info("Using new mode")
 		rollup.Register(re, model)
 	}
 
@@ -196,13 +203,19 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		opts.RpcUrl = fmt.Sprintf("ws://%s:%v", opts.AnvilAddress, opts.AnvilPort)
 	}
 	if !opts.DisableAdvance {
-		w.Workers = append(w.Workers, inputter.InputterWorker{
-			Model:              model,
-			Provider:           opts.RpcUrl,
-			InputBoxAddress:    common.HexToAddress(opts.InputBoxAddress),
-			InputBoxBlock:      opts.InputBoxBlock,
-			ApplicationAddress: common.HexToAddress(opts.ApplicationAddress),
-		})
+		if opts.Sequencer == "inputbox" {
+			w.Workers = append(w.Workers, inputter.InputterWorker{
+				Model:              model,
+				Provider:           opts.RpcUrl,
+				InputBoxAddress:    common.HexToAddress(opts.InputBoxAddress),
+				InputBoxBlock:      opts.InputBoxBlock,
+				ApplicationAddress: common.HexToAddress(opts.ApplicationAddress),
+			})
+		} else if opts.Sequencer == "espresso" {
+			w.Workers = append(w.Workers, espresso.EspressoListener{})
+		} else {
+			panic("sequencer not supported")
+		}
 	}
 	w.Workers = append(w.Workers, supervisor.HttpWorker{
 		Address: fmt.Sprintf("%v:%v", opts.HttpAddress, opts.HttpRollupsPort),
@@ -218,7 +231,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 			Name:    "app",
 			Command: opts.ApplicationArgs[0],
 			Args:    opts.ApplicationArgs[1:],
-			Env: []string{fmt.Sprintf("ROLLUP_HTTP_SERVER_URL=http://%s:%v/rollup",
+			Env: []string{fmt.Sprintf("ROLLUP_HTTP_SERVER_URL=http://%s:%v",
 				opts.HttpAddress, opts.HttpRollupsPort)},
 		})
 	} else if opts.EnableEcho {

@@ -20,12 +20,15 @@ import (
 // The model store inputs as pointers because these pointers are shared with the rollup state.
 type NonodoModel struct {
 	mutex            sync.Mutex
-	advances         []*AdvanceInput
 	inspects         []*InspectInput
 	state            rollupsState
 	decoder          Decoder
 	reportRepository *ReportRepository
 	inputRepository  *InputRepository
+}
+
+func (m *NonodoModel) GetInputRepository() InputRepository {
+	return *m.inputRepository
 }
 
 // Create a new model.
@@ -67,14 +70,13 @@ func (m *NonodoModel) AddAdvanceInput(
 		panic(err)
 	}
 	input := AdvanceInput{
-		Index:       int(index),
-		Status:      CompletionStatusUnprocessed,
-		MsgSender:   sender,
-		Payload:     payload,
-		Timestamp:   timestamp,
-		BlockNumber: blockNumber,
+		Index:          int(index),
+		Status:         CompletionStatusUnprocessed,
+		MsgSender:      sender,
+		Payload:        payload,
+		BlockTimestamp: timestamp,
+		BlockNumber:    blockNumber,
 	}
-	m.advances = append(m.advances, &input)
 	_, err = m.inputRepository.Create(input)
 	if err != nil {
 		panic(err)
@@ -126,6 +128,8 @@ func (m *NonodoModel) GetInspectInput(index int) InspectInput {
 func (m *NonodoModel) FinishAndGetNext(accepted bool) Input {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
+
+	// IMPROVE: Get the next input from Inputbox or Espresso
 
 	// finish current input
 	var status CompletionStatus

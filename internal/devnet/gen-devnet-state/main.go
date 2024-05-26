@@ -24,8 +24,9 @@ func run(name string, args ...string) {
 func main() {
 	// you can see the tags on
 	// https://hub.docker.com/r/sunodo/devnet/tags
-	run("docker", "create", "--name", "temp-devnet", "sunodo/devnet:1.5.0")
+	// update me when the image is updated
+	run("docker", "create", "--name", "temp-devnet", "sunodo/devnet:1.6.0")
 	defer run("docker", "rm", "temp-devnet")
-	run("docker", "cp", "temp-devnet:/usr/share/sunodo/anvil_state.json", ".")
-	run("docker", "cp", "temp-devnet:/usr/share/sunodo/localhost.json", ".")
+	// run("docker", "cp", "temp-devnet:/usr/share/sunodo/anvil_state.json", ".")
+	// run("docker", "cp", "temp-devnet:/usr/share/sunodo/localhost.json", ".")
 }

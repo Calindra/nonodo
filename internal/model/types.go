@@ -58,16 +58,17 @@ type Input interface{}
 
 // Rollups advance input type.
 type AdvanceInput struct {
-	Index       int
-	Status      CompletionStatus
-	MsgSender   common.Address
-	Payload     []byte
-	BlockNumber uint64
-	Timestamp   time.Time
-	Vouchers    []Voucher
-	Notices     []Notice
-	Reports     []Report
-	Exception   []byte
+	Index          int
+	Status         CompletionStatus
+	MsgSender      common.Address
+	Payload        []byte
+	BlockNumber    uint64
+	BlockTimestamp time.Time
+	PrevRandao     uint64
+	Vouchers       []Voucher
+	Notices        []Notice
+	Reports        []Report
+	Exception      []byte
 }
 
 // Rollups inspect input type.

@@ -96,7 +96,7 @@ func (s *ModelSuite) TestItAddsAndGetsAdvanceInputs() {
 		s.Equal(s.senders[i], input.MsgSender)
 		s.Equal(s.payloads[i], input.Payload)
 		s.Equal(s.blockNumbers[i], input.BlockNumber)
-		s.Equal(s.timestamps[i].UnixMilli(), input.Timestamp.UnixMilli())
+		s.Equal(s.timestamps[i].UnixMilli(), input.BlockTimestamp.UnixMilli())
 		s.Empty(input.Vouchers)
 		s.Empty(input.Notices)
 		s.Empty(input.Reports)
@@ -584,7 +584,7 @@ func (s *ModelSuite) TestItGetsAdvanceInputs() {
 		s.Equal(s.senders[i], input.MsgSender)
 		s.Equal(s.payloads[i], input.Payload)
 		s.Equal(s.blockNumbers[i], input.BlockNumber)
-		s.Equal(s.timestamps[i].UnixMilli(), input.Timestamp.UnixMilli())
+		s.Equal(s.timestamps[i].UnixMilli(), input.BlockTimestamp.UnixMilli())
 	}
 }
 
