@@ -19,7 +19,6 @@ import (
 	"github.com/calindra/nonodo/internal/model"
 	"github.com/calindra/nonodo/internal/reader"
 	"github.com/calindra/nonodo/internal/rollup"
-	v1 "github.com/calindra/nonodo/internal/rollup/v1"
 	"github.com/calindra/nonodo/internal/sequencers/espresso"
 	"github.com/calindra/nonodo/internal/sequencers/inputter"
 	"github.com/calindra/nonodo/internal/supervisor"
@@ -68,7 +67,6 @@ type NonodoOpts struct {
 	FromBlock        uint64
 	DbImplementation string
 
-	LegacyMode  bool
 	NodeVersion string
 
 	Sequencer string
@@ -96,7 +94,6 @@ func NewNonodoOpts() NonodoOpts {
 		FromBlock:          0,
 		DbImplementation:   "sqlite",
 		NodeVersion:        "v1",
-		LegacyMode:         false,
 		Sequencer:          "inputbox",
 	}
 }
@@ -196,13 +193,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		Timeout:      HttpTimeout,
 	}))
 
-	if opts.LegacyMode {
-		slog.Info("Using legacy mode")
-		v1.Register(re, model)
-	} else {
-		slog.Info("Using new mode")
-		rollup.Register(re, model)
-	}
+	rollup.Register(re, model)
 
 	if opts.RpcUrl == "" && !opts.DisableDevnet {
 		w.Workers = append(w.Workers, devnet.AnvilWorker{
