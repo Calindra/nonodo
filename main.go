@@ -112,6 +112,9 @@ func init() {
 
 	cmd.Flags().StringVar(&opts.DbImplementation, "db-implementation", opts.DbImplementation,
 		"DB to use. PostgreSQL or SQLite")
+
+	cmd.Flags().StringVar(&opts.DbImplementation, "node-version", opts.NodeVersion,
+		"Node version to emulate")
 }
 
 func run(cmd *cobra.Command, args []string) {
