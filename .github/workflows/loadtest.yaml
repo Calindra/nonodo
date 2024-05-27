@@ -1,0 +1,73 @@
+name: K6 Load Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  k6-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres
+        env:
+          POSTGRES_DB: mydatabase
+          POSTGRES_USER: myuser
+          POSTGRES_PASSWORD: mypassword
+        ports:
+          - "5432:5432"
+        volumes:
+          - ./db/restore.sql:/docker-entrypoint-initdb.d/restore.sql
+          - ./db/data_files/:/docker-entrypoint-initdb.d/data_files
+
+    steps:
+      - name: Fix permissions
+        run: sudo chmod -R 777 /home/runner/work/nonodo/nonodo
+
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      
+      - name: Build PostGraphile Docker image
+        run: docker build -t postgraphile-custom ./db/
+      
+      - name: Run PostGraphile service
+        run: docker run -d -p 5000:5000 --name postgraphile-custom postgraphile-custom
+      
+      - name: Build nonodo Docker image
+        run: docker build -t nonodo-app .
+      
+      - name: Run nonodo application
+        run: docker run -d -p 8080:8080 --name nonodo nonodo-app
+      
+      - name: Wait for services to be ready
+        run: |
+          for i in {1.60}; do
+            curl -sSf http://localhost:5000 && break
+            sleep 1
+          done
+          for i in {1..60}; do
+            curl -sSf http://localhost:8080 && break
+            sleep 1
+          done
+
+      - name: Install k6
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gnupg software-properties-common
+          sudo mkdir -p /etc/apt/keyrings
+          curl -fsSL https://dl.k6.io/key.gpg | sudo gpg --dearmor -o /etc/apt/keyrings/k6-archive-keyring.gpg
+          echo "deb [signed-by=/etc/apt/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install -y k6
+
+      - name: Run k6 tests
+        run: k6 run test.js

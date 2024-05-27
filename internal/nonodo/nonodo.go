@@ -15,12 +15,13 @@ import (
 	"github.com/calindra/nonodo/internal/convenience"
 	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/calindra/nonodo/internal/echoapp"
-	"github.com/calindra/nonodo/internal/inputter"
 	"github.com/calindra/nonodo/internal/inspect"
 	"github.com/calindra/nonodo/internal/model"
 	"github.com/calindra/nonodo/internal/reader"
 	"github.com/calindra/nonodo/internal/rollup"
 	v1 "github.com/calindra/nonodo/internal/rollup/v1"
+	"github.com/calindra/nonodo/internal/sequencers/espresso"
+	"github.com/calindra/nonodo/internal/sequencers/inputter"
 	"github.com/calindra/nonodo/internal/supervisor"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
@@ -67,10 +68,9 @@ type NonodoOpts struct {
 	FromBlock        uint64
 	DbImplementation string
 
-	// If set, enables legacy mode.
-	LegacyMode bool
+	LegacyMode  bool
+	NodeVersion string
 
-	// If set, uses the sequencer.
 	Sequencer string
 }
 
@@ -95,7 +95,8 @@ func NewNonodoOpts() NonodoOpts {
 		SqliteFile:         "file:memory1?mode=memory&cache=shared",
 		FromBlock:          0,
 		DbImplementation:   "sqlite",
-		LegacyMode:         true,
+		NodeVersion:        "v1",
+		LegacyMode:         false,
 		Sequencer:          "inputbox",
 	}
 }
@@ -127,7 +128,17 @@ func NewSupervisorPoC(opts NonodoOpts) supervisor.SupervisorWorker {
 	container := convenience.NewContainer(*db)
 	decoder := container.GetOutputDecoder()
 	convenienceService := container.GetConvenienceService()
-	adapter := reader.NewAdapterV1(db, convenienceService)
+
+	var adapter reader.Adapter
+
+	if opts.NodeVersion == "v1" {
+		adapter = reader.NewAdapterV1(db, convenienceService)
+	} else {
+		httpClient := reader.HTTPClientImpl{}
+		inputBlobAdapter := reader.InputBlobAdapter{}
+		adapter = reader.NewAdapterV2(convenienceService, &httpClient, inputBlobAdapter)
+	}
+
 	synchronizer := container.GetGraphQLSynchronizer()
 	model := model.NewNonodoModel(decoder, db)
 	w.Workers = append(w.Workers, synchronizer)
@@ -202,13 +213,19 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		opts.RpcUrl = fmt.Sprintf("ws://%s:%v", opts.AnvilAddress, opts.AnvilPort)
 	}
 	if !opts.DisableAdvance {
-		w.Workers = append(w.Workers, inputter.InputterWorker{
-			Model:              model,
-			Provider:           opts.RpcUrl,
-			InputBoxAddress:    common.HexToAddress(opts.InputBoxAddress),
-			InputBoxBlock:      opts.InputBoxBlock,
-			ApplicationAddress: common.HexToAddress(opts.ApplicationAddress),
-		})
+		if opts.Sequencer == "inputbox" {
+			w.Workers = append(w.Workers, inputter.InputterWorker{
+				Model:              model,
+				Provider:           opts.RpcUrl,
+				InputBoxAddress:    common.HexToAddress(opts.InputBoxAddress),
+				InputBoxBlock:      opts.InputBoxBlock,
+				ApplicationAddress: common.HexToAddress(opts.ApplicationAddress),
+			})
+		} else if opts.Sequencer == "espresso" {
+			w.Workers = append(w.Workers, espresso.EspressoListener{})
+		} else {
+			panic("sequencer not supported")
+		}
 	}
 	w.Workers = append(w.Workers, supervisor.HttpWorker{
 		Address: fmt.Sprintf("%v:%v", opts.HttpAddress, opts.HttpRollupsPort),

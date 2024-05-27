@@ -14,7 +14,6 @@ services:
       - pgdata:/var/lib/postgresql/data
       - ./restore.sql:/docker-entrypoint-initdb.d/restore.sql
       - ./data_files/:/docker-entrypoint-initdb.d/data_files
-
   postgraphile:
     build:
       context: .
