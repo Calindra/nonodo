@@ -29,13 +29,35 @@ const FinishPollInterval = time.Millisecond * 100
 
 // Register the rollup API to echo
 func Register(e *echo.Echo, model *model.NonodoModel) {
-	var rollupAPI ServerInterface = &rollupAPI{model}
+	sequencer := InputBoxSequencer{model: model}
+	var rollupAPI ServerInterface = &rollupAPI{model, &sequencer}
 	RegisterHandlers(e, rollupAPI)
 }
 
 // Shared struct for request handlers.
 type rollupAPI struct {
+	model     *model.NonodoModel
+	sequencer Sequencer
+}
+
+type InputBoxSequencer struct {
 	model *model.NonodoModel
+}
+
+type EspressoSequencer struct {
+	//??
+}
+
+func (es *EspressoSequencer) FinishAndGetNext(accept bool) model.Input {
+	return nil
+}
+
+func (ibs *InputBoxSequencer) FinishAndGetNext(accept bool) model.Input {
+	return ibs.model.FinishAndGetNext(accept)
+}
+
+type Sequencer interface {
+	FinishAndGetNext(accept bool) model.Input
 }
 
 // type FetchResponse struct {
@@ -67,7 +89,7 @@ var VM_ID = devnet.ApplicationAddress[0:18]
 func computeEpoch(blockNumber *big.Int) (*big.Int, error) {
 	// try to mimic current Authority epoch computation
 	if EPOCH_DURATION == nil {
-		return nil, fmt.Errorf("Invalid epochDuration")
+		return nil, fmt.Errorf("invalid epoch duration")
 	} else {
 		result := new(big.Int).Div(blockNumber, EPOCH_DURATION)
 		return result, nil
@@ -77,12 +99,12 @@ func computeEpoch(blockNumber *big.Int) (*big.Int, error) {
 func (r *rollupAPI) fetchCurrentInput() (*model.AdvanceInput, error) {
 	// retrieve total number of inputs
 	input := r.model.GetInputRepository()
-	currInput, err := input.FindByStatusNeDesc(model.CompletionStatusUnprocessed)
+	currentInput, err := input.FindByStatusNeDesc(model.CompletionStatusUnprocessed)
 	if err != nil {
 		return nil, err
 	}
 
-	return currInput, nil
+	return currentInput, nil
 }
 
 func getEpochDuration() *big.Int {
@@ -342,7 +364,7 @@ func (r *rollupAPI) Finish(c echo.Context) error {
 
 	// talk to model
 	for i := 0; i < FinishRetries; i++ {
-		input := r.model.FinishAndGetNext(accepted)
+		input := r.sequencer.FinishAndGetNext(accepted)
 		if input != nil {
 			resp := convertInput(input)
 			return c.JSON(http.StatusOK, &resp)
@@ -486,11 +508,13 @@ func convertInput(input model.Input) RollupRequest {
 	switch input := input.(type) {
 	case model.AdvanceInput:
 		advance := Advance{
-			BlockNumber:    input.BlockNumber,
-			InputIndex:     uint64(input.Index),
-			MsgSender:      hexutil.Encode(input.MsgSender[:]),
-			BlockTimestamp: uint64(input.BlockTimestamp.Unix()),
-			Payload:        hexutil.Encode(input.Payload),
+			Metadata: Metadata{
+				BlockNumber:    input.BlockNumber,
+				InputIndex:     uint64(input.Index),
+				MsgSender:      hexutil.Encode(input.MsgSender[:]),
+				BlockTimestamp: uint64(input.BlockTimestamp.Unix()),
+			},
+			Payload: hexutil.Encode(input.Payload),
 		}
 		err := resp.Data.FromAdvance(advance)
 		if err != nil {

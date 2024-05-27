@@ -23,6 +23,7 @@
         "Graphile",
         "hexutil",
         "Idempotency",
+        "inputbox",
         "inputter",
         "Inputter",
         "isatty",

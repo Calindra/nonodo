@@ -41,7 +41,8 @@ func getYAML(v2 string, isV2 bool) []byte {
 }
 
 func main() {
-	v2URL := "https://raw.githubusercontent.com/cartesi/openapi-interfaces/v0.8.0/rollup.yaml"
+	// v2URL := "https://raw.githubusercontent.com/cartesi/openapi-interfaces/v0.8.0/rollup.yaml"
+	v2URL := "https://raw.githubusercontent.com/cartesi/openapi-interfaces/fix/http-server/rollup.yaml"
 	v1URL := "https://raw.githubusercontent.com/cartesi/openapi-interfaces/v0.7.3/rollup.yaml"
 
 	v1 := getYAML(v1URL, false)
