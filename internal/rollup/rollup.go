@@ -17,6 +17,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/calindra/nonodo/internal/dataavailability"
 	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/calindra/nonodo/internal/model"
 	"github.com/ethereum/go-ethereum/common"
@@ -165,12 +166,12 @@ func (r *rollupAPI) fetchContext(blockNumber *big.Int) (*FetchInputBoxContext, e
 	return &context, nil
 }
 
-func (r *rollupAPI) fetchEspresso(ctx echo.Context, id string) (*string, *model.HttpCustomError) {
+func (r *rollupAPI) fetchEspresso(ctx echo.Context, id string) (*string, *dataavailability.HttpCustomError) {
 	// check if id is valid and parse id as maxBlockNumber and espressoBlockHeight
 	if len(id) != INPUT_FETCH_SIZE || id[:2] != "0x" {
 		err := fmt.Sprintf("Invalid id %s: : must be a hex string with 32 bytes for maxBlockNumber and 32 bytes for espressoBlockHeight", id)
 		slog.Error(err)
-		return nil, model.NewHttpCustomError(http.StatusBadRequest, nil)
+		return nil, dataavailability.NewHttpCustomError(http.StatusBadRequest, nil)
 	}
 	maxBlockNumber := big.NewInt(0).SetBytes([]byte(id[2:66]))
 	espressoBlockHeight := big.NewInt(0).SetBytes([]byte(id[66:130]))
@@ -178,7 +179,7 @@ func (r *rollupAPI) fetchEspresso(ctx echo.Context, id string) (*string, *model.
 	context, err := r.fetchContext(maxBlockNumber)
 
 	if err != nil {
-		return nil, model.NewHttpCustomError(http.StatusInternalServerError, nil)
+		return nil, dataavailability.NewHttpCustomError(http.StatusInternalServerError, nil)
 	}
 
 	// check if out of epoch's scope
@@ -190,7 +191,7 @@ func (r *rollupAPI) fetchEspresso(ctx echo.Context, id string) (*string, *model.
 			context.epoch.String(),
 		)
 		slog.Error(error)
-		return nil, model.NewHttpCustomError(http.StatusForbidden, nil)
+		return nil, dataavailability.NewHttpCustomError(http.StatusForbidden, nil)
 	}
 
 	ctxHttp := ctx.Request().Context()
@@ -202,7 +203,7 @@ func (r *rollupAPI) fetchEspresso(ctx echo.Context, id string) (*string, *model.
 		if err != nil {
 			msg := fmt.Sprintf("Failed to get latest block height: %s", err)
 			slog.Error(msg)
-			return nil, model.NewHttpCustomError(http.StatusInternalServerError, nil)
+			return nil, dataavailability.NewHttpCustomError(http.StatusInternalServerError, nil)
 
 		}
 		if espressoBlockHeight.Cmp(lastEspressoBlockHeight) == 1 {
@@ -211,7 +212,7 @@ func (r *rollupAPI) fetchEspresso(ctx echo.Context, id string) (*string, *model.
 			if err != nil {
 				msg := fmt.Sprintf("Failed to get header by block height: %s", err)
 				slog.Error(msg)
-				return nil, model.NewHttpCustomError(http.StatusInternalServerError, nil)
+				return nil, dataavailability.NewHttpCustomError(http.StatusInternalServerError, nil)
 
 			}
 
@@ -220,20 +221,20 @@ func (r *rollupAPI) fetchEspresso(ctx echo.Context, id string) (*string, *model.
 			if l1Finalized.Cmp(maxBlockNumber) == 1 {
 				msg := fmt.Sprintf("Espresso block height %s is not finalized", espressoBlockHeight)
 				slog.Error(msg)
-				return nil, model.NewHttpCustomError(http.StatusInternalServerError, nil)
+				return nil, dataavailability.NewHttpCustomError(http.StatusInternalServerError, nil)
 
 			}
 
 			// call again at some later time to see if we reach the block
-			var timeInMs time.Duration = 500
-			time.Sleep(timeInMs * time.Millisecond)
+			var delay time.Duration = 500
+			time.Sleep(delay * time.Millisecond)
 		} else {
 			// requested Espresso block available: fetch it
 			filteredBlock, err := espressoService.GetTransactionByHeight(espressoBlockHeight)
 			if err != nil {
 				msg := fmt.Sprintf("Failed to get block by height: %s", err)
 				slog.Error(msg)
-				return nil, model.NewHttpCustomError(http.StatusInternalServerError, nil)
+				return nil, dataavailability.NewHttpCustomError(http.StatusInternalServerError, nil)
 
 			}
 
@@ -242,7 +243,7 @@ func (r *rollupAPI) fetchEspresso(ctx echo.Context, id string) (*string, *model.
 			if err != nil {
 				msg := fmt.Sprintf("Failed to get header by block height: %s", err)
 				slog.Error(msg)
-				return nil, model.NewHttpCustomError(http.StatusInternalServerError, nil)
+				return nil, dataavailability.NewHttpCustomError(http.StatusInternalServerError, nil)
 
 			}
 
@@ -252,20 +253,20 @@ func (r *rollupAPI) fetchEspresso(ctx echo.Context, id string) (*string, *model.
 			if l1Finalized == nil {
 				msg := fmt.Sprintf("Espresso block %s with undefined L1 blockNumber", espressoBlockHeight)
 				slog.Error(msg)
-				return nil, model.NewHttpCustomError(http.StatusNotFound, nil)
+				return nil, dataavailability.NewHttpCustomError(http.StatusNotFound, nil)
 			}
 
 			if l1Finalized.Cmp(maxBlockNumber) == 1 {
 				msg := fmt.Sprintf("Espresso block height %s beyond requested L1 blockNumber", espressoBlockHeight)
 				slog.Error(msg)
-				return nil, model.NewHttpCustomError(http.StatusNotFound, nil)
+				return nil, dataavailability.NewHttpCustomError(http.StatusNotFound, nil)
 			}
 
 			serializedBlock, err := json.Marshal(filteredBlock)
 			if err != nil {
 				msg := fmt.Sprintf("Failed to marshal block: %s", err)
 				slog.Error(msg)
-				return nil, model.NewHttpCustomError(http.StatusInternalServerError, nil)
+				return nil, dataavailability.NewHttpCustomError(http.StatusInternalServerError, nil)
 
 			}
 			encodedBlockHex := hexutil.Encode(serializedBlock)
@@ -277,7 +278,7 @@ func (r *rollupAPI) fetchEspresso(ctx echo.Context, id string) (*string, *model.
 	}
 }
 
-func (r *rollupAPI) Fetcher(ctx echo.Context, request GioJSONRequestBody) (*GioResponseRollup, *model.HttpCustomError) {
+func (r *rollupAPI) Fetcher(ctx echo.Context, request GioJSONRequestBody) (*GioResponseRollup, *dataavailability.HttpCustomError) {
 	var espresso uint16 = 2222
 	var syscoin uint16 = 5700
 	var its_ok uint16 = 42
@@ -300,7 +301,7 @@ func (r *rollupAPI) Fetcher(ctx echo.Context, request GioJSONRequestBody) (*GioR
 
 		return &GioResponseRollup{Data: *data, Code: its_ok}, nil
 	case syscoin:
-		data, err := model.FetchSyscoinPoDa(ctx, request.Id)
+		data, err := dataavailability.FetchSyscoinPoDa(ctx, request.Id)
 
 		if err != nil {
 			return nil, err
@@ -309,7 +310,7 @@ func (r *rollupAPI) Fetcher(ctx echo.Context, request GioJSONRequestBody) (*GioR
 		return &GioResponseRollup{Data: *data, Code: its_ok}, nil
 	default:
 		unsupported := "Unsupported domain"
-		return nil, model.NewHttpCustomError(http.StatusBadRequest, &unsupported)
+		return nil, dataavailability.NewHttpCustomError(http.StatusBadRequest, &unsupported)
 	}
 }
 

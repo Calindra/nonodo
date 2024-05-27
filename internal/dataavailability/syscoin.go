@@ -1,4 +1,4 @@
-package model
+package dataavailability
 
 import (
 	"io"
@@ -44,7 +44,6 @@ func FetchSyscoinPoDa(ctx echo.Context, id string) (*string, *HttpCustomError) {
 
 	// Convert the body to string
 	str := string(body)
-	// str = hex.
 
 	slog.Debug("Called syscoin PoDa: ")
 
