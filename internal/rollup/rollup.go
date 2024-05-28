@@ -60,11 +60,6 @@ type Sequencer interface {
 	FinishAndGetNext(accept bool) model.Input
 }
 
-// type FetchResponse struct {
-// 	status uint
-// 	data   *string
-// }
-
 type FetchInputBoxContext struct {
 	blockNumber             big.Int
 	epoch                   big.Int
