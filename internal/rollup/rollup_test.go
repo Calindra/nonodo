@@ -2,12 +2,18 @@ package rollup
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
+	"os"
+	"path"
 	"testing"
 	"time"
 
 	"github.com/calindra/nonodo/internal/commons"
+	"github.com/calindra/nonodo/internal/convenience"
 	"github.com/calindra/nonodo/internal/model"
+	"github.com/jmoiron/sqlx"
+	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 )
@@ -18,29 +24,13 @@ const TestTimeout = 5 * time.Second
 // Test Suite
 //
 
-type IInputRepository interface {
-	// CreateTables() error
-	// Create(input AdvanceInput) (*AdvanceInput, error)
-	// Update(input AdvanceInput) (*AdvanceInput, error)
-	// FindByStatusNeDesc(status CompletionStatus) (*AdvanceInput, error)
-	// FindByStatus(status CompletionStatus) (*AdvanceInput, error)
-	// FindByIndex(index int) (*AdvanceInput, error)
-	// Count(filter []*model.ConvenienceFilter) (uint64, error)
-	// FindAll(
-	// 	first *int,
-	// 	last *int,
-	// 	after *string,
-	// 	before *string,
-	// 	filter []*model.ConvenienceFilter,
-	// ) (*commons.PageResult[AdvanceInput], error)
-}
-
 type RollupSuite struct {
 	suite.Suite
-	ctx             context.Context
-	cancel          context.CancelFunc
-	inputRepository IInputRepository
-	rollupsAPI      ServerInterface
+	ctx        context.Context
+	cancel     context.CancelFunc
+	rollupsAPI ServerInterface
+	tempDir    string
+	server     *echo.Echo
 }
 
 type SequencerMock struct {
@@ -52,16 +42,25 @@ func (s *SequencerMock) FinishAndGetNext(accept bool) model.Input {
 	panic("unimplemented")
 }
 
-type InputRepositoryMock struct {
-	mock.Mock
-}
-
 func (s *RollupSuite) SetupTest() {
 	s.ctx, s.cancel = context.WithTimeout(context.Background(), TestTimeout)
+
+	tempDir, err := os.MkdirTemp("", "")
+	s.NoError(err)
+	s.tempDir = tempDir
+
+	sqliteFileName := fmt.Sprintf("test_rollup%d.sqlite3", time.Now().UnixMilli())
+	sqliteFileName = path.Join(tempDir, sqliteFileName)
+
+	db := sqlx.MustConnect("sqlite3", sqliteFileName)
+	container := convenience.NewContainer(*db)
+	decoder := container.GetOutputDecoder()
+	nonodoModel := model.NewNonodoModel(decoder, db)
+
 	commons.ConfigureLog(slog.LevelDebug)
-	s.inputRepository = &InputRepositoryMock{}
 	sequencer := &SequencerMock{}
-	s.rollupsAPI = &RollupAPI{model: nil, sequencer: sequencer}
+	s.rollupsAPI = &RollupAPI{model: nonodoModel, sequencer: sequencer}
+
 }
 
 func TestRollupSuite(t *testing.T) {
@@ -81,4 +80,5 @@ func (s *RollupSuite) teardown() {
 func (s *RollupSuite) TestFetcher() {
 	defer s.teardown()
 
+	// s.rollupsAPI.Gio(s.ctx)
 }
