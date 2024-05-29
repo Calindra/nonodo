@@ -23,4 +23,3 @@ func (ibs *InputBoxSequencer) FinishAndGetNext(accept bool) model.Input {
 type Sequencer interface {
 	FinishAndGetNext(accept bool) model.Input
 }
-
