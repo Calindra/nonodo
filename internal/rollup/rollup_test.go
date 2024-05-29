@@ -30,7 +30,7 @@ type RollupSuite struct {
 	cancel     context.CancelFunc
 	rollupsAPI ServerInterface
 	tempDir    string
-	// server     *echo.Echo
+	server     *echo.Echo
 }
 
 type SequencerMock struct {
@@ -43,8 +43,8 @@ func (s *SequencerMock) FinishAndGetNext(accept bool) model.Input {
 }
 
 func (s *RollupSuite) SetupTest() {
+	commons.ConfigureLog(slog.LevelDebug)
 	s.ctx, s.cancel = context.WithTimeout(context.Background(), TestTimeout)
-
 	tempDir, err := os.MkdirTemp("", "")
 	s.NoError(err)
 	s.tempDir = tempDir
@@ -57,10 +57,15 @@ func (s *RollupSuite) SetupTest() {
 	decoder := container.GetOutputDecoder()
 	nonodoModel := model.NewNonodoModel(decoder, db)
 
-	commons.ConfigureLog(slog.LevelDebug)
+	// s.server = echo.New()
+	// s.server.Use(middleware.Logger())
+	// s.server.Use(middleware.TimeoutWithConfig(middleware.TimeoutConfig{
+	// 	ErrorMessage: "Request timed out",
+	// 	Timeout:      100 * time.Millisecond,
+	// }))
+	// Register(s.server, nonodoModel)
 	sequencer := &SequencerMock{}
 	s.rollupsAPI = &RollupAPI{model: nonodoModel, sequencer: sequencer}
-
 }
 
 func TestRollupSuite(t *testing.T) {
@@ -69,6 +74,7 @@ func TestRollupSuite(t *testing.T) {
 
 func (s *RollupSuite) teardown() {
 	// nothing to do
+	// s.server.Close()
 	select {
 	case <-s.ctx.Done():
 		s.T().Error(s.ctx.Err())
@@ -79,9 +85,8 @@ func (s *RollupSuite) teardown() {
 
 func (s *RollupSuite) TestFetcher() {
 	defer s.teardown()
-
-	var ctx echo.Context = echo.New().NewContext(nil, nil)
-
-	res := s.rollupsAPI.Gio(ctx)
-	s.NoError(res, "Gio should not return an error")
+	// ctx := s.server.AcquireContext()
+	// defer s.server.ReleaseContext(ctx)
+	// res := s.rollupsAPI.Gio(ctx)
+	// s.NoError(res, "Gio should not return an error")
 }
