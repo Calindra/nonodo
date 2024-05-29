@@ -63,7 +63,7 @@ type NonodoOpts struct {
 	// If set, start application.
 	ApplicationArgs []string
 
-	ConveniencePoC   bool
+	HLGraphQL        bool
 	SqliteFile       string
 	FromBlock        uint64
 	DbImplementation string
@@ -91,7 +91,7 @@ func NewNonodoOpts() NonodoOpts {
 		DisableDevnet:      false,
 		DisableAdvance:     false,
 		ApplicationArgs:    nil,
-		ConveniencePoC:     false,
+		HLGraphQL:          false,
 		SqliteFile:         "file:memory1?mode=memory&cache=shared",
 		FromBlock:          0,
 		DbImplementation:   "sqlite",

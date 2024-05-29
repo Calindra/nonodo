@@ -259,6 +259,37 @@ ALTER TABLE ONLY public.reports
     ADD CONSTRAINT reports_input_index_fkey FOREIGN KEY (input_index) REFERENCES public.inputs(index);
 
 
+CREATE TABLE IF NOT EXISTS public.vouchers (
+		destination text,
+		payload 	text,
+		executed	BOOLEAN,
+		input_index  integer,
+		output_index integer);
+
+ALTER TABLE public.vouchers OWNER TO myuser;
+
+ALTER TABLE ONLY public.vouchers
+    ADD CONSTRAINT vouchers_pkey PRIMARY KEY (input_index, output_index);
+
+
+INSERT INTO public.vouchers VALUES ('OX1223', 'OX1343', false, 1, 1);
+INSERT INTO public.vouchers VALUES ('OX1223', 'OX1343', false, 2, 2);
+
+CREATE TABLE IF NOT EXISTS public.notices (
+		payload 		text,
+		input_index		integer,
+		output_index	integer);
+
+ALTER TABLE public.notices OWNER TO myuser;
+
+ALTER TABLE ONLY public.notices
+    ADD CONSTRAINT notices_pkey PRIMARY KEY (input_index, output_index);
+
+
+INSERT INTO public.notices VALUES ('OX1223', 1, 1);
+INSERT INTO public.notices VALUES ('OX1223', 2, 2);
+
+
 --
 -- PostgreSQL database dump complete
 --

@@ -100,7 +100,7 @@ func init() {
 		"If set, nonodo connects to this url instead of setting up Anvil")
 
 	// convenience experimental implementation
-	cmd.Flags().BoolVar(&opts.ConveniencePoC, "convenience-poc", opts.ConveniencePoC,
+	cmd.Flags().BoolVar(&opts.HLGraphQL, "high-level-graphql", opts.HLGraphQL,
 		"If set, enables the convenience layer experiment")
 
 	// database file
@@ -113,7 +113,7 @@ func init() {
 	cmd.Flags().StringVar(&opts.DbImplementation, "db-implementation", opts.DbImplementation,
 		"DB to use. PostgreSQL or SQLite")
 
-	cmd.Flags().StringVar(&opts.DbImplementation, "node-version", opts.NodeVersion,
+	cmd.Flags().StringVar(&opts.NodeVersion, "node-version", opts.NodeVersion,
 		"Node version to emulate")
 }
 
@@ -168,7 +168,7 @@ func run(cmd *cobra.Command, args []string) {
 		case <-ctx.Done():
 		}
 	}()
-	if opts.ConveniencePoC {
+	if opts.HLGraphQL {
 		err := nonodo.NewSupervisorPoC(opts).Start(ctx, ready)
 		cobra.CheckErr(err)
 	} else {
