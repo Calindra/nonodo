@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/calindra/nonodo/internal/commons"
+	"github.com/calindra/nonodo/internal/model"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 )
@@ -39,6 +40,16 @@ type RollupSuite struct {
 	ctx             context.Context
 	cancel          context.CancelFunc
 	inputRepository IInputRepository
+	rollupsAPI      ServerInterface
+}
+
+type SequencerMock struct {
+	mock.Mock
+}
+
+// FinishAndGetNext implements Sequencer.
+func (s *SequencerMock) FinishAndGetNext(accept bool) model.Input {
+	panic("unimplemented")
 }
 
 type InputRepositoryMock struct {
@@ -49,6 +60,8 @@ func (s *RollupSuite) SetupTest() {
 	s.ctx, s.cancel = context.WithTimeout(context.Background(), TestTimeout)
 	commons.ConfigureLog(slog.LevelDebug)
 	s.inputRepository = &InputRepositoryMock{}
+	sequencer := &SequencerMock{}
+	s.rollupsAPI = &RollupAPI{model: nil, sequencer: sequencer}
 }
 
 func TestRollupSuite(t *testing.T) {

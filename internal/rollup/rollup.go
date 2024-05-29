@@ -29,35 +29,15 @@ const FinishPollInterval = time.Millisecond * 100
 
 // Register the rollup API to echo
 func Register(e *echo.Echo, model *model.NonodoModel) {
-	sequencer := InputBoxSequencer{model: model}
-	var rollupAPI ServerInterface = &rollupAPI{model, &sequencer}
+	sequencer := &InputBoxSequencer{model}
+	var rollupAPI ServerInterface = &RollupAPI{model, sequencer}
 	RegisterHandlers(e, rollupAPI)
 }
 
 // Shared struct for request handlers.
-type rollupAPI struct {
+type RollupAPI struct {
 	model     *model.NonodoModel
 	sequencer Sequencer
-}
-
-type InputBoxSequencer struct {
-	model *model.NonodoModel
-}
-
-type EspressoSequencer struct {
-	//??
-}
-
-func (es *EspressoSequencer) FinishAndGetNext(accept bool) model.Input {
-	return nil
-}
-
-func (ibs *InputBoxSequencer) FinishAndGetNext(accept bool) model.Input {
-	return ibs.model.FinishAndGetNext(accept)
-}
-
-type Sequencer interface {
-	FinishAndGetNext(accept bool) model.Input
 }
 
 type FetchInputBoxContext struct {
@@ -67,11 +47,6 @@ type FetchInputBoxContext struct {
 	currentInputBlockNumber big.Int
 	currentEpoch            big.Int
 }
-
-// type FetchInputBoxContextOrError struct {
-// 	context *FetchInputBoxContext
-// 	err     error
-// }
 
 const (
 	INPUT_BOX_SIZE   = 130
@@ -91,7 +66,7 @@ func computeEpoch(blockNumber *big.Int) (*big.Int, error) {
 	}
 }
 
-func (r *rollupAPI) fetchCurrentInput() (*model.AdvanceInput, error) {
+func (r *RollupAPI) fetchCurrentInput() (*model.AdvanceInput, error) {
 	// retrieve total number of inputs
 	input := r.model.GetInputRepository()
 	currentInput, err := input.FindByStatusNeDesc(model.CompletionStatusUnprocessed)
@@ -119,7 +94,7 @@ func getEpochDuration() *big.Int {
 	return epochDuration
 }
 
-func (r *rollupAPI) fetchContext(blockNumber *big.Int) (*FetchInputBoxContext, error) {
+func (r *RollupAPI) fetchContext(blockNumber *big.Int) (*FetchInputBoxContext, error) {
 	currentInput, err := r.fetchCurrentInput()
 	currentInputIndex := big.NewInt(0).SetInt64(int64(currentInput.Index))
 
@@ -160,7 +135,7 @@ func (r *rollupAPI) fetchContext(blockNumber *big.Int) (*FetchInputBoxContext, e
 	return &context, nil
 }
 
-func (r *rollupAPI) fetchEspresso(ctx echo.Context, id string) (*string, *model.HttpCustomError) {
+func (r *RollupAPI) fetchEspresso(ctx echo.Context, id string) (*string, *model.HttpCustomError) {
 	// check if id is valid and parse id as maxBlockNumber and espressoBlockHeight
 	if len(id) != INPUT_FETCH_SIZE || id[:2] != "0x" {
 		err := fmt.Sprintf("Invalid id %s: : must be a hex string with 32 bytes for maxBlockNumber and 32 bytes for espressoBlockHeight", id)
@@ -272,7 +247,7 @@ func (r *rollupAPI) fetchEspresso(ctx echo.Context, id string) (*string, *model.
 	}
 }
 
-func (r *rollupAPI) Fetcher(ctx echo.Context, request GioJSONRequestBody) (*GioResponseRollup, *model.HttpCustomError) {
+func (r *RollupAPI) Fetcher(ctx echo.Context, request GioJSONRequestBody) (*GioResponseRollup, *model.HttpCustomError) {
 	var espresso uint16 = 2222
 	var syscoin uint16 = 5700
 	var its_ok uint16 = 42
@@ -309,7 +284,7 @@ func (r *rollupAPI) Fetcher(ctx echo.Context, request GioJSONRequestBody) (*GioR
 }
 
 // Gio implements ServerInterface.
-func (r *rollupAPI) Gio(ctx echo.Context) error {
+func (r *RollupAPI) Gio(ctx echo.Context) error {
 
 	if !checkContentType(ctx) {
 		return ctx.String(http.StatusUnsupportedMediaType, "invalid content type")
@@ -335,7 +310,7 @@ func (r *rollupAPI) Gio(ctx echo.Context) error {
 }
 
 // Handle requests to /finish.
-func (r *rollupAPI) Finish(c echo.Context) error {
+func (r *RollupAPI) Finish(c echo.Context) error {
 	if !checkContentType(c) {
 		return c.String(http.StatusUnsupportedMediaType, "invalid content type")
 	}
@@ -358,6 +333,9 @@ func (r *rollupAPI) Finish(c echo.Context) error {
 	}
 
 	// talk to model
+	if r.sequencer == nil {
+		return c.String(http.StatusInternalServerError, "sequencer not available")
+	}
 	for i := 0; i < FinishRetries; i++ {
 		input := r.sequencer.FinishAndGetNext(accepted)
 		if input != nil {
@@ -375,7 +353,7 @@ func (r *rollupAPI) Finish(c echo.Context) error {
 }
 
 // Handle requests to /voucher.
-func (r *rollupAPI) AddVoucher(c echo.Context) error {
+func (r *RollupAPI) AddVoucher(c echo.Context) error {
 	if !checkContentType(c) {
 		return c.String(http.StatusUnsupportedMediaType, "invalid content type")
 	}
@@ -411,7 +389,7 @@ func (r *rollupAPI) AddVoucher(c echo.Context) error {
 }
 
 // Handle requests to /notice.
-func (r *rollupAPI) AddNotice(c echo.Context) error {
+func (r *RollupAPI) AddNotice(c echo.Context) error {
 	if !checkContentType(c) {
 		return c.String(http.StatusUnsupportedMediaType, "invalid content type")
 	}
@@ -440,7 +418,7 @@ func (r *rollupAPI) AddNotice(c echo.Context) error {
 }
 
 // Handle requests to /report.
-func (r *rollupAPI) AddReport(c echo.Context) error {
+func (r *RollupAPI) AddReport(c echo.Context) error {
 	if !checkContentType(c) {
 		return c.String(http.StatusUnsupportedMediaType, "invalid content type")
 	}
@@ -466,7 +444,7 @@ func (r *rollupAPI) AddReport(c echo.Context) error {
 }
 
 // Handle requests to /exception.
-func (r *rollupAPI) RegisterException(c echo.Context) error {
+func (r *RollupAPI) RegisterException(c echo.Context) error {
 	if !checkContentType(c) {
 		return c.String(http.StatusUnsupportedMediaType, "invalid content type")
 	}

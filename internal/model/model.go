@@ -27,8 +27,8 @@ type NonodoModel struct {
 	inputRepository  *InputRepository
 }
 
-func (m *NonodoModel) GetInputRepository() InputRepository {
-	return *m.inputRepository
+func (m *NonodoModel) GetInputRepository() *InputRepository {
+	return m.inputRepository
 }
 
 // Create a new model.
@@ -128,8 +128,6 @@ func (m *NonodoModel) GetInspectInput(index int) InspectInput {
 func (m *NonodoModel) FinishAndGetNext(accepted bool) Input {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
-
-	// IMPROVE: Get the next input from Inputbox or Espresso
 
 	// finish current input
 	var status CompletionStatus
