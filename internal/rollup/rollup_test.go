@@ -30,7 +30,7 @@ type RollupSuite struct {
 	cancel     context.CancelFunc
 	rollupsAPI ServerInterface
 	tempDir    string
-	server     *echo.Echo
+	// server     *echo.Echo
 }
 
 type SequencerMock struct {
@@ -80,5 +80,8 @@ func (s *RollupSuite) teardown() {
 func (s *RollupSuite) TestFetcher() {
 	defer s.teardown()
 
-	// s.rollupsAPI.Gio(s.ctx)
+	var ctx echo.Context = echo.New().NewContext(nil, nil)
+
+	res := s.rollupsAPI.Gio(ctx)
+	s.NoError(res, "Gio should not return an error")
 }
