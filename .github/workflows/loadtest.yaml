@@ -58,6 +58,17 @@ jobs:
             curl -sSf http://localhost:8080 && break
             sleep 1
           done
+      
+      - name: Get logs if nonodo is not running
+        if: failure() || always()
+        run: |
+          if [ $(docker inspect -f '{{.State.Running}}' nonodo) == "false" ]; then
+            echo "nonodo container logs:"
+            docker logs nonodo
+          else
+            echo "nonodo container is running"
+          fi
+
 
       - name: Install k6
         run: |
