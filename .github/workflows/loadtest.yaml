@@ -70,4 +70,20 @@ jobs:
           sudo apt-get install -y k6
 
       - name: Run k6 tests
-        run: k6 run loadtesting/test.js
+        id: k6
+        run: |
+          k6 run loadtesting/test.js > result.log 2>&1
+
+      - name: Post comment on failure
+        if: failure()
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const result = fs.readFileSync('result.log', 'utf8');
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `K6 Load Test failed. Details:\n\n\`\`\`\n${result}\n\`\`\``
+            });

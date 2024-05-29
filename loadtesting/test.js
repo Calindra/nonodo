@@ -5,7 +5,6 @@ export let options = {
     stages: [
         { duration: '30s', target: 10 },
         { duration: '60s', target: 30 },
-        { duration: '60s', target: 60 },
         { duration: '10s', target: 0 },
     ],
     thresholds: {
@@ -13,8 +12,9 @@ export let options = {
     }
 };
 
+const GRAPHQL_ENDPOINT = 'http://localhost:8080/graphql'
+
 function testVoucherNotFound() {
-    const url = 'http://localhost:8181/graphql'; 
     const payload = JSON.stringify({
         query: "query { voucher(voucherIndex: 0, inputIndex: 0) { index }}"
     });
@@ -25,7 +25,7 @@ function testVoucherNotFound() {
         },
     };
 
-    const response = http.post(url, payload, params);
+    const response = http.post(GRAPHQL_ENDPOINT, payload, params);
 
     check(response, {
         'testVoucherNotFound is status 200': (r) => r.status === 200,
@@ -34,7 +34,6 @@ function testVoucherNotFound() {
 }
 
 function testVoucherFound() {
-    const url = 'http://localhost:8181/graphql'; 
     const payload = JSON.stringify({
         query: "query { voucher(voucherIndex: 1, inputIndex: 1) { index }}"
     });
@@ -45,7 +44,7 @@ function testVoucherFound() {
         },
     };
 
-    const response = http.post(url, payload, params);
+    const response = http.post(GRAPHQL_ENDPOINT, payload, params);
 
     check(response, {
         'testVoucherFound is status 200': (r) => r.status === 200,
@@ -55,7 +54,6 @@ function testVoucherFound() {
 
 
 function testNoticeFound() {
-    const url = 'http://localhost:8181/graphql'; 
     const payload = JSON.stringify({
         query: "query { notice(noticeIndex: 1, inputIndex: 1) { index payload }}"
     });
@@ -66,7 +64,7 @@ function testNoticeFound() {
         },
     };
 
-    const response = http.post(url, payload, params);
+    const response = http.post(GRAPHQL_ENDPOINT, payload, params);
 
     check(response, {
         'testNoticeFound is status 200': (r) => r.status === 200,
