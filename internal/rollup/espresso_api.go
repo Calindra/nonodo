@@ -23,7 +23,7 @@ type ExpressoService struct {
 	client  *client.Client
 }
 
-func NewExpressoService(ctx context.Context, url *string) *ExpressoService {
+func NewEspressoService(ctx context.Context, url *string) *ExpressoService {
 	var myClient *client.Client
 
 	if url != nil {
