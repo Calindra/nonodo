@@ -7,6 +7,7 @@ require (
 	github.com/EspressoSystems/espresso-sequencer-go v0.0.16
 	github.com/Khan/genqlient v0.6.0
 	github.com/carlmjohnson/versioninfo v0.22.5
+	github.com/celestiaorg/celestia-openrpc v0.4.0
 	github.com/deepmap/oapi-codegen/v2 v2.0.0
 	github.com/ethereum/go-ethereum v1.13.5
 	github.com/jmoiron/sqlx v1.3.5
@@ -33,7 +34,6 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bits-and-blooms/bitset v1.7.0 // indirect
 	github.com/btcsuite/btcd/btcec/v2 v2.2.1 // indirect
-	github.com/celestiaorg/celestia-openrpc v0.4.0 // indirect
 	github.com/celestiaorg/go-fraud v0.2.0 // indirect
 	github.com/celestiaorg/go-header v0.4.1 // indirect
 	github.com/celestiaorg/go-square v1.0.1 // indirect
