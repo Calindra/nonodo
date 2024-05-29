@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"log/slog"
 
 	client "github.com/celestiaorg/celestia-openrpc"
 	"github.com/celestiaorg/celestia-openrpc/types/blob"
@@ -36,7 +37,7 @@ func SubmitBlob(ctx context.Context, url string, token string) error {
 		return err
 	}
 
-	fmt.Printf("Blob was included at height %d\n", height)
+	slog.Debug("Blob was included at height", "height", height)
 
 	// fetch the blob back from the network
 	retrievedBlobs, err := client.Blob.GetAll(ctx, height, []share.Namespace{namespace})
