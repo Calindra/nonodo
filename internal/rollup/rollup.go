@@ -7,8 +7,6 @@ package rollup
 //go:generate go run github.com/deepmap/oapi-codegen/v2/cmd/oapi-codegen -config=oapi.yaml ../../api/rollup.yaml
 
 import (
-	"encoding/json"
-	"log/slog"
 	"net/http"
 
 	"strings"
@@ -34,44 +32,6 @@ func Register(e *echo.Echo, model *model.NonodoModel) {
 type RollupAPI struct {
 	model     *model.NonodoModel
 	sequencer Sequencer
-}
-
-func (r *RollupAPI) Fetcher(ctx echo.Context, request GioJSONRequestBody) (*GioResponseRollup, *model.HttpCustomError) {
-	var (
-		espresso uint16 = 2222
-		syscoin  uint16 = 5700
-		its_ok   uint16 = 42
-	)
-
-	deb, err := json.Marshal(request)
-
-	if err != nil {
-		slog.Debug("Failed to marshal request", "error", err)
-	} else {
-		slog.Debug("Fetcher called", "json", string(deb))
-	}
-
-	switch request.Domain {
-	case espresso:
-		data, err := r.FetchEspresso(ctx, request.Id)
-
-		if err != nil {
-			return nil, err
-		}
-
-		return &GioResponseRollup{Data: *data, Code: its_ok}, nil
-	case syscoin:
-		data, err := model.FetchSyscoinPoDa(ctx, request.Id)
-
-		if err != nil {
-			return nil, err
-		}
-
-		return &GioResponseRollup{Data: *data, Code: its_ok}, nil
-	default:
-		unsupported := "Unsupported domain"
-		return nil, model.NewHttpCustomError(http.StatusBadRequest, &unsupported)
-	}
 }
 
 // Gio implements ServerInterface.

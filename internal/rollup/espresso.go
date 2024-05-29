@@ -30,6 +30,14 @@ type FetchInputBoxContext struct {
 	currentEpoch            big.Int
 }
 
+type EspressoFetcher struct {
+	inputRepository *model.InputRepository
+}
+
+func (r *RollupAPI) NewEspressoFetcher(input *model.InputRepository) Fetch {
+	return &EspressoFetcher{inputRepository: input}
+}
+
 func computeEpoch(blockNumber *big.Int) (*big.Int, error) {
 	// try to mimic current Authority epoch computation
 	if EPOCH_DURATION == nil {
@@ -40,9 +48,9 @@ func computeEpoch(blockNumber *big.Int) (*big.Int, error) {
 	}
 }
 
-func (r *RollupAPI) fetchCurrentInput() (*model.AdvanceInput, error) {
+func (e *EspressoFetcher) fetchCurrentInput() (*model.AdvanceInput, error) {
 	// retrieve total number of inputs
-	input := r.model.GetInputRepository()
+	input := e.inputRepository
 	currentInput, err := input.FindByStatusNeDesc(model.CompletionStatusUnprocessed)
 	if err != nil {
 		return nil, err
@@ -68,8 +76,8 @@ func getEpochDuration() *big.Int {
 	return epochDuration
 }
 
-func (r *RollupAPI) fetchContext(blockNumber *big.Int) (*FetchInputBoxContext, error) {
-	currentInput, err := r.fetchCurrentInput()
+func (e *EspressoFetcher) fetchContext(blockNumber *big.Int) (*FetchInputBoxContext, error) {
+	currentInput, err := e.fetchCurrentInput()
 	currentInputIndex := big.NewInt(0).SetInt64(int64(currentInput.Index))
 
 	if err != nil {
@@ -109,7 +117,7 @@ func (r *RollupAPI) fetchContext(blockNumber *big.Int) (*FetchInputBoxContext, e
 	return &context, nil
 }
 
-func (r *RollupAPI) FetchEspresso(ctx echo.Context, id string) (*string, *model.HttpCustomError) {
+func (e *EspressoFetcher) Fetch(ctx echo.Context, id string) (*string, *model.HttpCustomError) {
 	// check if id is valid and parse id as maxBlockNumber and espressoBlockHeight
 	if len(id) != INPUT_FETCH_SIZE || id[:2] != "0x" {
 		err := fmt.Sprintf("Invalid id %s: : must be a hex string with 32 bytes for maxBlockNumber and 32 bytes for espressoBlockHeight", id)
@@ -119,7 +127,7 @@ func (r *RollupAPI) FetchEspresso(ctx echo.Context, id string) (*string, *model.
 	maxBlockNumber := big.NewInt(0).SetBytes([]byte(id[2:66]))
 	espressoBlockHeight := big.NewInt(0).SetBytes([]byte(id[66:130]))
 
-	context, err := r.fetchContext(maxBlockNumber)
+	context, err := e.fetchContext(maxBlockNumber)
 
 	if err != nil {
 		return nil, model.NewHttpCustomError(http.StatusInternalServerError, nil)

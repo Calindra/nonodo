@@ -1,10 +1,11 @@
-package model
+package rollup
 
 import (
 	"io"
 	"log/slog"
 	"net/http"
 
+	"github.com/calindra/nonodo/internal/model"
 	"github.com/labstack/echo/v4"
 )
 
@@ -13,7 +14,7 @@ type SyscoinClient struct {
 	endpoint string
 }
 
-func NewSyscoinClient() *SyscoinClient {
+func (r *RollupAPI) NewSyscoinClient() Fetch {
 	url := "https://poda.syscoin.org/vh"
 
 	return &SyscoinClient{
@@ -22,8 +23,15 @@ func NewSyscoinClient() *SyscoinClient {
 	}
 }
 
+func (r *RollupAPI) NewSyscoinClientMock(endpoint string, client *http.Client) Fetch {
+	return &SyscoinClient{
+		client,
+		endpoint,
+	}
+}
+
 // example: https://poda.syscoin.org/vh/06310294ee0af7f1ae4c8e19fa509264565fa82ba8c82a7a9074b2abf12a15d9
-func FetchSyscoinPoDa(ctx echo.Context, id string) (*string, *HttpCustomError) {
+func (sc *SyscoinClient) Fetch(ctx echo.Context, id string) (*string, *model.HttpCustomError) {
 	slog.Debug("Called FetchSyscoinPoDa")
 
 	full_url := "https://poda.syscoin.org/vh/" + id
@@ -31,7 +39,7 @@ func FetchSyscoinPoDa(ctx echo.Context, id string) (*string, *HttpCustomError) {
 	res, err := http.Get(full_url)
 
 	if err != nil {
-		return nil, NewHttpCustomError(http.StatusInternalServerError, nil)
+		return nil, model.NewHttpCustomError(http.StatusInternalServerError, nil)
 	}
 
 	defer res.Body.Close()
@@ -39,7 +47,7 @@ func FetchSyscoinPoDa(ctx echo.Context, id string) (*string, *HttpCustomError) {
 	// Read the response body
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		return nil, NewHttpCustomError(http.StatusInternalServerError, nil)
+		return nil, model.NewHttpCustomError(http.StatusInternalServerError, nil)
 	}
 
 	// Convert the body to string
