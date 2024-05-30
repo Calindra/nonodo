@@ -72,6 +72,7 @@ type NonodoOpts struct {
 	NodeVersion string
 
 	Sequencer string
+	Namespace uint64
 }
 
 // Create the options struct with default values.
@@ -98,6 +99,7 @@ func NewNonodoOpts() NonodoOpts {
 		NodeVersion:        "v1",
 		LegacyMode:         false,
 		Sequencer:          "inputbox",
+		Namespace:          10008,
 	}
 }
 
@@ -222,7 +224,11 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 				ApplicationAddress: common.HexToAddress(opts.ApplicationAddress),
 			})
 		} else if opts.Sequencer == "espresso" {
-			w.Workers = append(w.Workers, espresso.EspressoListener{})
+			w.Workers = append(w.Workers, espresso.NewEspressoListener(
+				opts.Namespace,
+				model.GetInputRepository(),
+				opts.FromBlock,
+			))
 		} else {
 			panic("sequencer not supported")
 		}
