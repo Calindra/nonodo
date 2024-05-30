@@ -7,6 +7,7 @@ package rollup
 //go:generate go run github.com/deepmap/oapi-codegen/v2/cmd/oapi-codegen -config=oapi.yaml ../../api/rollup.yaml
 
 import (
+	"log/slog"
 	"net/http"
 
 	"strings"
@@ -52,6 +53,7 @@ func (r *RollupAPI) Gio(ctx echo.Context) error {
 	fetch, err := r.Fetcher(ctx, request)
 
 	if err != nil {
+		slog.Debug("Error in Fetcher: %s %d", err.Error(), err.Status())
 		return ctx.String(int(err.Status()), err.Error())
 	}
 

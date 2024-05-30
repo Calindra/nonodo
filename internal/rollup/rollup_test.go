@@ -111,4 +111,6 @@ func (s *RollupSuite) TestFetcherMissing() {
 
 	res := s.rollupsAPI.Gio(c)
 	s.NoError(res, "Gio should not return an error")
+	s.Assert().Equal(http.StatusBadRequest, rec.Result().StatusCode)
+	s.Assert().Equal("Unsupported domain", rec.Body.String())
 }
