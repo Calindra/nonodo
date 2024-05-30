@@ -1,8 +1,6 @@
 package rollup
 
 import (
-	"encoding/json"
-	"log/slog"
 	"net/http"
 
 	"github.com/calindra/nonodo/internal/model"
@@ -19,14 +17,6 @@ func (r *RollupAPI) Fetcher(ctx echo.Context, request GioJSONRequestBody) (*GioR
 		syscoin  uint16 = 5700
 		its_ok   uint16 = 42
 	)
-
-	deb, err := json.Marshal(request)
-
-	if err != nil {
-		slog.Debug("Failed to marshal request", "error", err)
-	} else {
-		slog.Debug("Fetcher called", "json", string(deb))
-	}
 
 	switch request.Domain {
 	case espresso:
