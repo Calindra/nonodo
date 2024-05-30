@@ -96,12 +96,12 @@ func (s *RollupSuite) TearDownTest() {
 	}
 }
 
-func (s *RollupSuite) TestFetcher() {
-	reqBd := GioJSONRequestBody{
-		Domain: 2222,
-		Id:     "sasa",
+func (s *RollupSuite) TestFetcherMissing() {
+	gioJsonReqBody := GioJSONRequestBody{
+		Domain: 0,
+		Id:     "idontexist",
 	}
-	body, err := json.Marshal(reqBd)
+	body, err := json.Marshal(gioJsonReqBody)
 	s.NoError(err)
 	bodyReader := bytes.NewReader(body)
 	req := httptest.NewRequest(http.MethodGet, "/gio", bodyReader)
