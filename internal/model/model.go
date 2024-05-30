@@ -25,10 +25,19 @@ type NonodoModel struct {
 	decoder          Decoder
 	reportRepository *ReportRepository
 	inputRepository  *InputRepository
+	sequencer        *Sequencer
 }
 
 func (m *NonodoModel) GetInputRepository() *InputRepository {
 	return m.inputRepository
+}
+
+func (m *NonodoModel) SetSequencer(s *Sequencer) {
+	m.sequencer = s
+}
+
+func (m *NonodoModel) GetSequencer() *Sequencer {
+	return m.sequencer
 }
 
 // Create a new model.

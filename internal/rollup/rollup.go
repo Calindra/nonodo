@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/calindra/nonodo/internal/model"
+	mdl "github.com/calindra/nonodo/internal/model"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/labstack/echo/v4"
@@ -22,16 +22,16 @@ const FinishRetries = 50
 const FinishPollInterval = time.Millisecond * 100
 
 // Register the rollup API to echo
-func Register(e *echo.Echo, model *model.NonodoModel) {
-	sequencer := &InputBoxSequencer{model}
-	var rollupAPI ServerInterface = &RollupAPI{model, sequencer}
+func Register(e *echo.Echo, model *mdl.NonodoModel) {
+	var sequencer mdl.Sequencer = mdl.NewInputBoxSequencer(model)
+	model.SetSequencer(&sequencer)
+	var rollupAPI ServerInterface = &RollupAPI{model}
 	RegisterHandlers(e, rollupAPI)
 }
 
 // Shared struct for request handlers.
 type RollupAPI struct {
-	model     *model.NonodoModel
-	sequencer Sequencer
+	model *mdl.NonodoModel
 }
 
 // Gio implements ServerInterface.
@@ -84,11 +84,12 @@ func (r *RollupAPI) Finish(c echo.Context) error {
 	}
 
 	// talk to model
-	if r.sequencer == nil {
+	seq := r.model.GetSequencer()
+	if seq == nil {
 		return c.String(http.StatusInternalServerError, "sequencer not available")
 	}
 	for i := 0; i < FinishRetries; i++ {
-		input := r.sequencer.FinishAndGetNext(accepted)
+		input := (*seq).FinishAndGetNext(accepted)
 		if input != nil {
 			resp := convertInput(input)
 			return c.JSON(http.StatusOK, &resp)
@@ -227,10 +228,10 @@ func checkContentType(c echo.Context) bool {
 }
 
 // Convert model input to API type.
-func convertInput(input model.Input) RollupRequest {
+func convertInput(input mdl.Input) RollupRequest {
 	var resp RollupRequest
 	switch input := input.(type) {
-	case model.AdvanceInput:
+	case mdl.AdvanceInput:
 		advance := Advance{
 			Metadata: Metadata{
 				BlockNumber:    input.BlockNumber,
@@ -245,7 +246,7 @@ func convertInput(input model.Input) RollupRequest {
 			panic("failed to convert advance")
 		}
 		resp.RequestType = AdvanceState
-	case model.InspectInput:
+	case mdl.InspectInput:
 		inspect := Inspect{
 			Payload: hexutil.Encode(input.Payload),
 		}

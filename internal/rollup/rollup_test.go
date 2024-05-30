@@ -14,6 +14,7 @@ import (
 	"github.com/calindra/nonodo/internal/model"
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/suite"
 )
@@ -43,7 +44,6 @@ func (s *SequencerMock) FinishAndGetNext(accept bool) model.Input {
 }
 
 func (s *RollupSuite) SetupTest() {
-	commons.ConfigureLog(slog.LevelDebug)
 	s.ctx, s.cancel = context.WithTimeout(context.Background(), TestTimeout)
 	tempDir, err := os.MkdirTemp("", "")
 	s.NoError(err)
@@ -56,25 +56,23 @@ func (s *RollupSuite) SetupTest() {
 	container := convenience.NewContainer(*db)
 	decoder := container.GetOutputDecoder()
 	nonodoModel := model.NewNonodoModel(decoder, db)
+	var sequencer model.Sequencer = &SequencerMock{}
+	nonodoModel.SetSequencer(&sequencer)
 
-	// s.server = echo.New()
-	// s.server.Use(middleware.Logger())
-	// s.server.Use(middleware.TimeoutWithConfig(middleware.TimeoutConfig{
-	// 	ErrorMessage: "Request timed out",
-	// 	Timeout:      100 * time.Millisecond,
-	// }))
-	// Register(s.server, nonodoModel)
-	sequencer := &SequencerMock{}
-	s.rollupsAPI = &RollupAPI{model: nonodoModel, sequencer: sequencer}
+	s.server = echo.New()
+	s.server.Use(middleware.Logger())
+	Register(s.server, nonodoModel)
+	s.rollupsAPI = &RollupAPI{model: nonodoModel}
+	commons.ConfigureLog(slog.LevelDebug)
 }
 
 func TestRollupSuite(t *testing.T) {
 	suite.Run(t, new(RollupSuite))
 }
 
-func (s *RollupSuite) teardown() {
+func (s *RollupSuite) TearDownTest() {
 	// nothing to do
-	// s.server.Close()
+	s.server.Close()
 	select {
 	case <-s.ctx.Done():
 		s.T().Error(s.ctx.Err())
@@ -84,7 +82,10 @@ func (s *RollupSuite) teardown() {
 }
 
 func (s *RollupSuite) TestFetcher() {
-	defer s.teardown()
+	// req := httptest.NewRequest("POST", "/gio", nil)
+
+	// s.rollupsAPI.Gio()
+
 	// ctx := s.server.AcquireContext()
 	// defer s.server.ReleaseContext(ctx)
 	// res := s.rollupsAPI.Gio(ctx)
