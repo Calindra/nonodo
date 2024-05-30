@@ -23,8 +23,10 @@ const FinishPollInterval = time.Millisecond * 100
 
 // Register the rollup API to echo
 func Register(e *echo.Echo, model *mdl.NonodoModel) {
-	var sequencer mdl.Sequencer = mdl.NewInputBoxSequencer(model)
-	model.SetSequencer(&sequencer)
+	if sq := model.GetSequencer(); sq == nil {
+		var sequencer mdl.Sequencer = mdl.NewInputBoxSequencer(model)
+		model.SetSequencer(&sequencer)
+	}
 	var rollupAPI ServerInterface = &RollupAPI{model}
 	RegisterHandlers(e, rollupAPI)
 }
