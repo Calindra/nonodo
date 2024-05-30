@@ -1,9 +1,13 @@
 package rollup
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path"
 	"testing"
@@ -44,26 +48,37 @@ func (s *SequencerMock) FinishAndGetNext(accept bool) model.Input {
 }
 
 func (s *RollupSuite) SetupTest() {
+	// Log
+	commons.ConfigureLog(slog.LevelDebug)
+
+	// Context
 	s.ctx, s.cancel = context.WithTimeout(context.Background(), TestTimeout)
+
+	// Temp
 	tempDir, err := os.MkdirTemp("", "")
 	s.NoError(err)
 	s.tempDir = tempDir
 
+	// Database
 	sqliteFileName := fmt.Sprintf("test_rollup%d.sqlite3", time.Now().UnixMilli())
 	sqliteFileName = path.Join(tempDir, sqliteFileName)
 
+	// NoNodoModel
 	db := sqlx.MustConnect("sqlite3", sqliteFileName)
 	container := convenience.NewContainer(*db)
 	decoder := container.GetOutputDecoder()
 	nonodoModel := model.NewNonodoModel(decoder, db)
+
+	// Sequencer
 	var sequencer model.Sequencer = &SequencerMock{}
 	nonodoModel.SetSequencer(&sequencer)
 
+	// Server
 	s.server = echo.New()
 	s.server.Use(middleware.Logger())
-	Register(s.server, nonodoModel)
+	s.server.Use(middleware.Recover())
 	s.rollupsAPI = &RollupAPI{model: nonodoModel}
-	commons.ConfigureLog(slog.LevelDebug)
+	RegisterHandlers(s.server, s.rollupsAPI)
 }
 
 func TestRollupSuite(t *testing.T) {
@@ -82,12 +97,18 @@ func (s *RollupSuite) TearDownTest() {
 }
 
 func (s *RollupSuite) TestFetcher() {
-	// req := httptest.NewRequest("POST", "/gio", nil)
+	reqBd := GioJSONRequestBody{
+		Domain: 2222,
+		Id:     "sasa",
+	}
+	body, err := json.Marshal(reqBd)
+	s.NoError(err)
+	bodyReader := bytes.NewReader(body)
+	req := httptest.NewRequest(http.MethodGet, "/gio", bodyReader)
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	c := s.server.NewContext(req, rec)
 
-	// s.rollupsAPI.Gio()
-
-	// ctx := s.server.AcquireContext()
-	// defer s.server.ReleaseContext(ctx)
-	// res := s.rollupsAPI.Gio(ctx)
-	// s.NoError(res, "Gio should not return an error")
+	res := s.rollupsAPI.Gio(c)
+	s.NoError(res, "Gio should not return an error")
 }
