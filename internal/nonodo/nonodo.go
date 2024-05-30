@@ -33,6 +33,7 @@ import (
 const DefaultHttpPort = 8080
 const DefaultRollupsPort = 5004
 const HttpTimeout = 10 * time.Second
+const DefaultNamespace = 10008
 
 // Options to nonodo.
 type NonodoOpts struct {
@@ -99,7 +100,7 @@ func NewNonodoOpts() NonodoOpts {
 		NodeVersion:        "v1",
 		LegacyMode:         false,
 		Sequencer:          "inputbox",
-		Namespace:          10008,
+		Namespace:          DefaultNamespace,
 	}
 }
 

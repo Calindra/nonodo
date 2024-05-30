@@ -63,17 +63,16 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 				// transform and add to InputRepository
 				index, err := e.Repository.Count(nil)
 				if err != nil {
-					panic("fatal error") // plz handle the error
+					return err
 				}
-				e.Repository.Create(model.AdvanceInput{
+				_, err = e.Repository.Create(model.AdvanceInput{
 					Index:   int(index),
 					Payload: transaction,
 				})
+				if err != nil {
+					return err
+				}
 			}
-		}
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
 		}
 	}
 }
