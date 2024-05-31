@@ -62,6 +62,7 @@ jobs:
             fi
           done
           # Verify if the Postgres container is running and healthy
+          docker inspect postgres
           if [ "$(docker inspect -f '{{.State.Health.Status}}' postgres)" != "healthy" ]; then
             echo "Postgres is not healthy"
             docker logs postgres
