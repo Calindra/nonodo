@@ -12,12 +12,6 @@ import (
 type EspressoHeader = types.Header
 type EspressoBlockResponse = client.TransactionsInBlock
 
-type EspressoAPI interface {
-	GetLatestBlockHeight() (*big.Int, error)
-	GetHeaderByBlockByHeight(height *big.Int) (*EspressoHeader, error)
-	GetBlockByHeight(height *big.Int) (*EspressoBlockResponse, error)
-}
-
 type EspressoService struct {
 	context context.Context
 	client  *client.Client
