@@ -11,10 +11,10 @@ import (
 )
 
 type EspressoListener struct {
-	espressoAPI *dataavailability.EspressoAPI
-	namespace   uint64
-	Repository  *model.InputRepository
-	fromBlock   uint64
+	espressoAPI     *dataavailability.EspressoAPI
+	namespace       uint64
+	InputRepository *model.InputRepository
+	fromBlock       uint64
 }
 
 func (e EspressoListener) String() string {
@@ -22,7 +22,7 @@ func (e EspressoListener) String() string {
 }
 
 func NewEspressoListener(namespace uint64, repository *model.InputRepository, fromBlock uint64) *EspressoListener {
-	return &EspressoListener{namespace: namespace, Repository: repository, fromBlock: fromBlock}
+	return &EspressoListener{namespace: namespace, InputRepository: repository, fromBlock: fromBlock}
 }
 
 func (e EspressoListener) getBaseUrl() string {
@@ -70,13 +70,14 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 				transaction := transactions.Transactions[i]
 				slog.Debug("transaction", "currentBlockHeight", currentBlockHeight, "transaction", transaction)
 				// transform and add to InputRepository
-				index, err := e.Repository.Count(nil)
+				index, err := e.InputRepository.Count(nil)
 				if err != nil {
 					return err
 				}
-				_, err = e.Repository.Create(model.AdvanceInput{
-					Index:   int(index),
-					Payload: transaction,
+				_, err = e.InputRepository.Create(model.AdvanceInput{
+					Index:       int(index),
+					Payload:     transaction,
+					BlockNumber: currentBlockHeight,
 				})
 				if err != nil {
 					return err

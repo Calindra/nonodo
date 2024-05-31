@@ -120,7 +120,7 @@ func (r *InputRepository) FindByStatusNeDesc(status CompletionStatus) (*AdvanceI
 }
 
 func (r *InputRepository) FindByStatus(status CompletionStatus) (*AdvanceInput, error) {
-	slog.Info("FindByStatus", "status", status)
+	slog.Debug("FindByStatus", "status", status)
 
 	sql := `SELECT
 		input_index,
