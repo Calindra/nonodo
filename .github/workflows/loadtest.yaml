@@ -23,10 +23,13 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
       
+      - name: Create Docker network
+        run: docker network create mynetwork
+      
       - name: Build and run PostgreSQL container
         run: |
           docker build -t postgresteste:latest ./postgres
-          docker run -d -p 5432:5432 --name postgres postgresteste:latest
+          docker run -d --network mynetwork -p 5432:5432 --name postgres postgresteste:latest
       
       - name: Install PostgreSQL Client
         run: sudo apt-get install -y postgresql-client
@@ -48,7 +51,7 @@ jobs:
         run: docker build -t postgraphile-custom ./postgraphile/
       
       - name: Run PostGraphile service
-        run: docker run -d -p 5000:5000 --name postgraphile-custom postgraphile-custom
+        run: docker run -d --network mynetwork -p 5000:5000 --name postgraphile-custom postgraphile-custom
       
       - name: Wait for PostGraphile to be ready
         run: |
@@ -61,7 +64,7 @@ jobs:
         run: docker build -t nonodo-app .
 
       - name: Run nonodo application
-        run: docker run -d -p 8080:8080 --name nonodo nonodo-app
+        run: docker run -d --network mynetwork -p 8080:8080 --name nonodo nonodo-app
       
       - name: Wait for Nonodo to be ready
         run: |
