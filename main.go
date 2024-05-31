@@ -115,6 +115,9 @@ func init() {
 
 	cmd.Flags().StringVar(&opts.NodeVersion, "node-version", opts.NodeVersion,
 		"Node version to emulate")
+
+	cmd.Flags().BoolVar(&opts.LoadTestMode, "load-test-mode", opts.LoadTestMode,
+		"If set, enables load test mode")
 }
 
 func run(cmd *cobra.Command, args []string) {

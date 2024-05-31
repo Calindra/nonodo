@@ -71,7 +71,8 @@ type NonodoOpts struct {
 	LegacyMode  bool
 	NodeVersion string
 
-	Sequencer string
+	Sequencer    string
+	LoadTestMode bool
 }
 
 // Create the options struct with default values.
@@ -98,6 +99,7 @@ func NewNonodoOpts() NonodoOpts {
 		NodeVersion:        "v1",
 		LegacyMode:         false,
 		Sequencer:          "inputbox",
+		LoadTestMode:       false,
 	}
 }
 
@@ -139,18 +141,24 @@ func NewSupervisorPoC(opts NonodoOpts) supervisor.SupervisorWorker {
 		adapter = reader.NewAdapterV2(convenienceService, &httpClient, inputBlobAdapter)
 	}
 
-	synchronizer := container.GetGraphQLSynchronizer()
+	if !opts.LoadTestMode {
+		synchronizer := container.GetGraphQLSynchronizer()
+		w.Workers = append(w.Workers, synchronizer)
+
+		fromBlock := new(big.Int).SetUint64(opts.FromBlock)
+		execVoucherListener := convenience.NewExecListener(
+			opts.RpcUrl,
+			common.HexToAddress(opts.ApplicationAddress),
+			convenienceService,
+			fromBlock,
+		)
+		w.Workers = append(w.Workers, execVoucherListener)
+	}
+
 	model := model.NewNonodoModel(decoder, db)
-	w.Workers = append(w.Workers, synchronizer)
+
 	opts.RpcUrl = fmt.Sprintf("ws://%s:%v", opts.AnvilAddress, opts.AnvilPort)
-	fromBlock := new(big.Int).SetUint64(opts.FromBlock)
-	execVoucherListener := convenience.NewExecListener(
-		opts.RpcUrl,
-		common.HexToAddress(opts.ApplicationAddress),
-		convenienceService,
-		fromBlock,
-	)
-	w.Workers = append(w.Workers, execVoucherListener)
+
 	e := echo.New()
 	e.Use(middleware.CORS())
 	e.Use(middleware.Recover())
