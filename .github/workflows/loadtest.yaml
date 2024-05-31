@@ -52,6 +52,7 @@ jobs:
             pg_isready -h localhost -p 5432 && break
             sleep 1
           done
+          docker logs postgres
 
       
       - name: Run nonodo application
