@@ -49,6 +49,12 @@ jobs:
       - name: Install PostgreSQL Client
         run: sudo apt-get install -y postgresql-client
 
+      - name: List contents of db directory on host
+        run: ls -l ./db
+
+      - name: List contents of docker-entrypoint-initdb.d on host
+        run: ls -l ./db/restore.sql ./db/data_files
+
       - name: Wait for Postgres to be ready
         run: |
           echo "Waiting for postgres to be ready..."
@@ -61,7 +67,7 @@ jobs:
               sleep 1
             fi
           done
-          
+
       - name: List contents of /docker-entrypoint-initdb.d/
         run: docker exec postgres ls -l /docker-entrypoint-initdb.d/
       
