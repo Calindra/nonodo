@@ -37,4 +37,4 @@ RUN go build -o nonodo
 EXPOSE 8080
 
 # Comando para rodar a aplicação
-CMD ["./nonodo", "--http-address=0.0.0.0", "--high-level-graphql", "--enable-debug", "--node-version", "v2", "--db-implementation", "postgres"]
+CMD ["./nonodo", "--http-address=0.0.0.0", "--high-level-graphql", "--enable-debug", "--node-version", "v2"]
