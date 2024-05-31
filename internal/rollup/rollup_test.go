@@ -71,13 +71,12 @@ func (s *RollupSuite) SetupTest() {
 
 	// Sequencer
 	var sequencer model.Sequencer = &SequencerMock{}
-	nonodoModel.SetSequencer(&sequencer)
 
 	// Server
 	s.server = echo.New()
 	s.server.Use(middleware.Logger())
 	s.server.Use(middleware.Recover())
-	s.rollupsAPI = &RollupAPI{model: nonodoModel}
+	s.rollupsAPI = &RollupAPI{model: nonodoModel, sequencer: sequencer}
 	RegisterHandlers(s.server, s.rollupsAPI)
 }
 

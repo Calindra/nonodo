@@ -23,18 +23,19 @@ const FinishRetries = 50
 const FinishPollInterval = time.Millisecond * 100
 
 // Register the rollup API to echo
-func Register(e *echo.Echo, model *mdl.NonodoModel) {
-	if sq := model.GetSequencer(); sq == nil {
-		var sequencer mdl.Sequencer = mdl.NewInputBoxSequencer(model)
-		model.SetSequencer(&sequencer)
-	}
-	var rollupAPI ServerInterface = &RollupAPI{model}
+func Register(e *echo.Echo, model *mdl.NonodoModel, sequencer Sequencer) {
+	var rollupAPI ServerInterface = &RollupAPI{model, sequencer}
 	RegisterHandlers(e, rollupAPI)
 }
 
 // Shared struct for request handlers.
 type RollupAPI struct {
-	model *mdl.NonodoModel
+	model     *mdl.NonodoModel
+	sequencer Sequencer
+}
+
+type Sequencer interface {
+	FinishAndGetNext(accept bool) mdl.Input
 }
 
 // Gio implements ServerInterface.
@@ -88,12 +89,11 @@ func (r *RollupAPI) Finish(c echo.Context) error {
 	}
 
 	// talk to model
-	seq := r.model.GetSequencer()
-	if seq == nil {
+	if r.sequencer == nil {
 		return c.String(http.StatusInternalServerError, "sequencer not available")
 	}
 	for i := 0; i < FinishRetries; i++ {
-		input := (*seq).FinishAndGetNext(accepted)
+		input := r.sequencer.FinishAndGetNext(accepted)
 		if input != nil {
 			resp := convertInput(input)
 			return c.JSON(http.StatusOK, &resp)
