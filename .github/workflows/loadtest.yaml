@@ -46,14 +46,27 @@ jobs:
       - name: Build nonodo Docker image
         run: docker build -t nonodo-app .
 
+      - name: Install PostgreSQL Client
+        run: sudo apt-get install -y postgresql-client
+
       - name: Wait for Postgres to be ready
         run: |
           echo "Waiting for postgres to be ready..."
-          until docker exec postgres pg_isready; do
-            echo "Postgres is unavailable - sleeping"
-            sleep 1
+          for i in {1..60}; do
+            if pg_isready -h localhost -p 5432 -U myuser; then
+              echo "Postgres is ready"
+              break
+            else
+              echo "Postgres is unavailable - sleeping"
+              sleep 1
+            fi
           done
-          echo "Postgres is up - continuing..."
+          # Verify if the Postgres container is running and healthy
+          if [ "$(docker inspect -f '{{.State.Health.Status}}' postgres)" != "healthy" ]; then
+            echo "Postgres is not healthy"
+            docker logs postgres
+            exit 1
+          fi
       
       
       - name: Run nonodo application
