@@ -135,7 +135,7 @@ func (m *NonodoModel) GetInspectInput(index int) InspectInput {
 // Finish the current input and get the next one.
 // If there is no input to be processed return nil.
 //
-// Deprecated: use in v2 the sequencer instead.
+// Note: use in v2 the sequencer instead.
 func (m *NonodoModel) FinishAndGetNext(accepted bool) Input {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
