@@ -61,15 +61,6 @@ jobs:
               sleep 1
             fi
           done
-          # Verify if the Postgres container is running and healthy
-         
-          if [ "$(docker inspect -f '{{.State.Status}}' postgres)" != "healthy" ]; then
-            echo "Postgres is not healthy"
-            docker inspect postgres
-            docker logs postgres
-            exit 1
-          fi
-      
       
       - name: Run nonodo application
         run: docker run -d -p 8080:8080 --name nonodo nonodo-app
