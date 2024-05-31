@@ -12,7 +12,7 @@ import (
 type EspressoListener struct {
 	client     *client.Client
 	namespace  uint64
-	Repository model.InputRepository
+	Repository *model.InputRepository
 	fromBlock  uint64
 }
 
@@ -20,7 +20,7 @@ func (e EspressoListener) String() string {
 	return "espresso_listener"
 }
 
-func NewEspressoListener(namespace uint64, repository model.InputRepository, fromBlock uint64) *EspressoListener {
+func NewEspressoListener(namespace uint64, repository *model.InputRepository, fromBlock uint64) *EspressoListener {
 	return &EspressoListener{namespace: namespace, Repository: repository, fromBlock: fromBlock}
 }
 

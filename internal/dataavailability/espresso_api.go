@@ -1,4 +1,4 @@
-package rollup
+package dataavailability
 
 import (
 	"context"
@@ -12,25 +12,19 @@ import (
 type EspressoHeader = types.Header
 type EspressoBlockResponse = client.TransactionsInBlock
 
-type EspressoAPI interface {
-	GetLatestBlockHeight() (*big.Int, error)
-	GetHeaderByBlockByHeight(height *big.Int) (*EspressoHeader, error)
-	GetBlockByHeight(height *big.Int) (*EspressoBlockResponse, error)
-}
-
-type ExpressoService struct {
+type EspressoService struct {
 	context context.Context
 	client  *client.Client
 }
 
-func NewEspressoService(ctx context.Context, url *string) *ExpressoService {
+func NewEspressoService(ctx context.Context, url *string) *EspressoService {
 	var myClient *client.Client
 
 	if url != nil {
 		myClient = client.NewClient(*url)
 	}
 
-	return &ExpressoService{
+	return &EspressoService{
 		context: ctx,
 		client:  myClient,
 	}
@@ -42,7 +36,7 @@ func NewEspressoService(ctx context.Context, url *string) *ExpressoService {
  * https://docs.espressosys.com/sequencer/api-reference/sequencer-api/status-api#get-status-block-height
  * returns integer
  */
-func (s *ExpressoService) GetLatestBlockHeight() (*big.Int, error) {
+func (s *EspressoService) GetLatestBlockHeight() (*big.Int, error) {
 	// This is a mock implementation
 	if s.client == nil {
 		mock := 32644
@@ -64,7 +58,7 @@ func (s *ExpressoService) GetLatestBlockHeight() (*big.Int, error) {
  * GET /availability/header/:height
  * https://docs.espressosys.com/sequencer/api-reference/sequencer-api/availability-api#get-availability-header
  */
-func (s *ExpressoService) GetHeaderByBlockByHeight(height *big.Int) (*EspressoHeader, error) {
+func (s *EspressoService) GetHeaderByBlockByHeight(height *big.Int) (*EspressoHeader, error) {
 	if s.client == nil {
 		mock := 32644
 
@@ -89,7 +83,7 @@ func (s *ExpressoService) GetHeaderByBlockByHeight(height *big.Int) (*EspressoHe
  * GET /availability/block/:height/namespace/:namespace
  * https://docs.espressosys.com/sequencer/api-reference/sequencer-api/availability-api#get-availability-block-height-namespace-namespace
  */
-func (s *ExpressoService) GetTransactionByHeight(height *big.Int) (*EspressoBlockResponse, error) {
+func (s *EspressoService) GetTransactionByHeight(height *big.Int) (*EspressoBlockResponse, error) {
 	if s.client == nil {
 		return &EspressoBlockResponse{
 			Transactions: nil,
