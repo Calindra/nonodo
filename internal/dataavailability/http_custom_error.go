@@ -1,4 +1,4 @@
-package model
+package dataavailability
 
 type HttpCustomError struct {
 	status uint

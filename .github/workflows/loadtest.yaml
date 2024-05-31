@@ -3,7 +3,7 @@ name: K6 Load Test
 on:
   push:
     branches:
-      - main
+      - '**'
   pull_request:
     branches:
       - main
@@ -70,4 +70,4 @@ jobs:
           sudo apt-get install -y k6
 
       - name: Run k6 tests
-        run: k6 run test.js
+        run: k6 run loadtesting/test.js

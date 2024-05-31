@@ -1,4 +1,4 @@
-package rollup
+package dataavailability
 
 import (
 	"io"
@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/calindra/nonodo/internal/model"
+	"github.com/calindra/nonodo/internal/rollup"
 	"github.com/labstack/echo/v4"
 )
 
@@ -14,7 +15,7 @@ type SyscoinClient struct {
 	endpoint string
 }
 
-func (r *RollupAPI) NewSyscoinClient() Fetch {
+func (r *rollup.RollupAPI) NewSyscoinClient() Fetch {
 	url := "https://poda.syscoin.org/vh"
 
 	return &SyscoinClient{
@@ -23,7 +24,7 @@ func (r *RollupAPI) NewSyscoinClient() Fetch {
 	}
 }
 
-func (r *RollupAPI) NewSyscoinClientMock(endpoint string, client *http.Client) Fetch {
+func (r *rollup.RollupAPI) NewSyscoinClientMock(endpoint string, client *http.Client) Fetch {
 	return &SyscoinClient{
 		client,
 		endpoint,
