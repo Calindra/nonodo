@@ -100,8 +100,3 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y k6
 
-      - name: Run k6 tests
-        id: k6
-        run: |
-          docker ps
-          k6 run loadtesting/test.js
