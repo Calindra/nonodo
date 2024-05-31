@@ -4,14 +4,13 @@ FROM golang:1.21
 # Instale Clang
 RUN apt-get update && apt-get install -y clang
 
-RUN echo "127.0.0.1 postgres" >> /etc/hosts
 
 # Instale Foundry
 RUN curl -L https://foundry.paradigm.xyz | bash
 
 # Configure o PATH para incluir o binário do Foundry
 ENV PATH="/root/.foundry/bin:${PATH}"
-ENV POSTGRES_HOST=postgres
+ENV POSTGRES_HOST=127.0.0.1
 ENV POSTGRES_PORT=5432
 ENV POSTGRES_DB=mydatabase
 ENV POSTGRES_USER=myuser
