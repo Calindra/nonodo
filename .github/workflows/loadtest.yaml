@@ -95,6 +95,16 @@ jobs:
             echo "nonodo container is running"
           fi
 
+          postgres_running=$(docker inspect -f '{{.State.Running}}' postgres)
+          if [ "$postgres_running" != "true" ]; then
+            echo "postgres container logs (last 100 lines):"
+            docker logs --tail 100 postgres
+            echo "postgres container inspect:"
+            docker inspect postgres
+          else
+            echo "postgres container is running"
+          fi
+
       - name: Install k6
         run: |
           sudo apt-get update
