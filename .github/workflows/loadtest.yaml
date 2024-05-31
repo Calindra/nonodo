@@ -47,7 +47,10 @@ jobs:
         run: docker build -t nonodo-app .
       
       - name: Check PostgreSQL logs
-        run: docker logs postgres || echo "PostgreSQL container not found"
+        run:  docker logs --since 0m postgres > postgres.log
+      
+      - name: Print PostgreSQL logs
+        run: cat postgres.log
 
       - name: Wait for PostgreSQL to be ready
         run: |
