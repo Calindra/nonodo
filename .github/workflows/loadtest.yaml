@@ -60,15 +60,14 @@ jobs:
           done
       
       - name: Get logs if nonodo is not running
-        if: failure() || always()
         run: |
-          if [ $(docker inspect -f '{{.State.Running}}' nonodo) == "false" ]; then
+          nonodo_running=$(docker inspect -f '{{.State.Running}}' nonodo)
+          if [ "$nonodo_running" != "true" ]; then
             echo "nonodo container logs:"
             docker logs nonodo
           else
             echo "nonodo container is running"
           fi
-
 
       - name: Install k6
         run: |
