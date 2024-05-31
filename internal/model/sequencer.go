@@ -8,17 +8,19 @@ func NewInputBoxSequencer(model *NonodoModel) *InputBoxSequencer {
 	return &InputBoxSequencer{model: model}
 }
 
+func NewEspressoSequencer(model *NonodoModel) *EspressoSequencer {
+	return &EspressoSequencer{model: model}
+}
+
 type EspressoSequencer struct {
-	//??
+	model *NonodoModel
 }
 
 func (es *EspressoSequencer) FinishAndGetNext(accept bool) Input {
-	return nil
+	return FinishAndGetNext(es.model, accept)
 }
 
-func (ibs *InputBoxSequencer) FinishAndGetNext(accept bool) Input {
-	m := ibs.model
-
+func FinishAndGetNext(m *NonodoModel, accept bool) Input {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
@@ -57,6 +59,10 @@ func (ibs *InputBoxSequencer) FinishAndGetNext(accept bool) Input {
 	// if no input was found, set state to idle
 	m.state = newRollupsStateIdle()
 	return nil
+}
+
+func (ibs *InputBoxSequencer) FinishAndGetNext(accept bool) Input {
+	return FinishAndGetNext(ibs.model, accept)
 }
 
 type Sequencer interface {
