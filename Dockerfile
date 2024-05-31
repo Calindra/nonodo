@@ -9,7 +9,7 @@ RUN curl -L https://foundry.paradigm.xyz | bash
 
 # Configure o PATH para incluir o binário do Foundry
 ENV PATH="/root/.foundry/bin:${PATH}"
-ENV POSTGRES_HOST=0.0.0.0
+ENV POSTGRES_HOST=postgres
 ENV POSTGRES_PORT=5432
 ENV POSTGRES_DB=mydatabase
 ENV POSTGRES_USER=myuser
