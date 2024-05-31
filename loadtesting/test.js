@@ -11,7 +11,7 @@ export let options = {
     }
 };
 
-const GRAPHQL_ENDPOINT = 'http://localhost:8080/graphql'
+const GRAPHQL_ENDPOINT = 'http://nonodo:8080/graphql'
 
 function testVoucherNotFound() {
     const payload = JSON.stringify({
