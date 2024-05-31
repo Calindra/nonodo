@@ -147,7 +147,7 @@ func (e *EspressoFetcher) Fetch(ctx echo.Context, id string) (*string, *HttpCust
 
 	ctxHttp := ctx.Request().Context()
 	urlBase := "https://query.cappuccino.testnet.espresso.network/"
-	espressoService := NewExpressoService(ctxHttp, &urlBase)
+	espressoService := NewEspressoService(ctxHttp, &urlBase)
 
 	for {
 		lastEspressoBlockHeight, err := espressoService.GetLatestBlockHeight()
