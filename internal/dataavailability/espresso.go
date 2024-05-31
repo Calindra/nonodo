@@ -1,4 +1,4 @@
-package rollup
+package dataavailability
 
 import (
 	"encoding/json"
@@ -34,7 +34,7 @@ type EspressoFetcher struct {
 	inputRepository *model.InputRepository
 }
 
-func (r *RollupAPI) NewEspressoFetcher(input *model.InputRepository) Fetch {
+func NewEspressoFetcher(input *model.InputRepository) Fetch {
 	return &EspressoFetcher{inputRepository: input}
 }
 
@@ -117,12 +117,12 @@ func (e *EspressoFetcher) fetchContext(blockNumber *big.Int) (*FetchInputBoxCont
 	return &context, nil
 }
 
-func (e *EspressoFetcher) Fetch(ctx echo.Context, id string) (*string, *model.HttpCustomError) {
+func (e *EspressoFetcher) Fetch(ctx echo.Context, id string) (*string, *HttpCustomError) {
 	// check if id is valid and parse id as maxBlockNumber and espressoBlockHeight
 	if len(id) != INPUT_FETCH_SIZE || id[:2] != "0x" {
 		err := fmt.Sprintf("Invalid id %s: : must be a hex string with 32 bytes for maxBlockNumber and 32 bytes for espressoBlockHeight", id)
 		slog.Error(err)
-		return nil, model.NewHttpCustomError(http.StatusBadRequest, nil)
+		return nil, NewHttpCustomError(http.StatusBadRequest, nil)
 	}
 	maxBlockNumber := big.NewInt(0).SetBytes([]byte(id[2:66]))
 	espressoBlockHeight := big.NewInt(0).SetBytes([]byte(id[66:130]))
@@ -130,7 +130,7 @@ func (e *EspressoFetcher) Fetch(ctx echo.Context, id string) (*string, *model.Ht
 	context, err := e.fetchContext(maxBlockNumber)
 
 	if err != nil {
-		return nil, model.NewHttpCustomError(http.StatusInternalServerError, nil)
+		return nil, NewHttpCustomError(http.StatusInternalServerError, nil)
 	}
 
 	// check if out of epoch's scope
@@ -142,7 +142,7 @@ func (e *EspressoFetcher) Fetch(ctx echo.Context, id string) (*string, *model.Ht
 			context.epoch.String(),
 		)
 		slog.Error(error)
-		return nil, model.NewHttpCustomError(http.StatusForbidden, nil)
+		return nil, NewHttpCustomError(http.StatusForbidden, nil)
 	}
 
 	ctxHttp := ctx.Request().Context()
@@ -154,7 +154,7 @@ func (e *EspressoFetcher) Fetch(ctx echo.Context, id string) (*string, *model.Ht
 		if err != nil {
 			msg := fmt.Sprintf("Failed to get latest block height: %s", err)
 			slog.Error(msg)
-			return nil, model.NewHttpCustomError(http.StatusInternalServerError, nil)
+			return nil, NewHttpCustomError(http.StatusInternalServerError, nil)
 
 		}
 		if espressoBlockHeight.Cmp(lastEspressoBlockHeight) == 1 {
@@ -163,7 +163,7 @@ func (e *EspressoFetcher) Fetch(ctx echo.Context, id string) (*string, *model.Ht
 			if err != nil {
 				msg := fmt.Sprintf("Failed to get header by block height: %s", err)
 				slog.Error(msg)
-				return nil, model.NewHttpCustomError(http.StatusInternalServerError, nil)
+				return nil, NewHttpCustomError(http.StatusInternalServerError, nil)
 
 			}
 
@@ -172,7 +172,7 @@ func (e *EspressoFetcher) Fetch(ctx echo.Context, id string) (*string, *model.Ht
 			if l1Finalized.Cmp(maxBlockNumber) == 1 {
 				msg := fmt.Sprintf("Espresso block height %s is not finalized", espressoBlockHeight)
 				slog.Error(msg)
-				return nil, model.NewHttpCustomError(http.StatusInternalServerError, nil)
+				return nil, NewHttpCustomError(http.StatusInternalServerError, nil)
 
 			}
 
@@ -185,7 +185,7 @@ func (e *EspressoFetcher) Fetch(ctx echo.Context, id string) (*string, *model.Ht
 			if err != nil {
 				msg := fmt.Sprintf("Failed to get block by height: %s", err)
 				slog.Error(msg)
-				return nil, model.NewHttpCustomError(http.StatusInternalServerError, nil)
+				return nil, NewHttpCustomError(http.StatusInternalServerError, nil)
 
 			}
 
@@ -194,7 +194,7 @@ func (e *EspressoFetcher) Fetch(ctx echo.Context, id string) (*string, *model.Ht
 			if err != nil {
 				msg := fmt.Sprintf("Failed to get header by block height: %s", err)
 				slog.Error(msg)
-				return nil, model.NewHttpCustomError(http.StatusInternalServerError, nil)
+				return nil, NewHttpCustomError(http.StatusInternalServerError, nil)
 
 			}
 
@@ -204,20 +204,20 @@ func (e *EspressoFetcher) Fetch(ctx echo.Context, id string) (*string, *model.Ht
 			if l1Finalized == nil {
 				msg := fmt.Sprintf("Espresso block %s with undefined L1 blockNumber", espressoBlockHeight)
 				slog.Error(msg)
-				return nil, model.NewHttpCustomError(http.StatusNotFound, nil)
+				return nil, NewHttpCustomError(http.StatusNotFound, nil)
 			}
 
 			if l1Finalized.Cmp(maxBlockNumber) == 1 {
 				msg := fmt.Sprintf("Espresso block height %s beyond requested L1 blockNumber", espressoBlockHeight)
 				slog.Error(msg)
-				return nil, model.NewHttpCustomError(http.StatusNotFound, nil)
+				return nil, NewHttpCustomError(http.StatusNotFound, nil)
 			}
 
 			serializedBlock, err := json.Marshal(filteredBlock)
 			if err != nil {
 				msg := fmt.Sprintf("Failed to marshal block: %s", err)
 				slog.Error(msg)
-				return nil, model.NewHttpCustomError(http.StatusInternalServerError, nil)
+				return nil, NewHttpCustomError(http.StatusInternalServerError, nil)
 
 			}
 			encodedBlockHex := hexutil.Encode(serializedBlock)

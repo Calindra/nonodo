@@ -5,8 +5,6 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/calindra/nonodo/internal/model"
-	"github.com/calindra/nonodo/internal/rollup"
 	"github.com/labstack/echo/v4"
 )
 
@@ -15,7 +13,7 @@ type SyscoinClient struct {
 	endpoint string
 }
 
-func (r *rollup.RollupAPI) NewSyscoinClient() Fetch {
+func NewSyscoinClient() Fetch {
 	url := "https://poda.syscoin.org/vh"
 
 	return &SyscoinClient{
@@ -24,7 +22,7 @@ func (r *rollup.RollupAPI) NewSyscoinClient() Fetch {
 	}
 }
 
-func (r *rollup.RollupAPI) NewSyscoinClientMock(endpoint string, client *http.Client) Fetch {
+func NewSyscoinClientMock(endpoint string, client *http.Client) Fetch {
 	return &SyscoinClient{
 		client,
 		endpoint,
@@ -32,7 +30,7 @@ func (r *rollup.RollupAPI) NewSyscoinClientMock(endpoint string, client *http.Cl
 }
 
 // example: https://poda.syscoin.org/vh/06310294ee0af7f1ae4c8e19fa509264565fa82ba8c82a7a9074b2abf12a15d9
-func (sc *SyscoinClient) Fetch(ctx echo.Context, id string) (*string, *model.HttpCustomError) {
+func (sc *SyscoinClient) Fetch(ctx echo.Context, id string) (*string, *HttpCustomError) {
 	slog.Debug("Called FetchSyscoinPoDa")
 
 	full_url := "https://poda.syscoin.org/vh/" + id
@@ -40,7 +38,7 @@ func (sc *SyscoinClient) Fetch(ctx echo.Context, id string) (*string, *model.Htt
 	res, err := http.Get(full_url)
 
 	if err != nil {
-		return nil, model.NewHttpCustomError(http.StatusInternalServerError, nil)
+		return nil, NewHttpCustomError(http.StatusInternalServerError, nil)
 	}
 
 	defer res.Body.Close()
@@ -48,7 +46,7 @@ func (sc *SyscoinClient) Fetch(ctx echo.Context, id string) (*string, *model.Htt
 	// Read the response body
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		return nil, model.NewHttpCustomError(http.StatusInternalServerError, nil)
+		return nil, NewHttpCustomError(http.StatusInternalServerError, nil)
 	}
 
 	// Convert the body to string
