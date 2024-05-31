@@ -73,6 +73,6 @@ function testNoticeFound() {
 
 export default function () {
    testVoucherNotFound()
-  // testVoucherFound()
-  // testNoticeFound()
+   testVoucherFound()
+   testNoticeFound()
 }
