@@ -52,7 +52,6 @@ jobs:
       
       - name: Wait for PostGraphile to be ready
         run: |
-          docker logs postgraphile-custom 
           for i in {1.60}; do
             curl -sSf http://localhost:5000 && break
             sleep 1
@@ -101,3 +100,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y k6
 
+      - name: Run k6 tests
+        id: k6
+        run: |
+          docker logs postgraphile-custom
+          docker ps
+         
