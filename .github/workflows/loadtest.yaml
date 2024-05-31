@@ -20,6 +20,7 @@ jobs:
           POSTGRES_DB: mydatabase
           POSTGRES_USER: myuser
           POSTGRES_PASSWORD: mypassword
+        options: --name postgres
         ports:
           - "5432:5432"
         volumes:
@@ -44,6 +45,9 @@ jobs:
       
       - name: Build nonodo Docker image
         run: docker build -t nonodo-app .
+      
+      - name: Check PostgreSQL logs
+        run: docker logs postgres || echo "PostgreSQL container not found"
 
       - name: Wait for PostgreSQL to be ready
         run: |
