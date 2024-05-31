@@ -44,6 +44,15 @@ jobs:
       
       - name: Build nonodo Docker image
         run: docker build -t nonodo-app .
+
+      - name: Wait for PostgreSQL to be ready
+        run: |
+          echo "Waiting for PostgreSQL to be ready..."
+          for i in {1..60}; do
+            pg_isready -h localhost -p 5432 && break
+            sleep 1
+          done
+
       
       - name: Run nonodo application
         run: docker run -d -p 8080:8080 --name nonodo nonodo-app
