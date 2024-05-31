@@ -45,6 +45,15 @@ jobs:
       
       - name: Build nonodo Docker image
         run: docker build -t nonodo-app .
+
+      - name: Wait for Postgres to be ready
+        run: |
+          echo "Waiting for postgres to be ready..."
+          until docker exec postgres pg_isready; do
+            echo "Postgres is unavailable - sleeping"
+            sleep 1
+          done
+          echo "Postgres is up - continuing..."
       
       
       - name: Run nonodo application
