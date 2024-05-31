@@ -24,8 +24,7 @@ jobs:
         ports:
           - "5432:5432"
         volumes:
-          - ./db/restore.sql:/docker-entrypoint-initdb.d/restore.sql
-          - ./db/data_files/:/docker-entrypoint-initdb.d/data_files
+          - ./db:/docker-entrypoint-initdb.d
 
     steps:
       - name: Fix permissions
