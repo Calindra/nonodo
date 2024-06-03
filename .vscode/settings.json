@@ -60,6 +60,7 @@
         "postgres",
         "Preparex",
         "Queryx",
+        "randao",
         "Randao",
         "readerclient",
         "rollup",

@@ -8,6 +8,7 @@ import (
 
 	"github.com/calindra/nonodo/internal/dataavailability"
 	"github.com/calindra/nonodo/internal/model"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 type EspressoListener struct {
@@ -45,6 +46,11 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 	slog.Debug("Espresso: watchNewTransactions", "fromBlock", e.fromBlock)
 	currentBlockHeight := e.fromBlock
 
+	var mapToDeduplicate []map[string]bool
+	mapToDeduplicate = make([]map[string]bool, 3)
+	for i := range mapToDeduplicate {
+		mapToDeduplicate[i] = make(map[string]bool)
+	}
 	// main polling loop
 	for {
 		slog.Debug("Espresso: fetchLatestBlockHeight...")
@@ -59,6 +65,9 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 			continue
 		}
 		for ; currentBlockHeight < lastEspressoBlockHeight; currentBlockHeight++ {
+			iMap := currentBlockHeight % 3
+			dMap := (currentBlockHeight + 2) % 3
+			mapToDeduplicate[dMap] = make(map[string]bool)
 			slog.Debug("Espresso:", "currentBlockHeight", currentBlockHeight)
 			transactions, err := e.espressoAPI.FetchTransactionsInBlock(ctx, currentBlockHeight, e.namespace)
 			if err != nil {
@@ -68,7 +77,14 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 			slog.Debug("Espresso:", "transactionsLen", tot)
 			for i := 0; i < tot; i++ {
 				transaction := transactions.Transactions[i]
-				slog.Debug("transaction", "currentBlockHeight", currentBlockHeight, "transaction", transaction)
+				key := common.Bytes2Hex(transaction)
+				slog.Debug("transaction", "currentBlockHeight", currentBlockHeight, "transaction", key)
+				if mapToDeduplicate[iMap][key] || mapToDeduplicate[(iMap+1)%3][key] {
+					slog.Debug("Espresso: duplicated", "transaction", transaction)
+					continue
+				}
+				slog.Debug("not duplicated")
+				mapToDeduplicate[(iMap+1)%3][key] = true
 				// transform and add to InputRepository
 				index, err := e.InputRepository.Count(nil)
 				if err != nil {
