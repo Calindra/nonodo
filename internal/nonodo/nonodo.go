@@ -33,6 +33,7 @@ import (
 const DefaultHttpPort = 8080
 const DefaultRollupsPort = 5004
 const HttpTimeout = 10 * time.Second
+const DefaultNamespace = 10008
 
 // Options to nonodo.
 type NonodoOpts struct {
@@ -70,9 +71,10 @@ type NonodoOpts struct {
 
 	LegacyMode  bool
 	NodeVersion string
-
 	Sequencer    string
 	LoadTestMode bool
+	Namespace uint64
+
 }
 
 // Create the options struct with default values.
@@ -100,6 +102,7 @@ func NewNonodoOpts() NonodoOpts {
 		LegacyMode:         false,
 		Sequencer:          "inputbox",
 		LoadTestMode:       false,
+		Namespace:          DefaultNamespace,
 	}
 }
 
@@ -190,7 +193,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	decoder := container.GetOutputDecoder()
 	convenienceService := container.GetConvenienceService()
 	adapter := reader.NewAdapterV1(db, convenienceService)
-	model := model.NewNonodoModel(decoder, db)
+	modelInstance := model.NewNonodoModel(decoder, db)
 	e := echo.New()
 	e.Use(middleware.CORS())
 	e.Use(middleware.Recover())
@@ -198,8 +201,8 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		ErrorMessage: "Request timed out",
 		Timeout:      HttpTimeout,
 	}))
-	inspect.Register(e, model)
-	reader.Register(e, model, convenienceService, adapter)
+	inspect.Register(e, modelInstance)
+	reader.Register(e, modelInstance, convenienceService, adapter)
 
 	// Start the "internal" http rollup server
 	re := echo.New()
@@ -209,15 +212,6 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		ErrorMessage: "Request timed out",
 		Timeout:      HttpTimeout,
 	}))
-
-	if opts.LegacyMode {
-		slog.Info("Using legacy mode")
-		v1.Register(re, model)
-	} else {
-		slog.Info("Using new mode")
-		rollup.Register(re, model)
-	}
-
 	if opts.RpcUrl == "" && !opts.DisableDevnet {
 		w.Workers = append(w.Workers, devnet.AnvilWorker{
 			Address: opts.AnvilAddress,
@@ -226,20 +220,34 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		})
 		opts.RpcUrl = fmt.Sprintf("ws://%s:%v", opts.AnvilAddress, opts.AnvilPort)
 	}
+	var sequencer model.Sequencer = nil
 	if !opts.DisableAdvance {
 		if opts.Sequencer == "inputbox" {
+			sequencer = model.NewInputBoxSequencer(modelInstance)
 			w.Workers = append(w.Workers, inputter.InputterWorker{
-				Model:              model,
+				Model:              modelInstance,
 				Provider:           opts.RpcUrl,
 				InputBoxAddress:    common.HexToAddress(opts.InputBoxAddress),
 				InputBoxBlock:      opts.InputBoxBlock,
 				ApplicationAddress: common.HexToAddress(opts.ApplicationAddress),
 			})
 		} else if opts.Sequencer == "espresso" {
-			w.Workers = append(w.Workers, espresso.EspressoListener{})
+			sequencer = model.NewEspressoSequencer(modelInstance)
+			w.Workers = append(w.Workers, espresso.NewEspressoListener(
+				opts.Namespace,
+				modelInstance.GetInputRepository(),
+				opts.FromBlock,
+			))
 		} else {
 			panic("sequencer not supported")
 		}
+	}
+	if opts.LegacyMode {
+		slog.Info("Using legacy mode")
+		v1.Register(re, modelInstance)
+	} else {
+		slog.Info("Using new mode")
+		rollup.Register(re, modelInstance, sequencer)
 	}
 	w.Workers = append(w.Workers, supervisor.HttpWorker{
 		Address: fmt.Sprintf("%v:%v", opts.HttpAddress, opts.HttpRollupsPort),
