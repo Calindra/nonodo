@@ -8,7 +8,10 @@ import (
 
 	"github.com/calindra/nonodo/internal/dataavailability"
 	"github.com/calindra/nonodo/internal/model"
+	"github.com/ethereum/go-ethereum/common"
 )
+
+const DEDUPLICATION_BLOCKS = 3
 
 type EspressoListener struct {
 	espressoAPI     *dataavailability.EspressoAPI
@@ -45,6 +48,10 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 	slog.Debug("Espresso: watchNewTransactions", "fromBlock", e.fromBlock)
 	currentBlockHeight := e.fromBlock
 
+	mapToDeduplicate := make([]map[string]bool, DEDUPLICATION_BLOCKS)
+	for i := range mapToDeduplicate {
+		mapToDeduplicate[i] = make(map[string]bool)
+	}
 	// main polling loop
 	for {
 		slog.Debug("Espresso: fetchLatestBlockHeight...")
@@ -59,6 +66,9 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 			continue
 		}
 		for ; currentBlockHeight < lastEspressoBlockHeight; currentBlockHeight++ {
+			iMap := currentBlockHeight % DEDUPLICATION_BLOCKS
+			dMap := (currentBlockHeight + DEDUPLICATION_BLOCKS - 1) % DEDUPLICATION_BLOCKS
+			mapToDeduplicate[dMap] = make(map[string]bool)
 			slog.Debug("Espresso:", "currentBlockHeight", currentBlockHeight)
 			transactions, err := e.espressoAPI.FetchTransactionsInBlock(ctx, currentBlockHeight, e.namespace)
 			if err != nil {
@@ -67,8 +77,16 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 			tot := len(transactions.Transactions)
 			slog.Debug("Espresso:", "transactionsLen", tot)
 			for i := 0; i < tot; i++ {
+				nextBlock := (iMap + 1) % DEDUPLICATION_BLOCKS
 				transaction := transactions.Transactions[i]
-				slog.Debug("transaction", "currentBlockHeight", currentBlockHeight, "transaction", transaction)
+				key := common.Bytes2Hex(transaction)
+				slog.Debug("transaction", "currentBlockHeight", currentBlockHeight, "transaction", key)
+				if mapToDeduplicate[iMap][key] || mapToDeduplicate[nextBlock][key] {
+					slog.Debug("Espresso: duplicated", "transaction", transaction)
+					continue
+				}
+				slog.Debug("not duplicated")
+				mapToDeduplicate[nextBlock][key] = true
 				// transform and add to InputRepository
 				index, err := e.InputRepository.Count(nil)
 				if err != nil {

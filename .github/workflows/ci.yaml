@@ -208,6 +208,6 @@ jobs:
         run: |
           npm ci
           npm pack
-          npm publish --access public --tag alpha
+          npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
