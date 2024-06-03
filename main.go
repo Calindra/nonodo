@@ -76,6 +76,8 @@ func init() {
 
 	cmd.Flags().StringVar(&opts.Sequencer, "sequencer", opts.Sequencer,
 		"Set the sequencer (inputbox[default] or espresso)")
+	cmd.Flags().Uint64Var(&opts.Namespace, "namespace", opts.Namespace,
+		"Set the namespace for espresso)")
 
 	// disable-*
 	cmd.Flags().BoolVar(&opts.DisableDevnet, "disable-devnet", opts.DisableDevnet,

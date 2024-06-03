@@ -1,4 +1,4 @@
-package model
+package dataavailability
 
 import (
 	"io"
@@ -13,7 +13,7 @@ type SyscoinClient struct {
 	endpoint string
 }
 
-func NewSyscoinClient() *SyscoinClient {
+func NewSyscoinClient() Fetch {
 	url := "https://poda.syscoin.org/vh"
 
 	return &SyscoinClient{
@@ -22,8 +22,15 @@ func NewSyscoinClient() *SyscoinClient {
 	}
 }
 
+func NewSyscoinClientMock(endpoint string, client *http.Client) Fetch {
+	return &SyscoinClient{
+		client,
+		endpoint,
+	}
+}
+
 // example: https://poda.syscoin.org/vh/06310294ee0af7f1ae4c8e19fa509264565fa82ba8c82a7a9074b2abf12a15d9
-func FetchSyscoinPoDa(ctx echo.Context, id string) (*string, *HttpCustomError) {
+func (sc *SyscoinClient) Fetch(ctx echo.Context, id string) (*string, *HttpCustomError) {
 	slog.Debug("Called FetchSyscoinPoDa")
 
 	full_url := "https://poda.syscoin.org/vh/" + id
@@ -44,7 +51,6 @@ func FetchSyscoinPoDa(ctx echo.Context, id string) (*string, *HttpCustomError) {
 
 	// Convert the body to string
 	str := string(body)
-	// str = hex.
 
 	slog.Debug("Called syscoin PoDa: ")
 

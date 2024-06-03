@@ -1,5 +1,5 @@
 # Use uma imagem base que tenha o Go instalado
-FROM golang:1.21
+FROM golang:1.22
 
 # Instale Clang
 RUN apt-get update && apt-get install -y clang
