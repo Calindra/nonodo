@@ -654,22 +654,12 @@ func getInputForwardQuery(first *int, after *string, where *graphql.InputFilter)
 }
 
 func (a AdapterV2) GetInput(index int) (*graphql.Input, error) {
-	requestBody := []byte(fmt.Sprintf(`{
-       {
-			"query": "query Inputs($index: Int) { 
-				inputs(condition: {index: $index}) {
-					edges {
-						node {
-							index
-							blob
-							status
-						}
-					}
-				}
-			}",
-			"variables": {
-				"index": %d
-			}
+	slog.Info(fmt.Sprintf("Adapter V2 - GetInput %d", index))
+
+	requestBody := []byte(fmt.Sprintf(`
+        {
+			"query": "query { inputs(condition: {index: %d}) { edges { node { index blob status}}}}"
+			
     	}`, index))
 
 	response, err := a.httpClient.Post(requestBody)
