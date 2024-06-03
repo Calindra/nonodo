@@ -136,7 +136,13 @@ func NewSupervisorPoC(opts NonodoOpts) supervisor.SupervisorWorker {
 	if opts.NodeVersion == "v1" {
 		adapter = reader.NewAdapterV1(db, convenienceService)
 	} else {
-		httpClient := reader.HTTPClientImpl{}
+		graphileHost := "localhost"
+
+		if opts.LoadTestMode {
+			graphileHost = "postgraphile-custom"
+		}
+
+		httpClient := reader.HTTPClientImpl{GraphileHost: graphileHost}
 		inputBlobAdapter := reader.InputBlobAdapter{}
 		adapter = reader.NewAdapterV2(convenienceService, &httpClient, inputBlobAdapter)
 	}

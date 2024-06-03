@@ -2,17 +2,18 @@ package reader
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 )
 
-type HTTPClientImpl struct{}
-
-const GRAPHILE_ENDPOINT = "http://localhost:5000/graphql"
+type HTTPClientImpl struct {
+	GraphileHost string
+}
 
 func (c *HTTPClientImpl) Post(requestBody []byte) ([]byte, error) {
-	req, err := http.NewRequest("POST", GRAPHILE_ENDPOINT, bytes.NewBuffer(requestBody))
+	req, err := http.NewRequest("POST", fmt.Sprintf("http://%s:5000/graphql", c.GraphileHost), bytes.NewBuffer(requestBody))
 	if err != nil {
 		slog.Error("Error creating request", "error", err)
 		return nil, err
