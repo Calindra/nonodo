@@ -73,10 +73,6 @@ func init() {
 	cmd.Flags().BoolVar(&color, "enable-color", true, "If set, enables logs color")
 	cmd.Flags().BoolVar(&opts.EnableEcho, "enable-echo", opts.EnableEcho,
 		"If set, nonodo starts a built-in echo application")
-	cmd.Flags().BoolVar(&opts.LegacyMode,
-		"enable-legacy",
-		opts.LegacyMode,
-		"If set, enables legacy based in 0.7.1 (branch 0.7.3) rollups interface")
 
 	cmd.Flags().StringVar(&opts.Sequencer, "sequencer", opts.Sequencer,
 		"Set the sequencer (inputbox[default] or espresso)")
