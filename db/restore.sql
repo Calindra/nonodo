@@ -88,6 +88,10 @@ CREATE TABLE public.inputs (
 
 ALTER TABLE public.inputs OWNER TO myuser;
 
+
+INSERT INTO public.inputs (index, blob, status) VALUES (1, '\xDEADBEEF', 'ACCEPTED');
+INSERT INTO public.inputs (index, blob, status) VALUES (2, '\xDEADBEEF', 'ACCEPTED');
+
 --
 -- Name: outputs; Type: TABLE; Schema: public; Owner: postgres
 --

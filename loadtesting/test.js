@@ -71,8 +71,29 @@ function testNoticeFound() {
     });
 }
 
+
+function testInputFound() {
+    const payload = JSON.stringify({
+        query: "query { input(index: 1) { index }}"
+    });
+
+    const params = {
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    };
+
+    const response = http.post(GRAPHQL_ENDPOINT, payload, params);
+
+    check(response, {
+        'testInputFound is status 200': (r) => r.status === 200,
+        'testInputFound response body contains expected content': (r) => r.body.includes('{"data":{"input":{"index":1}}}'), 
+    });
+}
+
 export default function () {
    testVoucherNotFound()
    testVoucherFound()
    testNoticeFound()
+   testInputFound()
 }
