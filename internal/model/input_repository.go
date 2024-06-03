@@ -38,6 +38,17 @@ func (r *InputRepository) CreateTables() error {
 }
 
 func (r *InputRepository) Create(input AdvanceInput) (*AdvanceInput, error) {
+	exist, err := r.FindByIndex(input.Index)
+	if err != nil {
+		return nil, err
+	}
+	if exist != nil {
+		return exist, nil
+	}
+	return r.rawCreate(input)
+}
+
+func (r *InputRepository) rawCreate(input AdvanceInput) (*AdvanceInput, error) {
 	insertSql := `INSERT INTO inputs (
 		input_index,
 		status,
