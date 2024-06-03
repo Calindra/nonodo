@@ -85,10 +85,25 @@ function testInputFound() {
 
     const response = http.post(GRAPHQL_ENDPOINT, payload, params);
 
+    // Log the response status and body
+    console.log('Response status: ' + response.status);
+    console.log('Response body: ' + response.body);
+
+    const isStatus200 = response.status === 200;
+    const isBodyContainsExpectedContent = response.body.includes('{"data":{"input":{"index":1}}}');
+
     check(response, {
-        'testInputFound is status 200': (r) => r.status === 200,
-        'testInputFound response body contains expected content': (r) => r.body.includes('{"data":{"input":{"index":1}}}'), 
+        'testInputFound is status 200': (r) => isStatus200,
+        'testInputFound response body contains expected content': (r) => isBodyContainsExpectedContent, 
     });
+
+    // Additional logging to understand which check is failing
+    if (!isStatus200) {
+        console.error('Expected status 200 but got: ' + response.status);
+    }
+    if (!isBodyContainsExpectedContent) {
+        console.error('Response body does not contain expected content.');
+    }
 }
 
 export default function () {
