@@ -85,25 +85,49 @@ function testInputFound() {
 
     const response = http.post(GRAPHQL_ENDPOINT, payload, params);
 
-    // Log the response status and body
-    console.log('Response status: ' + response.status);
-    console.log('Response body: ' + response.body);
+    check(response, {
+        'testInputFound is status 200': (r) => r.status === 200,
+        'testInputFound response body contains expected content': (r) => r.body.includes('{"data":{"input":{"index":1}}}'), 
+    });
+}
 
-    const isStatus200 = response.status === 200;
-    const isBodyContainsExpectedContent = response.body.includes('{"data":{"input":{"index":1}}}');
+function testGetInput() {
+    const payload = JSON.stringify({
+        query: "query { input(index: 1) { index }}"
+    }); 
+
+    const params = {
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    };
+
+    const response = http.post(GRAPHQL_ENDPOINT, payload, params);
 
     check(response, {
-        'testInputFound is status 200': (r) => isStatus200,
-        'testInputFound response body contains expected content': (r) => isBodyContainsExpectedContent, 
+        'testInputFound is status 200': (r) => r.status === 200,
+        'testInputFound response body contains expected content': (r) => r.body.includes('{"data":{"input":{"index":1}}}'), 
     });
+}
 
-    // Additional logging to understand which check is failing
-    if (!isStatus200) {
-        console.error('Expected status 200 but got: ' + response.status);
-    }
-    if (!isBodyContainsExpectedContent) {
-        console.error('Response body does not contain expected content.');
-    }
+function testConvenientVouchers() {
+    const payload = JSON.stringify({
+        query: "query { convenientVouchers(first: 10) { edges { node { index }}}}"
+    }); 
+
+    const params = {
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    };
+
+    const response = http.post(GRAPHQL_ENDPOINT, payload, params);
+
+    check(response, {
+        'testConvenientVouchers is status 200': (r) => r.status === 200,
+        'testConvenientVouchers response body contains expected content': (r) => r.body.includes('{"data":{"convenientVouchers":{"edges":[{"node":{"index":1}},{"node":{"index":2}}]}}}'), 
+    });
+}
 }
 
 export default function () {
@@ -111,4 +135,6 @@ export default function () {
    testVoucherFound()
    testNoticeFound()
    testInputFound()
+   testGetInput()
+   testConvenientVouchers()
 }
