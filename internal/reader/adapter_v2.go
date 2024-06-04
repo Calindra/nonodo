@@ -119,22 +119,9 @@ func (a AdapterV2) GetProof(ctx context.Context, inputIndex int, outputIndex int
 func (a AdapterV2) GetReport(reportIndex int, inputIndex int) (*graphql.Report, error) {
 	requestBody := []byte(fmt.Sprintf(`
     {
-        "query": "query Reports($index: Int, $inputIndex: Int) {
-            reports(condition: {index: $index, inputIndex: $inputIndex}) {
-                edges {
-                    node {
-                        index
-                        blob
-                        inputIndex
-                    }
-                }
-            }
-        }",
-        "variables": {
-            "index": %d,
-            "inputIndex": %d
-        }
-    }`, reportIndex, inputIndex))
+		"query": "query { reports(condition: {index: %d, inputIndex: %d}) { edges { node { index blob inputIndex}}}}"
+		
+	}`, reportIndex, inputIndex))
 
 	response, err := a.httpClient.Post(requestBody)
 
@@ -184,25 +171,9 @@ func (a AdapterV2) GetReports(
 		}
 
 		requestBody := []byte(fmt.Sprintf(`
-    {
-        "query": "query MyQuery($first: Int, $after: String, $inputIndex: Int) {
-            reports(first: $first, after: $after, condition: {inputIndex: $inputIndex}) {
-                edges {
-                    cursor
-                    node {
-                        index
-                        inputIndex
-                        blob
-                    }
-                }
-            }
-        }",
-        "variables": {
-            "first": %d,
-            "after": %s,
-            "inputIndex": %d
-        }
-    }`, first, afterValue, inputIndex))
+		{
+			"query": "query { reports(first: %d, after: %s, condition: {inputIndex: %d}) { edges { cursor node { index inputIndex blob }}} }"
+		}`, first, afterValue, inputIndex))
 
 		response, err := a.httpClient.Post(requestBody)
 

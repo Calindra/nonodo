@@ -91,9 +91,9 @@ function testInputFound() {
     });
 }
 
-function testGetInput() {
+function testReportFound() {
     const payload = JSON.stringify({
-        query: "query { input(index: 1) { index }}"
+        query: "query { report(reportIndex: 2, inputIndex: 2) { index }}"
     }); 
 
     const params = {
@@ -105,8 +105,8 @@ function testGetInput() {
     const response = http.post(GRAPHQL_ENDPOINT, payload, params);
 
     check(response, {
-        'testInputFound is status 200': (r) => r.status === 200,
-        'testInputFound response body contains expected content': (r) => r.body.includes('{"data":{"input":{"index":1}}}'), 
+        'testReportFound is status 200': (r) => r.status === 200,
+        'testReportFound response body contains expected content': (r) => r.body.includes('{"data":{"report":{"index":2}}}'), 
     });
 }
 
@@ -129,12 +129,72 @@ function testConvenientVouchers() {
     });
 }
 
+function testReports() {
+    const payload = JSON.stringify({
+        query: "query { reports(first: 10) { edges { node { index }}}}"
+    }); 
+
+    const params = {
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    };
+
+    const response = http.post(GRAPHQL_ENDPOINT, payload, params);
+
+    check(response, {
+        'testReports is status 200': (r) => r.status === 200,
+        'testReports response body contains expected content': (r) => r.body.includes('{"data":{"reports":{"edges":[{"node":{"index":1}},{"node":{"index":2}}]}}}'), 
+    });
+}
+
+function testVouchers() {
+    const payload = JSON.stringify({
+        query: "query { vouchers(first: 10) { edges { node { index }}}}"
+    }); 
+
+    const params = {
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    };
+
+    const response = http.post(GRAPHQL_ENDPOINT, payload, params);
+
+    check(response, {
+        'testVouchers is status 200': (r) => r.status === 200,
+        'testVouchers response body contains expected content': (r) => r.body.includes('{"data":{"vouchers":{"edges":[{"node":{"index":1}},{"node":{"index":2}}]}}}'), 
+    });
+}
+
+function testNotices() {
+    const payload = JSON.stringify({
+        query: "query { notices(first: 10) { edges { node { index }}}}"
+    }); 
+
+    const params = {
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    };
+
+    const response = http.post(GRAPHQL_ENDPOINT, payload, params);
+
+    check(response, {
+        'testNotices is status 200': (r) => r.status === 200,
+        'testNotices response body contains expected content': (r) => r.body.includes('{"data":{"notices":{"edges":[{"node":{"index":1}},{"node":{"index":2}}]}}}'), 
+    });
+}
+
 
 export default function () {
    testVoucherNotFound()
    testVoucherFound()
    testNoticeFound()
    testInputFound()
-   testGetInput()
+   testReportFound()
    testConvenientVouchers()
+   testVouchers()
+   testNotices()
+ //  testReports()
 }
