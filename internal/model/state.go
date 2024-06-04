@@ -59,7 +59,7 @@ func (s *rollupsStateIdle) finish(status CompletionStatus) {
 }
 
 func (s *rollupsStateIdle) addVoucher(destination common.Address, payload []byte) (int, error) {
-	return 0, fmt.Errorf("cannot add voucher in current state")
+	return 0, fmt.Errorf("cannot add voucher in idle state")
 }
 
 func (s *rollupsStateIdle) addNotice(payload []byte) (int, error) {
@@ -267,7 +267,7 @@ func (s *rollupsStateInspect) finish(status CompletionStatus) {
 }
 
 func (s *rollupsStateInspect) addVoucher(destination common.Address, payload []byte) (int, error) {
-	return 0, fmt.Errorf("cannot add voucher in current state")
+	return 0, fmt.Errorf("cannot add voucher in inspect state")
 }
 
 func (s *rollupsStateInspect) addNotice(payload []byte) (int, error) {
