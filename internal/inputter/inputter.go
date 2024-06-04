@@ -21,6 +21,7 @@ type Model interface {
 		payload []byte,
 		blockNumber uint64,
 		timestamp time.Time,
+		index int,
 	)
 }
 
@@ -140,6 +141,7 @@ func (w InputterWorker) addInput(
 		event.Input,
 		event.Raw.BlockNumber,
 		timestamp,
+		int(event.InputIndex.Int64()),
 	)
 	return nil
 }
