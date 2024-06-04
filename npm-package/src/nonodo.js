@@ -1,28 +1,23 @@
 #!/usr/bin/env node
-const {
-  existsSync,
-  createReadStream,
-  readFileSync,
-  writeFileSync,
-} = require("node:fs");
-const { Buffer } = require("node:buffer");
-const { URL } = require("node:url");
-const { spawn } = require("node:child_process");
-const path = require("node:path");
-const { arch, platform, tmpdir } = require("node:os");
-const { version } = require("../package.json");
-const { createHash } = require("node:crypto");
-const { get: request } = require("node:https");
-const { unzipSync } = require("node:zlib");
-const { SingleBar, Presets } = require("cli-progress");
-const AdmZip = require("adm-zip");
+"use strict";
+import { existsSync, createReadStream, readFileSync, writeFileSync } from "node:fs";
+import { Buffer } from "node:buffer";
+import { URL } from "node:url";
+import { spawn } from "node:child_process";
+import { join } from "node:path";
+import { arch, platform, tmpdir } from "node:os";
+import { createHash } from "node:crypto";
+import { get as request } from "node:https";
+import { unzipSync } from "node:zlib";
+import { SingleBar, Presets } from "cli-progress";
+import AdmZip from "adm-zip";
 
-const PACKAGE_NONODO_VERSION =
-  process.env.PACKAGE_NONODO_VERSION ?? version;
-const PACKAGE_NONODO_URL = new URL(
-  process.env.PACKAGE_NONODO_URL ??
-    `https://github.com/Calindra/nonodo/releases/download/v${PACKAGE_NONODO_VERSION}/`,
-);
+// const PACKAGE_NONODO_VERSION =
+// process.env.PACKAGE_NONODO_VERSION ?? version;
+// const PACKAGE_NONODO_URL = new URL(
+//   process.env.PACKAGE_NONODO_URL ??
+//     `https://github.com/Calindra/nonodo/releases/download/v${PACKAGE_NONODO_VERSION}/`,
+// );
 const PACKAGE_NONODO_DIR = process.env.PACKAGE_NONODO_DIR ?? tmpdir();
 
 const HASH_ALGO = "md5";
@@ -47,22 +42,21 @@ function getArch() {
   else return arc;
 }
 
-function getReleaseName() {
+function getReleaseName(version) {
   const arcName = getArch();
   const platformName = getPlatform();
   const exe = platform() === "win32" ? ".zip" : ".tar.gz";
-  return `nonodo-v${PACKAGE_NONODO_VERSION}-${platformName}-${arcName}${exe}`;
+  return `nonodo-v${version}-${platformName}-${arcName}${exe}`;
 }
 
-function getBinaryName() {
+function getBinaryName(version) {
   const arcName = getArch();
   const platformName = getPlatform();
   const exe = platform() === "win32" ? ".exe" : "";
-  return `nonodo-v${PACKAGE_NONODO_VERSION}-${platformName}-${arcName}${exe}`;
+  return `nonodo-v${version}-${platformName}-${arcName}${exe}`;
 }
 
-const releaseName = getReleaseName();
-const binaryName = getBinaryName();
+
 const asyncController = new AbortController();
 
 /**
@@ -101,7 +95,9 @@ function unpackZip(zipPath, destPath) {
 function unpackTarball(tarballPath, destPath) {
   const tarballDownloadBuffer = readFileSync(tarballPath);
   const tarballBuffer = unzipSync(tarballDownloadBuffer);
-  writeFileSync(destPath, extractFileFromTarball(tarballBuffer, "nonodo"), {
+  const data = extractFileFromTarball(tarballBuffer, "nonodo");
+  if (!data) throw new Error("Dont find binary on tarball");
+  writeFileSync(destPath, data, {
     mode: 0o755,
   });
 }
@@ -139,15 +135,18 @@ function extractFileFromTarball(tarballBuffer, filepath) {
   }
 }
 
-async function downloadBinary() {
+async function downloadBinary(nonodoUrl, releaseName) {
+  if (!(nonodoUrl instanceof URL)) {
+    throw new Error("Invalid URL");
+  }
   const dir = PACKAGE_NONODO_DIR;
-  const url = new URL(PACKAGE_NONODO_URL);
+  const url = new URL(nonodoUrl);
   if (!url.href.endsWith("/")) url.pathname += "/";
   url.pathname += releaseName;
 
   console.log(`Downloading: ${url.href}`);
 
-  const dest = path.join(dir, releaseName);
+  const dest = join(dir, releaseName);
 
   const binary = await makeRequest(url);
 
@@ -156,18 +155,22 @@ async function downloadBinary() {
   });
 }
 
-async function downloadHash() {
+async function downloadHash(nonodoUrl, releaseName) {
+  if (!(nonodoUrl instanceof URL)) {
+    throw new Error("Invalid URL");
+  }
+
   const algo = HASH_ALGO;
   const filename = `${releaseName}.${algo}`;
 
   const dir = PACKAGE_NONODO_DIR;
-  const url = new URL(PACKAGE_NONODO_URL);
+  const url = new URL(nonodoUrl);
   if (!url.href.endsWith("/")) url.pathname += "/";
   url.pathname += filename;
 
   console.log(`Downloading: ${url.href}`);
 
-  const dest = path.join(dir, filename);
+  const dest = join(dir, filename);
 
   const response = await makeRequest(url);
   const body = response.toString("utf-8");
@@ -192,13 +195,21 @@ function makeRequest(url) {
     let bar;
 
     const req = request(url, (res) => {
+      if (!res.statusCode) {
+        reject(new Error("No status code"));
+        return;
+      }
+
       if (res.statusCode >= 200 && res.statusCode < 300) {
-        const length = parseInt(res.headers["content-length"], 10);
+        const contentLength = res.headers["content-length"];
         const chunks = [];
         let size = 0;
-        if (!Number.isNaN(length)) {
-          bar = new SingleBar({}, Presets.shades_classic);
-          bar.start(length, 0);
+        if (contentLength) {
+          const length = parseInt(contentLength, 10);
+          if (!Number.isNaN(length)) {
+            bar = new SingleBar({}, Presets.shades_classic);
+            bar.start(length, 0);
+          }
         }
 
         res.on("data", (chunk) => {
@@ -260,7 +271,7 @@ async function runNonodo(location) {
   });
 }
 
-async function getNonodoAvailable() {
+async function getNonodoAvailable(releaseName, binaryName) {
   const nonodoPath = PACKAGE_NONODO_DIR;
 
   const myPlatform = getPlatform();
@@ -268,7 +279,7 @@ async function getNonodoAvailable() {
   const support = `${myPlatform}-${myArch}`;
 
   if (AVAILABLE_BINARY_NAME.has(support)) {
-    const binaryPath = path.join(nonodoPath, binaryName);
+    const binaryPath = join(nonodoPath, binaryName);
 
     if (existsSync(binaryPath)) return binaryPath;
 
@@ -279,7 +290,7 @@ async function getNonodoAvailable() {
     console.log(`Downloaded nonodo binary.`);
     console.log(`Verifying hash...`);
 
-    const releasePath = path.join(nonodoPath, releaseName);
+    const releasePath = join(nonodoPath, releaseName);
     const calculatedHash = await calculateHash(releasePath, HASH_ALGO);
 
     if (hash !== calculatedHash) {
@@ -306,19 +317,36 @@ async function getNonodoAvailable() {
 }
 
 async function tryPackageNonodo() {
-  console.log(`Running brunodo ${version} for ${arch()} ${platform()}`);
+  const cli = new CLI();
 
-  try {
-    process.once("SIGINT", () => asyncController.abort());
-    const nonodoPath = await getNonodoAvailable();
-    console.log("nonodo path:", nonodoPath);
-    await runNonodo(nonodoPath);
-    return true;
-  } catch (e) {
-    console.error(e);
-  }
+  const version = "v2.1.1-beta";
 
-  return false;
+  console.error(`Running brunodo ${version} for ${arch()} ${platform()}`);
+
+  const nonodoUrl = new URL(`https://github.com/Calindra/nonodo/releases/download/v${version}`);
+  const releaseName = getReleaseName(version);
+  const binaryName = getBinaryName(version);
+
+  // Commands
+  // Install
+  // List
+  // Uninstall
+
+
+
+  return true;
+
+  // try {
+  //   process.once("SIGINT", () => asyncController.abort());
+  //   const nonodoPath = await getNonodoAvailable();
+  //   console.log("nonodo path:", nonodoPath);
+  //   await runNonodo(nonodoPath);
+  //   return true;
+  // } catch (e) {
+  //   console.error(e);
+  // }
+
+  // return false;
 }
 
 tryPackageNonodo()
