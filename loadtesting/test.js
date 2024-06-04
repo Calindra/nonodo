@@ -128,7 +128,7 @@ function testConvenientVouchers() {
         'testConvenientVouchers response body contains expected content': (r) => r.body.includes('{"data":{"convenientVouchers":{"edges":[{"node":{"index":1}},{"node":{"index":2}}]}}}'), 
     });
 }
-}
+
 
 export default function () {
    testVoucherNotFound()
