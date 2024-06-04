@@ -5,6 +5,8 @@ pkgs.mkShell {
     pkgs.go
     pkgs.delve
     pkgs.gcc
+    pkgs.watchexec
+    pkgs.sqlite
   ];
 
   shellHook = ''
