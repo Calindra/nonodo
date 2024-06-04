@@ -39,14 +39,21 @@ func getYAML(v2 string) []byte {
 func main() {
 	// v2URL := "https://raw.githubusercontent.com/cartesi/openapi-interfaces/v0.8.0/rollup.yaml"
 	v2URL := "https://raw.githubusercontent.com/cartesi/openapi-interfaces/fix/http-server/rollup.yaml"
+	inspectURL := "https://raw.githubusercontent.com/cartesi/rollups-node/v1.4.0/api/openapi/inspect.yaml"
 
 	v2 := getYAML(v2URL)
+	inspect := getYAML(inspectURL)
 
 	var filemode os.FileMode = 0644
 
 	err := os.WriteFile("rollup.yaml", v2, filemode)
 	if err != nil {
 		panic("Failed to write OpenAPI v2 to file: " + err.Error())
+	}
+
+	err = os.WriteFile("inspect.yaml", inspect, filemode)
+	if err != nil {
+		panic("Failed to write OpenAPI inspect to file: " + err.Error())
 	}
 
 	log.Println("OpenAPI written to file")
