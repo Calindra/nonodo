@@ -61,23 +61,19 @@ func (m *NonodoModel) AddAdvanceInput(
 	payload []byte,
 	blockNumber uint64,
 	timestamp time.Time,
+	index int,
 ) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
-
-	index, err := m.inputRepository.Count(nil)
-	if err != nil {
-		panic(err)
-	}
 	input := AdvanceInput{
-		Index:          int(index),
+		Index:          index,
 		Status:         CompletionStatusUnprocessed,
 		MsgSender:      sender,
 		Payload:        payload,
 		BlockTimestamp: timestamp,
 		BlockNumber:    blockNumber,
 	}
-	_, err = m.inputRepository.Create(input)
+	_, err := m.inputRepository.Create(input)
 	if err != nil {
 		panic(err)
 	}
