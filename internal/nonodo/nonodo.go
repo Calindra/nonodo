@@ -69,12 +69,11 @@ type NonodoOpts struct {
 	FromBlock        uint64
 	DbImplementation string
 
-	LegacyMode  bool
-	NodeVersion string
+	LegacyMode   bool
+	NodeVersion  string
 	Sequencer    string
 	LoadTestMode bool
-	Namespace uint64
-
+	Namespace    uint64
 }
 
 // Create the options struct with default values.
