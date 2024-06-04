@@ -9,7 +9,7 @@ import (
 
 type HTTPClientImpl struct{}
 
-const GRAPHILE_ENDPOINT = "http://localhost:5000/graphql"
+const GRAPHILE_ENDPOINT = "http://localhost:5001/graphql"
 
 func (c *HTTPClientImpl) Post(requestBody []byte) ([]byte, error) {
 	req, err := http.NewRequest("POST", GRAPHILE_ENDPOINT, bytes.NewBuffer(requestBody))

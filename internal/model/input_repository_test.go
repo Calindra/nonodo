@@ -53,12 +53,12 @@ func (s *InputRepositorySuite) TestCreateTables() {
 func (s *InputRepositorySuite) TestCreateInput() {
 	defer s.teardown()
 	input, err := s.inputRepository.Create(AdvanceInput{
-		Index:       0,
-		Status:      CompletionStatusUnprocessed,
-		MsgSender:   common.Address{},
-		Payload:     common.Hex2Bytes("0x1122"),
-		BlockNumber: 1,
-		Timestamp:   time.Now(),
+		Index:          0,
+		Status:         CompletionStatusUnprocessed,
+		MsgSender:      common.Address{},
+		Payload:        common.Hex2Bytes("0x1122"),
+		BlockNumber:    1,
+		BlockTimestamp: time.Now(),
 	})
 	s.NoError(err)
 	s.Equal(0, input.Index)
@@ -67,22 +67,22 @@ func (s *InputRepositorySuite) TestCreateInput() {
 func (s *InputRepositorySuite) TestFixCreateInputDuplicated() {
 	defer s.teardown()
 	input, err := s.inputRepository.Create(AdvanceInput{
-		Index:       0,
-		Status:      CompletionStatusUnprocessed,
-		MsgSender:   common.Address{},
-		Payload:     common.Hex2Bytes("0x1122"),
-		BlockNumber: 1,
-		Timestamp:   time.Now(),
+		Index:          0,
+		Status:         CompletionStatusUnprocessed,
+		MsgSender:      common.Address{},
+		Payload:        common.Hex2Bytes("0x1122"),
+		BlockNumber:    1,
+		BlockTimestamp: time.Now(),
 	})
 	s.NoError(err)
 	s.Equal(0, input.Index)
 	input, err = s.inputRepository.Create(AdvanceInput{
-		Index:       0,
-		Status:      CompletionStatusUnprocessed,
-		MsgSender:   common.Address{},
-		Payload:     common.Hex2Bytes("0x1122"),
-		BlockNumber: 1,
-		Timestamp:   time.Now(),
+		Index:          0,
+		Status:         CompletionStatusUnprocessed,
+		MsgSender:      common.Address{},
+		Payload:        common.Hex2Bytes("0x1122"),
+		BlockNumber:    1,
+		BlockTimestamp: time.Now(),
 	})
 	s.NoError(err)
 	s.Equal(0, input.Index)
@@ -94,12 +94,12 @@ func (s *InputRepositorySuite) TestFixCreateInputDuplicated() {
 func (s *InputRepositorySuite) TestCreateAndFindInputByIndex() {
 	defer s.teardown()
 	input, err := s.inputRepository.Create(AdvanceInput{
-		Index:       123,
-		Status:      CompletionStatusUnprocessed,
-		MsgSender:   common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
-		Payload:     common.Hex2Bytes("1122"),
-		BlockNumber: 1,
-		Timestamp:   time.Now(),
+		Index:          123,
+		Status:         CompletionStatusUnprocessed,
+		MsgSender:      common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
+		Payload:        common.Hex2Bytes("1122"),
+		BlockNumber:    1,
+		BlockTimestamp: time.Now(),
 	})
 	s.NoError(err)
 	s.Equal(123, input.Index)
@@ -111,18 +111,18 @@ func (s *InputRepositorySuite) TestCreateAndFindInputByIndex() {
 	s.Equal("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", input.MsgSender.Hex())
 	s.Equal("1122", common.Bytes2Hex(input.Payload))
 	s.Equal(1, int(input2.BlockNumber))
-	s.Equal(input.Timestamp.UnixMilli(), input2.Timestamp.UnixMilli())
+	s.Equal(input.BlockTimestamp.UnixMilli(), input2.BlockTimestamp.UnixMilli())
 }
 
 func (s *InputRepositorySuite) TestCreateInputAndUpdateStatus() {
 	defer s.teardown()
 	input, err := s.inputRepository.Create(AdvanceInput{
-		Index:       2222,
-		Status:      CompletionStatusUnprocessed,
-		MsgSender:   common.Address{},
-		Payload:     common.Hex2Bytes("0x1122"),
-		BlockNumber: 1,
-		Timestamp:   time.Now(),
+		Index:          2222,
+		Status:         CompletionStatusUnprocessed,
+		MsgSender:      common.Address{},
+		Payload:        common.Hex2Bytes("0x1122"),
+		BlockNumber:    1,
+		BlockTimestamp: time.Now(),
 	})
 	s.NoError(err)
 	s.Equal(2222, input.Index)
@@ -139,12 +139,13 @@ func (s *InputRepositorySuite) TestCreateInputAndUpdateStatus() {
 func (s *InputRepositorySuite) TestCreateInputFindByStatus() {
 	defer s.teardown()
 	input, err := s.inputRepository.Create(AdvanceInput{
-		Index:       2222,
-		Status:      CompletionStatusUnprocessed,
-		MsgSender:   common.Address{},
-		Payload:     common.Hex2Bytes("0x1122"),
-		BlockNumber: 1,
-		Timestamp:   time.Now(),
+		Index:          2222,
+		Status:         CompletionStatusUnprocessed,
+		MsgSender:      common.Address{},
+		Payload:        common.Hex2Bytes("0x1122"),
+		BlockNumber:    1,
+		PrevRandao:     0,
+		BlockTimestamp: time.Now(),
 	})
 	s.NoError(err)
 	s.Equal(2222, input.Index)
@@ -170,12 +171,12 @@ func (s *InputRepositorySuite) TestFindByIndexGt() {
 	defer s.teardown()
 	for i := 0; i < 5; i++ {
 		input, err := s.inputRepository.Create(AdvanceInput{
-			Index:       i,
-			Status:      CompletionStatusUnprocessed,
-			MsgSender:   common.Address{},
-			Payload:     common.Hex2Bytes("0x1122"),
-			BlockNumber: 1,
-			Timestamp:   time.Now(),
+			Index:          i,
+			Status:         CompletionStatusUnprocessed,
+			MsgSender:      common.Address{},
+			Payload:        common.Hex2Bytes("0x1122"),
+			BlockNumber:    1,
+			BlockTimestamp: time.Now(),
 		})
 		s.NoError(err)
 		s.Equal(i, input.Index)
@@ -196,12 +197,12 @@ func (s *InputRepositorySuite) TestFindByIndexLt() {
 	defer s.teardown()
 	for i := 0; i < 5; i++ {
 		input, err := s.inputRepository.Create(AdvanceInput{
-			Index:       i,
-			Status:      CompletionStatusUnprocessed,
-			MsgSender:   common.Address{},
-			Payload:     common.Hex2Bytes("0x1122"),
-			BlockNumber: 1,
-			Timestamp:   time.Now(),
+			Index:          i,
+			Status:         CompletionStatusUnprocessed,
+			MsgSender:      common.Address{},
+			Payload:        common.Hex2Bytes("0x1122"),
+			BlockNumber:    1,
+			BlockTimestamp: time.Now(),
 		})
 		s.NoError(err)
 		s.Equal(i, input.Index)

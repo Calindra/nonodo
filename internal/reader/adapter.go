@@ -1,6 +1,8 @@
 package reader
 
 import (
+	"context"
+
 	graphql "github.com/calindra/nonodo/internal/reader/model"
 )
 
@@ -28,4 +30,6 @@ type Adapter interface {
 	GetVouchers(
 		first *int, last *int, after *string, before *string, inputIndex *int,
 	) (*graphql.VoucherConnection, error)
+
+	GetProof(ctx context.Context, inputIndex, outputIndex int) (*graphql.Proof, error)
 }

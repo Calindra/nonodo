@@ -2,7 +2,7 @@ openapi: 3.0.0
 
 info:
   title: Cartesi Rollup HTTP API
-  version: 0.8.0
+  version: 0.8.1
   license:
     name: Apache-2.0
     url: https://www.apache.org/licenses/LICENSE-2.0.html
@@ -146,7 +146,7 @@ paths:
         required: true
 
       responses:
-        "200":
+        "201":
           description: Created the voucher.
           content:
             application/json:
@@ -180,7 +180,7 @@ paths:
         required: true
 
       responses:
-        "200":
+        "201":
           description: Created the notice.
           content:
             application/json:
@@ -211,7 +211,7 @@ paths:
         required: true
 
       responses:
-        "200":
+        "202":
           description: Created the report.
 
         default:
@@ -272,7 +272,7 @@ paths:
         required: true
 
       responses:
-        "200":
+        "202":
           description: Accepted the exception throw.
 
         default:
@@ -313,6 +313,17 @@ components:
     Advance:
       type: object
       properties:
+        metadata:
+          $ref: "#/components/schemas/Metadata"
+        payload:
+          $ref: "#/components/schemas/Payload"
+      required:
+        - metadata
+        - payload
+
+    Metadata:
+      type: object
+      properties:
         chain_id:
           type: integer
           format: uint64
@@ -350,8 +361,11 @@ components:
           format: uint64
           description: Unix timestamp of block in milliseconds.
           example: 1588598533000
-        payload:
-          $ref: "#/components/schemas/Payload"
+        prev_randao:
+          type: integer
+          format: uint64
+          description: The latest RANDAO mix of the post beacon state of the previous block.
+          example: 1588598533000
       required:
         - chain_id
         - app_contract
@@ -360,7 +374,7 @@ components:
         - input_index
         - block_number
         - block_timestamp
-        - payload
+        - prev_randao
 
     Payload:
       type: string
@@ -443,7 +457,7 @@ components:
           type: integer
           format: uint16
           description: An arbitrary number representing the request domain.
-          example: 8
+          example: 16
         id:
           type: string
           format: hex

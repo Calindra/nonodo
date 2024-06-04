@@ -7,12 +7,13 @@ package rollup
 //go:generate go run github.com/deepmap/oapi-codegen/v2/cmd/oapi-codegen -config=oapi.yaml ../../api/rollup.yaml
 
 import (
-	"fmt"
+	"log/slog"
 	"net/http"
+
 	"strings"
 	"time"
 
-	"github.com/calindra/nonodo/internal/model"
+	mdl "github.com/calindra/nonodo/internal/model"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/labstack/echo/v4"
@@ -22,23 +23,50 @@ const FinishRetries = 50
 const FinishPollInterval = time.Millisecond * 100
 
 // Register the rollup API to echo
-func Register(e *echo.Echo, model *model.NonodoModel) {
-	var rollupAPI ServerInterface = &rollupAPI{model}
+func Register(e *echo.Echo, model *mdl.NonodoModel, sequencer Sequencer) {
+	var rollupAPI ServerInterface = &RollupAPI{model, sequencer}
 	RegisterHandlers(e, rollupAPI)
 }
 
 // Shared struct for request handlers.
-type rollupAPI struct {
-	model *model.NonodoModel
+type RollupAPI struct {
+	model     *mdl.NonodoModel
+	sequencer Sequencer
+}
+
+type Sequencer interface {
+	FinishAndGetNext(accept bool) mdl.Input
 }
 
 // Gio implements ServerInterface.
-func (r *rollupAPI) Gio(ctx echo.Context) error {
-	return fmt.Errorf("not implemented")
+func (r *RollupAPI) Gio(ctx echo.Context) error {
+
+	if !checkContentType(ctx) {
+		return ctx.String(http.StatusUnsupportedMediaType, "invalid content type")
+	}
+
+	// parse body
+	var request GioJSONRequestBody
+	if err := ctx.Bind(&request); err != nil {
+		return err
+	}
+
+	fetch, err := r.Fetcher(ctx, request)
+
+	if err != nil {
+		slog.Debug("Error in Fetcher: %s %d", err.Error(), err.Status())
+		return ctx.String(int(err.Status()), err.Error())
+	}
+
+	if fetch == nil {
+		return ctx.String(http.StatusNotFound, "Not found")
+	}
+
+	return ctx.JSON(http.StatusOK, fetch)
 }
 
 // Handle requests to /finish.
-func (r *rollupAPI) Finish(c echo.Context) error {
+func (r *RollupAPI) Finish(c echo.Context) error {
 	if !checkContentType(c) {
 		return c.String(http.StatusUnsupportedMediaType, "invalid content type")
 	}
@@ -61,8 +89,11 @@ func (r *rollupAPI) Finish(c echo.Context) error {
 	}
 
 	// talk to model
+	if r.sequencer == nil {
+		return c.String(http.StatusInternalServerError, "sequencer not available")
+	}
 	for i := 0; i < FinishRetries; i++ {
-		input := r.model.FinishAndGetNext(accepted)
+		input := r.sequencer.FinishAndGetNext(accepted)
 		if input != nil {
 			resp := convertInput(input)
 			return c.JSON(http.StatusOK, &resp)
@@ -78,7 +109,7 @@ func (r *rollupAPI) Finish(c echo.Context) error {
 }
 
 // Handle requests to /voucher.
-func (r *rollupAPI) AddVoucher(c echo.Context) error {
+func (r *RollupAPI) AddVoucher(c echo.Context) error {
 	if !checkContentType(c) {
 		return c.String(http.StatusUnsupportedMediaType, "invalid content type")
 	}
@@ -114,7 +145,7 @@ func (r *rollupAPI) AddVoucher(c echo.Context) error {
 }
 
 // Handle requests to /notice.
-func (r *rollupAPI) AddNotice(c echo.Context) error {
+func (r *RollupAPI) AddNotice(c echo.Context) error {
 	if !checkContentType(c) {
 		return c.String(http.StatusUnsupportedMediaType, "invalid content type")
 	}
@@ -143,7 +174,7 @@ func (r *rollupAPI) AddNotice(c echo.Context) error {
 }
 
 // Handle requests to /report.
-func (r *rollupAPI) AddReport(c echo.Context) error {
+func (r *RollupAPI) AddReport(c echo.Context) error {
 	if !checkContentType(c) {
 		return c.String(http.StatusUnsupportedMediaType, "invalid content type")
 	}
@@ -169,7 +200,7 @@ func (r *rollupAPI) AddReport(c echo.Context) error {
 }
 
 // Handle requests to /exception.
-func (r *rollupAPI) RegisterException(c echo.Context) error {
+func (r *RollupAPI) RegisterException(c echo.Context) error {
 	if !checkContentType(c) {
 		return c.String(http.StatusUnsupportedMediaType, "invalid content type")
 	}
@@ -201,23 +232,25 @@ func checkContentType(c echo.Context) bool {
 }
 
 // Convert model input to API type.
-func convertInput(input model.Input) RollupRequest {
+func convertInput(input mdl.Input) RollupRequest {
 	var resp RollupRequest
 	switch input := input.(type) {
-	case model.AdvanceInput:
+	case mdl.AdvanceInput:
 		advance := Advance{
-			BlockNumber:    input.BlockNumber,
-			InputIndex:     uint64(input.Index),
-			MsgSender:      hexutil.Encode(input.MsgSender[:]),
-			BlockTimestamp: uint64(input.Timestamp.Unix()),
-			Payload:        hexutil.Encode(input.Payload),
+			Metadata: Metadata{
+				BlockNumber:    input.BlockNumber,
+				InputIndex:     uint64(input.Index),
+				MsgSender:      hexutil.Encode(input.MsgSender[:]),
+				BlockTimestamp: uint64(input.BlockTimestamp.Unix()),
+			},
+			Payload: hexutil.Encode(input.Payload),
 		}
 		err := resp.Data.FromAdvance(advance)
 		if err != nil {
 			panic("failed to convert advance")
 		}
 		resp.RequestType = AdvanceState
-	case model.InspectInput:
+	case mdl.InspectInput:
 		inspect := Inspect{
 			Payload: hexutil.Encode(input.Payload),
 		}

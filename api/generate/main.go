@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func getYAML(v2 string, isV2 bool) []byte {
+func getYAML(v2 string) []byte {
 	log.Println("Downloading OpenAPI from", v2)
 	resp, err := http.Get(v2)
 	if err != nil {
@@ -27,36 +27,26 @@ func getYAML(v2 string, isV2 bool) []byte {
 
 	log.Println("OpenAPI downloaded successfully")
 
-	if isV2 {
-		// Replace GioResponse with GioResponseRollup
-		// Because oapi-codegen will generate the same name for
-		// both GioResponse from schema and GioResponse from client
-		// https://github.com/deepmap/oapi-codegen/issues/386
-		var str = string(data)
-		str = strings.ReplaceAll(str, "GioResponse", "GioResponseRollup")
-		return []byte(str)
-	}
-
-	return data
+	// Replace GioResponse with GioResponseRollup
+	// Because oapi-codegen will generate the same name for
+	// both GioResponse from schema and GioResponse from client
+	// https://github.com/deepmap/oapi-codegen/issues/386
+	var str = string(data)
+	str = strings.ReplaceAll(str, "GioResponse", "GioResponseRollup")
+	return []byte(str)
 }
 
 func main() {
-	v2URL := "https://raw.githubusercontent.com/cartesi/openapi-interfaces/v0.8.0/rollup.yaml"
-	v1URL := "https://raw.githubusercontent.com/cartesi/openapi-interfaces/v0.7.3/rollup.yaml"
+	// v2URL := "https://raw.githubusercontent.com/cartesi/openapi-interfaces/v0.8.0/rollup.yaml"
+	v2URL := "https://raw.githubusercontent.com/cartesi/openapi-interfaces/fix/http-server/rollup.yaml"
 
-	v1 := getYAML(v1URL, false)
-	v2 := getYAML(v2URL, true)
+	v2 := getYAML(v2URL)
 
 	var filemode os.FileMode = 0644
 
 	err := os.WriteFile("rollup.yaml", v2, filemode)
 	if err != nil {
 		panic("Failed to write OpenAPI v2 to file: " + err.Error())
-	}
-
-	err = os.WriteFile("rollup-v1.yaml", v1, filemode)
-	if err != nil {
-		panic("Failed to write OpenAPI v1 to file: " + err.Error())
 	}
 
 	log.Println("OpenAPI written to file")
