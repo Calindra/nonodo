@@ -119,22 +119,9 @@ func (a AdapterV2) GetProof(ctx context.Context, inputIndex int, outputIndex int
 func (a AdapterV2) GetReport(reportIndex int, inputIndex int) (*graphql.Report, error) {
 	requestBody := []byte(fmt.Sprintf(`
     {
-        "query": "query Reports($index: Int, $inputIndex: Int) {
-            reports(condition: {index: $index, inputIndex: $inputIndex}) {
-                edges {
-                    node {
-                        index
-                        blob
-                        inputIndex
-                    }
-                }
-            }
-        }",
-        "variables": {
-            "index": %d,
-            "inputIndex": %d
-        }
-    }`, reportIndex, inputIndex))
+		"query": "query { reports(condition: {index: %d, inputIndex: %d}) { edges { node { index blob inputIndex}}}}"
+		
+	}`, reportIndex, inputIndex))
 
 	response, err := a.httpClient.Post(requestBody)
 
@@ -184,25 +171,9 @@ func (a AdapterV2) GetReports(
 		}
 
 		requestBody := []byte(fmt.Sprintf(`
-    {
-        "query": "query MyQuery($first: Int, $after: String, $inputIndex: Int) {
-            reports(first: $first, after: $after, condition: {inputIndex: $inputIndex}) {
-                edges {
-                    cursor
-                    node {
-                        index
-                        inputIndex
-                        blob
-                    }
-                }
-            }
-        }",
-        "variables": {
-            "first": %d,
-            "after": %s,
-            "inputIndex": %d
-        }
-    }`, first, afterValue, inputIndex))
+		{
+			"query": "query { reports(first: %d, after: %s, condition: {inputIndex: %d}) { edges { cursor node { index inputIndex blob }}} }"
+		}`, first, afterValue, inputIndex))
 
 		response, err := a.httpClient.Post(requestBody)
 
@@ -654,22 +625,12 @@ func getInputForwardQuery(first *int, after *string, where *graphql.InputFilter)
 }
 
 func (a AdapterV2) GetInput(index int) (*graphql.Input, error) {
-	requestBody := []byte(fmt.Sprintf(`{
-       {
-			"query": "query Inputs($index: Int) { 
-				inputs(condition: {index: $index}) {
-					edges {
-						node {
-							index
-							blob
-							status
-						}
-					}
-				}
-			}",
-			"variables": {
-				"index": %d
-			}
+	slog.Info(fmt.Sprintf("Adapter V2 - GetInput %d", index))
+
+	requestBody := []byte(fmt.Sprintf(`
+        {
+			"query": "query { inputs(condition: {index: %d}) { edges { node { index blob status}}}}"
+			
     	}`, index))
 
 	response, err := a.httpClient.Post(requestBody)

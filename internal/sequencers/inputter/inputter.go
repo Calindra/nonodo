@@ -22,6 +22,7 @@ type Model interface {
 		payload []byte,
 		blockNumber uint64,
 		timestamp time.Time,
+		index int,
 	)
 }
 
@@ -146,6 +147,7 @@ func (w InputterWorker) addInput(
 
 	msgSender := values[2].(common.Address)
 	payload := values[7].([]uint8)
+	inputIndex := int(event.Index.Int64())
 
 	slog.Debug("inputter: read event",
 		"dapp", event.AppContract,
@@ -164,6 +166,7 @@ func (w InputterWorker) addInput(
 		payload,
 		event.Raw.BlockNumber,
 		timestamp,
+		inputIndex,
 	)
 	return nil
 }

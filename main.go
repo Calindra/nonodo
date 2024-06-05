@@ -73,13 +73,11 @@ func init() {
 	cmd.Flags().BoolVar(&color, "enable-color", true, "If set, enables logs color")
 	cmd.Flags().BoolVar(&opts.EnableEcho, "enable-echo", opts.EnableEcho,
 		"If set, nonodo starts a built-in echo application")
-	cmd.Flags().BoolVar(&opts.LegacyMode,
-		"enable-legacy",
-		opts.LegacyMode,
-		"If set, enables legacy based in 0.7.1 (branch 0.7.3) rollups interface")
 
 	cmd.Flags().StringVar(&opts.Sequencer, "sequencer", opts.Sequencer,
 		"Set the sequencer (inputbox[default] or espresso)")
+	cmd.Flags().Uint64Var(&opts.Namespace, "namespace", opts.Namespace,
+		"Set the namespace for espresso)")
 
 	// disable-*
 	cmd.Flags().BoolVar(&opts.DisableDevnet, "disable-devnet", opts.DisableDevnet,
@@ -100,7 +98,7 @@ func init() {
 		"If set, nonodo connects to this url instead of setting up Anvil")
 
 	// convenience experimental implementation
-	cmd.Flags().BoolVar(&opts.ConveniencePoC, "convenience-poc", opts.ConveniencePoC,
+	cmd.Flags().BoolVar(&opts.HLGraphQL, "high-level-graphql", opts.HLGraphQL,
 		"If set, enables the convenience layer experiment")
 
 	// database file
@@ -113,8 +111,11 @@ func init() {
 	cmd.Flags().StringVar(&opts.DbImplementation, "db-implementation", opts.DbImplementation,
 		"DB to use. PostgreSQL or SQLite")
 
-	cmd.Flags().StringVar(&opts.DbImplementation, "node-version", opts.NodeVersion,
+	cmd.Flags().StringVar(&opts.NodeVersion, "node-version", opts.NodeVersion,
 		"Node version to emulate")
+
+	cmd.Flags().BoolVar(&opts.LoadTestMode, "load-test-mode", opts.LoadTestMode,
+		"If set, enables load test mode")
 }
 
 func run(cmd *cobra.Command, args []string) {
@@ -168,7 +169,7 @@ func run(cmd *cobra.Command, args []string) {
 		case <-ctx.Done():
 		}
 	}()
-	if opts.ConveniencePoC {
+	if opts.HLGraphQL {
 		err := nonodo.NewSupervisorPoC(opts).Start(ctx, ready)
 		cobra.CheckErr(err)
 	} else {

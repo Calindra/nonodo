@@ -27,8 +27,8 @@ type NonodoModel struct {
 	inputRepository  *InputRepository
 }
 
-func (m *NonodoModel) GetInputRepository() InputRepository {
-	return *m.inputRepository
+func (m *NonodoModel) GetInputRepository() *InputRepository {
+	return m.inputRepository
 }
 
 // Create a new model.
@@ -61,23 +61,19 @@ func (m *NonodoModel) AddAdvanceInput(
 	payload []byte,
 	blockNumber uint64,
 	timestamp time.Time,
+	index int,
 ) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
-
-	index, err := m.inputRepository.Count(nil)
-	if err != nil {
-		panic(err)
-	}
 	input := AdvanceInput{
-		Index:          int(index),
+		Index:          index,
 		Status:         CompletionStatusUnprocessed,
 		MsgSender:      sender,
 		Payload:        payload,
 		BlockTimestamp: timestamp,
 		BlockNumber:    blockNumber,
 	}
-	_, err = m.inputRepository.Create(input)
+	_, err := m.inputRepository.Create(input)
 	if err != nil {
 		panic(err)
 	}
@@ -125,11 +121,11 @@ func (m *NonodoModel) GetInspectInput(index int) InspectInput {
 
 // Finish the current input and get the next one.
 // If there is no input to be processed return nil.
+//
+// Note: use in v2 the sequencer instead.
 func (m *NonodoModel) FinishAndGetNext(accepted bool) Input {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
-
-	// IMPROVE: Get the next input from Inputbox or Espresso
 
 	// finish current input
 	var status CompletionStatus
