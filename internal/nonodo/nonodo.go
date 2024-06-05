@@ -19,7 +19,6 @@ import (
 	"github.com/calindra/nonodo/internal/model"
 	"github.com/calindra/nonodo/internal/reader"
 	"github.com/calindra/nonodo/internal/rollup"
-	v1 "github.com/calindra/nonodo/internal/rollup/v1"
 	"github.com/calindra/nonodo/internal/sequencers/espresso"
 	"github.com/calindra/nonodo/internal/sequencers/inputter"
 	"github.com/calindra/nonodo/internal/supervisor"
@@ -69,11 +68,10 @@ type NonodoOpts struct {
 	FromBlock        uint64
 	DbImplementation string
 
-	LegacyMode   bool
-	NodeVersion  string
-	Sequencer    string
-	LoadTestMode bool
-	Namespace    uint64
+	NodeVersion string
+  LoadTestMode bool
+	Sequencer string
+	Namespace uint64
 }
 
 // Create the options struct with default values.
@@ -98,7 +96,6 @@ func NewNonodoOpts() NonodoOpts {
 		FromBlock:          0,
 		DbImplementation:   "sqlite",
 		NodeVersion:        "v1",
-		LegacyMode:         false,
 		Sequencer:          "inputbox",
 		LoadTestMode:       false,
 		Namespace:          DefaultNamespace,
@@ -211,6 +208,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		ErrorMessage: "Request timed out",
 		Timeout:      HttpTimeout,
 	}))
+
 	if opts.RpcUrl == "" && !opts.DisableDevnet {
 		w.Workers = append(w.Workers, devnet.AnvilWorker{
 			Address: opts.AnvilAddress,
@@ -241,13 +239,8 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 			panic("sequencer not supported")
 		}
 	}
-	if opts.LegacyMode {
-		slog.Info("Using legacy mode")
-		v1.Register(re, modelInstance)
-	} else {
-		slog.Info("Using new mode")
-		rollup.Register(re, modelInstance, sequencer)
-	}
+
+	rollup.Register(re, modelInstance, sequencer)
 	w.Workers = append(w.Workers, supervisor.HttpWorker{
 		Address: fmt.Sprintf("%v:%v", opts.HttpAddress, opts.HttpRollupsPort),
 		Handler: re,

@@ -64,6 +64,33 @@ func (s *InputRepositorySuite) TestCreateInput() {
 	s.Equal(0, input.Index)
 }
 
+func (s *InputRepositorySuite) TestFixCreateInputDuplicated() {
+	defer s.teardown()
+	input, err := s.inputRepository.Create(AdvanceInput{
+		Index:          0,
+		Status:         CompletionStatusUnprocessed,
+		MsgSender:      common.Address{},
+		Payload:        common.Hex2Bytes("0x1122"),
+		BlockNumber:    1,
+		BlockTimestamp: time.Now(),
+	})
+	s.NoError(err)
+	s.Equal(0, input.Index)
+	input, err = s.inputRepository.Create(AdvanceInput{
+		Index:          0,
+		Status:         CompletionStatusUnprocessed,
+		MsgSender:      common.Address{},
+		Payload:        common.Hex2Bytes("0x1122"),
+		BlockNumber:    1,
+		BlockTimestamp: time.Now(),
+	})
+	s.NoError(err)
+	s.Equal(0, input.Index)
+	count, err := s.inputRepository.Count(nil)
+	s.NoError(err)
+	s.Equal(uint64(1), count)
+}
+
 func (s *InputRepositorySuite) TestCreateAndFindInputByIndex() {
 	defer s.teardown()
 	input, err := s.inputRepository.Create(AdvanceInput{
