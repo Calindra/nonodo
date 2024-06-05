@@ -68,10 +68,10 @@ type NonodoOpts struct {
 	FromBlock        uint64
 	DbImplementation string
 
-	NodeVersion string
-  LoadTestMode bool
-	Sequencer string
-	Namespace uint64
+	NodeVersion  string
+	LoadTestMode bool
+	Sequencer    string
+	Namespace    uint64
 }
 
 // Create the options struct with default values.
