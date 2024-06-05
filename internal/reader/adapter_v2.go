@@ -259,7 +259,6 @@ func getInputBackwardQuery(last *int, before *string, where *graphql.InputFilter
 				builder.WriteString(", ")
 			}
 			builder.WriteString(fmt.Sprintf("index: {greaterThan: %d}", *where.IndexGreaterThan))
-			filterParamsAdded = true
 		}
 
 		builder.WriteString("}")
@@ -308,7 +307,6 @@ func getInputForwardQuery(first *int, after *string, where *graphql.InputFilter)
 				builder.WriteString(", ")
 			}
 			builder.WriteString(fmt.Sprintf("index: {greaterThan: %d}", *where.IndexGreaterThan))
-			filterParamsAdded = true
 		}
 
 		builder.WriteString("}")
