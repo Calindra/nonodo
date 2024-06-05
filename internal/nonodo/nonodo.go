@@ -63,15 +63,15 @@ type NonodoOpts struct {
 	// If set, start application.
 	ApplicationArgs []string
 
-	ConveniencePoC   bool
+	HLGraphQL        bool
 	SqliteFile       string
 	FromBlock        uint64
 	DbImplementation string
 
-	NodeVersion string
-
-	Sequencer string
-	Namespace uint64
+	NodeVersion  string
+	LoadTestMode bool
+	Sequencer    string
+	Namespace    uint64
 }
 
 // Create the options struct with default values.
@@ -91,12 +91,13 @@ func NewNonodoOpts() NonodoOpts {
 		DisableDevnet:      false,
 		DisableAdvance:     false,
 		ApplicationArgs:    nil,
-		ConveniencePoC:     false,
+		HLGraphQL:          false,
 		SqliteFile:         "file:memory1?mode=memory&cache=shared",
 		FromBlock:          0,
 		DbImplementation:   "sqlite",
 		NodeVersion:        "v1",
 		Sequencer:          "inputbox",
+		LoadTestMode:       false,
 		Namespace:          DefaultNamespace,
 	}
 }
@@ -134,23 +135,35 @@ func NewSupervisorPoC(opts NonodoOpts) supervisor.SupervisorWorker {
 	if opts.NodeVersion == "v1" {
 		adapter = reader.NewAdapterV1(db, convenienceService)
 	} else {
-		httpClient := reader.HTTPClientImpl{}
+		graphileHost := "localhost"
+
+		if opts.LoadTestMode {
+			graphileHost = "postgraphile-custom"
+		}
+
+		httpClient := reader.HTTPClientImpl{GraphileHost: graphileHost}
 		inputBlobAdapter := reader.InputBlobAdapter{}
 		adapter = reader.NewAdapterV2(convenienceService, &httpClient, inputBlobAdapter)
 	}
 
-	synchronizer := container.GetGraphQLSynchronizer()
+	if !opts.LoadTestMode {
+		synchronizer := container.GetGraphQLSynchronizer()
+		w.Workers = append(w.Workers, synchronizer)
+
+		fromBlock := new(big.Int).SetUint64(opts.FromBlock)
+		execVoucherListener := convenience.NewExecListener(
+			opts.RpcUrl,
+			common.HexToAddress(opts.ApplicationAddress),
+			convenienceService,
+			fromBlock,
+		)
+		w.Workers = append(w.Workers, execVoucherListener)
+	}
+
 	model := model.NewNonodoModel(decoder, db)
-	w.Workers = append(w.Workers, synchronizer)
+
 	opts.RpcUrl = fmt.Sprintf("ws://%s:%v", opts.AnvilAddress, opts.AnvilPort)
-	fromBlock := new(big.Int).SetUint64(opts.FromBlock)
-	execVoucherListener := convenience.NewExecListener(
-		opts.RpcUrl,
-		common.HexToAddress(opts.ApplicationAddress),
-		convenienceService,
-		fromBlock,
-	)
-	w.Workers = append(w.Workers, execVoucherListener)
+
 	e := echo.New()
 	e.Use(middleware.CORS())
 	e.Use(middleware.Recover())
