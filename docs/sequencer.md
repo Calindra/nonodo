@@ -31,8 +31,8 @@ sequenceDiagram
     EspressoListener->>InputRepository: create(tx)
     App->>HTTP_API: /finish
     HTTP_API->>InputRepository: FindNext()*
-    InputRepository-->>HTTP_API: input
-    HTTP_API-->>App: input
+    InputRepository-->>HTTP_API: tx input
+    HTTP_API-->>App: tx input
 ```
 
 HTTP API Proposal for Rollups Node Implementation
@@ -68,8 +68,8 @@ sequenceDiagram
     EspressoListener->>InputRepository: create(tx)
     App->>HTTP_API: /finish
     HTTP_API->>InputRepository: FindNext()*
-    InputRepository-->>HTTP_API: input
-    HTTP_API-->>App: input
+    InputRepository-->>HTTP_API: tx input
+    HTTP_API-->>App: tx input
 ```
 
 ## Executing a Transaction
