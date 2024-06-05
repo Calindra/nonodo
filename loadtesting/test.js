@@ -186,6 +186,24 @@ function testNotices() {
     });
 }
 
+function testInputs() {
+    const payload = JSON.stringify({
+        query: "query { inputs(first: 10) { edges { node { index }}}}"
+    }); 
+
+    const params = {
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    };
+
+    const response = http.post(GRAPHQL_ENDPOINT, payload, params);
+
+    check(response, {
+        'testInputs is status 200': (r) => r.status === 200,
+        'testInputs response body contains expected content': (r) => r.body.includes('{"data":{"inputs":{"edges":[{"node":{"index":1}},{"node":{"index":2}}]}}}'), 
+    });
+}
 
 export default function () {
    testVoucherNotFound()
@@ -196,5 +214,6 @@ export default function () {
    testConvenientVouchers()
    testVouchers()
    testNotices()
- //  testReports()
+   testReports()
+   testInputs()
 }
