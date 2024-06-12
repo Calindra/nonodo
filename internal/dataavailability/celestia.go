@@ -37,7 +37,16 @@ func SubmitBlob(ctx context.Context, url string, token string) error {
 		return err
 	}
 
-	slog.Debug("Blob was included at height", "height", height)
+	bProof, err := client.Blob.GetProof(ctx, height, namespace, helloWorldBlob.Commitment)
+	if err != nil {
+		return err
+	}
+
+	slog.Debug("Blob was included at",
+		"height", height,
+		"start", (*bProof)[0].Start(),
+		"end", (*bProof)[0].End(),
+	)
 
 	// fetch the blob back from the network
 	retrievedBlobs, err := client.Blob.GetAll(ctx, height, []share.Namespace{namespace})
