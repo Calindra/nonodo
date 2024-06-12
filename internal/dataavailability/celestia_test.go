@@ -19,7 +19,6 @@ func (s *CelestiaSuite) SetupTest() {
 }
 
 func (s *CelestiaSuite) TestSubmitBlob() {
-	// token := "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJBbGxvdyI6WyJwdWJsaWMiLCJyZWFkIiwid3JpdGUiLCJhZG1pbiJdfQ.jKg7hqk14Bh4QW_KoFHJ1Pb7h9buq2c42EX6q_QZ5gU"
 	token := os.Getenv("CELESTIA_AUTH_TOKEN")
 	// url := os.Getenv("CELESTIA_URL")
 	// url := "https://api.celestia-arabica-11.com" //os.Getenv("CELESTIA_URL")
