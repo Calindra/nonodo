@@ -11,7 +11,6 @@ import (
 	"github.com/calindra/nonodo/internal/convenience/decoder"
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/convenience/repository"
-	"github.com/ethereum/go-ethereum/common"
 )
 
 type GraphileSynchronizer struct {
@@ -64,14 +63,14 @@ func (x GraphileSynchronizer) Start(ctx context.Context, ready chan<- struct{}) 
 				adapted := adapter.ConvertVoucherPayloadToV2(
 					edge.Node.Blob[2:],
 				)
-				destination, _ := adapter.GetDestination(adapted)
+				destination, _ := adapter.GetDestination(edge.Node.Blob)
 
 				if len(destination) == 0 {
 					panic(err)
 				}
 
 				err := x.Decoder.HandleOutput(ctx,
-					common.HexToAddress(destination),
+					destination,
 					adapted,
 					uint64(inputIndex),
 					uint64(outputIndex),
@@ -80,6 +79,7 @@ func (x GraphileSynchronizer) Start(ctx context.Context, ready chan<- struct{}) 
 					panic(err)
 				}
 			}
+
 			if len(voucherResp.Data.Outputs.PageInfo.EndCursor) > 0 {
 				initCursorAfter := x.GraphileFetcher.CursorAfter
 				x.GraphileFetcher.CursorAfter = voucherResp.Data.Outputs.PageInfo.EndCursor
@@ -91,6 +91,7 @@ func (x GraphileSynchronizer) Start(ctx context.Context, ready chan<- struct{}) 
 						LogVouchersIds: strings.Join(voucherIds, ";"),
 					})
 				if err != nil {
+					slog.Error("Deu erro", "erro", err)
 					panic(err)
 				}
 			}

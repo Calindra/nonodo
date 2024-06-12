@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/jmoiron/sqlx"
@@ -35,6 +36,8 @@ func (c *SynchronizerRepository) CreateTables() error {
 func (c *SynchronizerRepository) Create(
 	ctx context.Context, data *model.SynchronizerFetch,
 ) (*model.SynchronizerFetch, error) {
+	slog.Info("Saving sync fetch to db")
+
 	insertSql := `INSERT INTO synchronizer_fetch (
 		timestamp_after,
 		ini_cursor_after,

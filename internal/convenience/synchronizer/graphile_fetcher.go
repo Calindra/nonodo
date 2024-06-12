@@ -10,7 +10,9 @@ import (
 	"strings"
 )
 
-const graphileQuery = `query { outputs(first: %d ) { edges { cursor node { blob index inputIndex nodeId  proofByInputIndexAndOutputIndex { validityOutputIndexWithinInput validityOutputHashesRootHash validityOutputHashesInEpochSiblings validityOutputHashInOutputHashesSiblings validityOutputEpochRootHash validityMachineStateHash validityInputIndexWithinEpoch } } }  pageInfo { endCursor hasNextPage hasPreviousPage startCursor }}}`
+const graphileQuery = `query { outputs(first: %d) { edges { cursor node { blob index inputIndex nodeId  proofByInputIndexAndOutputIndex { validityOutputIndexWithinInput validityOutputHashesRootHash validityOutputHashesInEpochSiblings validityOutputHashInOutputHashesSiblings validityOutputEpochRootHash validityMachineStateHash validityInputIndexWithinEpoch } } }  pageInfo { endCursor hasNextPage hasPreviousPage startCursor }}}`
+
+const graphileQueryWithCursor = `query { outputs(first: %d, after: %s ) { edges { cursor node { blob index inputIndex nodeId  proofByInputIndexAndOutputIndex { validityOutputIndexWithinInput validityOutputHashesRootHash validityOutputHashesInEpochSiblings validityOutputHashInOutputHashesSiblings validityOutputEpochRootHash validityMachineStateHash validityInputIndexWithinEpoch } } }  pageInfo { endCursor hasNextPage hasPreviousPage startCursor }}}`
 
 const ErrorSendingGraphileRequest = `
 +-----------------------------------------------------------+
@@ -20,33 +22,36 @@ GRAPH_QL_URL
 `
 
 type GraphileFetcher struct {
-	Url         string
-	CursorAfter string
-	BatchSize   int
-	Query       string
+	Url             string
+	CursorAfter     string
+	BatchSize       int
+	Query           string
+	QueryWithCursor string
 }
 
 func NewGraphileFetcher() *GraphileFetcher {
 	return &GraphileFetcher{
-		Url:         "http://localhost:5000/graphql",
-		CursorAfter: "",
-		BatchSize:   10,
-		Query:       graphileQuery,
+		Url:             "http://localhost:5000/graphql",
+		CursorAfter:     "",
+		BatchSize:       10,
+		Query:           graphileQuery,
+		QueryWithCursor: graphileQueryWithCursor,
 	}
 }
 
 func (v *GraphileFetcher) Fetch() (*OutputResponse, error) {
 	slog.Debug("Graphile querying", "after", v.CursorAfter)
 
-	variables := map[string]interface{}{
-		"batchSize": v.BatchSize,
-	}
+	var query string
+
 	if len(v.CursorAfter) > 0 {
-		variables["after"] = v.CursorAfter
+		query = fmt.Sprintf(graphileQueryWithCursor, v.BatchSize, v.CursorAfter)
+	} else {
+		query = fmt.Sprintf(graphileQuery, v.BatchSize)
 	}
 
 	payload, err := json.Marshal(map[string]interface{}{
-		"query": fmt.Sprintf(graphileQuery, v.BatchSize),
+		"query": query,
 	})
 	if err != nil {
 		slog.Error("Error marshalling JSON:", "error", err)
@@ -77,8 +82,6 @@ func (v *GraphileFetcher) Fetch() (*OutputResponse, error) {
 			))
 		return nil, err
 	}
-
-	slog.Info("response is ", "response", resp)
 
 	// Read response body
 	body, err := io.ReadAll(resp.Body)
