@@ -10,37 +10,7 @@ import (
 	"strings"
 )
 
-const graphileQuery = `query {
-    outputs(first: %d, after: %s) {
-      edges {
-        cursor
-        node {
-          blob
-          index
-          inputIndex
-          nodeId
-          inputByInputIndex {
-            index
-          }
-          proofByInputIndexAndOutputIndex {
-            validityOutputIndexWithinInput
-            validityOutputHashesRootHash
-            validityOutputHashesInEpochSiblings
-            validityOutputHashInOutputHashesSiblings
-            validityOutputEpochRootHash
-            validityMachineStateHash
-            validityInputIndexWithinEpoch
-          }
-        }
-      }
-      pageInfo {
-        endCursor
-        hasNextPage
-        hasPreviousPage
-        startCursor
-      }
-    }
-  }`
+const graphileQuery = `query { outputs(first: %d ) { edges { cursor node { blob index inputIndex nodeId  proofByInputIndexAndOutputIndex { validityOutputIndexWithinInput validityOutputHashesRootHash validityOutputHashesInEpochSiblings validityOutputHashInOutputHashesSiblings validityOutputEpochRootHash validityMachineStateHash validityInputIndexWithinEpoch } } }  pageInfo { endCursor hasNextPage hasPreviousPage startCursor }}}`
 
 const ErrorSendingGraphileRequest = `
 +-----------------------------------------------------------+
@@ -76,9 +46,7 @@ func (v *GraphileFetcher) Fetch() (*OutputResponse, error) {
 	}
 
 	payload, err := json.Marshal(map[string]interface{}{
-		"operationName": nil,
-		"query":         fmt.Sprintf(graphileQuery, v.BatchSize, v.CursorAfter),
-		"variables":     variables,
+		"query": fmt.Sprintf(graphileQuery, v.BatchSize),
 	})
 	if err != nil {
 		slog.Error("Error marshalling JSON:", "error", err)
@@ -110,6 +78,8 @@ func (v *GraphileFetcher) Fetch() (*OutputResponse, error) {
 		return nil, err
 	}
 
+	slog.Info("response is ", "response", resp)
+
 	// Read response body
 	body, err := io.ReadAll(resp.Body)
 
@@ -125,40 +95,29 @@ func (v *GraphileFetcher) Fetch() (*OutputResponse, error) {
 		slog.Error("Error parsing JSON:", "error", err)
 		return nil, err
 	}
+
+	slog.Info("response is ", "responseparsed", response)
+
 	return &response, nil
 }
 
 type OutputResponse struct {
-	Data OutputData `json:"data"`
-}
-
-type OutputData struct {
-	Query OutputQuery `json:"query"`
-}
-
-type OutputQuery struct {
-	Outputs OutputConnection `json:"outputs"`
-}
-
-type OutputConnection struct {
-	Edges    []OutputEdge   `json:"edges"`
-	PageInfo OutputPageInfo `json:"pageInfo"`
-}
-
-type OutputEdge struct {
-	Node   Output `json:"node"`
-	Cursor string `json:"cursor"`
-}
-
-type Output struct {
-	Index      int    `json:"index"`
-	InputIndex int    `json:"inputIndex"`
-	Blob       string `json:"blob"`
-}
-
-type OutputPageInfo struct {
-	StartCursor     string `json:"startCursor"`
-	EndCursor       string `json:"endCursor"`
-	HasNextPage     bool   `json:"hasNextPage"`
-	HasPreviousPage bool   `json:"hasPreviousPage"`
+	Data struct {
+		Outputs struct {
+			PageInfo struct {
+				StartCursor     string `json:"startCursor"`
+				EndCursor       string `json:"endCursor"`
+				HasNextPage     bool   `json:"hasNextPage"`
+				HasPreviousPage bool   `json:"hasPreviousPage"`
+			}
+			Edges []struct {
+				Cursor string `json:"cursor"`
+				Node   struct {
+					Index      int    `json:"index"`
+					Blob       string `json:"blob"`
+					InputIndex int    `json:"inputIndex"`
+				} `json:"node"`
+			} `json:"edges"`
+		} `json:"outputs"`
+	} `json:"data"`
 }

@@ -73,7 +73,7 @@ func GetDestination(payload string) (string, error) {
 		return "", err
 	}
 
-	slog.Info("values", "batata", values)
+	slog.Info("values", "values", values)
 
 	return values[0].(string), nil
 }

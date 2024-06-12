@@ -50,7 +50,7 @@ func (x GraphileSynchronizer) Start(ctx context.Context, ready chan<- struct{}) 
 		} else {
 			// Handle response data
 			voucherIds := []string{}
-			for _, edge := range voucherResp.Data.Query.Outputs.Edges {
+			for _, edge := range voucherResp.Data.Outputs.Edges {
 				outputIndex := edge.Node.Index
 				inputIndex := edge.Node.InputIndex
 				slog.Debug("Add Voucher",
@@ -80,9 +80,9 @@ func (x GraphileSynchronizer) Start(ctx context.Context, ready chan<- struct{}) 
 					panic(err)
 				}
 			}
-			if len(voucherResp.Data.Query.Outputs.PageInfo.EndCursor) > 0 {
+			if len(voucherResp.Data.Outputs.PageInfo.EndCursor) > 0 {
 				initCursorAfter := x.GraphileFetcher.CursorAfter
-				x.GraphileFetcher.CursorAfter = voucherResp.Data.Query.Outputs.PageInfo.EndCursor
+				x.GraphileFetcher.CursorAfter = voucherResp.Data.Outputs.PageInfo.EndCursor
 				_, err := x.SynchronizerRepository.Create(
 					ctx, &model.SynchronizerFetch{
 						TimestampAfter: uint64(time.Now().UnixMilli()),
