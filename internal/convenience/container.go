@@ -11,14 +11,16 @@ import (
 // what is the best DI/IoC framework for go?
 
 type Container struct {
-	db                  *sqlx.DB
-	outputDecoder       *decoder.OutputDecoder
-	convenienceService  *services.ConvenienceService
-	repository          *repository.VoucherRepository
-	syncRepository      *repository.SynchronizerRepository
-	graphQLSynchronizer *synchronizer.Synchronizer
-	voucherFetcher      *synchronizer.VoucherFetcher
-	noticeRepository    *repository.NoticeRepository
+	db                   *sqlx.DB
+	outputDecoder        *decoder.OutputDecoder
+	convenienceService   *services.ConvenienceService
+	repository           *repository.VoucherRepository
+	syncRepository       *repository.SynchronizerRepository
+	graphQLSynchronizer  *synchronizer.Synchronizer
+	voucherFetcher       *synchronizer.VoucherFetcher
+	graphileFetcher      *synchronizer.GraphileFetcher
+	noticeRepository     *repository.NoticeRepository
+	graphileSynchronizer *synchronizer.GraphileSynchronizer
 }
 
 func NewContainer(db sqlx.DB) *Container {
@@ -99,10 +101,32 @@ func (c *Container) GetGraphQLSynchronizer() *synchronizer.Synchronizer {
 	)
 	return c.graphQLSynchronizer
 }
+
+func (c *Container) GetGrahileSynchronizer() *synchronizer.GraphileSynchronizer {
+	if c.graphileSynchronizer != nil {
+		return c.graphileSynchronizer
+	}
+
+	c.graphileSynchronizer = synchronizer.NewGraphileSynchronizer(
+		c.GetOutputDecoder(),
+		c.GetSyncRepository(),
+		c.GetGraphileFetcher(),
+	)
+	return c.graphileSynchronizer
+}
+
 func (c *Container) GetVoucherFetcher() *synchronizer.VoucherFetcher {
 	if c.voucherFetcher != nil {
 		return c.voucherFetcher
 	}
 	c.voucherFetcher = synchronizer.NewVoucherFetcher()
 	return c.voucherFetcher
+}
+
+func (c *Container) GetGraphileFetcher() *synchronizer.GraphileFetcher {
+	if c.graphileFetcher != nil {
+		return c.graphileFetcher
+	}
+	c.graphileFetcher = synchronizer.NewGraphileFetcher()
+	return c.graphileFetcher
 }

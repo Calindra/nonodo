@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-const query = `query GetVouchers($after: String, $batchSize: Int) {
+const graphqlQuery = `query GetVouchers($after: String, $batchSize: Int) {
 	vouchers(first: $batchSize, after: $after) {
 		totalCount
 		edges{
@@ -66,7 +66,7 @@ func NewVoucherFetcher() *VoucherFetcher {
 		Url:         "http://localhost:8080/graphql",
 		CursorAfter: "",
 		BatchSize:   DefaultBatchSize,
-		Query:       query,
+		Query:       graphqlQuery,
 	}
 }
 
@@ -82,7 +82,7 @@ func (v *VoucherFetcher) Fetch() (*VoucherResponse, error) {
 
 	payload, err := json.Marshal(map[string]interface{}{
 		"operationName": nil,
-		"query":         query,
+		"query":         graphqlQuery,
 		"variables":     variables,
 	})
 	if err != nil {

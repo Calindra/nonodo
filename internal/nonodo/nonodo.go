@@ -147,10 +147,19 @@ func NewSupervisorPoC(opts NonodoOpts) supervisor.SupervisorWorker {
 	}
 
 	if !opts.LoadTestMode {
-		synchronizer := container.GetGraphQLSynchronizer()
+		var synchronizer supervisor.Worker
+
+		if opts.NodeVersion == "v2" {
+			synchronizer = container.GetGrahileSynchronizer()
+		} else {
+			synchronizer = container.GetGraphQLSynchronizer()
+		}
+
 		w.Workers = append(w.Workers, synchronizer)
 
+		opts.RpcUrl = fmt.Sprintf("ws://%s:%v", opts.AnvilAddress, opts.AnvilPort)
 		fromBlock := new(big.Int).SetUint64(opts.FromBlock)
+
 		execVoucherListener := convenience.NewExecListener(
 			opts.RpcUrl,
 			common.HexToAddress(opts.ApplicationAddress),
@@ -161,8 +170,6 @@ func NewSupervisorPoC(opts NonodoOpts) supervisor.SupervisorWorker {
 	}
 
 	model := model.NewNonodoModel(decoder, db)
-
-	opts.RpcUrl = fmt.Sprintf("ws://%s:%v", opts.AnvilAddress, opts.AnvilPort)
 
 	e := echo.New()
 	e.Use(middleware.CORS())
