@@ -1,13 +1,11 @@
 package synchronizer
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"log/slog"
-	"net/http"
-	"strings"
+
+	"github.com/calindra/nonodo/internal/reader"
 )
 
 const graphileQuery = `query { outputs(first: %d) { edges { cursor node { blob index inputIndex nodeId  proofByInputIndexAndOutputIndex { validityOutputIndexWithinInput validityOutputHashesRootHash validityOutputHashesInEpochSiblings validityOutputHashInOutputHashesSiblings validityOutputEpochRootHash validityMachineStateHash validityInputIndexWithinEpoch } } }  pageInfo { endCursor hasNextPage hasPreviousPage startCursor }}}`
@@ -27,15 +25,17 @@ type GraphileFetcher struct {
 	BatchSize       int
 	Query           string
 	QueryWithCursor string
+	GraphileClient  reader.GraphileClient
 }
 
-func NewGraphileFetcher() *GraphileFetcher {
+func NewGraphileFetcher(graphileClient reader.GraphileClient) *GraphileFetcher {
 	return &GraphileFetcher{
 		Url:             "http://localhost:5000/graphql",
 		CursorAfter:     "",
 		BatchSize:       10,
 		Query:           graphileQuery,
 		QueryWithCursor: graphileQueryWithCursor,
+		GraphileClient:  graphileClient,
 	}
 }
 
@@ -59,34 +59,8 @@ func (v *GraphileFetcher) Fetch() (*OutputResponse, error) {
 	}
 
 	// Make a POST request to the GraphQL endpoint
-	req, err := http.NewRequest("POST", v.Url, bytes.NewBuffer(payload))
-	if err != nil {
-		slog.Error("Error creating request:", "error", err)
-		return nil, err
-	}
 
-	// Set request headers
-	req.Header.Set("Content-Type", "application/json")
-
-	// Send request
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		slog.Error("Error sending request:", "error", err)
-		fmt.Println(
-			strings.Replace(
-				ErrorSendingRequest,
-				"GRAPH_QL_URL",
-				fmt.Sprintf("|    %-55s|", v.Url),
-				-1,
-			))
-		return nil, err
-	}
-
-	// Read response body
-	body, err := io.ReadAll(resp.Body)
-
-	defer resp.Body.Close()
+	body, err := v.GraphileClient.Post(payload)
 
 	if err != nil {
 		slog.Error("Error reading response:", "error", err)

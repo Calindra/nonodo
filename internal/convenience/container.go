@@ -5,6 +5,7 @@ import (
 	"github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/calindra/nonodo/internal/convenience/services"
 	"github.com/calindra/nonodo/internal/convenience/synchronizer"
+	"github.com/calindra/nonodo/internal/reader"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -21,6 +22,7 @@ type Container struct {
 	graphileFetcher      *synchronizer.GraphileFetcher
 	noticeRepository     *repository.NoticeRepository
 	graphileSynchronizer *synchronizer.GraphileSynchronizer
+	graphileClient       reader.GraphileClient
 }
 
 func NewContainer(db sqlx.DB) *Container {
@@ -102,15 +104,16 @@ func (c *Container) GetGraphQLSynchronizer() *synchronizer.Synchronizer {
 	return c.graphQLSynchronizer
 }
 
-func (c *Container) GetGrahileSynchronizer() *synchronizer.GraphileSynchronizer {
+func (c *Container) GetGraphileSynchronizer(loadTestMode bool) *synchronizer.GraphileSynchronizer {
 	if c.graphileSynchronizer != nil {
 		return c.graphileSynchronizer
 	}
 
+	graphileClient := c.GetGraphileClient(loadTestMode)
 	c.graphileSynchronizer = synchronizer.NewGraphileSynchronizer(
 		c.GetOutputDecoder(),
 		c.GetSyncRepository(),
-		c.GetGraphileFetcher(),
+		c.GetGraphileFetcher(graphileClient),
 	)
 	return c.graphileSynchronizer
 }
@@ -123,10 +126,28 @@ func (c *Container) GetVoucherFetcher() *synchronizer.VoucherFetcher {
 	return c.voucherFetcher
 }
 
-func (c *Container) GetGraphileFetcher() *synchronizer.GraphileFetcher {
+func (c *Container) GetGraphileFetcher(graphileClient reader.GraphileClient) *synchronizer.GraphileFetcher {
 	if c.graphileFetcher != nil {
 		return c.graphileFetcher
 	}
-	c.graphileFetcher = synchronizer.NewGraphileFetcher()
+	c.graphileFetcher = synchronizer.NewGraphileFetcher(graphileClient)
 	return c.graphileFetcher
+}
+
+func (c *Container) GetGraphileClient(loadTestMode bool) reader.GraphileClient {
+
+	if c.graphileClient != nil {
+		return c.graphileClient
+	}
+
+	graphileHost := "localhost"
+
+	if loadTestMode {
+		graphileHost = "postgraphile-custom"
+	}
+
+	c.graphileClient = &reader.GraphileClientImpl{
+		GraphileHost: graphileHost,
+	}
+	return c.graphileClient
 }

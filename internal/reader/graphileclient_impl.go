@@ -8,11 +8,11 @@ import (
 	"net/http"
 )
 
-type HTTPClientImpl struct {
+type GraphileClientImpl struct {
 	GraphileHost string
 }
 
-func (c *HTTPClientImpl) Post(requestBody []byte) ([]byte, error) {
+func (c *GraphileClientImpl) Post(requestBody []byte) ([]byte, error) {
 	req, err := http.NewRequest("POST", fmt.Sprintf("http://%s:5000/graphql", c.GraphileHost), bytes.NewBuffer(requestBody))
 	if err != nil {
 		slog.Error("Error creating request", "error", err)

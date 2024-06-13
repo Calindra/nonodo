@@ -1,5 +1,5 @@
 package reader
 
-type HttpClient interface {
+type GraphileClient interface {
 	Post(requestBody []byte) ([]byte, error)
 }

@@ -43,6 +43,7 @@ func (c *SynchronizerRepository) Create(
 		ini_cursor_after,
 		log_vouchers_ids,
 		end_cursor_after) VALUES ($1, $2, $3, $4)`
+
 	c.Db.MustExec(
 		insertSql,
 		data.TimestampAfter,
