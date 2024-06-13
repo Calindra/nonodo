@@ -1,14 +1,10 @@
 package reader
 
 import (
-	"fmt"
-	"log"
 	"log/slog"
-	"math/big"
 	"testing"
 
 	"github.com/calindra/nonodo/internal/commons"
-	"github.com/calindra/nonodo/internal/contracts"
 	"github.com/calindra/nonodo/internal/model"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
@@ -77,28 +73,4 @@ func (s *AdapterSuite) TestGetReports() {
 	res, err = s.adapter.GetReports(nil, nil, nil, nil, &inputIndex)
 	s.NoError(err)
 	s.Equal(1, res.TotalCount)
-}
-
-func (s *AdapterSuite) TestGetOutputFormat() {
-	s.Equal("1", GenerateBlobOutput())
-}
-
-func GenerateBlobOutput() string {
-	// Parse the ABI JSON
-	abiParsed, err := contracts.OutputsMetaData.GetAbi()
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	value := big.NewInt(1000000000000000000)
-	payload := common.Hex2Bytes("11223344556677889900")
-	destination := common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
-	inputData, _ := abiParsed.Pack("Voucher",
-		destination,
-		value,
-		payload,
-	)
-
-	return fmt.Sprintf("0x%s", common.Bytes2Hex(inputData))
 }

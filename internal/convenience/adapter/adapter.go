@@ -9,40 +9,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-const abiJSON = `[
-	{
-	  "inputs": [
-		{
-		  "internalType": "bytes",
-		  "name": "notice",
-		  "type": "bytes"
-		}
-	  ],
-	  "name": "Notice",
-	  "outputs": [],
-	  "stateMutability": "nonpayable",
-	  "type": "function"
-	},
-	{
-	  "inputs": [
-		{
-		  "internalType": "address",
-		  "name": "destination",
-		  "type": "address"
-		},
-		{
-		  "internalType": "bytes",
-		  "name": "payload",
-		  "type": "bytes"
-		}
-	  ],
-	  "name": "Voucher",
-	  "outputs": [],
-	  "stateMutability": "nonpayable",
-	  "type": "function"
-	}
-  ]`
-
 func ConvertVoucherPayloadToV2(payloadV1 string) string {
 	return fmt.Sprintf("0x%s%s", model.VOUCHER_SELECTOR, payloadV1)
 }
