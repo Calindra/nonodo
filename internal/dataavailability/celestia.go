@@ -172,9 +172,15 @@ func GetBlob(ctx context.Context, id string, url string, token string) ([]byte, 
 	if err != nil {
 		return nil, err
 	}
+	// find the blob with the start = json.index
+	json, err := retrievedBlobs[0].MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
 	slog.Debug("Blobs",
 		"len", len(retrievedBlobs),
 		"data", string(retrievedBlobs[0].Blob.Data),
+		"data", string(json),
 	)
 
 	return retrievedBlobs[0].Blob.Data, nil

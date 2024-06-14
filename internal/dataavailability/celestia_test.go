@@ -40,6 +40,7 @@ func (s *CelestiaSuite) TestSubmitBlob() {
 	// test the fetch
 	abiParsed, err := getABI()
 	s.NoError(err)
+
 	// dead beef
 	stringNamespace := "00000000000000000000000000000000000000000000000000000000deadbeef"
 	namespace := common.Hex2Bytes(stringNamespace)
@@ -54,12 +55,12 @@ func (s *CelestiaSuite) TestSubmitBlob() {
 		&start,
 	)
 	s.NoError(err)
-	id := "0x" + common.Bytes2Hex(payload)
+	gioID := "0x" + common.Bytes2Hex(payload)
 	slog.Debug("ID",
-		"id", id,
+		"id", gioID,
 		"namespace", namespace,
 	)
-	data, err := GetBlob(ctx, id, url, token)
+	data, err := GetBlob(ctx, gioID, url, token)
 	s.NoError(err)
 	slog.Debug("GetBlob",
 		"data", string(data),
