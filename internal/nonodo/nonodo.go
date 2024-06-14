@@ -135,23 +135,25 @@ func NewSupervisorPoC(opts NonodoOpts) supervisor.SupervisorWorker {
 	if opts.NodeVersion == "v1" {
 		adapter = reader.NewAdapterV1(db, convenienceService)
 	} else {
-		graphileHost := "localhost"
-
-		if opts.LoadTestMode {
-			graphileHost = "postgraphile-custom"
-		}
-
-		httpClient := reader.GraphileClientImpl{GraphileHost: graphileHost}
+		httpClient := container.GetGraphileClient(opts.LoadTestMode)
 		inputBlobAdapter := reader.InputBlobAdapter{}
-		adapter = reader.NewAdapterV2(convenienceService, &httpClient, inputBlobAdapter)
+		adapter = reader.NewAdapterV2(convenienceService, httpClient, inputBlobAdapter)
 	}
 
 	if !opts.LoadTestMode {
-		synchronizer := container.GetGraphQLSynchronizer()
+		var synchronizer supervisor.Worker
+
+		if opts.NodeVersion == "v2" {
+			synchronizer = container.GetGraphileSynchronizer(opts.LoadTestMode)
+		} else {
+			synchronizer = container.GetGraphQLSynchronizer()
+		}
+
 		w.Workers = append(w.Workers, synchronizer)
 
 		opts.RpcUrl = fmt.Sprintf("ws://%s:%v", opts.AnvilAddress, opts.AnvilPort)
 		fromBlock := new(big.Int).SetUint64(opts.FromBlock)
+
 		execVoucherListener := convenience.NewExecListener(
 			opts.RpcUrl,
 			common.HexToAddress(opts.ApplicationAddress),

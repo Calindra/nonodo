@@ -10,6 +10,7 @@ import (
 	"github.com/calindra/nonodo/internal/commons"
 	convenience "github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/convenience/services"
+	"github.com/calindra/nonodo/internal/graphile"
 	repos "github.com/calindra/nonodo/internal/model"
 	"github.com/calindra/nonodo/internal/reader/model"
 	graphql "github.com/calindra/nonodo/internal/reader/model"
@@ -17,7 +18,7 @@ import (
 
 type AdapterV2 struct {
 	convenienceService *services.ConvenienceService
-	graphileClient     GraphileClient
+	graphileClient     graphile.GraphileClient
 	InputBlobAdapter   InputBlobAdapter
 }
 
@@ -57,7 +58,7 @@ type ProofByIndexes struct {
 
 func NewAdapterV2(
 	convenienceService *services.ConvenienceService,
-	graphileClient GraphileClient,
+	graphileClient graphile.GraphileClient,
 	inputBlobAdapter InputBlobAdapter,
 ) Adapter {
 	slog.Debug("NewAdapterV2")

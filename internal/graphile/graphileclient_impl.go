@@ -1,4 +1,4 @@
-package reader
+package graphile
 
 import (
 	"bytes"
