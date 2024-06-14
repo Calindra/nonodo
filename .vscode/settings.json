@@ -71,6 +71,7 @@
         "sslmode",
         "stretchr",
         "syscoin",
+        "tendermint",
         "unmarshal",
         "versioninfo",
         "wangyoucao",
