@@ -107,7 +107,7 @@ func addCelestiaSubcommands(celestiaCmd *cobra.Command) {
 				return fmt.Errorf("missing environment variables")
 			}
 
-			height, start, end, err := dataavailability.SubmitBlob(ctx, url, token, []byte(celestia.Payload))
+			height, start, end, err := dataavailability.SubmitBlob(ctx, url, token, celestia.Namespace, []byte(celestia.Payload))
 
 			if err != nil {
 				slog.Error("Submit", "error", err)

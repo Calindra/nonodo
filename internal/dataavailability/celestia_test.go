@@ -69,8 +69,8 @@ func (s *CelestiaSuite) XTestSubmitBlob() {
 	slog.Debug("Configs", "url", url, "token", token)
 	ctx := context.Background()
 	rawData := []byte(`Hello, World! Cartesi Rocks!
-	Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!`)
-	heightU, startU, endU, err := SubmitBlob(ctx, url, token, rawData)
+	Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello`)
+	heightU, startU, endU, err := SubmitBlob(ctx, url, token, "DEADBEEF", rawData)
 	s.NoError(err)
 
 	// test the fetch

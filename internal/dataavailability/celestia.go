@@ -17,14 +17,15 @@ import (
 )
 
 // SubmitBlob submits a blob containing "Hello, World!" to the 0xDEADBEEF namespace. It uses the default signer on the running node.
-func SubmitBlob(ctx context.Context, url string, token string, rawData []byte) (height uint64, start uint64, end uint64, err error) {
+func SubmitBlob(ctx context.Context, url string, token string, namespaceHex string, rawData []byte) (height uint64, start uint64, end uint64, err error) {
 	client, err := client.NewClient(ctx, url, token)
 	if err != nil {
 		return 0, 0, 0, err
 	}
 
 	// let's post to 0xDEADBEEF namespace
-	namespace, err := share.NewBlobNamespaceV0([]byte{0xDE, 0xAD, 0xBE, 0xEF})
+	nms := common.Hex2Bytes(namespaceHex)
+	namespace, err := share.NewBlobNamespaceV0(nms)
 	if err != nil {
 		return 0, 0, 0, err
 	}
