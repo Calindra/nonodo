@@ -17,7 +17,7 @@ import (
 )
 
 // SubmitBlob submits a blob containing "Hello, World!" to the 0xDEADBEEF namespace. It uses the default signer on the running node.
-func SubmitBlob(ctx context.Context, url string, token string) (uint64, uint64, error) {
+func SubmitBlob(ctx context.Context, url string, token string, rawData []byte) (uint64, uint64, error) {
 	client, err := client.NewClient(ctx, url, token)
 	if err != nil {
 		return 0, 0, err
@@ -30,7 +30,7 @@ func SubmitBlob(ctx context.Context, url string, token string) (uint64, uint64, 
 	}
 
 	// create a blob
-	helloWorldBlob, err := blob.NewBlobV0(namespace, []byte("Hello, World! Cartesi Rocks!"))
+	helloWorldBlob, err := blob.NewBlobV0(namespace, rawData)
 	if err != nil {
 		return 0, 0, err
 	}

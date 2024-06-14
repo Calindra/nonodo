@@ -31,10 +31,13 @@ func (s *CelestiaSuite) TestTendermint() {
 	}
 	ctx := context.Background()
 	blockHeight := 2034386
-	blobStart := 10
-	blobEnd := 11
+	shareStart := 10
+	shareEnd := 11
+	// blockHeight := 2048473
+	// shareStart := 16
+	// shareEnd := 17
 
-	shareProof, err := trpc.ProveShares(ctx, uint64(blockHeight), uint64(blobStart), uint64(blobEnd))
+	shareProof, err := trpc.ProveShares(ctx, uint64(blockHeight), uint64(shareStart), uint64(shareEnd))
 	if err != nil {
 		s.Fail(fmt.Sprintf("failed to get share proof: %s", err))
 	}
@@ -65,7 +68,9 @@ func (s *CelestiaSuite) XTestSubmitBlob() {
 	}
 	slog.Debug("Configs", "url", url, "token", token)
 	ctx := context.Background()
-	heightU, startU, err := SubmitBlob(ctx, url, token)
+	rawData := []byte(`Hello, World! Cartesi Rocks!
+	Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!`)
+	heightU, startU, err := SubmitBlob(ctx, url, token, rawData)
 	s.NoError(err)
 
 	// test the fetch
