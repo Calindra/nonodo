@@ -158,16 +158,21 @@ func addCelestiaSubcommands(celestiaCmd *cobra.Command) {
 			slog.Info("Send a payload to Celestia Relay")
 
 			ctx := context.Background()
-			app := common.HexToAddress(os.Getenv("CELESTIA_APP"))
-			dataavailability.CallCelestiaRelay(ctx, celestia.Height, celestia.Start, celestia.End, app, []byte{})
+			app := common.HexToAddress("0xab7528bb862fb57e8a2bcd567a2e929a0be56a5e")
+			err := dataavailability.CallCelestiaRelay(ctx, celestia.Height, celestia.Start, celestia.End, app, []byte{})
+
+			if err != nil {
+				return err
+			}
+
+			slog.Info("Payload sent to Celestia Relay")
 
 			return nil
 		}}
-	celestiaRelaySend.Flags().StringVar(&celestia.Namespace, "namespace", "", "Namespace of the payload")
 	celestiaRelaySend.Flags().Uint64Var(&celestia.Height, "height", 0, "Height of the block")
 	celestiaRelaySend.Flags().Uint64Var(&celestia.Start, "start", 0, "Start of the proof")
 	celestiaRelaySend.Flags().Uint64Var(&celestia.End, "end", 0, "End of the proof")
-	celestiaRelaySend.MarkFlagsRequiredTogether("namespace", "height", "start", "end")
+	celestiaRelaySend.MarkFlagsRequiredTogether("height", "start", "end")
 
 	celestiaCmd.AddCommand(celestiaSendCmd, celestiaCheckProofCmd, celestiaRelaySend)
 }

@@ -25,7 +25,8 @@ import (
 	"github.com/calindra/nonodo/internal/contracts"
 )
 
-var CELESTIA_RELAY_ADDRESS common.Address = common.HexToAddress("0x9246F2Ca979Ef55FcacB5C4D3F46D36399da760e")
+// var CELESTIA_RELAY_ADDRESS common.Address = common.HexToAddress("0x9246F2Ca979Ef55FcacB5C4D3F46D36399da760e")
+var CELESTIA_RELAY_ADDRESS common.Address = common.HexToAddress("0x9C78A4C38357179057d23834d6572cFf14890e37")
 
 // SubmitBlob submits a blob containing "Hello, World!" to the 0xDEADBEEF namespace. It uses the default signer on the running node.
 func SubmitBlob(ctx context.Context, url string, token string, namespaceHex string, rawData []byte) (height uint64, start uint64, end uint64, err error) {
@@ -276,6 +277,7 @@ func GetShareProof(ctx context.Context, height uint64, start uint64, end uint64)
 }
 
 func CallCelestiaRelay(ctx context.Context, height uint64, start uint64, end uint64, dappAddress common.Address, execLayerData []byte) error {
+	var chainId int64 = 31337
 	pk_celestia := os.Getenv("PK_CELESTIA")
 
 	if pk_celestia == "" {
@@ -283,9 +285,14 @@ func CallCelestiaRelay(ctx context.Context, height uint64, start uint64, end uin
 	}
 
 	// Connect to an Ethereum node
-	eth, _, err := connections()
+	// eth, _, err := connections()
+	// if err != nil {
+	// 	return err
+	// }
+	ethEndpoint := "http://localhost:8545"
+	eth, err := ethclient.Dial(ethEndpoint)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to connect to the Ethereum node: %w", err)
 	}
 	defer eth.Close()
 
@@ -323,7 +330,7 @@ func CallCelestiaRelay(ctx context.Context, height uint64, start uint64, end uin
 
 	// Set up the transaction options
 	gasLimit := 3000000
-	auth, err := bind.NewKeyedTransactorWithChainID(privateKey, big.NewInt(1))
+	auth, err := bind.NewKeyedTransactorWithChainID(privateKey, big.NewInt(chainId))
 	if err != nil {
 		return fmt.Errorf("failed to create transactor: %w", err)
 	}
