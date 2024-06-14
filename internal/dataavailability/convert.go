@@ -31,9 +31,10 @@ func toNamespaceMerkleMultiProofs(proofs []*tmproto.NMTProof) []contracts.Namesp
 func minNamespace(innerNode []byte) *contracts.Namespace {
 	version := innerNode[0]
 	var id [28]byte
-	for i, b := range innerNode[1:29] {
-		id[i] = b
-	}
+	copy(id[:], innerNode[1:29])
+	// for i, b := range innerNode[1:29] {
+	// 	id[i] = b
+	// }
 	return &contracts.Namespace{
 		Version: [1]byte{version},
 		Id:      id,
@@ -43,9 +44,10 @@ func minNamespace(innerNode []byte) *contracts.Namespace {
 func maxNamespace(innerNode []byte) *contracts.Namespace {
 	version := innerNode[29]
 	var id [28]byte
-	for i, b := range innerNode[30:58] {
-		id[i] = b
-	}
+	copy(id[:], innerNode[30:58])
+	// for i, b := range innerNode[30:58] {
+	// 	id[i] = b
+	// }
 	return &contracts.Namespace{
 		Version: [1]byte{version},
 		Id:      id,
@@ -56,9 +58,10 @@ func toNamespaceNode(node []byte) *contracts.NamespaceNode {
 	minNs := minNamespace(node)
 	maxNs := maxNamespace(node)
 	var digest [32]byte
-	for i, b := range node[58:] {
-		digest[i] = b
-	}
+	copy(digest[:], node[58:])
+	// for i, b := range node[58:] {
+	// 	digest[i] = b
+	// }
 	return &contracts.NamespaceNode{
 		Min:    *minNs,
 		Max:    *maxNs,
@@ -89,9 +92,10 @@ func toRowProofs(proofs []*merkle.Proof) []contracts.BinaryMerkleProof {
 		sideNodes := make([][32]byte, len(proof.Aunts))
 		for j, sideNode := range proof.Aunts {
 			var bzSideNode [32]byte
-			for k, b := range sideNode {
-				bzSideNode[k] = b
-			}
+			copy(bzSideNode[:], sideNode)
+			// for k, b := range sideNode {
+			// 	bzSideNode[k] = b
+			// }
 			sideNodes[j] = bzSideNode
 		}
 		rowProofs[i] = contracts.BinaryMerkleProof{
@@ -112,9 +116,10 @@ func toAttestationProof(
 	sideNodes := make([][32]byte, len(dataRootInclusionProof.Aunts))
 	for i, sideNode := range dataRootInclusionProof.Aunts {
 		var bzSideNode [32]byte
-		for k, b := range sideNode {
-			bzSideNode[k] = b
-		}
+		copy(bzSideNode[:], sideNode)
+		// for k, b := range sideNode {
+		// 	bzSideNode[k] = b
+		// }
 		sideNodes[i] = bzSideNode
 	}
 
