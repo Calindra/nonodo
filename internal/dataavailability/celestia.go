@@ -4,25 +4,28 @@ package dataavailability
 import (
 	"bytes"
 	"context"
+	"crypto/ecdsa"
 	"encoding/base64"
 	"fmt"
 	"log/slog"
 	"math/big"
+	"os"
 	"strings"
 
 	client "github.com/celestiaorg/celestia-openrpc"
 	"github.com/celestiaorg/celestia-openrpc/types/blob"
 	"github.com/celestiaorg/celestia-openrpc/types/share"
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/tendermint/tendermint/rpc/client/http"
 
 	"github.com/calindra/nonodo/internal/contracts"
-	// shareloader "github.com/calindra/nonodo/internal/dataavailability/contracts/ShareLoader.sol"
 )
 
-var CELESTIA_RELAY_ADDRESS common.Address = common.HexToAddress("0x")
+var CELESTIA_RELAY_ADDRESS common.Address = common.HexToAddress("0x9246F2Ca979Ef55FcacB5C4D3F46D36399da760e")
 
 // SubmitBlob submits a blob containing "Hello, World!" to the 0xDEADBEEF namespace. It uses the default signer on the running node.
 func SubmitBlob(ctx context.Context, url string, token string, namespaceHex string, rawData []byte) (height uint64, start uint64, end uint64, err error) {
@@ -273,25 +276,71 @@ func GetShareProof(ctx context.Context, height uint64, start uint64, end uint64)
 }
 
 func CallCelestiaRelay(ctx context.Context, height uint64, start uint64, end uint64, dappAddress common.Address, execLayerData []byte) error {
+	pk_celestia := os.Getenv("PK_CELESTIA")
+
+	if pk_celestia == "" {
+		return fmt.Errorf("missing Celestia private key")
+	}
+
+	// Connect to an Ethereum node
+	eth, _, err := connections()
+	if err != nil {
+		return err
+	}
+	defer eth.Close()
+
 	proofs, root, err := GetShareProof(ctx, height, start, end)
 
 	if err != nil {
 		return err
 	}
 
-	eth, _, err := connections()
+	// Load your private key
+	privateKey, err := crypto.HexToECDSA(pk_celestia)
+	if err != nil {
+		return fmt.Errorf("failed to create private key: %w", err)
+	}
+
+	// Get the public key address
+	publicKey := privateKey.Public()
+	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
+	if !ok {
+		return fmt.Errorf("failed to create public key: %w", err)
+	}
+	fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
+
+	// Get the nonce (number of transactions sent by the sender)
+	nonce, err := eth.PendingNonceAt(ctx, fromAddress)
+	if err != nil {
+		return fmt.Errorf("failed to get nonce: %w", err)
+	}
+
+	// Set the gas price
+	gasPrice, err := eth.SuggestGasPrice(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get gas price: %w", err)
+	}
+
+	// Set up the transaction options
+	gasLimit := 3000000
+	auth, err := bind.NewKeyedTransactorWithChainID(privateKey, big.NewInt(1))
+	if err != nil {
+		return fmt.Errorf("failed to create transactor: %w", err)
+	}
+	auth.Nonce = big.NewInt(int64(nonce))
+	auth.Value = big.NewInt(0)
+	auth.GasLimit = uint64(gasLimit)
+	auth.GasPrice = gasPrice
+
+	// Create a new instance of the contract
+	relay, err := contracts.NewCelestiaRelay(CELESTIA_RELAY_ADDRESS, eth)
 
 	if err != nil {
 		return err
 	}
 
-	s, err := contracts.NewCelestiaRelay(CELESTIA_RELAY_ADDRESS, eth)
-
-	if err != nil {
-		return err
-	}
-
-	trx, err := s.RelayShares(nil, dappAddress, *proofs, root, execLayerData)
+	// Call the contract
+	trx, err := relay.RelayShares(auth, dappAddress, *proofs, root, execLayerData)
 
 	if err != nil {
 		return err

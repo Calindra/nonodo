@@ -154,9 +154,14 @@ func addCelestiaSubcommands(celestiaCmd *cobra.Command) {
 	var celestiaRelaySend = &cobra.Command{
 		Use:   "relay-send",
 		Short: "Send a payload to Celestia Relay",
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			slog.Info("Send a payload to Celestia Relay")
 
+			ctx := context.Background()
+			app := common.HexToAddress(os.Getenv("CELESTIA_APP"))
+			dataavailability.CallCelestiaRelay(ctx, celestia.Height, celestia.Start, celestia.End, app, []byte{})
+
+			return nil
 		}}
 	celestiaRelaySend.Flags().StringVar(&celestia.Namespace, "namespace", "", "Namespace of the payload")
 	celestiaRelaySend.Flags().Uint64Var(&celestia.Height, "height", 0, "Height of the block")
