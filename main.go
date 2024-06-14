@@ -36,6 +36,26 @@ var cmd = &cobra.Command{
 	Version: versioninfo.Short(),
 }
 
+var CompletionCmd = &cobra.Command{
+	Use:                   "completion",
+	Short:                 "Generate shell completion scripts",
+	DisableFlagsInUseLine: true,
+	ValidArgs:             []string{"bash", "zsh", "fish", "powershell"},
+	Args:                  cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
+	Run: func(cmd *cobra.Command, args []string) {
+		switch args[0] {
+		case "bash":
+			cobra.CheckErr(cmd.Root().GenBashCompletion(os.Stdout))
+		case "zsh":
+			cobra.CheckErr(cmd.Root().GenZshCompletion(os.Stdout))
+		case "fish":
+			cobra.CheckErr(cmd.Root().GenFishCompletion(os.Stdout, true))
+		case "powershell":
+			cobra.CheckErr(cmd.Root().GenPowerShellCompletion(os.Stdout))
+		}
+	},
+}
+
 var addressBookCmd = &cobra.Command{
 	Use:   "address-book",
 	Short: "Show address book",
@@ -68,8 +88,7 @@ func addCelestiaSubcommands(celestiaCmd *cobra.Command) {
 		Use:   "send",
 		Short: "Send a payload to Celestia Network",
 		Run: func(cmd *cobra.Command, args []string) {
-			slog.Info("Send a payload to Celestia Network")
-			fmt.Println("Args", args)
+			slog.Info("Send a payload to Celestia Network", "args", args)
 		},
 	}
 	celestiaSendCmd.PersistentFlags().StringVar(&namespace, "namespace", "0xdeadbeef", "Payload to send to Celestia Network")
@@ -84,7 +103,7 @@ func addCelestiaSubcommands(celestiaCmd *cobra.Command) {
 		Short: "Check proof of a payload sent to Celestia Network",
 		Run: func(cmd *cobra.Command, args []string) {
 			slog.Info("Check proof of a payload sent to Celestia Network")
-			fmt.Println("Args", args)
+
 		},
 	}
 	celestiaCheckProofCmd.PersistentFlags().StringVar(&namespace, "namespace", "0xdeadbeef", "Payload to send to Celestia Network")
@@ -99,7 +118,7 @@ func addCelestiaSubcommands(celestiaCmd *cobra.Command) {
 		Short: "Send a payload to Celestia Relay",
 		Run: func(cmd *cobra.Command, args []string) {
 			slog.Info("Send a payload to Celestia Relay")
-			fmt.Println("Args", args)
+
 		}}
 	celestiaRelaySend.PersistentFlags().StringVar(&namespace, "namespace", "0xdeadbeef", "Payload to send to Celestia Network")
 	celestiaRelaySend.PersistentFlags().Uint64Var(&height, "height", exampleHeight, "Height of the block")
@@ -238,7 +257,7 @@ func run(cmd *cobra.Command, args []string) {
 
 func main() {
 	addCelestiaSubcommands(celestiaCmd)
-	cmd.AddCommand(addressBookCmd, celestiaCmd)
+	cmd.AddCommand(addressBookCmd, celestiaCmd, CompletionCmd)
 	cobra.CheckErr(cmd.Execute())
 }
 
