@@ -66,7 +66,7 @@ const graphileQueryWithCursor = `
 	}
 }`
 
-const DefaultBatchSize = 10
+const DefaultQueryBatchSize = 10
 
 const ErrorSendingGraphileRequest = `
 +-----------------------------------------------------------+
@@ -88,7 +88,7 @@ func NewGraphileFetcher(graphileClient graphile.GraphileClient) *GraphileFetcher
 	return &GraphileFetcher{
 		Url:             "http://localhost:5000/graphql",
 		CursorAfter:     "",
-		BatchSize:       DefaultBatchSize,
+		BatchSize:       DefaultQueryBatchSize,
 		Query:           graphileQuery,
 		QueryWithCursor: graphileQueryWithCursor,
 		GraphileClient:  graphileClient,
