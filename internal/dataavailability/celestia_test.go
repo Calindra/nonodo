@@ -2,6 +2,8 @@ package dataavailability
 
 import (
 	"context"
+	"encoding/binary"
+	"fmt"
 	"log/slog"
 	"math/big"
 	"os"
@@ -10,6 +12,7 @@ import (
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/suite"
+	"github.com/tendermint/tendermint/rpc/client/http"
 )
 
 type CelestiaSuite struct {
@@ -20,7 +23,35 @@ func (s *CelestiaSuite) SetupTest() {
 	commons.ConfigureLog(slog.LevelDebug)
 }
 
-func (s *CelestiaSuite) TestSubmitBlob() {
+func (s *CelestiaSuite) TestTendermint() {
+	trpcEndpoint := "https://celestia-mocha-rpc.publicnode.com:443"
+	trpc, err := http.New(trpcEndpoint, "/websocket")
+	if err != nil {
+		panic(fmt.Errorf("failed to connect to the Tendermint RPC: %w", err))
+	}
+	ctx := context.Background()
+	blockHeight := 2034386
+	blobStart := 10
+	blobEnd := 11
+
+	shareProof, err := trpc.ProveShares(ctx, uint64(blockHeight), uint64(blobStart), uint64(blobEnd))
+	if err != nil {
+		s.Fail(fmt.Sprintf("failed to get share proof: %s", err))
+	}
+	namespace := shareProof.Data[0][:29]
+	dataRawLen := shareProof.Data[0][30:34]
+	dataLen := binary.BigEndian.Uint32(dataRawLen)
+	data := shareProof.Data[0][34 : 34+dataLen]
+	slog.Debug("Result",
+		"namespace", common.Bytes2Hex(namespace),
+		"dataLen", binary.BigEndian.Uint32(dataRawLen),
+		"data", common.Bytes2Hex(data),
+		"data", string(data),
+	)
+	s.Fail("x")
+}
+
+func (s *CelestiaSuite) XTestSubmitBlob() {
 	token := os.Getenv("TIA_AUTH_TOKEN")
 	url := os.Getenv("TIA_URL")
 	// url := "https://api.celestia-arabica-11.com" //os.Getenv("CELESTIA_URL")
