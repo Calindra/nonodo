@@ -45,11 +45,68 @@ var addressBookCmd = &cobra.Command{
 	},
 }
 
+// Celestia Network
+var celestiaCmd = &cobra.Command{
+	Use:   "celestia",
+	Short: "Handle blob to Celestia",
+	Long:  "Submit a blob and check proofs after one hour to Celestia Network",
+}
+
 var (
 	debug bool
 	color bool
 	opts  = nonodo.NewNonodoOpts()
 )
+
+func addCelestiaSubcommands(celestiaCmd *cobra.Command) {
+	var namespace string
+	var height, start, end uint64
+	const exampleHeight uint64 = 123456
+
+	// Send
+	celestiaSendCmd := &cobra.Command{
+		Use:   "send",
+		Short: "Send a payload to Celestia Network",
+		Run: func(cmd *cobra.Command, args []string) {
+			slog.Info("Send a payload to Celestia Network")
+			fmt.Println("Args", args)
+		},
+	}
+	celestiaSendCmd.PersistentFlags().StringVar(&namespace, "namespace", "0xdeadbeef", "Payload to send to Celestia Network")
+	celestiaSendCmd.PersistentFlags().Uint64Var(&height, "height", exampleHeight, "Height of the block")
+	celestiaSendCmd.PersistentFlags().Uint64Var(&start, "start", 0, "Start of the proof")
+	celestiaSendCmd.PersistentFlags().Uint64Var(&end, "end", 1, "End of the proof")
+	celestiaCmd.AddCommand(celestiaSendCmd)
+
+	// Check proof
+	celestiaCheckProofCmd := &cobra.Command{
+		Use:   "check-proof",
+		Short: "Check proof of a payload sent to Celestia Network",
+		Run: func(cmd *cobra.Command, args []string) {
+			slog.Info("Check proof of a payload sent to Celestia Network")
+			fmt.Println("Args", args)
+		},
+	}
+	celestiaCheckProofCmd.PersistentFlags().StringVar(&namespace, "namespace", "0xdeadbeef", "Payload to send to Celestia Network")
+	celestiaCheckProofCmd.PersistentFlags().Uint64Var(&height, "height", exampleHeight, "Height of the block")
+	celestiaCheckProofCmd.PersistentFlags().Uint64Var(&start, "start", 0, "Start of the proof")
+	celestiaCheckProofCmd.PersistentFlags().Uint64Var(&end, "end", 1, "End of the proof")
+	celestiaCmd.AddCommand(celestiaCheckProofCmd)
+
+	// Send to relay
+	var celestiaRelaySend = &cobra.Command{
+		Use:   "relay-send",
+		Short: "Send a payload to Celestia Relay",
+		Run: func(cmd *cobra.Command, args []string) {
+			slog.Info("Send a payload to Celestia Relay")
+			fmt.Println("Args", args)
+		}}
+	celestiaRelaySend.PersistentFlags().StringVar(&namespace, "namespace", "0xdeadbeef", "Payload to send to Celestia Network")
+	celestiaRelaySend.PersistentFlags().Uint64Var(&height, "height", exampleHeight, "Height of the block")
+	celestiaRelaySend.PersistentFlags().Uint64Var(&start, "start", 0, "Start of the proof")
+	celestiaRelaySend.PersistentFlags().Uint64Var(&end, "end", 1, "End of the proof")
+	celestiaCmd.AddCommand(celestiaRelaySend)
+}
 
 func init() {
 	// anvil-*
@@ -180,7 +237,8 @@ func run(cmd *cobra.Command, args []string) {
 }
 
 func main() {
-	cmd.AddCommand(addressBookCmd)
+	addCelestiaSubcommands(celestiaCmd)
+	cmd.AddCommand(addressBookCmd, celestiaCmd)
 	cobra.CheckErr(cmd.Execute())
 }
 
