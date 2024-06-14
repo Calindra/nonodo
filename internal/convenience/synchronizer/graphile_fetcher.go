@@ -66,6 +66,8 @@ const graphileQueryWithCursor = `
 	}
 }`
 
+const DefaultBatchSize = 10
+
 const ErrorSendingGraphileRequest = `
 +-----------------------------------------------------------+
 | Please ensure that the rollups-node is up and running at: |
@@ -86,7 +88,7 @@ func NewGraphileFetcher(graphileClient graphile.GraphileClient) *GraphileFetcher
 	return &GraphileFetcher{
 		Url:             "http://localhost:5000/graphql",
 		CursorAfter:     "",
-		BatchSize:       10,
+		BatchSize:       DefaultBatchSize,
 		Query:           graphileQuery,
 		QueryWithCursor: graphileQueryWithCursor,
 		GraphileClient:  graphileClient,
