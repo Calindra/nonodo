@@ -18,8 +18,11 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/tendermint/tendermint/rpc/client/http"
 
-	shareloader "github.com/calindra/nonodo/internal/dataavailability/contracts/ShareLoader.sol"
+	"github.com/calindra/nonodo/internal/contracts"
+	// shareloader "github.com/calindra/nonodo/internal/dataavailability/contracts/ShareLoader.sol"
 )
+
+var CELESTIA_RELAY_ADDRESS common.Address = common.HexToAddress("0x")
 
 // SubmitBlob submits a blob containing "Hello, World!" to the 0xDEADBEEF namespace. It uses the default signer on the running node.
 func SubmitBlob(ctx context.Context, url string, token string, namespaceHex string, rawData []byte) (height uint64, start uint64, end uint64, err error) {
@@ -196,36 +199,41 @@ func GetBlob(ctx context.Context, id string, url string, token string) ([]byte, 
 	return retrievedBlobs[0].Blob.Data, nil
 }
 
-func connections() (eth *ethclient.Client, trpc *http.HTTP) {
+func connections() (eth *ethclient.Client, trpc *http.HTTP, err error) {
 	ethEndpoint := "https://arbitrum-sepolia-rpc.publicnode.com"
 	trpcEndpoint := "https://celestia-mocha-rpc.publicnode.com:443"
 
-	eth, err := ethclient.Dial(ethEndpoint)
+	eth, err = ethclient.Dial(ethEndpoint)
 	if err != nil {
-		panic(fmt.Errorf("failed to connect to the Ethereum node: %w", err))
+		return nil, nil, fmt.Errorf("failed to connect to the Ethereum node: %w", err)
 	}
 	trpc, err = http.New(trpcEndpoint, "/websocket")
 	if err != nil {
-		panic(fmt.Errorf("failed to connect to the Tendermint RPC: %w", err))
+		return nil, nil, fmt.Errorf("failed to connect to the Tendermint RPC: %w", err)
 	}
 
-	return eth, trpc
+	return eth, trpc, nil
 }
 
 // GetShareProof returns the share proof for the given share pointer.
 // Ready to be used with the DAVerifier library.
 // RE: https://docs.celestia.org/developers/blobstream-proof-queries#example-rollup-that-uses-the-daverifier
-func GetShareProof(ctx context.Context, height uint64, start uint64, end uint64) (shareProofFinal *shareloader.SharesProof, blockDataRoot [32]byte, err error) {
+func GetShareProof(ctx context.Context, height uint64, start uint64, end uint64) (shareProofFinal *contracts.SharesProof, blockDataRoot [32]byte, err error) {
 	var maxHeight uint64 = 10_000_000
 
-	eth, trpc := connections()
+	eth, trpc, err := connections()
+
+	if err != nil {
+		return nil, [32]byte{}, fmt.Errorf("failed to connect to the Ethereum node or trpc: %w", err)
+	}
+
 	defer eth.Close()
 
 	// 1. Get the data commitment
 	dataCommitment, err := GetDataCommitment(eth, int64(height), maxHeight)
 
 	if err != nil {
-		return nil, [32]byte{}, fmt.Errorf("failed to get data commitment: %w", err)
+		return nil, [32]byte{}, err
 	}
 
 	h := int64(height)
@@ -254,7 +262,7 @@ func GetShareProof(ctx context.Context, height uint64, start uint64, end uint64)
 
 	slog.Info("ShareProof", "Length", len(shareProof.ShareProofs), "Start", shareProof.ShareProofs[0].Start, "End", shareProof.ShareProofs[0].End)
 
-	return &shareloader.SharesProof{
+	return &contracts.SharesProof{
 		Data:             shareProof.Data,
 		ShareProofs:      toNamespaceMerkleMultiProofs(shareProof.ShareProofs),
 		Namespace:        *namespace(shareProof.NamespaceID, uint8(shareProof.NamespaceVersion)),
@@ -262,4 +270,34 @@ func GetShareProof(ctx context.Context, height uint64, start uint64, end uint64)
 		RowProofs:        toRowProofs(shareProof.RowProof.Proofs),
 		AttestationProof: toAttestationProof(nonce, height, blockDataRoot, dcProof.Proof),
 	}, blockDataRoot, nil
+}
+
+func CallCelestiaRelay(ctx context.Context, height uint64, start uint64, end uint64, dappAddress common.Address, execLayerData []byte) error {
+	proofs, root, err := GetShareProof(ctx, height, start, end)
+
+	if err != nil {
+		return err
+	}
+
+	eth, _, err := connections()
+
+	if err != nil {
+		return err
+	}
+
+	s, err := contracts.NewCelestiaRelay(CELESTIA_RELAY_ADDRESS, eth)
+
+	if err != nil {
+		return err
+	}
+
+	trx, err := s.RelayShares(nil, dappAddress, *proofs, root, execLayerData)
+
+	if err != nil {
+		return err
+	}
+
+	slog.Info("Transaction", "trx", trx)
+
+	return nil
 }
