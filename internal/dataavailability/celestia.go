@@ -17,22 +17,22 @@ import (
 )
 
 // SubmitBlob submits a blob containing "Hello, World!" to the 0xDEADBEEF namespace. It uses the default signer on the running node.
-func SubmitBlob(ctx context.Context, url string, token string, rawData []byte) (uint64, uint64, error) {
+func SubmitBlob(ctx context.Context, url string, token string, rawData []byte) (height uint64, start uint64, end uint64, err error) {
 	client, err := client.NewClient(ctx, url, token)
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, 0, err
 	}
 
 	// let's post to 0xDEADBEEF namespace
 	namespace, err := share.NewBlobNamespaceV0([]byte{0xDE, 0xAD, 0xBE, 0xEF})
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, 0, err
 	}
 
 	// create a blob
 	helloWorldBlob, err := blob.NewBlobV0(namespace, rawData)
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, 0, err
 	}
 
 	base64Str := base64.StdEncoding.EncodeToString(helloWorldBlob.Commitment)
@@ -43,15 +43,15 @@ func SubmitBlob(ctx context.Context, url string, token string, rawData []byte) (
 	// }
 	// client.State.SubmitPayForBlob(ctx, math.Int, 1, []*blob.Blob{helloWorldBlob})
 	// submit the blob to the network
-	height, err := client.Blob.Submit(ctx, []*blob.Blob{helloWorldBlob}, blob.DefaultGasPrice())
+	height, err = client.Blob.Submit(ctx, []*blob.Blob{helloWorldBlob}, blob.DefaultGasPrice())
 	if err != nil {
 		slog.Error("Submit", "error", err)
-		return 0, 0, err
+		return 0, 0,0, err
 	}
 
 	bProof, err := client.Blob.GetProof(ctx, height, namespace, helloWorldBlob.Commitment)
 	if err != nil {
-		return 0, 0, err
+		return 0, 0,0, err
 	}
 
 	slog.Debug("Blob was included at",
@@ -64,7 +64,7 @@ func SubmitBlob(ctx context.Context, url string, token string, rawData []byte) (
 	// retrievedBlobs, err := client.Blob.GetAll(ctx, height, []share.Namespace{namespace})
 	retrievedBlob, err := client.Blob.Get(ctx, height, namespace, helloWorldBlob.Commitment)
 	if err != nil {
-		return 0, 0, err
+		return 0, 0,0, err
 	}
 
 	// slog.Debug("Blobs are equal?", "equal", bytes.Equal(helloWorldBlob.Commitment, retrievedBlobs[0].Commitment))
@@ -77,12 +77,12 @@ func SubmitBlob(ctx context.Context, url string, token string, rawData []byte) (
 
 	proof, err := client.Blob.GetProof(ctx, height, namespace, helloWorldBlob.Commitment)
 	if err != nil {
-		return 0, 0, err
+		return 0, 0,0, err
 	}
 
 	json, err := retrievedBlob.MarshalJSON()
 	if err != nil {
-		return 0, 0, err
+		return 0, 0,0, err
 	}
 
 	slog.Debug("Proof",
@@ -90,7 +90,7 @@ func SubmitBlob(ctx context.Context, url string, token string, rawData []byte) (
 		"end", (*proof)[0].End(),
 		"index", string(json),
 	)
-	return height, uint64((*proof)[0].Start()), nil
+	return height, uint64((*proof)[0].Start()),  uint64((*proof)[0].End()), nil
 }
 
 func getABI() (*abi.ABI, error) {
@@ -108,6 +108,10 @@ func getABI() (*abi.ABI, error) {
 				},
 				{
 					"name": "start",
+					"type": "uint256"
+				},
+				{
+					"name": "end",
 					"type": "uint256"
 				}
 			],

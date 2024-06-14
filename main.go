@@ -5,6 +5,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
@@ -13,6 +14,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/calindra/nonodo/internal/dataavailability"
 	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/calindra/nonodo/internal/nonodo"
 	"github.com/carlmjohnson/versioninfo"
@@ -66,6 +68,14 @@ var addressBookCmd = &cobra.Command{
 }
 
 // Celestia Network
+type CelestiaOpts struct {
+	Payload   string
+	Namespace string
+	Height    uint64
+	Start     uint64
+	End       uint64
+}
+
 var celestiaCmd = &cobra.Command{
 	Use:   "celestia",
 	Short: "Handle blob to Celestia",
@@ -79,23 +89,39 @@ var (
 )
 
 func addCelestiaSubcommands(celestiaCmd *cobra.Command) {
-	var namespace string
-	var height, start, end uint64
-	const exampleHeight uint64 = 123456
+	var celestia = &CelestiaOpts{}
 
 	// Send
 	celestiaSendCmd := &cobra.Command{
 		Use:   "send",
 		Short: "Send a payload to Celestia Network",
-		Run: func(cmd *cobra.Command, args []string) {
-			slog.Info("Send a payload to Celestia Network", "args", args)
+		RunE: func(cmd *cobra.Command, args []string) error {
+			slog.Info("Send a payload to Celestia Network", "args", args, "celestia", celestia)
+
+			ctx := context.Background()
+			token := os.Getenv("TIA_AUTH_TOKEN")
+			url := os.Getenv("TIA_URL")
+
+			if token == "" || url == "" {
+				slog.Error("Missing environment variables", "token", token, "url", url)
+				return fmt.Errorf("missing environment variables")
+			}
+
+			height, start, end, err := dataavailability.SubmitBlob(ctx, url, token, []byte(celestia.Payload))
+
+			if err != nil {
+				slog.Error("Submit", "error", err)
+				return err
+			}
+
+			slog.Info("Blob was included at", "height", height, "start", start, "end", end)
+
+			return nil
 		},
 	}
-	celestiaSendCmd.PersistentFlags().StringVar(&namespace, "namespace", "0xdeadbeef", "Payload to send to Celestia Network")
-	celestiaSendCmd.PersistentFlags().Uint64Var(&height, "height", exampleHeight, "Height of the block")
-	celestiaSendCmd.PersistentFlags().Uint64Var(&start, "start", 0, "Start of the proof")
-	celestiaSendCmd.PersistentFlags().Uint64Var(&end, "end", 1, "End of the proof")
-	celestiaCmd.AddCommand(celestiaSendCmd)
+	celestiaSendCmd.Flags().StringVar(&celestia.Payload, "payload", "", "Payload to send to Celestia Network")
+	celestiaSendCmd.Flags().StringVar(&celestia.Namespace, "namespace", "", "Namespace of the payload")
+	celestiaSendCmd.MarkFlagsRequiredTogether("payload", "namespace")
 
 	// Check proof
 	celestiaCheckProofCmd := &cobra.Command{
@@ -106,11 +132,11 @@ func addCelestiaSubcommands(celestiaCmd *cobra.Command) {
 
 		},
 	}
-	celestiaCheckProofCmd.PersistentFlags().StringVar(&namespace, "namespace", "0xdeadbeef", "Payload to send to Celestia Network")
-	celestiaCheckProofCmd.PersistentFlags().Uint64Var(&height, "height", exampleHeight, "Height of the block")
-	celestiaCheckProofCmd.PersistentFlags().Uint64Var(&start, "start", 0, "Start of the proof")
-	celestiaCheckProofCmd.PersistentFlags().Uint64Var(&end, "end", 1, "End of the proof")
-	celestiaCmd.AddCommand(celestiaCheckProofCmd)
+	celestiaCheckProofCmd.Flags().StringVar(&celestia.Namespace, "namespace", "", "Namespace of the payload")
+	celestiaCheckProofCmd.Flags().Uint64Var(&celestia.Height, "height", 0, "Height of the block")
+	celestiaCheckProofCmd.Flags().Uint64Var(&celestia.Start, "start", 0, "Start of the proof")
+	celestiaCheckProofCmd.Flags().Uint64Var(&celestia.End, "end", 0, "End of the proof")
+	celestiaCheckProofCmd.MarkFlagsRequiredTogether("namespace", "height", "start", "end")
 
 	// Send to relay
 	var celestiaRelaySend = &cobra.Command{
@@ -120,11 +146,13 @@ func addCelestiaSubcommands(celestiaCmd *cobra.Command) {
 			slog.Info("Send a payload to Celestia Relay")
 
 		}}
-	celestiaRelaySend.PersistentFlags().StringVar(&namespace, "namespace", "0xdeadbeef", "Payload to send to Celestia Network")
-	celestiaRelaySend.PersistentFlags().Uint64Var(&height, "height", exampleHeight, "Height of the block")
-	celestiaRelaySend.PersistentFlags().Uint64Var(&start, "start", 0, "Start of the proof")
-	celestiaRelaySend.PersistentFlags().Uint64Var(&end, "end", 1, "End of the proof")
-	celestiaCmd.AddCommand(celestiaRelaySend)
+	celestiaRelaySend.Flags().StringVar(&celestia.Namespace, "namespace", "", "Namespace of the payload")
+	celestiaRelaySend.Flags().Uint64Var(&celestia.Height, "height", 0, "Height of the block")
+	celestiaRelaySend.Flags().Uint64Var(&celestia.Start, "start", 0, "Start of the proof")
+	celestiaRelaySend.Flags().Uint64Var(&celestia.End, "end", 0, "End of the proof")
+	celestiaRelaySend.MarkFlagsRequiredTogether("namespace", "height", "start", "end")
+
+	celestiaCmd.AddCommand(celestiaSendCmd, celestiaCheckProofCmd, celestiaRelaySend)
 }
 
 func init() {

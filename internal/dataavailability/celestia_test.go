@@ -70,7 +70,7 @@ func (s *CelestiaSuite) XTestSubmitBlob() {
 	ctx := context.Background()
 	rawData := []byte(`Hello, World! Cartesi Rocks!
 	Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!`)
-	heightU, startU, err := SubmitBlob(ctx, url, token, rawData)
+	heightU, startU, endU, err := SubmitBlob(ctx, url, token, rawData)
 	s.NoError(err)
 
 	// test the fetch
@@ -84,11 +84,13 @@ func (s *CelestiaSuite) XTestSubmitBlob() {
 	copy(bytes32Value[:], namespace)
 	height := big.NewInt(int64(heightU))
 	start := big.NewInt(int64(startU))
+	end := big.NewInt(int64(endU))
 	payload, err := abiParsed.Pack(
 		"CelestiaRequest",
 		bytes32Value,
 		&height,
 		&start,
+		&end,
 	)
 	s.NoError(err)
 	gioID := "0x" + common.Bytes2Hex(payload)
