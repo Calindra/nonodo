@@ -141,7 +141,7 @@ func NewSupervisorPoC(opts NonodoOpts) supervisor.SupervisorWorker {
 			graphileHost = "postgraphile-custom"
 		}
 
-		httpClient := reader.HTTPClientImpl{GraphileHost: graphileHost}
+		httpClient := reader.GraphileClientImpl{GraphileHost: graphileHost}
 		inputBlobAdapter := reader.InputBlobAdapter{}
 		adapter = reader.NewAdapterV2(convenienceService, &httpClient, inputBlobAdapter)
 	}

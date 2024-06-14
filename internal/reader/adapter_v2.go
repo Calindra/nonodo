@@ -17,7 +17,7 @@ import (
 
 type AdapterV2 struct {
 	convenienceService *services.ConvenienceService
-	httpClient         HttpClient
+	graphileClient     GraphileClient
 	InputBlobAdapter   InputBlobAdapter
 }
 
@@ -57,13 +57,13 @@ type ProofByIndexes struct {
 
 func NewAdapterV2(
 	convenienceService *services.ConvenienceService,
-	httpClient HttpClient,
+	graphileClient GraphileClient,
 	inputBlobAdapter InputBlobAdapter,
 ) Adapter {
 	slog.Debug("NewAdapterV2")
 	return AdapterV2{
 		convenienceService: convenienceService,
-		httpClient:         httpClient,
+		graphileClient:     graphileClient,
 		InputBlobAdapter:   inputBlobAdapter,
 	}
 }
@@ -100,7 +100,7 @@ func (a AdapterV2) GetProof(ctx context.Context, inputIndex int, outputIndex int
 		slog.Error("Error marshalling JSON:", "error", err)
 		return nil, err
 	}
-	response, err := a.httpClient.Post(payload)
+	response, err := a.graphileClient.Post(payload)
 	slog.Debug("Proof", "response", string(response))
 	if err != nil {
 		slog.Error("Error calling Graphile Reports", "error", err)
@@ -124,7 +124,7 @@ func (a AdapterV2) GetReport(reportIndex int, inputIndex int) (*graphql.Report, 
 		
 	}`, reportIndex, inputIndex))
 
-	response, err := a.httpClient.Post(requestBody)
+	response, err := a.graphileClient.Post(requestBody)
 
 	if err != nil {
 		slog.Error("Error calling Graphile Reports", "error", err)
@@ -173,7 +173,7 @@ func (a AdapterV2) GetReports(
 		requestBody, _ = createBackwardRequestBody(last, before, inputIndex)
 	}
 
-	response, err := a.httpClient.Post(requestBody)
+	response, err := a.graphileClient.Post(requestBody)
 
 	if err != nil {
 		slog.Error("Error calling Graphile Reports", "error", err)
@@ -211,7 +211,7 @@ func (a AdapterV2) GetInputs(
 		requestBody, _ = getInputBackwardQuery(last, before, where)
 	}
 
-	response, err := a.httpClient.Post(requestBody)
+	response, err := a.graphileClient.Post(requestBody)
 
 	if err != nil {
 		slog.Error("Error calling Graphile Inputs", "error", err)
@@ -326,7 +326,7 @@ func (a AdapterV2) GetInput(index int) (*graphql.Input, error) {
 			
     	}`, index))
 
-	response, err := a.httpClient.Post(requestBody)
+	response, err := a.graphileClient.Post(requestBody)
 
 	if err != nil {
 		slog.Error("Error calling Graphile Inouts", "error", err)

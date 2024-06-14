@@ -384,7 +384,7 @@ func (s *AdapterV2TestSuite) TestGetProof() {
 	}
 	hitTheRealServer := false
 	if hitTheRealServer {
-		httpClient := HTTPClientImpl{}
+		httpClient := GraphileClientImpl{}
 		inputBlobAdapter := InputBlobAdapter{}
 		s.adapter = AdapterV2{nil, &httpClient, inputBlobAdapter}
 	}
