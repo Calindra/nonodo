@@ -168,11 +168,11 @@ Start a PostGres instance locally, "cd" to db folder and use docker-compose.yml 
 Set PostGres connection details using environment variables
 
 ```env
-POSTGRES_HOST=localhost
-POSTGRES_PORT=5432
-POSTGRES_DB=mydatabase
-POSTGRES_USER=myuser
-POSTGRES_PASSWORD=mypassword
+export POSTGRES_HOST=localhost
+export POSTGRES_PORT=5432
+export POSTGRES_DB=mydatabase
+export POSTGRES_USER=myuser
+export POSTGRES_PASSWORD=mypassword
 ```
 
 When running nonodo, set flag db-implementation with the value postgres
