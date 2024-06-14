@@ -29,6 +29,7 @@ import (
 
 const (
 	rollupsContractsUrl = "https://registry.npmjs.org/@cartesi/rollups/-/rollups-2.0.0-rc.3.tgz"
+	celestiaUrl         = "https://raw.githubusercontent.com/miltonjonat/rollups-celestia/main/onchain/deployments/sepolia/CelestiaRelay.json"
 	baseContractsPath   = "package/export/artifacts/contracts/"
 	bindingPkg          = "contracts"
 )
@@ -63,11 +64,22 @@ func main() {
 	contractsTar := unzip(contractsZip)
 	defer contractsTar.Close()
 
+	contractJson := downloadJsonContract(celestiaUrl)
+	defer contractJson.Close()
+
 	files := make(map[string]bool)
 	for _, b := range bindings {
 		files[b.jsonPath] = true
 	}
 	contents := readFilesFromTar(contractsTar, files)
+
+	content := readJson(contractJson)
+	contents[baseContractsPath+"sepolia/CelestiaRelay.json"] = content
+	bindings = append(bindings, contractBinding{
+		jsonPath: baseContractsPath + "sepolia/CelestiaRelay.json",
+		typeName: "CelestiaRelay",
+		outFile:  "celestia_relay.go",
+	})
 
 	for _, b := range bindings {
 		content := contents[b.jsonPath]
@@ -83,6 +95,17 @@ func checkErr(context string, err any) {
 	if err != nil {
 		log.Fatal(context, ": ", err)
 	}
+}
+
+func downloadJsonContract(url string) io.ReadCloser {
+	log.Print("downloading contracts from ", url)
+	response, err := http.Get(url)
+	checkErr("download json", err)
+	if response.StatusCode != http.StatusOK {
+		response.Body.Close()
+		log.Fatal("invalid status: ", response.Status)
+	}
+	return response.Body
 }
 
 // Download the contracts from rollupsContractsUrl.
@@ -104,6 +127,12 @@ func unzip(r io.Reader) io.ReadCloser {
 	gzipReader, err := gzip.NewReader(r)
 	checkErr("unziping", err)
 	return gzipReader
+}
+
+func readJson(r io.Reader) []byte {
+	content, err := io.ReadAll(r)
+	checkErr("read json", err)
+	return content
 }
 
 // Read the required files from the tar.
