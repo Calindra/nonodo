@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"fmt"
 	"log/slog"
 	"math/big"
 	"strings"
@@ -14,6 +15,10 @@ import (
 	"github.com/celestiaorg/celestia-openrpc/types/share"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/tendermint/tendermint/rpc/client/http"
+
+	shareloader "github.com/calindra/nonodo/internal/dataavailability/contracts/ShareLoader.sol"
 )
 
 // SubmitBlob submits a blob containing "Hello, World!" to the 0xDEADBEEF namespace. It uses the default signer on the running node.
@@ -47,12 +52,12 @@ func SubmitBlob(ctx context.Context, url string, token string, namespaceHex stri
 	height, err = client.Blob.Submit(ctx, []*blob.Blob{helloWorldBlob}, blob.DefaultGasPrice())
 	if err != nil {
 		slog.Error("Submit", "error", err)
-		return 0, 0,0, err
+		return 0, 0, 0, err
 	}
 
 	bProof, err := client.Blob.GetProof(ctx, height, namespace, helloWorldBlob.Commitment)
 	if err != nil {
-		return 0, 0,0, err
+		return 0, 0, 0, err
 	}
 
 	slog.Debug("Blob was included at",
@@ -65,7 +70,7 @@ func SubmitBlob(ctx context.Context, url string, token string, namespaceHex stri
 	// retrievedBlobs, err := client.Blob.GetAll(ctx, height, []share.Namespace{namespace})
 	retrievedBlob, err := client.Blob.Get(ctx, height, namespace, helloWorldBlob.Commitment)
 	if err != nil {
-		return 0, 0,0, err
+		return 0, 0, 0, err
 	}
 
 	// slog.Debug("Blobs are equal?", "equal", bytes.Equal(helloWorldBlob.Commitment, retrievedBlobs[0].Commitment))
@@ -78,12 +83,12 @@ func SubmitBlob(ctx context.Context, url string, token string, namespaceHex stri
 
 	proof, err := client.Blob.GetProof(ctx, height, namespace, helloWorldBlob.Commitment)
 	if err != nil {
-		return 0, 0,0, err
+		return 0, 0, 0, err
 	}
 
 	json, err := retrievedBlob.MarshalJSON()
 	if err != nil {
-		return 0, 0,0, err
+		return 0, 0, 0, err
 	}
 
 	slog.Debug("Proof",
@@ -91,7 +96,7 @@ func SubmitBlob(ctx context.Context, url string, token string, namespaceHex stri
 		"end", (*proof)[0].End(),
 		"index", string(json),
 	)
-	return height, uint64((*proof)[0].Start()),  uint64((*proof)[0].End()), nil
+	return height, uint64((*proof)[0].Start()), uint64((*proof)[0].End()), nil
 }
 
 func getABI() (*abi.ABI, error) {
@@ -189,4 +194,72 @@ func GetBlob(ctx context.Context, id string, url string, token string) ([]byte, 
 	)
 
 	return retrievedBlobs[0].Blob.Data, nil
+}
+
+func connections() (eth *ethclient.Client, trpc *http.HTTP) {
+	ethEndpoint := "https://arbitrum-sepolia-rpc.publicnode.com"
+	trpcEndpoint := "https://celestia-mocha-rpc.publicnode.com:443"
+
+	eth, err := ethclient.Dial(ethEndpoint)
+	if err != nil {
+		panic(fmt.Errorf("failed to connect to the Ethereum node: %w", err))
+	}
+	trpc, err = http.New(trpcEndpoint, "/websocket")
+	if err != nil {
+		panic(fmt.Errorf("failed to connect to the Tendermint RPC: %w", err))
+	}
+
+	return eth, trpc
+}
+
+// GetShareProof returns the share proof for the given share pointer.
+// Ready to be used with the DAVerifier library.
+// RE: https://docs.celestia.org/developers/blobstream-proof-queries#example-rollup-that-uses-the-daverifier
+func GetShareProof(ctx context.Context, height uint64, start uint64, end uint64) (shareProofFinal *shareloader.SharesProof, blockDataRoot [32]byte, err error) {
+	var maxHeight uint64 = 10_000_000
+
+	eth, trpc := connections()
+	defer eth.Close()
+
+	// 1. Get the data commitment
+	dataCommitment, err := GetDataCommitment(eth, int64(height), maxHeight)
+
+	if err != nil {
+		return nil, [32]byte{}, fmt.Errorf("failed to get data commitment: %w", err)
+	}
+
+	h := int64(height)
+
+	// 2. Get the block
+	blockRes, err := trpc.Block(ctx, &h)
+	if err != nil {
+		return nil, [32]byte{}, fmt.Errorf("failed to get block: %w", err)
+	}
+
+	// 3. get data root inclusion commitment
+	dcProof, err := trpc.DataRootInclusionProof(ctx, height, dataCommitment.StartBlock, dataCommitment.EndBlock)
+	if err != nil {
+		return nil, [32]byte{}, fmt.Errorf("failed to get data root inclusion proof: %w", err)
+	}
+
+	// 4. get share proof
+	shareProof, err := trpc.ProveShares(ctx, height, start, end)
+	if err != nil {
+		return nil, [32]byte{}, fmt.Errorf("failed to get share proof: %w", err)
+	}
+
+	nonce := dataCommitment.ProofNonce.Uint64()
+
+	blockDataRoot = [32]byte(blockRes.Block.DataHash)
+
+	slog.Info("ShareProof", "Length", len(shareProof.ShareProofs), "Start", shareProof.ShareProofs[0].Start, "End", shareProof.ShareProofs[0].End)
+
+	return &shareloader.SharesProof{
+		Data:             shareProof.Data,
+		ShareProofs:      toNamespaceMerkleMultiProofs(shareProof.ShareProofs),
+		Namespace:        *namespace(shareProof.NamespaceID, uint8(shareProof.NamespaceVersion)),
+		RowRoots:         toRowRoots(shareProof.RowProof.RowRoots),
+		RowProofs:        toRowProofs(shareProof.RowProof.Proofs),
+		AttestationProof: toAttestationProof(nonce, height, blockDataRoot, dcProof.Proof),
+	}, blockDataRoot, nil
 }

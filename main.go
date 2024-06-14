@@ -127,16 +127,28 @@ func addCelestiaSubcommands(celestiaCmd *cobra.Command) {
 	celestiaCheckProofCmd := &cobra.Command{
 		Use:   "check-proof",
 		Short: "Check proof of a payload sent to Celestia Network",
-		Run: func(cmd *cobra.Command, args []string) {
+		RunE: func(cmd *cobra.Command, args []string) error {
 			slog.Info("Check proof of a payload sent to Celestia Network")
 
+			ctx := context.Background()
+
+			shareProof, dataBlock, err := dataavailability.GetShareProof(
+				ctx, celestia.Height, celestia.Start, celestia.End,
+			)
+
+			if err != nil {
+				return err
+			}
+
+			slog.Info("Share Proof", "proof", shareProof, "dataBlock", dataBlock)
+
+			return nil
 		},
 	}
-	celestiaCheckProofCmd.Flags().StringVar(&celestia.Namespace, "namespace", "", "Namespace of the payload")
 	celestiaCheckProofCmd.Flags().Uint64Var(&celestia.Height, "height", 0, "Height of the block")
 	celestiaCheckProofCmd.Flags().Uint64Var(&celestia.Start, "start", 0, "Start of the proof")
 	celestiaCheckProofCmd.Flags().Uint64Var(&celestia.End, "end", 0, "End of the proof")
-	celestiaCheckProofCmd.MarkFlagsRequiredTogether("namespace", "height", "start", "end")
+	celestiaCheckProofCmd.MarkFlagsRequiredTogether("height", "start", "end")
 
 	// Send to relay
 	var celestiaRelaySend = &cobra.Command{
