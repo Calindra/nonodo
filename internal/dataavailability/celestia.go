@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math/big"
+	stdhttp "net/http"
 	"os"
 	"strings"
 
@@ -20,6 +21,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/labstack/echo/v4"
 	"github.com/tendermint/tendermint/rpc/client/http"
 
 	"github.com/calindra/nonodo/internal/contracts"
@@ -356,4 +358,35 @@ func CallCelestiaRelay(ctx context.Context, height uint64, start uint64, end uin
 	slog.Info("Transaction", "trx", trx)
 
 	return nil
+}
+
+type CelestiaClient struct{}
+
+// Fetch implements Fetch.
+func (c *CelestiaClient) Fetch(ctx echo.Context, id string) (*string, *HttpCustomError) {
+
+	token := os.Getenv("TIA_AUTH_TOKEN")
+	url := os.Getenv("TIA_URL")
+
+	var cont context.Context = ctx.Request().Context()
+
+	if token == "" || url == "" {
+		slog.Error("missing celestia configuration")
+		return nil, NewHttpCustomError(stdhttp.StatusInternalServerError, nil)
+	}
+
+	blob, err := GetBlob(cont, id, url, token)
+
+	if err != nil {
+		msg := err.Error()
+		return nil, NewHttpCustomError(stdhttp.StatusBadRequest, &msg)
+	}
+
+	result := common.Bytes2Hex(blob)
+
+	return &result, nil
+}
+
+func NewCelestiaClient() Fetch {
+	return &CelestiaClient{}
 }
