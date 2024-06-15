@@ -6,6 +6,7 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"encoding/base64"
+	"encoding/binary"
 	"fmt"
 	"log/slog"
 	"math/big"
@@ -29,6 +30,13 @@ import (
 
 // var CELESTIA_RELAY_ADDRESS common.Address = common.HexToAddress("0x9246F2Ca979Ef55FcacB5C4D3F46D36399da760e")
 var CELESTIA_RELAY_ADDRESS common.Address = common.HexToAddress("0x9C78A4C38357179057d23834d6572cFf14890e37")
+
+type GioReqParams struct {
+	Namespace []byte
+	Height    *big.Int
+	Start     *big.Int
+	End       *big.Int
+}
 
 // SubmitBlob submits a blob containing "Hello, World!" to the 0xDEADBEEF namespace. It uses the default signer on the running node.
 func SubmitBlob(ctx context.Context, url string, token string, namespaceHex string, rawData []byte) (height uint64, start uint64, end uint64, err error) {
@@ -115,7 +123,7 @@ func getABI() (*abi.ABI, error) {
 			"inputs": [
 				{
 					"name": "namespace",
-					"type": "bytes32"
+					"type": "bytes29"
 				},
 				{
 					"name": "height",
@@ -149,35 +157,40 @@ func getABI() (*abi.ABI, error) {
 	return &parsed, nil
 }
 
-func parseParams(id string) (*[32]uint8, *big.Int, *big.Int, error) {
+func parseParams(id string) (*GioReqParams, error) {
 	abiParsed, err := getABI()
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	values, err := abiParsed.Methods["CelestiaRequest"].Inputs.UnpackValues(common.Hex2Bytes(id[10:]))
-	if err != nil {
-		slog.Error("Error unpacking blob.", "err", err)
-		return nil, nil, nil, err
-	}
-	namespace := values[0].([32]uint8)
-	height := values[1].(*big.Int)
-	start := values[2].(*big.Int)
-	return &namespace, height, start, nil
-}
-
-func GetBlob(ctx context.Context, id string, url string, token string) ([]byte, error) {
-	namespace, height, start, err := parseParams(id)
 	if err != nil {
 		return nil, err
 	}
-	namespaceV0, err := share.NewBlobNamespaceV0(namespace[22:])
+	values, err := abiParsed.Methods["CelestiaRequest"].Inputs.UnpackValues(common.Hex2Bytes(id[2:]))
+	if err != nil {
+		slog.Error("Error unpacking blob.", "err", err)
+		return nil, err
+	}
+	namespace := values[0].([29]uint8)
+	height := values[1].(*big.Int)
+	start := values[2].(*big.Int)
+	res := GioReqParams{
+		Namespace: namespace[:],
+		Height:    height,
+		Start:     start,
+	}
+	return &res, nil
+}
+
+func GetBlob(ctx context.Context, id string, url string, token string) ([]byte, error) {
+	gioReqParams, err := parseParams(id)
+	if err != nil {
+		return nil, err
+	}
+	namespaceV0, err := share.NewBlobNamespaceV0(gioReqParams.Namespace[22:])
 	if err != nil {
 		return nil, err
 	}
 	slog.Debug("CelestiaRequest",
 		"namespaceV0", common.Bytes2Hex(namespaceV0[:]),
-		"height", height,
-		"start", start,
+		"height", gioReqParams.Height,
+		"start", gioReqParams.Start,
 	)
 	client, err := client.NewClient(ctx, url, token)
 	if err != nil {
@@ -185,7 +198,7 @@ func GetBlob(ctx context.Context, id string, url string, token string) ([]byte, 
 	}
 	// namespaceV0, err = share.NewBlobNamespaceV0([]byte{0xDE, 0xAD, 0xBE, 0xEF})
 
-	celestiaHeight := height.Uint64()
+	celestiaHeight := gioReqParams.Height.Uint64()
 	celestiaNamespace := []share.Namespace{namespaceV0}
 	retrievedBlobs, err := client.Blob.GetAll(ctx, celestiaHeight, celestiaNamespace)
 	if err != nil {
@@ -360,15 +373,50 @@ func CallCelestiaRelay(ctx context.Context, height uint64, start uint64, end uin
 	return nil
 }
 
+func FetchFromTendermint(ctx context.Context, id string) (*string, error) {
+	gioReqParams, err := parseParams(id)
+	if err != nil {
+		return nil, err
+	}
+	trpcEndpoint := "https://celestia-mocha-rpc.publicnode.com:443"
+	trpc, err := http.New(trpcEndpoint, "/websocket")
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to the Tendermint RPC: %w", err)
+	}
+	blockHeight := gioReqParams.Height.Uint64()
+	shareStart := gioReqParams.Start.Uint64()
+	shareEnd := shareStart + 1
+
+	shareProof, err := trpc.ProveShares(ctx, blockHeight, shareStart, shareEnd)
+	if err != nil {
+		return nil, err
+	}
+	namespace := shareProof.Data[0][:29]
+	dataRawLen := shareProof.Data[0][30:34]
+	dataLen := binary.BigEndian.Uint32(dataRawLen)
+	data := shareProof.Data[0][34 : 34+dataLen]
+	slog.Debug("Result",
+		"namespace", common.Bytes2Hex(namespace),
+		"dataLen", binary.BigEndian.Uint32(dataRawLen),
+		"data", common.Bytes2Hex(data),
+		"data", string(data),
+	)
+	dataAsHex := common.Bytes2Hex(data)
+	return &dataAsHex, nil
+}
+
 type CelestiaClient struct{}
 
 // Fetch implements Fetch.
 func (c *CelestiaClient) Fetch(ctx echo.Context, id string) (*string, *HttpCustomError) {
+	var cont context.Context = ctx.Request().Context()
+	data, err := FetchFromTendermint(cont, id)
+	if err == nil {
+		return data, nil
+	}
 
 	token := os.Getenv("TIA_AUTH_TOKEN")
 	url := os.Getenv("TIA_URL")
-
-	var cont context.Context = ctx.Request().Context()
 
 	if token == "" || url == "" {
 		slog.Error("missing celestia configuration")

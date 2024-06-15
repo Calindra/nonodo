@@ -2,8 +2,6 @@ package dataavailability
 
 import (
 	"context"
-	"encoding/binary"
-	"fmt"
 	"log/slog"
 	"math/big"
 	"os"
@@ -12,7 +10,6 @@ import (
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/suite"
-	"github.com/tendermint/tendermint/rpc/client/http"
 )
 
 type CelestiaSuite struct {
@@ -23,35 +20,37 @@ func (s *CelestiaSuite) SetupTest() {
 	commons.ConfigureLog(slog.LevelDebug)
 }
 
-func (s *CelestiaSuite) TestTendermint() {
-	trpcEndpoint := "https://celestia-mocha-rpc.publicnode.com:443"
-	trpc, err := http.New(trpcEndpoint, "/websocket")
-	if err != nil {
-		panic(fmt.Errorf("failed to connect to the Tendermint RPC: %w", err))
-	}
-	ctx := context.Background()
-	blockHeight := 2034386
-	shareStart := 10
-	shareEnd := 11
-	// blockHeight := 2048473
-	// shareStart := 16
-	// shareEnd := 17
-
-	shareProof, err := trpc.ProveShares(ctx, uint64(blockHeight), uint64(shareStart), uint64(shareEnd))
-	if err != nil {
-		s.Fail(fmt.Sprintf("failed to get share proof: %s", err))
-	}
-	namespace := shareProof.Data[0][:29]
-	dataRawLen := shareProof.Data[0][30:34]
-	dataLen := binary.BigEndian.Uint32(dataRawLen)
-	data := shareProof.Data[0][34 : 34+dataLen]
-	slog.Debug("Result",
-		"namespace", common.Bytes2Hex(namespace),
-		"dataLen", binary.BigEndian.Uint32(dataRawLen),
-		"data", common.Bytes2Hex(data),
-		"data", string(data),
+func (s *CelestiaSuite) createGioID(blockHeight uint64, shareStart uint64, shareEnd uint64) string {
+	abiParsed, err := getABI()
+	s.NoError(err)
+	// stringNamespace := "00000000000000000000000000000000000000000000000000000000deadbeef"
+	stringNamespace := "00000000000000000000000000000000000000000000000000deadbeef"
+	namespace := common.Hex2Bytes(stringNamespace)
+	var bytesNamespace [29]byte
+	copy(bytesNamespace[:], namespace)
+	height := big.NewInt(int64(blockHeight))
+	start := big.NewInt(int64(shareStart))
+	end := big.NewInt(int64(shareEnd))
+	payload, err := abiParsed.Pack(
+		"CelestiaRequest",
+		bytesNamespace,
+		&height,
+		&start,
+		&end,
 	)
-	s.Fail("x")
+	s.NoError(err)
+	gioID := "0x" + common.Bytes2Hex(payload[4:])
+	return gioID
+}
+
+func (s *CelestiaSuite) TestTendermint() {
+	ctx := context.Background()
+	gioID := s.createGioID(2034386, 10, 11)
+	slog.Debug("FetchFromTendermint", "gioID", gioID)
+	dataAsHexStr, err := FetchFromTendermint(ctx, gioID)
+	s.NoError(err)
+	dataAsBytes := common.Hex2Bytes(*dataAsHexStr)
+	s.Equal("Hello, World! Cartesi Rocks!", string(dataAsBytes))
 }
 
 func (s *CelestiaSuite) XTestSubmitBlob() {
@@ -68,32 +67,14 @@ func (s *CelestiaSuite) XTestSubmitBlob() {
 	}
 	slog.Debug("Configs", "url", url, "token", token)
 	ctx := context.Background()
-	rawData := []byte(`Hello, World! Cartesi Rocks!
-	Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello`)
-	heightU, startU, endU, err := SubmitBlob(ctx, url, token, "DEADBEEF", rawData)
+	strData := `Hello, World! Cartesi Rocks!
+	Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello, World! Cartesi Rocks!Hello`
+	rawData := []byte(strData)
+	blockHeight, shareStart, shareEnd, err := SubmitBlob(ctx, url, token, "DEADBEEF", rawData)
 	s.NoError(err)
 
 	// test the fetch
-	abiParsed, err := getABI()
-	s.NoError(err)
-
-	// dead beef
-	stringNamespace := "00000000000000000000000000000000000000000000000000000000deadbeef"
-	namespace := common.Hex2Bytes(stringNamespace)
-	var bytes32Value [32]byte
-	copy(bytes32Value[:], namespace)
-	height := big.NewInt(int64(heightU))
-	start := big.NewInt(int64(startU))
-	end := big.NewInt(int64(endU))
-	payload, err := abiParsed.Pack(
-		"CelestiaRequest",
-		bytes32Value,
-		&height,
-		&start,
-		&end,
-	)
-	s.NoError(err)
-	gioID := "0x" + common.Bytes2Hex(payload)
+	gioID := s.createGioID(blockHeight, shareStart, shareEnd)
 	slog.Debug("ID",
 		"id", gioID,
 		"namespace", namespace,
@@ -107,32 +88,8 @@ func (s *CelestiaSuite) XTestSubmitBlob() {
 }
 
 func (s *CelestiaSuite) XTestGioRequest() {
-	abiParsed, err := getABI()
-	s.NoError(err)
-	// dead beef
-	stringNamespace := "00000000000000000000000000000000000000000000000000000000deadbeef"
-	namespace := common.Hex2Bytes(stringNamespace)
-	var bytes32Value [32]byte
-	copy(bytes32Value[:], namespace)
-	height := big.NewInt(1490181)
-	start := big.NewInt(1)
-	// height := big.NewInt(2040311)
-	// start := big.NewInt(14)
+	gioID := s.createGioID(1490181, 1, 2)
 
-	// height := big.NewInt(731137)
-	// start := big.NewInt(0)
-	payload, err := abiParsed.Pack(
-		"CelestiaRequest",
-		bytes32Value,
-		&height,
-		&start,
-	)
-	s.NoError(err)
-	id := "0x" + common.Bytes2Hex(payload)
-	slog.Debug("ID",
-		"id", id,
-		"namespace", namespace,
-	)
 	ctx := context.Background()
 	token := os.Getenv("TIA_AUTH_TOKEN")
 	url := os.Getenv("TIA_URL")
@@ -145,7 +102,7 @@ func (s *CelestiaSuite) XTestGioRequest() {
 		slog.Debug("missing celestia configuration")
 		return
 	}
-	data, err := GetBlob(ctx, id, url, token)
+	data, err := GetBlob(ctx, gioID, url, token)
 	s.NoError(err)
 	slog.Debug("GetBlob", "data", string(data))
 	// s.Fail("x")
