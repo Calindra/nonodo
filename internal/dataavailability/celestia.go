@@ -28,8 +28,9 @@ import (
 	"github.com/calindra/nonodo/internal/contracts"
 )
 
-// var CELESTIA_RELAY_ADDRESS common.Address = common.HexToAddress("0x9246F2Ca979Ef55FcacB5C4D3F46D36399da760e")
-var CELESTIA_RELAY_ADDRESS common.Address = common.HexToAddress("0x9C78A4C38357179057d23834d6572cFf14890e37")
+var CELESTIA_RELAY_ADDRESS common.Address = common.HexToAddress("0x9246F2Ca979Ef55FcacB5C4D3F46D36399da760e")
+
+// var CELESTIA_RELAY_ADDRESS common.Address = common.HexToAddress("0x096a7847B754647e06A887BeF0192689148A0C33")
 
 type GioReqParams struct {
 	Namespace []byte
@@ -355,13 +356,19 @@ func CallCelestiaRelay(ctx context.Context, height uint64, start uint64, end uin
 	auth.GasPrice = gasPrice
 
 	// Create a new instance of the contract
-	relay, err := contracts.NewCelestiaRelay(CELESTIA_RELAY_ADDRESS, eth)
+	celestiaRelayAddress := CELESTIA_RELAY_ADDRESS
+	envAddress := os.Getenv("CELESTIA_RELAY_ADDRESS")
+	if envAddress != "" {
+		celestiaRelayAddress = common.HexToAddress(envAddress)
+	}
+	relay, err := contracts.NewCelestiaRelay(celestiaRelayAddress, eth)
 
 	if err != nil {
 		return err
 	}
 
 	// Call the contract
+	slog.Debug("call relay shares", "dappAddress", dappAddress)
 	trx, err := relay.RelayShares(auth, dappAddress, *proofs, root, execLayerData)
 
 	if err != nil {
@@ -386,6 +393,11 @@ func FetchFromTendermint(ctx context.Context, id string) (*string, error) {
 	blockHeight := gioReqParams.Height.Uint64()
 	shareStart := gioReqParams.Start.Uint64()
 	shareEnd := shareStart + 1
+	slog.Debug("Fetch data",
+		"blockHeight", blockHeight,
+		"shareStart", shareStart,
+		"shareEnd", shareEnd,
+	)
 
 	shareProof, err := trpc.ProveShares(ctx, blockHeight, shareStart, shareEnd)
 	if err != nil {
