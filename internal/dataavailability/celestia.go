@@ -292,8 +292,7 @@ func GetShareProof(ctx context.Context, height uint64, start uint64, end uint64)
 	}, blockDataRoot, nil
 }
 
-func CallCelestiaRelay(ctx context.Context, height uint64, start uint64, end uint64, dappAddress common.Address, execLayerData []byte, ethEndpointRPC string) error {
-	var chainId int64 = 31337
+func CallCelestiaRelay(ctx context.Context, height uint64, start uint64, end uint64, dappAddress common.Address, execLayerData []byte, ethEndpointRPC string, chainId int64) error {
 	pk_celestia := os.Getenv("PK_CELESTIA")
 
 	if pk_celestia == "" {

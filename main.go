@@ -75,6 +75,7 @@ type CelestiaOpts struct {
 	Start     uint64
 	End       uint64
 	RpcUrl    string
+	chainId   int64
 }
 
 var celestiaCmd = &cobra.Command{
@@ -160,15 +161,7 @@ func addCelestiaSubcommands(celestiaCmd *cobra.Command) {
 
 			ctx := context.Background()
 			app := common.HexToAddress("0xab7528bb862fb57e8a2bcd567a2e929a0be56a5e")
-			var ethEndpointRPC string
-
-			if celestia.RpcUrl == "" {
-				ethEndpointRPC = "http://localhost:8545"
-			} else {
-				ethEndpointRPC = opts.RpcUrl
-			}
-
-			err := dataavailability.CallCelestiaRelay(ctx, celestia.Height, celestia.Start, celestia.End, app, []byte{}, ethEndpointRPC)
+			err := dataavailability.CallCelestiaRelay(ctx, celestia.Height, celestia.Start, celestia.End, app, []byte{}, celestia.RpcUrl, celestia.chainId)
 
 			if err != nil {
 				return err
@@ -178,10 +171,12 @@ func addCelestiaSubcommands(celestiaCmd *cobra.Command) {
 
 			return nil
 		}}
+	const goTestnetChainId = 31337
 	celestiaRelaySend.Flags().Uint64Var(&celestia.Height, "height", 0, "Height of the block")
 	celestiaRelaySend.Flags().Uint64Var(&celestia.Start, "start", 0, "Start of the proof")
 	celestiaRelaySend.Flags().Uint64Var(&celestia.End, "end", 0, "End of the proof")
-	celestiaRelaySend.Flags().StringVar(&celestia.RpcUrl, "rpc-url", "",
+	celestiaRelaySend.Flags().Int64Var(&celestia.chainId, "chain-id", goTestnetChainId, "Chain ID of the network")
+	celestiaRelaySend.Flags().StringVar(&celestia.RpcUrl, "rpc-url", "http://localhost:8545",
 		"If set, celestia command connects to this url instead of setting up Anvil")
 	celestiaRelaySend.MarkFlagsRequiredTogether("height", "start", "end")
 
