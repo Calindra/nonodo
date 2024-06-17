@@ -159,7 +159,15 @@ func addCelestiaSubcommands(celestiaCmd *cobra.Command) {
 
 			ctx := context.Background()
 			app := common.HexToAddress("0xab7528bb862fb57e8a2bcd567a2e929a0be56a5e")
-			err := dataavailability.CallCelestiaRelay(ctx, celestia.Height, celestia.Start, celestia.End, app, []byte{})
+			var ethEndpointRPC string
+
+			if opts.RpcUrl == "" {
+				ethEndpointRPC = "http://localhost:8545"
+			} else {
+				ethEndpointRPC = opts.RpcUrl
+			}
+
+			err := dataavailability.CallCelestiaRelay(ctx, celestia.Height, celestia.Start, celestia.End, app, []byte{}, ethEndpointRPC)
 
 			if err != nil {
 				return err

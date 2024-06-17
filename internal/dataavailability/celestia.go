@@ -292,7 +292,7 @@ func GetShareProof(ctx context.Context, height uint64, start uint64, end uint64)
 	}, blockDataRoot, nil
 }
 
-func CallCelestiaRelay(ctx context.Context, height uint64, start uint64, end uint64, dappAddress common.Address, execLayerData []byte) error {
+func CallCelestiaRelay(ctx context.Context, height uint64, start uint64, end uint64, dappAddress common.Address, execLayerData []byte, ethEndpointRPC string) error {
 	var chainId int64 = 31337
 	pk_celestia := os.Getenv("PK_CELESTIA")
 
@@ -301,12 +301,7 @@ func CallCelestiaRelay(ctx context.Context, height uint64, start uint64, end uin
 	}
 
 	// Connect to an Ethereum node
-	// eth, _, err := connections()
-	// if err != nil {
-	// 	return err
-	// }
-	ethEndpoint := "http://localhost:8545"
-	eth, err := ethclient.Dial(ethEndpoint)
+	eth, err := ethclient.Dial(ethEndpointRPC)
 	if err != nil {
 		return fmt.Errorf("failed to connect to the Ethereum node: %w", err)
 	}
