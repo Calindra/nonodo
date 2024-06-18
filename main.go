@@ -25,6 +25,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var APP_ADDRESS = common.HexToAddress(devnet.ApplicationAddress)
+
 var startupMessage = `
 Http Rollups for development started at http://localhost:ROLLUPS_PORT
 GraphQL running at http://localhost:HTTP_PORT/graphql
@@ -160,8 +162,7 @@ func addCelestiaSubcommands(celestiaCmd *cobra.Command) {
 			slog.Info("Send a payload to Celestia Relay")
 
 			ctx := context.Background()
-			app := common.HexToAddress("0xab7528bb862fb57e8a2bcd567a2e929a0be56a5e")
-			err := dataavailability.CallCelestiaRelay(ctx, celestia.Height, celestia.Start, celestia.End, app, []byte{}, celestia.RpcUrl, celestia.chainId)
+			err := dataavailability.CallCelestiaRelay(ctx, celestia.Height, celestia.Start, celestia.End, APP_ADDRESS, []byte{}, celestia.RpcUrl, celestia.chainId)
 
 			if err != nil {
 				return err
