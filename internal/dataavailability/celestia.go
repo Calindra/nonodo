@@ -415,8 +415,8 @@ type CelestiaClient struct{}
 
 // Fetch implements Fetch.
 func (c *CelestiaClient) Fetch(ctx echo.Context, id string) (*string, *HttpCustomError) {
-	var cont context.Context = ctx.Request().Context()
-	data, err := FetchFromTendermint(cont, id)
+	var requestContext context.Context = ctx.Request().Context()
+	data, err := FetchFromTendermint(requestContext, id)
 	if err == nil {
 		return data, nil
 	}
@@ -429,7 +429,7 @@ func (c *CelestiaClient) Fetch(ctx echo.Context, id string) (*string, *HttpCusto
 		return nil, NewHttpCustomError(stdhttp.StatusInternalServerError, nil)
 	}
 
-	blob, err := GetBlob(cont, id, url, token)
+	blob, err := GetBlob(requestContext, id, url, token)
 
 	if err != nil {
 		msg := err.Error()
