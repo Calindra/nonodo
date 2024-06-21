@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/calindra/nonodo/internal/contracts"
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -48,27 +49,20 @@ func (w InputterWorker) Start(ctx context.Context, ready chan<- struct{}) error 
 		return fmt.Errorf("inputter: bind input box: %w", err)
 	}
 	ready <- struct{}{}
-
-	// First, read the event logs to get the past inputs; then, watch the event logs to get the
-	// new ones. There is a race condition where we might lose inputs sent between the
-	// readPastInputs call and the watchNewInputs call. Given that nonodo is a development node,
-	// we accept this race condition.
-	err = w.readPastInputs(ctx, client, inputBox)
-	if err != nil {
-		return err
-	}
 	return w.watchNewInputs(ctx, client, inputBox)
 }
 
 // Read inputs starting from the input box deployment block until the latest block.
-func (w InputterWorker) readPastInputs(
+func (w *InputterWorker) readPastInputs(
 	ctx context.Context,
 	client *ethclient.Client,
 	inputBox *contracts.InputBox,
+	startBlockNumber uint64,
 ) error {
+	slog.Debug("readPastInputs", "startBlockNumber", startBlockNumber)
 	opts := bind.FilterOpts{
 		Context: ctx,
-		Start:   w.InputBoxBlock,
+		Start:   startBlockNumber,
 	}
 	filter := []common.Address{w.ApplicationAddress}
 	it, err := inputBox.FilterInputAdded(&opts, filter, nil)
@@ -77,6 +71,7 @@ func (w InputterWorker) readPastInputs(
 	}
 	defer it.Close()
 	for it.Next() {
+		w.InputBoxBlock = it.Event.Raw.BlockNumber - 1
 		if err := w.addInput(ctx, client, it.Event); err != nil {
 			return err
 		}
@@ -91,27 +86,84 @@ func (w InputterWorker) watchNewInputs(
 	client *ethclient.Client,
 	inputBox *contracts.InputBox,
 ) error {
-	logs := make(chan *contracts.InputBoxInputAdded)
-	opts := bind.WatchOpts{
-		Context: ctx,
-	}
-	filter := []common.Address{w.ApplicationAddress}
-	sub, err := inputBox.WatchInputAdded(&opts, logs, filter, nil)
-	if err != nil {
-		return fmt.Errorf("inputter: watch input added: %w", err)
-	}
-	defer sub.Unsubscribe()
+	var sub ethereum.Subscription
+	var err error
+	reconnectDelay := 5 * time.Second
+	retryCount := 0
+	maxRetry := 3
+	currentBlock := w.InputBoxBlock
 	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case err := <-sub.Err():
-			return err
-		case event := <-logs:
-			if err := w.addInput(ctx, client, event); err != nil {
-				return err
+		// First, read the event logs to get the past inputs; then, watch the event logs to get the
+		// new ones. There is a race condition where we might lose inputs sent between the
+		// readPastInputs call and the watchNewInputs call. Given that nonodo is a development node,
+		// we accept this race condition.
+		err = w.readPastInputs(ctx, client, inputBox, currentBlock)
+		if err != nil {
+			if retryCount > maxRetry {
+				return fmt.Errorf("readPastInputs: %w", err)
+			} else {
+				slog.Warn("Inputter", "error", err)
+				slog.Info("Inputter reconnecting", "reconnectDelay", reconnectDelay)
+				time.Sleep(reconnectDelay)
+				continue
 			}
 		}
+
+		// Create a new subscription
+		logs := make(chan *contracts.InputBoxInputAdded)
+		opts := bind.WatchOpts{
+			Context: ctx,
+		}
+		filter := []common.Address{w.ApplicationAddress}
+		sub, err = inputBox.WatchInputAdded(&opts, logs, filter, nil)
+		if err != nil {
+			if retryCount > maxRetry {
+				return fmt.Errorf("inputter: watch input added: %w", err)
+			} else {
+				slog.Warn("Inputter", "error", err)
+				slog.Info("Inputter reconnecting", "reconnectDelay", reconnectDelay)
+				time.Sleep(reconnectDelay)
+				continue
+			}
+		}
+
+		// Handle the subscription in a separate goroutine
+		errCh := make(chan error, 1)
+		go func() {
+			for {
+				select {
+				case <-ctx.Done():
+					errCh <- ctx.Err()
+					return
+				case err := <-sub.Err():
+					errCh <- err
+					return
+				case event := <-logs:
+					retryCount = 0
+					currentBlock = event.Raw.BlockNumber - 1
+					if err := w.addInput(ctx, client, event); err != nil {
+						errCh <- err
+						return
+					}
+				}
+			}
+		}()
+
+		// Wait for an error or context cancellation
+		err = <-errCh
+		sub.Unsubscribe()
+
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+
+		if err == nil {
+			return nil
+		}
+
+		slog.Warn("Inputter", "error", err)
+		slog.Info("Inputter reconnecting", "reconnectDelay", reconnectDelay)
+		time.Sleep(reconnectDelay)
 	}
 }
 
