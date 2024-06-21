@@ -2,6 +2,7 @@ package espresso
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
 	"time"
@@ -92,9 +93,33 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 				if err != nil {
 					return err
 				}
+
+				// assume the following encoding
+				// transaction = JSON.stringify({
+				//		 	signature,
+				//		 	typedData: btoa(JSON.stringify(typedData)),
+				//		 })
+				msgSender, typedData, err := ExtractSigAndData(string(transaction))
+				if err != nil {
+					return err
+				}
+				fmt.Println(msgSender)
+				// type EspressoMessage struct {
+				// 	nonce   uint32 `json:"nonce"`
+				// 	payload string `json:"payload"`
+				// }
+				nonce, ok1 := typedData.Message["nonce"].(uint32)
+				payload, ok2 := typedData.Message["payload"].(string)
+				if !ok1 || !ok2 {
+					slog.Debug("type assertion error ")
+				}
+				fmt.Println("nonce ", nonce)
+				fmt.Println("payload ", payload)
+
 				_, err = e.InputRepository.Create(model.AdvanceInput{
 					Index:       int(index),
-					Payload:     transaction,
+					MsgSender:   msgSender,
+					Payload:     []byte(payload),
 					BlockNumber: currentBlockHeight,
 				})
 				if err != nil {
