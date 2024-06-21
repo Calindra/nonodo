@@ -59,7 +59,10 @@ func (w *InputterWorker) readPastInputs(
 	inputBox *contracts.InputBox,
 	startBlockNumber uint64,
 ) error {
-	slog.Debug("readPastInputs", "startBlockNumber", startBlockNumber)
+	slog.Debug("readPastInputs",
+		"startBlockNumber", startBlockNumber,
+		"dappAddress", w.ApplicationAddress,
+	)
 	opts := bind.FilterOpts{
 		Context: ctx,
 		Start:   startBlockNumber,
@@ -103,7 +106,7 @@ func (w InputterWorker) watchNewInputs(
 			if retryCount > maxRetry {
 				return fmt.Errorf("readPastInputs: %w", err)
 			} else {
-				slog.Warn("Inputter", "error", err)
+				slog.Error("Inputter", "error", err)
 				slog.Info("Inputter reconnecting", "reconnectDelay", reconnectDelay)
 				time.Sleep(reconnectDelay)
 				continue
@@ -121,7 +124,7 @@ func (w InputterWorker) watchNewInputs(
 			if retryCount > maxRetry {
 				return fmt.Errorf("inputter: watch input added: %w", err)
 			} else {
-				slog.Warn("Inputter", "error", err)
+				slog.Error("Inputter", "error", err)
 				slog.Info("Inputter reconnecting", "reconnectDelay", reconnectDelay)
 				time.Sleep(reconnectDelay)
 				continue
@@ -162,7 +165,7 @@ func (w InputterWorker) watchNewInputs(
 			return nil
 		}
 
-		slog.Warn("Inputter", "error", err)
+		slog.Error("Inputter", "error", err)
 		slog.Info("Inputter reconnecting", "reconnectDelay", reconnectDelay)
 		time.Sleep(reconnectDelay)
 	}
