@@ -88,7 +88,8 @@ func (w InputterWorker) watchNewInputs(
 ) error {
 	var sub ethereum.Subscription
 	var err error
-	reconnectDelay := 5 * time.Second
+	seconds := 5
+	reconnectDelay := time.Duration(seconds) * time.Second
 	retryCount := 0
 	maxRetry := 3
 	currentBlock := w.InputBoxBlock
