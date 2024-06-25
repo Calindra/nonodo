@@ -7,7 +7,9 @@ package main
 import (
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"strings"
@@ -25,7 +27,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var APP_ADDRESS = common.HexToAddress(devnet.ApplicationAddress)
+var (
+	MAX_FILE_SIZE uint64 = 1_440_000 // 1,44 MB
+	APP_ADDRESS          = common.HexToAddress(devnet.ApplicationAddress)
+)
 
 var startupMessage = `
 Http Rollups for development started at http://localhost:ROLLUPS_PORT
@@ -71,13 +76,15 @@ var addressBookCmd = &cobra.Command{
 
 // Celestia Network
 type CelestiaOpts struct {
-	Payload   string
-	Namespace string
-	Height    uint64
-	Start     uint64
-	End       uint64
-	RpcUrl    string
-	chainId   int64
+	Payload     string
+	PayloadPath string
+	PayloadUrl  string
+	Namespace   string
+	Height      uint64
+	Start       uint64
+	End         uint64
+	RpcUrl      string
+	chainId     int64
 }
 
 var celestiaCmd = &cobra.Command{
@@ -92,23 +99,135 @@ var (
 	opts  = nonodo.NewNonodoOpts()
 )
 
+func markFlagRequired(cmd *cobra.Command, flagNames ...string) {
+	for _, flagName := range flagNames {
+		err := cmd.MarkFlagRequired(flagName)
+		cobra.CheckErr(err)
+	}
+}
+
+func ArrBytesAttr(key string, v []byte) slog.Attr {
+	var str string
+	for _, b := range v {
+		s := fmt.Sprintf("%02x", b)
+		str += s
+	}
+	return slog.String(key, str)
+}
+
+func CheckIfValidSize(size uint64) error {
+	if size > MAX_FILE_SIZE {
+		return fmt.Errorf("File size is too big %d bytes", size)
+	}
+
+	return nil
+}
+
 func addCelestiaSubcommands(celestiaCmd *cobra.Command) {
 	var celestia = &CelestiaOpts{}
+
+	// Send file
+	celestiaSendFileUrlCmd := &cobra.Command{
+		Use:   "send-file-url",
+		Short: "Send a url file to Celestia Network",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			slog.Debug("Send a url file to Celestia Network")
+			ctx := cmd.Context()
+
+			slog.Info("URL", "url", celestia.PayloadUrl)
+
+			// Download file
+			content, err := downloadFile(ctx, celestia.PayloadUrl)
+
+			if err != nil {
+				return err
+			}
+
+			// Check if the file is valid
+			err = CheckIfValidSize(uint64(len(content)))
+			if err != nil {
+				return err
+			}
+
+			slog.Info("File content", ArrBytesAttr("hex", content))
+			// slog.Info("File content", slog.String("Content", string(content)))
+
+			token, url, err := getTokenFromTia()
+			if err != nil {
+				return err
+			}
+
+			height, start, end, err := dataavailability.SubmitBlob(ctx, url, token, celestia.Namespace, []byte(celestia.Payload))
+
+			if err != nil {
+				slog.Error("Submit", "error", err)
+				return err
+			}
+
+			slog.Info("Blob was included at", "height", height, "start", start, "end", end)
+
+			return nil
+		},
+	}
+	celestiaSendFileUrlCmd.Flags().StringVar(&celestia.PayloadUrl, "url", "", "File to send to Celestia Network")
+	celestiaSendFileUrlCmd.Flags().StringVar(&celestia.Namespace, "namespace", "", "Namespace of the payload")
+	markFlagRequired(celestiaSendFileUrlCmd, "url", "namespace")
+
+	celestiaSendFileCmd := &cobra.Command{
+		Use:   "send-file",
+		Short: "Send a file to Celestia Network",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			slog.Debug("Send a file to Celestia Network")
+
+			ctx := cmd.Context()
+
+			content, err := readFile(ctx, celestia.PayloadPath)
+			if err != nil {
+				return err
+			}
+
+			// Check if the file is valid
+			err = CheckIfValidSize(uint64(len(content)))
+			if err != nil {
+				return err
+			}
+
+			slog.Info("File content", ArrBytesAttr("hex", content))
+
+			token, url, err := getTokenFromTia()
+			if err != nil {
+				return err
+			}
+
+			height, start, end, err := dataavailability.SubmitBlob(ctx, url, token, celestia.Namespace, []byte(celestia.Payload))
+
+			if err != nil {
+				slog.Error("Submit", "error", err)
+				return err
+			}
+
+			slog.Info("Blob was included at", "height", height, "start", start, "end", end)
+
+			return nil
+		},
+	}
+	celestiaSendFileCmd.Flags().StringVar(&celestia.PayloadPath, "file", "", "File to send to Celestia Network")
+	celestiaSendFileCmd.Flags().StringVar(&celestia.Namespace, "namespace", "", "Namespace of the payload")
+	markFlagRequired(celestiaSendFileCmd, "file", "namespace")
+	cobra.CheckErr(celestiaSendFileCmd.MarkFlagFilename("file"))
 
 	// Send
 	celestiaSendCmd := &cobra.Command{
 		Use:   "send",
 		Short: "Send a payload to Celestia Network",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			slog.Info("Send a payload to Celestia Network", "args", args, "celestia", celestia)
+			slog.Info("Send a payload to Celestia Network")
 
-			ctx := context.Background()
-			token := os.Getenv("TIA_AUTH_TOKEN")
-			url := os.Getenv("TIA_URL")
+			ctx := cmd.Context()
 
-			if token == "" || url == "" {
-				slog.Error("Missing environment variables", "token", token, "url", url)
-				return fmt.Errorf("missing environment variables")
+			token, url, err := getTokenFromTia()
+			if err != nil {
+				return err
 			}
 
 			height, start, end, err := dataavailability.SubmitBlob(ctx, url, token, celestia.Namespace, []byte(celestia.Payload))
@@ -125,7 +244,7 @@ func addCelestiaSubcommands(celestiaCmd *cobra.Command) {
 	}
 	celestiaSendCmd.Flags().StringVar(&celestia.Payload, "payload", "", "Payload to send to Celestia Network")
 	celestiaSendCmd.Flags().StringVar(&celestia.Namespace, "namespace", "", "Namespace of the payload")
-	celestiaSendCmd.MarkFlagsRequiredTogether("payload", "namespace")
+	markFlagRequired(celestiaSendCmd, "payload", "namespace")
 
 	// Check proof
 	celestiaCheckProofCmd := &cobra.Command{
@@ -134,7 +253,7 @@ func addCelestiaSubcommands(celestiaCmd *cobra.Command) {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			slog.Info("Check proof of a payload sent to Celestia Network")
 
-			ctx := context.Background()
+			ctx := cmd.Context()
 
 			shareProof, dataBlock, err := dataavailability.GetShareProof(
 				ctx, celestia.Height, celestia.Start, celestia.End,
@@ -152,7 +271,7 @@ func addCelestiaSubcommands(celestiaCmd *cobra.Command) {
 	celestiaCheckProofCmd.Flags().Uint64Var(&celestia.Height, "height", 0, "Height of the block")
 	celestiaCheckProofCmd.Flags().Uint64Var(&celestia.Start, "start", 0, "Start of the proof")
 	celestiaCheckProofCmd.Flags().Uint64Var(&celestia.End, "end", 0, "End of the proof")
-	celestiaCheckProofCmd.MarkFlagsRequiredTogether("height", "start", "end")
+	markFlagRequired(celestiaCheckProofCmd, "height", "start", "end")
 
 	// Send to relay
 	var celestiaRelaySend = &cobra.Command{
@@ -161,7 +280,7 @@ func addCelestiaSubcommands(celestiaCmd *cobra.Command) {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			slog.Info("Send a payload to Celestia Relay")
 
-			ctx := context.Background()
+			ctx := cmd.Context()
 			err := dataavailability.CallCelestiaRelay(ctx, celestia.Height, celestia.Start, celestia.End, APP_ADDRESS, []byte{}, celestia.RpcUrl, celestia.chainId)
 
 			if err != nil {
@@ -179,9 +298,69 @@ func addCelestiaSubcommands(celestiaCmd *cobra.Command) {
 	celestiaRelaySend.Flags().Int64Var(&celestia.chainId, "chain-id", goTestnetChainId, "Chain ID of the network")
 	celestiaRelaySend.Flags().StringVar(&celestia.RpcUrl, "rpc-url", "http://localhost:8545",
 		"If set, celestia command connects to this url instead of setting up Anvil")
-	celestiaRelaySend.MarkFlagsRequiredTogether("height", "start", "end")
+	markFlagRequired(celestiaRelaySend, "height", "start", "end")
 
-	celestiaCmd.AddCommand(celestiaSendCmd, celestiaCheckProofCmd, celestiaRelaySend)
+	celestiaCmd.AddCommand(celestiaSendCmd, celestiaCheckProofCmd, celestiaRelaySend, celestiaSendFileCmd, celestiaSendFileUrlCmd)
+}
+
+func downloadFile(ctx context.Context, url string) ([]byte, error) {
+	slog.Info("Download file", "url", url)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+
+	if err != nil {
+		slog.Error("Create request", "error", err)
+		return nil, err
+	}
+
+	client := http.DefaultClient
+	resp, err := client.Do(req)
+
+	if err != nil {
+		slog.Error("Get file", "error", err)
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+	content, err := io.ReadAll(resp.Body)
+	if err != nil {
+		slog.Error("Read file", "error", err)
+		return nil, err
+	}
+	return content, nil
+}
+
+func readFile(_ context.Context, path string) ([]byte, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		slog.Error("Open file", "error", err)
+		return nil, err
+	}
+	defer file.Close()
+	stat, err := file.Stat()
+	if err != nil {
+		slog.Error("Stat file", "error", err)
+		return nil, err
+	}
+	size := stat.Size()
+	content := make([]byte, size)
+	_, err = file.Read(content)
+
+	if err != nil {
+		slog.Error("Read file", "error", err)
+		return nil, err
+	}
+	return content, nil
+}
+
+func getTokenFromTia() (tiatoken string, tiaurl string, missingError error) {
+	token := os.Getenv("TIA_AUTH_TOKEN")
+	url := os.Getenv("TIA_URL")
+
+	if token == "" || url == "" {
+		slog.Error("Missing environment variables", "token", token, "url", url)
+		return "", "", fmt.Errorf("missing environment variables")
+	}
+	return token, url, nil
 }
 
 func init() {
@@ -252,6 +431,7 @@ func init() {
 }
 
 func run(cmd *cobra.Command, args []string) {
+	ctx := cmd.Context()
 	startTime := time.Now()
 
 	// setup log
@@ -281,7 +461,7 @@ func run(cmd *cobra.Command, args []string) {
 	opts.ApplicationArgs = args
 
 	// handle signals with notify context
-	ctx, cancel := signal.NotifyContext(cmd.Context(), syscall.SIGINT, syscall.SIGTERM)
+	ctx, cancel := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
 	// start nonodo

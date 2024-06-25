@@ -379,8 +379,9 @@ func FetchFromTendermint(ctx context.Context, id string) (*string, error) {
 	if err != nil {
 		return nil, err
 	}
+	var timeout uint = 30 // seconds
 	trpcEndpoint := "https://celestia-mocha-rpc.publicnode.com:443"
-	trpc, err := http.New(trpcEndpoint, "/websocket")
+	trpc, err := http.NewWithTimeout(trpcEndpoint, "/websocket", timeout)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to the Tendermint RPC: %w", err)
 	}
