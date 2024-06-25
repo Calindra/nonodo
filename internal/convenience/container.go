@@ -68,7 +68,7 @@ func (c *Container) GetSyncRepository() *repository.SynchronizerRepository {
 }
 
 func (c *Container) GetNoticeRepository() *repository.NoticeRepository {
-	if c.syncRepository != nil {
+	if c.noticeRepository != nil {
 		return c.noticeRepository
 	}
 	c.noticeRepository = &repository.NoticeRepository{
