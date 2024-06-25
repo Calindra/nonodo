@@ -152,19 +152,19 @@ func addCelestiaSubcommands(celestiaCmd *cobra.Command) {
 			slog.Info("File content", ArrBytesAttr("hex", content))
 			// slog.Info("File content", slog.String("Content", string(content)))
 
-			// token, url, err := getTokenFromTia()
-			// if err != nil {
-			// 	return err
-			// }
+			token, url, err := getTokenFromTia()
+			if err != nil {
+				return err
+			}
 
-			// height, start, end, err := dataavailability.SubmitBlob(ctx, url, token, celestia.Namespace, []byte(celestia.Payload))
+			height, start, end, err := dataavailability.SubmitBlob(ctx, url, token, celestia.Namespace, []byte(celestia.Payload))
 
-			// if err != nil {
-			// 	slog.Error("Submit", "error", err)
-			// 	return err
-			// }
+			if err != nil {
+				slog.Error("Submit", "error", err)
+				return err
+			}
 
-			// slog.Info("Blob was included at", "height", height, "start", start, "end", end)
+			slog.Info("Blob was included at", "height", height, "start", start, "end", end)
 
 			return nil
 		},
@@ -194,19 +194,19 @@ func addCelestiaSubcommands(celestiaCmd *cobra.Command) {
 
 			slog.Info("File content", ArrBytesAttr("hex", content))
 
-			// token, url, err := getTokenFromTia()
-			// if err != nil {
-			// 	return err
-			// }
+			token, url, err := getTokenFromTia()
+			if err != nil {
+				return err
+			}
 
-			// height, start, end, err := dataavailability.SubmitBlob(ctx, url, token, celestia.Namespace, []byte(celestia.Payload))
+			height, start, end, err := dataavailability.SubmitBlob(ctx, url, token, celestia.Namespace, []byte(celestia.Payload))
 
-			// if err != nil {
-			// 	slog.Error("Submit", "error", err)
-			// 	return err
-			// }
+			if err != nil {
+				slog.Error("Submit", "error", err)
+				return err
+			}
 
-			// slog.Info("Blob was included at", "height", height, "start", start, "end", end)
+			slog.Info("Blob was included at", "height", height, "start", start, "end", end)
 
 			return nil
 		},
