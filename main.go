@@ -5,6 +5,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
@@ -13,6 +14,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/calindra/nonodo/internal/dataavailability"
 	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/calindra/nonodo/internal/nonodo"
 	"github.com/carlmjohnson/versioninfo"
@@ -22,6 +24,8 @@ import (
 	"github.com/mattn/go-isatty"
 	"github.com/spf13/cobra"
 )
+
+var APP_ADDRESS = common.HexToAddress(devnet.ApplicationAddress)
 
 var startupMessage = `
 Http Rollups for development started at http://localhost:ROLLUPS_PORT
@@ -36,6 +40,26 @@ var cmd = &cobra.Command{
 	Version: versioninfo.Short(),
 }
 
+var CompletionCmd = &cobra.Command{
+	Use:                   "completion",
+	Short:                 "Generate shell completion scripts",
+	DisableFlagsInUseLine: true,
+	ValidArgs:             []string{"bash", "zsh", "fish", "powershell"},
+	Args:                  cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
+	Run: func(cmd *cobra.Command, args []string) {
+		switch args[0] {
+		case "bash":
+			cobra.CheckErr(cmd.Root().GenBashCompletion(os.Stdout))
+		case "zsh":
+			cobra.CheckErr(cmd.Root().GenZshCompletion(os.Stdout))
+		case "fish":
+			cobra.CheckErr(cmd.Root().GenFishCompletion(os.Stdout, true))
+		case "powershell":
+			cobra.CheckErr(cmd.Root().GenPowerShellCompletion(os.Stdout))
+		}
+	},
+}
+
 var addressBookCmd = &cobra.Command{
 	Use:   "address-book",
 	Short: "Show address book",
@@ -45,11 +69,120 @@ var addressBookCmd = &cobra.Command{
 	},
 }
 
+// Celestia Network
+type CelestiaOpts struct {
+	Payload   string
+	Namespace string
+	Height    uint64
+	Start     uint64
+	End       uint64
+	RpcUrl    string
+	chainId   int64
+}
+
+var celestiaCmd = &cobra.Command{
+	Use:   "celestia",
+	Short: "Handle blob to Celestia",
+	Long:  "Submit a blob and check proofs after one hour to Celestia Network",
+}
+
 var (
 	debug bool
 	color bool
 	opts  = nonodo.NewNonodoOpts()
 )
+
+func addCelestiaSubcommands(celestiaCmd *cobra.Command) {
+	var celestia = &CelestiaOpts{}
+
+	// Send
+	celestiaSendCmd := &cobra.Command{
+		Use:   "send",
+		Short: "Send a payload to Celestia Network",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			slog.Info("Send a payload to Celestia Network", "args", args, "celestia", celestia)
+
+			ctx := context.Background()
+			token := os.Getenv("TIA_AUTH_TOKEN")
+			url := os.Getenv("TIA_URL")
+
+			if token == "" || url == "" {
+				slog.Error("Missing environment variables", "token", token, "url", url)
+				return fmt.Errorf("missing environment variables")
+			}
+
+			height, start, end, err := dataavailability.SubmitBlob(ctx, url, token, celestia.Namespace, []byte(celestia.Payload))
+
+			if err != nil {
+				slog.Error("Submit", "error", err)
+				return err
+			}
+
+			slog.Info("Blob was included at", "height", height, "start", start, "end", end)
+
+			return nil
+		},
+	}
+	celestiaSendCmd.Flags().StringVar(&celestia.Payload, "payload", "", "Payload to send to Celestia Network")
+	celestiaSendCmd.Flags().StringVar(&celestia.Namespace, "namespace", "", "Namespace of the payload")
+	celestiaSendCmd.MarkFlagsRequiredTogether("payload", "namespace")
+
+	// Check proof
+	celestiaCheckProofCmd := &cobra.Command{
+		Use:   "check-proof",
+		Short: "Check proof of a payload sent to Celestia Network",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			slog.Info("Check proof of a payload sent to Celestia Network")
+
+			ctx := context.Background()
+
+			shareProof, dataBlock, err := dataavailability.GetShareProof(
+				ctx, celestia.Height, celestia.Start, celestia.End,
+			)
+
+			if err != nil {
+				return err
+			}
+
+			slog.Info("Share Proof", "proof", shareProof, "dataBlock", dataBlock)
+
+			return nil
+		},
+	}
+	celestiaCheckProofCmd.Flags().Uint64Var(&celestia.Height, "height", 0, "Height of the block")
+	celestiaCheckProofCmd.Flags().Uint64Var(&celestia.Start, "start", 0, "Start of the proof")
+	celestiaCheckProofCmd.Flags().Uint64Var(&celestia.End, "end", 0, "End of the proof")
+	celestiaCheckProofCmd.MarkFlagsRequiredTogether("height", "start", "end")
+
+	// Send to relay
+	var celestiaRelaySend = &cobra.Command{
+		Use:   "relay-send",
+		Short: "Send a payload to Celestia Relay",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			slog.Info("Send a payload to Celestia Relay")
+
+			ctx := context.Background()
+			err := dataavailability.CallCelestiaRelay(ctx, celestia.Height, celestia.Start, celestia.End, APP_ADDRESS, []byte{}, celestia.RpcUrl, celestia.chainId)
+
+			if err != nil {
+				return err
+			}
+
+			slog.Info("Payload sent to Celestia Relay")
+
+			return nil
+		}}
+	const goTestnetChainId = 31337
+	celestiaRelaySend.Flags().Uint64Var(&celestia.Height, "height", 0, "Height of the block")
+	celestiaRelaySend.Flags().Uint64Var(&celestia.Start, "start", 0, "Start of the proof")
+	celestiaRelaySend.Flags().Uint64Var(&celestia.End, "end", 0, "End of the proof")
+	celestiaRelaySend.Flags().Int64Var(&celestia.chainId, "chain-id", goTestnetChainId, "Chain ID of the network")
+	celestiaRelaySend.Flags().StringVar(&celestia.RpcUrl, "rpc-url", "http://localhost:8545",
+		"If set, celestia command connects to this url instead of setting up Anvil")
+	celestiaRelaySend.MarkFlagsRequiredTogether("height", "start", "end")
+
+	celestiaCmd.AddCommand(celestiaSendCmd, celestiaCheckProofCmd, celestiaRelaySend)
+}
 
 func init() {
 	// anvil-*
@@ -180,7 +313,8 @@ func run(cmd *cobra.Command, args []string) {
 }
 
 func main() {
-	cmd.AddCommand(addressBookCmd)
+	addCelestiaSubcommands(celestiaCmd)
+	cmd.AddCommand(addressBookCmd, celestiaCmd, CompletionCmd)
 	cobra.CheckErr(cmd.Execute())
 }
 
