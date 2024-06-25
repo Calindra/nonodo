@@ -28,7 +28,7 @@ import (
 	"github.com/calindra/nonodo/internal/contracts"
 )
 
-var CELESTIA_RELAY_ADDRESS common.Address = common.HexToAddress("0x9246F2Ca979Ef55FcacB5C4D3F46D36399da760e")
+var CELESTIA_RELAY_ADDRESS common.Address = common.HexToAddress("0xAc4D5eeB63CCEA4195f34c8d6766594F99c9E00E")
 
 // var CELESTIA_RELAY_ADDRESS common.Address = common.HexToAddress("0x096a7847B754647e06A887BeF0192689148A0C33")
 
@@ -306,7 +306,7 @@ func CallCelestiaRelay(ctx context.Context, height uint64, start uint64, end uin
 	}
 	defer eth.Close()
 
-	proofs, root, err := GetShareProof(ctx, height, start, end)
+	proofs, _, err := GetShareProof(ctx, height, start, end)
 
 	if err != nil {
 		return err
@@ -363,7 +363,7 @@ func CallCelestiaRelay(ctx context.Context, height uint64, start uint64, end uin
 
 	// Call the contract
 	slog.Debug("call relay shares", "dappAddress", dappAddress)
-	trx, err := relay.RelayShares(auth, dappAddress, *proofs, root, execLayerData)
+	trx, err := relay.RelayShares(auth, dappAddress, *proofs, execLayerData)
 
 	if err != nil {
 		return err
