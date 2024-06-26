@@ -144,7 +144,7 @@ func (s *InputRepositorySuite) TestCreateInputFindByStatus() {
 		MsgSender:      common.Address{},
 		Payload:        common.Hex2Bytes("0x1122"),
 		BlockNumber:    1,
-		PrevRandao:     0,
+		PrevRandao:     "0xdeadbeef",
 		BlockTimestamp: time.Now(),
 	})
 	s.NoError(err)

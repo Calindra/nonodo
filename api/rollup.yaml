@@ -341,11 +341,6 @@ components:
           example: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
           pattern: "^0x([0-9a-fA-F]{40})$"
           format: address
-        epoch_index:
-          type: integer
-          format: uint64
-          description: Deprecated. Always receives 0.
-          example: 0
         input_index:
           type: integer
           format: uint64
@@ -362,15 +357,15 @@ components:
           description: Unix timestamp of block in milliseconds.
           example: 1588598533000
         prev_randao:
-          type: integer
-          format: uint64
+          type: string
           description: The latest RANDAO mix of the post beacon state of the previous block.
-          example: 1588598533000
+          example: "0x0000000000000000000000000000000000000000000000000000000000000001"
+          pattern: "^0x([0-9a-fA-F]{64})$"
+          format: hex
       required:
         - chain_id
         - app_contract
         - msg_sender
-        - epoch_index
         - input_index
         - block_number
         - block_timestamp
@@ -456,7 +451,7 @@ components:
         domain:
           type: integer
           format: uint16
-          description: An arbitrary number representing the request domain.
+          description: An arbitrary number representing the request domain. Domains less then 0x10 are reserved.
           example: 16
         id:
           type: string

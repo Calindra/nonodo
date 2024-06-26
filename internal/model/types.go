@@ -64,7 +64,7 @@ type AdvanceInput struct {
 	Payload        []byte
 	BlockNumber    uint64
 	BlockTimestamp time.Time
-	PrevRandao     uint64
+	PrevRandao     string
 	Vouchers       []Voucher
 	Notices        []Notice
 	Reports        []Report
