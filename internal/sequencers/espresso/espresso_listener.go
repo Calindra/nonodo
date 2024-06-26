@@ -97,11 +97,11 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 				// }
 				nonce := int64(typedData.Message["nonce"].(float64)) // by default, JSON number is float64
 				payload, ok := typedData.Message["payload"].(string)
-				if !ok {
-					slog.Debug("type assertion error ")
-				}
 				fmt.Println("nonce ", nonce)
 				fmt.Println("payload ", payload)
+				if !ok {
+					return fmt.Errorf("type assertion error")
+				}
 
 				// update nonce maps
 				// no need to consider node exits abruptly and restarts from where it left
