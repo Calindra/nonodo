@@ -77,8 +77,8 @@ func init() {
 		"enable-legacy",
 		opts.LegacyMode,
 		"If set, enables legacy based in 0.7.1 (branch 0.7.3) rollups interface")
-	cmd.Flags().DurationVar(&opts.TimeoutInspect, "enable-timeout-inspect", opts.TimeoutInspect, "Timeout for inspect requests")
-	cmd.Flags().DurationVar(&opts.TimeoutAdvance, "enable-timeout-advance", opts.TimeoutAdvance, "Timeout for advance requests")
+	cmd.Flags().DurationVar(&opts.TimeoutInspect, "inspect-timeout", opts.TimeoutInspect, "Timeout for inspect requests. Example: nonodo --inspect-timeout 30s")
+	cmd.Flags().DurationVar(&opts.TimeoutAdvance, "advance-timeout", opts.TimeoutAdvance, "Timeout for advance requests. Example: nonodo --advance-timeout 30s")
 
 	// disable-*
 	cmd.Flags().BoolVar(&opts.DisableDevnet, "disable-devnet", opts.DisableDevnet,
