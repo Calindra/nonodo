@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"time"
 
 	rollup "github.com/calindra/nonodo/internal/rollup"
 )
@@ -17,13 +18,27 @@ import (
 // It uses the API rather than talking directly to the model so it can be used in integration tests.
 type EchoAppWorker struct {
 	RollupEndpoint string
+	// Delay between requests 202 Accepted
+	TimeoutDelay *time.Duration
+	// Delay after find inspect requests
+	TimeoutInspect *time.Duration
+	// Delay after find advance requests
+	TimeoutAdvance *time.Duration
 }
 
 func (w EchoAppWorker) String() string {
 	return "echo"
 }
 
+func (w EchoAppWorker) delay(d *time.Duration) {
+	if d != nil && *d > 0 {
+		slog.Debug("echo: waiting for", slog.Duration("time", *d))
+		time.Sleep(*d)
+	}
+}
+
 func (w EchoAppWorker) Start(ctx context.Context, ready chan<- struct{}) error {
+	slog.Debug("echo: starting echo application")
 	client, err := rollup.NewClientWithResponses(w.RollupEndpoint)
 	if err != nil {
 		return fmt.Errorf("echo: %w", err)
@@ -34,12 +49,15 @@ func (w EchoAppWorker) Start(ctx context.Context, ready chan<- struct{}) error {
 	finishReq := rollup.Finish{
 		Status: rollup.Accept,
 	}
+
 	for {
 		finishResp, err := client.FinishWithResponse(ctx, finishReq)
 		if err != nil {
 			return fmt.Errorf("echo: %w", err)
 		}
 		if finishResp.StatusCode() == http.StatusAccepted {
+			slog.Debug("echo: waiting for next request")
+			w.delay(w.TimeoutDelay)
 			continue
 		}
 		if finishResp.StatusCode() != http.StatusOK {
@@ -52,6 +70,7 @@ func (w EchoAppWorker) Start(ctx context.Context, ready chan<- struct{}) error {
 		}
 		switch finishBody.RequestType {
 		case rollup.AdvanceState:
+			slog.Debug("echo: received advance request")
 			advance, err := finishBody.Data.AsAdvance()
 			if err != nil {
 				return fmt.Errorf("echo: failed to parser advance: %w", err)
@@ -59,7 +78,9 @@ func (w EchoAppWorker) Start(ctx context.Context, ready chan<- struct{}) error {
 			if err := handleAdvance(ctx, client, advance); err != nil {
 				return err
 			}
+			w.delay(w.TimeoutAdvance)
 		case rollup.InspectState:
+			slog.Debug("echo: received inspect request")
 			inspect, err := finishBody.Data.AsInspect()
 			if err != nil {
 				return fmt.Errorf("echo: failed to parser inspect: %w", err)
@@ -67,6 +88,7 @@ func (w EchoAppWorker) Start(ctx context.Context, ready chan<- struct{}) error {
 			if err := handleInspect(ctx, client, inspect); err != nil {
 				return err
 			}
+			w.delay(w.TimeoutInspect)
 		default:
 			return fmt.Errorf("echo: invalid request type: %v", finishBody.RequestType)
 		}

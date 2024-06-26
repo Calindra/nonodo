@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/calindra/nonodo/internal/echoapp"
 	"github.com/carlmjohnson/versioninfo"
@@ -25,11 +26,15 @@ var cmd = &cobra.Command{
 	Version: versioninfo.Short(),
 }
 
-var endpoint string
+var (
+	endpoint string
+	timeout  *time.Duration
+)
 
 func init() {
 	cmd.Flags().StringVar(&endpoint, "endpoint", "", "Rollup HTTP API endpoint")
 	cobra.CheckErr(cmd.MarkFlagRequired("endpoint"))
+	cmd.Flags().DurationVar(timeout, "timeout", 0, "Set the timeout for inspect and advance requests")
 }
 
 func run(cmd *cobra.Command, args []string) {
@@ -38,6 +43,9 @@ func run(cmd *cobra.Command, args []string) {
 
 	w := echoapp.EchoAppWorker{
 		RollupEndpoint: endpoint,
+		TimeoutDelay:   timeout,
+		TimeoutInspect: timeout,
+		TimeoutAdvance: timeout,
 	}
 	ready := make(chan struct{})
 	go func() {

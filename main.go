@@ -73,6 +73,9 @@ func init() {
 	cmd.Flags().BoolVar(&color, "enable-color", true, "If set, enables logs color")
 	cmd.Flags().BoolVar(&opts.EnableEcho, "enable-echo", opts.EnableEcho,
 		"If set, nonodo starts a built-in echo application")
+	cmd.Flags().DurationVar(&opts.TimeoutBetweenRequests, "timeout-echo", 0, "Set the timeout between requests")
+	cmd.Flags().DurationVar(&opts.DeadlineInspectState, "timeout-inspect", 0, "Set the timeout for inspect requests")
+	cmd.Flags().DurationVar(&opts.DeadlineAdvanceState, "timeout-advance", 0, "Set the timeout for advance requests")
 
 	cmd.Flags().StringVar(&opts.Sequencer, "sequencer", opts.Sequencer,
 		"Set the sequencer (inputbox[default] or espresso)")

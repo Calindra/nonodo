@@ -68,10 +68,13 @@ type NonodoOpts struct {
 	FromBlock        uint64
 	DbImplementation string
 
-	NodeVersion  string
-	LoadTestMode bool
-	Sequencer    string
-	Namespace    uint64
+	NodeVersion            string
+	LoadTestMode           bool
+	Sequencer              string
+	Namespace              uint64
+	TimeoutBetweenRequests time.Duration
+	DeadlineInspectState   time.Duration
+	DeadlineAdvanceState   time.Duration
 }
 
 // Create the options struct with default values.
@@ -251,7 +254,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		Handler: e,
 	})
 	if len(opts.ApplicationArgs) > 0 {
-		fmt.Println("Starting app with supervisor")
+		slog.Info("Starting app with supervisor")
 		w.Workers = append(w.Workers, supervisor.CommandWorker{
 			Name:    "app",
 			Command: opts.ApplicationArgs[0],
@@ -260,9 +263,12 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 				opts.HttpAddress, opts.HttpRollupsPort)},
 		})
 	} else if opts.EnableEcho {
-		fmt.Println("Starting echo app")
+		slog.Info("Starting echo app")
 		w.Workers = append(w.Workers, echoapp.EchoAppWorker{
 			RollupEndpoint: fmt.Sprintf("http://%s:%v", opts.HttpAddress, opts.HttpRollupsPort),
+			TimeoutDelay:   &opts.TimeoutBetweenRequests,
+			TimeoutInspect: &opts.DeadlineInspectState,
+			TimeoutAdvance: &opts.DeadlineAdvanceState,
 		})
 	}
 	return w
