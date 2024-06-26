@@ -117,7 +117,7 @@ func (v *VoucherFetcher) Fetch() (*VoucherResponse, error) {
 
 	// Read response body
 	body, err := io.ReadAll(resp.Body)
-	resp.Body.Close()
+	defer resp.Body.Close()
 	if err != nil {
 		slog.Error("Error reading response:", "error", err)
 		return nil, err

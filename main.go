@@ -77,7 +77,9 @@ func init() {
 	cmd.Flags().StringVar(&opts.Sequencer, "sequencer", opts.Sequencer,
 		"Set the sequencer (inputbox[default] or espresso)")
 	cmd.Flags().Uint64Var(&opts.Namespace, "namespace", opts.Namespace,
-		"Set the namespace for espresso)")
+		"Set the namespace for espresso")
+	cmd.Flags().DurationVar(&opts.TimeoutInspect, "inspect-timeout", opts.TimeoutInspect, "Timeout for inspect requests. Example: nonodo --inspect-timeout 30s")
+	cmd.Flags().DurationVar(&opts.TimeoutAdvance, "advance-timeout", opts.TimeoutAdvance, "Timeout for advance requests. Example: nonodo --advance-timeout 30s")
 
 	// disable-*
 	cmd.Flags().BoolVar(&opts.DisableDevnet, "disable-devnet", opts.DisableDevnet,
