@@ -28,7 +28,7 @@ type Model interface {
 
 // Register the rollup API to echo
 func Register(e *echo.Echo, model Model) {
-	inspectAPI := &inspectAPI{model}
+	var inspectAPI ServerInterface = &inspectAPI{model}
 	RegisterHandlers(e, inspectAPI)
 }
 
@@ -39,7 +39,9 @@ type inspectAPI struct {
 
 // Handle POST requests to /.
 func (a *inspectAPI) InspectPost(c echo.Context) error {
-	payload, err := io.ReadAll(c.Request().Body)
+	body := c.Request().Body
+	defer body.Close()
+	payload, err := io.ReadAll(body)
 	if err != nil {
 		return c.String(http.StatusBadRequest, err.Error())
 	}
