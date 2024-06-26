@@ -31,7 +31,6 @@ import (
 
 const DefaultHttpPort = 8080
 const DefaultRollupsPort = 5004
-const HttpTimeout = 10 * time.Second
 
 // Options to nonodo.
 type NonodoOpts struct {
@@ -69,10 +68,14 @@ type NonodoOpts struct {
 
 	// If set, enables legacy mode.
 	LegacyMode bool
+
+	TimeoutInspect time.Duration
+	TimeoutAdvance time.Duration
 }
 
 // Create the options struct with default values.
 func NewNonodoOpts() NonodoOpts {
+	var defaultTimeout time.Duration = 10 * time.Second
 	return NonodoOpts{
 		AnvilAddress:       devnet.AnvilDefaultAddress,
 		AnvilPort:          devnet.AnvilDefaultPort,
@@ -93,6 +96,8 @@ func NewNonodoOpts() NonodoOpts {
 		FromBlock:          0,
 		DbImplementation:   "sqlite",
 		LegacyMode:         true,
+		TimeoutInspect:     defaultTimeout,
+		TimeoutAdvance:     defaultTimeout,
 	}
 }
 
@@ -141,7 +146,7 @@ func NewSupervisorPoC(opts NonodoOpts) supervisor.SupervisorWorker {
 	e.Use(middleware.Recover())
 	e.Use(middleware.TimeoutWithConfig(middleware.TimeoutConfig{
 		ErrorMessage: "Request timed out",
-		Timeout:      HttpTimeout,
+		Timeout:      opts.TimeoutInspect,
 	}))
 	inspect.Register(e, model)
 	reader.Register(e, model, convenienceService, adapter)
@@ -167,7 +172,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	e.Use(middleware.Recover())
 	e.Use(middleware.TimeoutWithConfig(middleware.TimeoutConfig{
 		ErrorMessage: "Request timed out",
-		Timeout:      HttpTimeout,
+		Timeout:      opts.TimeoutInspect,
 	}))
 	inspect.Register(e, model)
 	reader.Register(e, model, convenienceService, adapter)
@@ -178,7 +183,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	re.Use(middleware.Recover())
 	re.Use(middleware.TimeoutWithConfig(middleware.TimeoutConfig{
 		ErrorMessage: "Request timed out",
-		Timeout:      HttpTimeout,
+		Timeout:      opts.TimeoutAdvance,
 	}))
 
 	if opts.LegacyMode {
