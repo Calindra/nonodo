@@ -79,6 +79,24 @@ To use this option, pass the command to run the application after `--`.
 nonodo -- ./my-app
 ```
 
+#### Flags and Commands
+
+This is useful for searching for more behavior as described in this README.
+You can see any additional flags or commands with `--help` like:
+
+```sh
+nonodo --help
+```
+
+#### Timeout
+
+You can increase the default timeout by passing a flag.
+[Valid time](https://pkg.go.dev/time#ParseDuration) units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+
+```sh
+nonodo --sm-deadline-advance-state 30s --sm-deadline-inspect-state 30s
+```
+
 #### Built-in Echo Application
 
 NoNodo has a built-in echo application that generates a voucher, a notice, and a report for each advance input.
