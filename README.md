@@ -96,6 +96,24 @@ To start NoNodo with the built-in echo application, use the `--enable-echo` flag
 nonodo --enable-echo
 ```
 
+#### Flags and Commands
+
+This is useful for searching for more behavior as described in this README.
+You can see any additional flags or commands with `--help` like:
+
+```sh
+nonodo --help
+```
+
+#### Timeout
+
+You can increase the default timeout by passing a flag.
+[Valid time](https://pkg.go.dev/time#ParseDuration) units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+
+```sh
+nonodo --sm-deadline-advance-state 30s --sm-deadline-inspect-state 30s
+```
+
 #### Enable V1 for HTTP
 
 NoNodo for default is enable for new v2 API from [openapi-interfaces](https://github.com/cartesi/openapi-interfaces). If you need the old api, you can try this flag:
