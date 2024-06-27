@@ -2,6 +2,7 @@ package espresso
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
 	"time"
@@ -10,8 +11,6 @@ import (
 	"github.com/calindra/nonodo/internal/model"
 	"github.com/ethereum/go-ethereum/common"
 )
-
-const DEDUPLICATION_BLOCKS = 3
 
 type EspressoListener struct {
 	espressoAPI     *dataavailability.EspressoAPI
@@ -48,10 +47,9 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 	slog.Debug("Espresso: watchNewTransactions", "fromBlock", e.fromBlock)
 	currentBlockHeight := e.fromBlock
 
-	mapToDeduplicate := make([]map[string]bool, DEDUPLICATION_BLOCKS)
-	for i := range mapToDeduplicate {
-		mapToDeduplicate[i] = make(map[string]bool)
-	}
+	// keep track of msgSender -> nonce
+	nonceMap := make(map[common.Address]int64)
+
 	// main polling loop
 	for {
 		slog.Debug("Espresso: fetchLatestBlockHeight...")
@@ -66,9 +64,6 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 			continue
 		}
 		for ; currentBlockHeight < lastEspressoBlockHeight; currentBlockHeight++ {
-			iMap := currentBlockHeight % DEDUPLICATION_BLOCKS
-			dMap := (currentBlockHeight + DEDUPLICATION_BLOCKS - 1) % DEDUPLICATION_BLOCKS
-			mapToDeduplicate[dMap] = make(map[string]bool)
 			slog.Debug("Espresso:", "currentBlockHeight", currentBlockHeight)
 			transactions, err := e.espressoAPI.FetchTransactionsInBlock(ctx, currentBlockHeight, e.namespace)
 			if err != nil {
@@ -77,24 +72,53 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 			tot := len(transactions.Transactions)
 			slog.Debug("Espresso:", "transactionsLen", tot)
 			for i := 0; i < tot; i++ {
-				nextBlock := (iMap + 1) % DEDUPLICATION_BLOCKS
 				transaction := transactions.Transactions[i]
-				key := common.Bytes2Hex(transaction)
-				slog.Debug("transaction", "currentBlockHeight", currentBlockHeight, "transaction", key)
-				if mapToDeduplicate[iMap][key] || mapToDeduplicate[nextBlock][key] {
-					slog.Debug("Espresso: duplicated", "transaction", transaction)
-					continue
-				}
-				slog.Debug("not duplicated")
-				mapToDeduplicate[nextBlock][key] = true
+				slog.Debug("transaction", "currentBlockHeight", currentBlockHeight, "transaction", transaction)
+
 				// transform and add to InputRepository
 				index, err := e.InputRepository.Count(nil)
 				if err != nil {
 					return err
 				}
+
+				// assume the following encoding
+				// transaction = JSON.stringify({
+				//		 	signature,
+				//		 	typedData: btoa(JSON.stringify(typedData)),
+				//		 })
+				msgSender, typedData, err := ExtractSigAndData(string(transaction))
+				if err != nil {
+					return err
+				}
+				fmt.Println("msg sender ", msgSender.String())
+				// type EspressoMessage struct {
+				// 	nonce   uint32 `json:"nonce"`
+				// 	payload string `json:"payload"`
+				// }
+				nonce := int64(typedData.Message["nonce"].(float64)) // by default, JSON number is float64
+				payload, ok := typedData.Message["payload"].(string)
+				fmt.Println("nonce ", nonce)
+				fmt.Println("payload ", payload)
+				if !ok {
+					return fmt.Errorf("type assertion error")
+				}
+
+				// update nonce maps
+				// no need to consider node exits abruptly and restarts from where it left
+				// app has to start `nonce` from 1 and increment by 1 for each payload
+				if nonceMap[msgSender] == nonce-1 {
+					nonceMap[msgSender] = nonce
+					// fmt.Println("nonce is now ", nonce)
+				} else {
+					// nonce repeated
+					fmt.Println("duplicated or incorrect nonce")
+					continue
+				}
+
 				_, err = e.InputRepository.Create(model.AdvanceInput{
 					Index:       int(index),
-					Payload:     transaction,
+					MsgSender:   msgSender,
+					Payload:     []byte(payload),
 					BlockNumber: currentBlockHeight,
 				})
 				if err != nil {
