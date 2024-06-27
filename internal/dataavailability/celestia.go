@@ -242,7 +242,6 @@ func GetShareProof(ctx context.Context, height uint64, start uint64, end uint64)
 	var maxHeight uint64 = 10_000_000
 
 	eth, trpc, err := connections()
-
 	if err != nil {
 		return nil, [32]byte{}, fmt.Errorf("failed to connect to the Ethereum node or trpc: %w", err)
 	}
@@ -251,7 +250,6 @@ func GetShareProof(ctx context.Context, height uint64, start uint64, end uint64)
 
 	// 1. Get the data commitment
 	dataCommitment, err := GetDataCommitment(eth, int64(height), maxHeight)
-
 	if err != nil {
 		return nil, [32]byte{}, err
 	}
@@ -307,7 +305,6 @@ func CallCelestiaRelay(ctx context.Context, height uint64, start uint64, end uin
 	defer eth.Close()
 
 	proofs, _, err := GetShareProof(ctx, height, start, end)
-
 	if err != nil {
 		return err
 	}
@@ -356,7 +353,6 @@ func CallCelestiaRelay(ctx context.Context, height uint64, start uint64, end uin
 		celestiaRelayAddress = common.HexToAddress(envAddress)
 	}
 	relay, err := contracts.NewCelestiaRelay(celestiaRelayAddress, eth)
-
 	if err != nil {
 		return err
 	}
@@ -364,7 +360,6 @@ func CallCelestiaRelay(ctx context.Context, height uint64, start uint64, end uin
 	// Call the contract
 	slog.Debug("call relay shares", "dappAddress", dappAddress)
 	trx, err := relay.RelayShares(auth, dappAddress, *proofs, execLayerData)
-
 	if err != nil {
 		return err
 	}
@@ -431,7 +426,6 @@ func (c *CelestiaClient) Fetch(ctx echo.Context, id string) (*string, *HttpCusto
 	}
 
 	blob, err := GetBlob(requestContext, id, url, token)
-
 	if err != nil {
 		msg := err.Error()
 		return nil, NewHttpCustomError(stdhttp.StatusBadRequest, &msg)
