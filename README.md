@@ -96,14 +96,6 @@ To start NoNodo with the built-in echo application, use the `--enable-echo` flag
 nonodo --enable-echo
 ```
 
-#### Enable V1 for HTTP
-
-NoNodo for default is enable for new v2 API from [openapi-interfaces](https://github.com/cartesi/openapi-interfaces). If you need the old api, you can try this flag:
-
-```sh
-nonodo --enable-legacy
-```
-
 ### Sending inputs
 
 To send an input to the Cartesi application, you may use cast, a command-line tool from the foundry
