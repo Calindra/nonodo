@@ -19,6 +19,7 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"log/slog"
@@ -66,16 +67,19 @@ var bindings = []contractBinding{
 
 func main() {
 	commons.ConfigureLog(slog.LevelDebug)
-	contractsZip := downloadContracts(rollupsContractsUrl)
+	contractsZip, err := downloadContracts(rollupsContractsUrl)
+	checkErr("download contracts", err)
 	defer contractsZip.Close()
-	contractsTar := unzip(contractsZip)
+	contractsTar, err := unzip(contractsZip)
+	checkErr("unzip contracts", err)
 	defer contractsTar.Close()
 
 	files := make(map[string]bool)
 	for _, b := range bindings {
 		files[b.jsonPath] = true
 	}
-	contents := readFilesFromTar(contractsTar, files)
+	contents, err := readFilesFromTar(contractsTar, files)
+	checkErr("read files from tar", err)
 
 	for _, b := range bindings {
 		content := contents[b.jsonPath]
@@ -97,28 +101,32 @@ func checkErr(context string, err any) {
 
 // Download the contracts from rollupsContractsUrl.
 // Return the buffer with the contracts.
-func downloadContracts(url string) io.ReadCloser {
+func downloadContracts(url string) (io.ReadCloser, error) {
 	slog.Info("downloading contracts from ", slog.String("url", url))
 	response, err := http.Get(url)
-	checkErr("download tgz", err)
+	if err != nil {
+		return nil, fmt.Errorf("failed to download contracts from %s: %s", url, err.Error())
+	}
 	if response.StatusCode != http.StatusOK {
 		defer response.Body.Close()
-		log.Fatal("invalid status: ", response.Status)
+		return nil, fmt.Errorf("failed to download contracts from %s: status code %s", url, response.Status)
 	}
-	return response.Body
+	return response.Body, nil
 }
 
 // Decompress the buffer with the contracts.
-func unzip(r io.Reader) io.ReadCloser {
+func unzip(r io.Reader) (io.ReadCloser, error) {
 	slog.Info("unziping contracts")
 	gzipReader, err := gzip.NewReader(r)
-	checkErr("unziping", err)
-	return gzipReader
+	if err != nil {
+		return nil, err
+	}
+	return gzipReader, nil
 }
 
 // Read the required files from the tar.
 // Return a map with the file contents.
-func readFilesFromTar(r io.Reader, files map[string]bool) map[string][]byte {
+func readFilesFromTar(r io.Reader, files map[string]bool) (map[string][]byte, error) {
 	contents := make(map[string][]byte)
 	tarReader := tar.NewReader(r)
 	for {
@@ -126,13 +134,17 @@ func readFilesFromTar(r io.Reader, files map[string]bool) map[string][]byte {
 		if err == io.EOF {
 			break // End of archive
 		}
-		checkErr("read tar", err)
+		if err != nil {
+			return nil, fmt.Errorf("error while reading tar: %s", err)
+		}
 		if files[header.Name] {
 			contents[header.Name], err = io.ReadAll(tarReader)
-			checkErr("read tar", err)
+			if err != nil {
+				return nil, fmt.Errorf("error while reading file inside tar: %s", err)
+			}
 		}
 	}
-	return contents
+	return contents, nil
 }
 
 // Get the .abi key from the json
