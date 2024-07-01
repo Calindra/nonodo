@@ -1,18 +1,18 @@
 package dataavailability
 
 type HttpCustomError struct {
-	status uint
+	status int
 	body   *string
 }
 
-func NewHttpCustomError(status uint, body *string) *HttpCustomError {
+func NewHttpCustomError(status int, body *string) *HttpCustomError {
 	return &HttpCustomError{status: status, body: body}
 }
 
 func (m *HttpCustomError) Error() string {
 	return *m.body
 }
-func (m *HttpCustomError) Status() uint {
+func (m *HttpCustomError) Status() int {
 	return m.status
 }
 func (m *HttpCustomError) Body() *string {
