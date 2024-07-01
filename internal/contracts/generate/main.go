@@ -21,14 +21,16 @@ import (
 	"encoding/json"
 	"io"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 
+	"github.com/calindra/nonodo/internal/commons"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 )
 
 const (
-	rollupsContractsUrl = "https://registry.npmjs.org/@cartesi/rollups/-/rollups-2.0.0-rc.3.tgz"
+	rollupsContractsUrl = "https://registry.npmjs.org/@cartesi/rollups/-/rollups-2.0.0-rc.4.tgz"
 	baseContractsPath   = "package/export/artifacts/contracts/"
 	bindingPkg          = "contracts"
 )
@@ -63,6 +65,7 @@ var bindings = []contractBinding{
 }
 
 func main() {
+	commons.ConfigureLog(slog.LevelDebug)
 	contractsZip := downloadContracts(rollupsContractsUrl)
 	defer contractsZip.Close()
 	contractsTar := unzip(contractsZip)
@@ -81,6 +84,8 @@ func main() {
 		}
 		generateBinding(b, content)
 	}
+
+	slog.Info("done")
 }
 
 // Exit if there is any error.
@@ -93,11 +98,11 @@ func checkErr(context string, err any) {
 // Download the contracts from rollupsContractsUrl.
 // Return the buffer with the contracts.
 func downloadContracts(url string) io.ReadCloser {
-	log.Print("downloading contracts from ", url)
+	slog.Info("downloading contracts from ", slog.String("url", url))
 	response, err := http.Get(url)
 	checkErr("download tgz", err)
 	if response.StatusCode != http.StatusOK {
-		response.Body.Close()
+		defer response.Body.Close()
 		log.Fatal("invalid status: ", response.Status)
 	}
 	return response.Body
@@ -105,7 +110,7 @@ func downloadContracts(url string) io.ReadCloser {
 
 // Decompress the buffer with the contracts.
 func unzip(r io.Reader) io.ReadCloser {
-	log.Print("unziping contracts")
+	slog.Info("unziping contracts")
 	gzipReader, err := gzip.NewReader(r)
 	checkErr("unziping", err)
 	return gzipReader
@@ -155,5 +160,5 @@ func generateBinding(b contractBinding, content []byte) {
 	const fileMode = 0600
 	err = os.WriteFile(b.outFile, []byte(code), fileMode)
 	checkErr("write binding file", err)
-	log.Print("generated binding ", b.outFile)
+	slog.Info("generated binding ", slog.String("file", b.outFile))
 }
