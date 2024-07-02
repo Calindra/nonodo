@@ -19,16 +19,19 @@ import (
 	"archive/tar"
 	"compress/gzip"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 
+	"github.com/calindra/nonodo/internal/commons"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 )
 
 const (
-	rollupsContractsUrl = "https://registry.npmjs.org/@cartesi/rollups/-/rollups-2.0.0-rc.3.tgz"
+	rollupsContractsUrl = "https://registry.npmjs.org/@cartesi/rollups/-/rollups-2.0.0-rc.4.tgz"
 	baseContractsPath   = "package/export/artifacts/contracts/"
 	bindingPkg          = "contracts"
 )
@@ -63,16 +66,20 @@ var bindings = []contractBinding{
 }
 
 func main() {
-	contractsZip := downloadContracts(rollupsContractsUrl)
+	commons.ConfigureLog(slog.LevelDebug)
+	contractsZip, err := downloadContracts(rollupsContractsUrl)
+	checkErr("download contracts", err)
 	defer contractsZip.Close()
-	contractsTar := unzip(contractsZip)
+	contractsTar, err := unzip(contractsZip)
+	checkErr("unzip contracts", err)
 	defer contractsTar.Close()
 
 	files := make(map[string]bool)
 	for _, b := range bindings {
 		files[b.jsonPath] = true
 	}
-	contents := readFilesFromTar(contractsTar, files)
+	contents, err := readFilesFromTar(contractsTar, files)
+	checkErr("read files from tar", err)
 
 	for _, b := range bindings {
 		content := contents[b.jsonPath]
@@ -81,6 +88,8 @@ func main() {
 		}
 		generateBinding(b, content)
 	}
+
+	slog.Info("done")
 }
 
 // Exit if there is any error.
@@ -92,28 +101,32 @@ func checkErr(context string, err any) {
 
 // Download the contracts from rollupsContractsUrl.
 // Return the buffer with the contracts.
-func downloadContracts(url string) io.ReadCloser {
-	log.Print("downloading contracts from ", url)
+func downloadContracts(url string) (io.ReadCloser, error) {
+	slog.Info("downloading contracts from ", slog.String("url", url))
 	response, err := http.Get(url)
-	checkErr("download tgz", err)
-	if response.StatusCode != http.StatusOK {
-		response.Body.Close()
-		log.Fatal("invalid status: ", response.Status)
+	if err != nil {
+		return nil, fmt.Errorf("failed to download contracts from %s: %s", url, err.Error())
 	}
-	return response.Body
+	if response.StatusCode != http.StatusOK {
+		defer response.Body.Close()
+		return nil, fmt.Errorf("failed to download contracts from %s: status code %s", url, response.Status)
+	}
+	return response.Body, nil
 }
 
 // Decompress the buffer with the contracts.
-func unzip(r io.Reader) io.ReadCloser {
-	log.Print("unziping contracts")
+func unzip(r io.Reader) (io.ReadCloser, error) {
+	slog.Info("unziping contracts")
 	gzipReader, err := gzip.NewReader(r)
-	checkErr("unziping", err)
-	return gzipReader
+	if err != nil {
+		return nil, err
+	}
+	return gzipReader, nil
 }
 
 // Read the required files from the tar.
 // Return a map with the file contents.
-func readFilesFromTar(r io.Reader, files map[string]bool) map[string][]byte {
+func readFilesFromTar(r io.Reader, files map[string]bool) (map[string][]byte, error) {
 	contents := make(map[string][]byte)
 	tarReader := tar.NewReader(r)
 	for {
@@ -121,13 +134,17 @@ func readFilesFromTar(r io.Reader, files map[string]bool) map[string][]byte {
 		if err == io.EOF {
 			break // End of archive
 		}
-		checkErr("read tar", err)
+		if err != nil {
+			return nil, fmt.Errorf("error while reading tar: %s", err)
+		}
 		if files[header.Name] {
 			contents[header.Name], err = io.ReadAll(tarReader)
-			checkErr("read tar", err)
+			if err != nil {
+				return nil, fmt.Errorf("error while reading file inside tar: %s", err)
+			}
 		}
 	}
-	return contents
+	return contents, nil
 }
 
 // Get the .abi key from the json
@@ -155,5 +172,5 @@ func generateBinding(b contractBinding, content []byte) {
 	const fileMode = 0600
 	err = os.WriteFile(b.outFile, []byte(code), fileMode)
 	checkErr("write binding file", err)
-	log.Print("generated binding ", b.outFile)
+	slog.Info("generated binding ", slog.String("file", b.outFile))
 }

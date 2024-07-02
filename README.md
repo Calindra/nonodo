@@ -114,8 +114,6 @@ You can increase the default timeout by passing a flag.
 nonodo --sm-deadline-advance-state 30s --sm-deadline-inspect-state 30s
 ```
 
-=======
->>>>>>> main
 ### Sending inputs
 
 To send an input to the Cartesi application, you may use cast, a command-line tool from the foundry
@@ -124,8 +122,8 @@ application.
 
 ```sh
 INPUT=0xdeadbeef; \
-INPUT_BOX_ADDRESS=0x59b22D57D4f067708AB0c00552767405926dc768; \
-APPLICATION_ADDRESS=0x70ac08179605AF2D9e75782b8DEcDD3c22aA4D0C; \
+INPUT_BOX_ADDRESS=0x58Df21fE097d4bE5dCf61e01d9ea3f6B81c2E1dB; \
+APPLICATION_ADDRESS=0xab7528bb862fb57e8a2bcd567a2e929a0be56a5e; \
 cast send \
     --mnemonic "test test test test test test test test test test test junk" \
     --rpc-url "http://localhost:8545" \
