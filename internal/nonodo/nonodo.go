@@ -31,7 +31,6 @@ import (
 
 const DefaultHttpPort = 8080
 const DefaultRollupsPort = 5004
-const HttpTimeout = 10 * time.Second
 const DefaultNamespace = 10008
 
 // Options to nonodo.
@@ -63,19 +62,23 @@ type NonodoOpts struct {
 	// If set, start application.
 	ApplicationArgs []string
 
-	ConveniencePoC   bool
+	HLGraphQL        bool
 	SqliteFile       string
 	FromBlock        uint64
 	DbImplementation string
 
-	NodeVersion string
+	NodeVersion  string
+	LoadTestMode bool
+	Sequencer    string
+	Namespace    uint64
 
-	Sequencer string
-	Namespace uint64
+	TimeoutInspect time.Duration
+	TimeoutAdvance time.Duration
 }
 
 // Create the options struct with default values.
 func NewNonodoOpts() NonodoOpts {
+	var defaultTimeout time.Duration = 10 * time.Second
 	return NonodoOpts{
 		AnvilAddress:       devnet.AnvilDefaultAddress,
 		AnvilPort:          devnet.AnvilDefaultPort,
@@ -91,13 +94,16 @@ func NewNonodoOpts() NonodoOpts {
 		DisableDevnet:      false,
 		DisableAdvance:     false,
 		ApplicationArgs:    nil,
-		ConveniencePoC:     false,
+		HLGraphQL:          false,
 		SqliteFile:         "file:memory1?mode=memory&cache=shared",
 		FromBlock:          0,
 		DbImplementation:   "sqlite",
 		NodeVersion:        "v1",
 		Sequencer:          "inputbox",
+		LoadTestMode:       false,
 		Namespace:          DefaultNamespace,
+		TimeoutInspect:     defaultTimeout,
+		TimeoutAdvance:     defaultTimeout,
 	}
 }
 
@@ -134,29 +140,42 @@ func NewSupervisorPoC(opts NonodoOpts) supervisor.SupervisorWorker {
 	if opts.NodeVersion == "v1" {
 		adapter = reader.NewAdapterV1(db, convenienceService)
 	} else {
-		httpClient := reader.HTTPClientImpl{}
+		httpClient := container.GetGraphileClient(opts.LoadTestMode)
 		inputBlobAdapter := reader.InputBlobAdapter{}
-		adapter = reader.NewAdapterV2(convenienceService, &httpClient, inputBlobAdapter)
+		adapter = reader.NewAdapterV2(convenienceService, httpClient, inputBlobAdapter)
 	}
 
-	synchronizer := container.GetGraphQLSynchronizer()
+	if !opts.LoadTestMode {
+		var synchronizer supervisor.Worker
+
+		if opts.NodeVersion == "v2" {
+			synchronizer = container.GetGraphileSynchronizer(opts.LoadTestMode)
+		} else {
+			synchronizer = container.GetGraphQLSynchronizer()
+		}
+
+		w.Workers = append(w.Workers, synchronizer)
+
+		opts.RpcUrl = fmt.Sprintf("ws://%s:%v", opts.AnvilAddress, opts.AnvilPort)
+		fromBlock := new(big.Int).SetUint64(opts.FromBlock)
+
+		execVoucherListener := convenience.NewExecListener(
+			opts.RpcUrl,
+			common.HexToAddress(opts.ApplicationAddress),
+			convenienceService,
+			fromBlock,
+		)
+		w.Workers = append(w.Workers, execVoucherListener)
+	}
+
 	model := model.NewNonodoModel(decoder, db)
-	w.Workers = append(w.Workers, synchronizer)
-	opts.RpcUrl = fmt.Sprintf("ws://%s:%v", opts.AnvilAddress, opts.AnvilPort)
-	fromBlock := new(big.Int).SetUint64(opts.FromBlock)
-	execVoucherListener := convenience.NewExecListener(
-		opts.RpcUrl,
-		common.HexToAddress(opts.ApplicationAddress),
-		convenienceService,
-		fromBlock,
-	)
-	w.Workers = append(w.Workers, execVoucherListener)
+
 	e := echo.New()
 	e.Use(middleware.CORS())
 	e.Use(middleware.Recover())
 	e.Use(middleware.TimeoutWithConfig(middleware.TimeoutConfig{
 		ErrorMessage: "Request timed out",
-		Timeout:      HttpTimeout,
+		Timeout:      opts.TimeoutInspect,
 	}))
 	inspect.Register(e, model)
 	reader.Register(e, model, convenienceService, adapter)
@@ -182,7 +201,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	e.Use(middleware.Recover())
 	e.Use(middleware.TimeoutWithConfig(middleware.TimeoutConfig{
 		ErrorMessage: "Request timed out",
-		Timeout:      HttpTimeout,
+		Timeout:      opts.TimeoutInspect,
 	}))
 	inspect.Register(e, modelInstance)
 	reader.Register(e, modelInstance, convenienceService, adapter)
@@ -193,7 +212,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	re.Use(middleware.Recover())
 	re.Use(middleware.TimeoutWithConfig(middleware.TimeoutConfig{
 		ErrorMessage: "Request timed out",
-		Timeout:      HttpTimeout,
+		Timeout:      opts.TimeoutAdvance,
 	}))
 
 	if opts.RpcUrl == "" && !opts.DisableDevnet {

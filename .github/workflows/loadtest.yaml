@@ -13,19 +13,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
-    services:
-      postgres:
-        image: postgres
-        env:
-          POSTGRES_DB: mydatabase
-          POSTGRES_USER: myuser
-          POSTGRES_PASSWORD: mypassword
-        ports:
-          - "5432:5432"
-        volumes:
-          - ./db/restore.sql:/docker-entrypoint-initdb.d/restore.sql
-          - ./db/data_files/:/docker-entrypoint-initdb.d/data_files
-
     steps:
       - name: Fix permissions
         run: sudo chmod -R 777 /home/runner/work/nonodo/nonodo
@@ -36,28 +23,75 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v2
       
+      - name: Create Docker network
+        run: docker network create mynetwork
+      
+      - name: Build and run PostgreSQL container
+        run: |
+          docker build -t postgresteste:latest ./postgres
+          docker run -d --network mynetwork -p 5432:5432 --name postgres postgresteste:latest
+      
+      - name: Install PostgreSQL Client
+        run: sudo apt-get install -y postgresql-client
+
+      - name: Wait for Postgres to be ready
+        run: |
+          echo "Waiting for postgres to be ready..."
+          for i in {1..30}; do
+            if pg_isready -h localhost -p 5432 -U myuser; then
+              echo "Postgres is ready"
+              break
+            else
+              echo "Postgres is unavailable - sleeping"
+              sleep 1
+            fi
+          done
+      
       - name: Build PostGraphile Docker image
-        run: docker build -t postgraphile-custom ./db/
+        run: docker build -t postgraphile-custom ./postgraphile/
       
       - name: Run PostGraphile service
-        run: docker run -d -p 5000:5000 --name postgraphile-custom postgraphile-custom
+        run: docker run -d --network mynetwork -p 5000:5000 --name postgraphile-custom postgraphile-custom
       
-      - name: Build nonodo Docker image
-        run: docker build -t nonodo-app .
-      
-      - name: Run nonodo application
-        run: docker run -d -p 8080:8080 --name nonodo nonodo-app
-      
-      - name: Wait for services to be ready
+      - name: Wait for PostGraphile to be ready
         run: |
           for i in {1.60}; do
             curl -sSf http://localhost:5000 && break
             sleep 1
           done
+      
+      - name: Build nonodo Docker image
+        run: docker build -t nonodo-app .
+
+      - name: Run nonodo application
+        run: docker run -d --network mynetwork -p 8080:8080 --name nonodo nonodo-app
+      
+      - name: Wait for Nonodo to be ready
+        run: |
           for i in {1..60}; do
             curl -sSf http://localhost:8080 && break
             sleep 1
           done
+      
+      - name: Get logs if nonodo is not running
+        run: |
+          nonodo_running=$(docker inspect -f '{{.State.Running}}' nonodo)
+          if [ "$nonodo_running" != "true" ]; then
+            echo "nonodo container logs:"
+            docker logs nonodo
+          else
+            echo "nonodo container is running"
+          fi
+
+          postgres_running=$(docker inspect -f '{{.State.Running}}' postgres)
+          if [ "$postgres_running" != "true" ]; then
+            echo "postgres container logs (last 100 lines):"
+            docker logs --tail 100 postgres
+            echo "postgres container inspect:"
+            docker inspect postgres
+          else
+            echo "postgres container is running"
+          fi
 
       - name: Install k6
         run: |
@@ -70,4 +104,11 @@ jobs:
           sudo apt-get install -y k6
 
       - name: Run k6 tests
-        run: k6 run loadtesting/test.js
+        id: k6
+        run: |
+          docker logs postgres
+          docker logs nonodo
+          docker logs postgraphile-custom
+          docker ps
+          k6 run loadtesting/test.js
+         

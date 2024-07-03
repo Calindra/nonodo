@@ -11,9 +11,11 @@ import (
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/calindra/nonodo/internal/convenience/services"
+	"github.com/calindra/nonodo/internal/graphile"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/ncruces/go-sqlite3/driver"
+	_ "github.com/ncruces/go-sqlite3/embed"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -384,7 +386,7 @@ func (s *AdapterV2TestSuite) TestGetProof() {
 	}
 	hitTheRealServer := false
 	if hitTheRealServer {
-		httpClient := HTTPClientImpl{}
+		httpClient := graphile.GraphileClientImpl{}
 		inputBlobAdapter := InputBlobAdapter{}
 		s.adapter = AdapterV2{nil, &httpClient, inputBlobAdapter}
 	}

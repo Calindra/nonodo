@@ -88,7 +88,6 @@ CREATE TABLE public.inputs (
 
 ALTER TABLE public.inputs OWNER TO myuser;
 
-
 INSERT INTO public.inputs (index, blob, status) VALUES (1, '\x415bf3630000000000000000000000000000000000000000000000000000000000000001000000000000000000000000ab7528bb862fb57e8a2bcd567a2e929a0be56a5e000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb92266000000000000000000000000000000000000000000000000000000000000001400000000000000000000000000000000000000000000000000000000000004d20000000000000000000000000000000000000000000000000000000000000015000000000000000000000000000000000000000000000000000000000000002a0000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000000a1122334455667788990000000000000000000000000000000000000000000000', 'ACCEPTED');
 INSERT INTO public.inputs (index, blob, status) VALUES (2, '\x415bf3630000000000000000000000000000000000000000000000000000000000000001000000000000000000000000ab7528bb862fb57e8a2bcd567a2e929a0be56a5e000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb92266000000000000000000000000000000000000000000000000000000000000001400000000000000000000000000000000000000000000000000000000000004d20000000000000000000000000000000000000000000000000000000000000015000000000000000000000000000000000000000000000000000000000000002a0000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000000a1122334455667788990000000000000000000000000000000000000000000000', 'ACCEPTED');
 
@@ -140,6 +139,10 @@ CREATE TABLE public.reports (
 
 ALTER TABLE public.reports OWNER TO myuser;
 
+INSERT INTO public.reports VALUES (1, 1, '\x415bf3630000000000000000000000000000000000000000000000000000000000000001000000000000000000000000ab7528bb862fb57e8a2bcd567a2e929a0be56a5e000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb92266000000000000000000000000000000000000000000000000000000000000001400000000000000000000000000000000000000000000000000000000000004d20000000000000000000000000000000000000000000000000000000000000015000000000000000000000000000000000000000000000000000000000000002a0000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000000a1122334455667788990000000000000000000000000000000000000000000000');
+INSERT INTO public.reports VALUES (2, 2, '\x415bf3630000000000000000000000000000000000000000000000000000000000000001000000000000000000000000ab7528bb862fb57e8a2bcd567a2e929a0be56a5e000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb92266000000000000000000000000000000000000000000000000000000000000001400000000000000000000000000000000000000000000000000000000000004d20000000000000000000000000000000000000000000000000000000000000015000000000000000000000000000000000000000000000000000000000000002a0000000000000000000000000000000000000000000000000000000000000100000000000000000000000000000000000000000000000000000000000000000a1122334455667788990000000000000000000000000000000000000000000000');
+
+
 --
 -- Name: schema_migrations; Type: TABLE; Schema: public; Owner: postgres
 --
@@ -158,7 +161,7 @@ ALTER TABLE public.schema_migrations OWNER TO myuser;
 
 COPY public.inputs (index, blob, status) FROM stdin;
 \.
-COPY public.inputs (index, blob, status) FROM '/docker-entrypoint-initdb.d/data_files/3118.dat';
+--COPY public.inputs (index, blob, status) FROM '/docker-entrypoint-initdb.d/data_files/3118.dat';
 
 --
 -- Data for Name: outputs; Type: TABLE DATA; Schema: public; Owner: postgres
@@ -166,7 +169,7 @@ COPY public.inputs (index, blob, status) FROM '/docker-entrypoint-initdb.d/data_
 
 COPY public.outputs (input_index, index, blob) FROM stdin;
 \.
-COPY public.outputs (input_index, index, blob) FROM '/docker-entrypoint-initdb.d/data_files/3119.dat';
+--COPY public.outputs (input_index, index, blob) FROM '/docker-entrypoint-initdb.d/data_files/3119.dat';
 
 --
 -- Data for Name: proofs; Type: TABLE DATA; Schema: public; Owner: postgres
@@ -174,7 +177,7 @@ COPY public.outputs (input_index, index, blob) FROM '/docker-entrypoint-initdb.d
 
 COPY public.proofs (input_index, output_index, first_input, last_input, validity_input_index_within_epoch, validity_output_index_within_input, validity_output_hashes_root_hash, validity_output_epoch_root_hash, validity_machine_state_hash, validity_output_hash_in_output_hashes_siblings, validity_output_hashes_in_epoch_siblings) FROM stdin;
 \.
-COPY public.proofs (input_index, output_index, first_input, last_input, validity_input_index_within_epoch, validity_output_index_within_input, validity_output_hashes_root_hash, validity_output_epoch_root_hash, validity_machine_state_hash, validity_output_hash_in_output_hashes_siblings, validity_output_hashes_in_epoch_siblings) FROM '/docker-entrypoint-initdb.d/data_files/3121.dat';
+--COPY public.proofs (input_index, output_index, first_input, last_input, validity_input_index_within_epoch, validity_output_index_within_input, validity_output_hashes_root_hash, validity_output_epoch_root_hash, validity_machine_state_hash, validity_output_hash_in_output_hashes_siblings, validity_output_hashes_in_epoch_siblings) FROM '/docker-entrypoint-initdb.d/data_files/3121.dat';
 
 --
 -- Data for Name: reports; Type: TABLE DATA; Schema: public; Owner: postgres
@@ -182,7 +185,7 @@ COPY public.proofs (input_index, output_index, first_input, last_input, validity
 
 COPY public.reports (input_index, index, blob) FROM stdin;
 \.
-COPY public.reports (input_index, index, blob) FROM '/docker-entrypoint-initdb.d/data_files/3120.dat';
+--COPY public.reports (input_index, index, blob) FROM '/docker-entrypoint-initdb.d/data_files/3120.dat';
 
 --
 -- Data for Name: schema_migrations; Type: TABLE DATA; Schema: public; Owner: postgres
@@ -190,7 +193,7 @@ COPY public.reports (input_index, index, blob) FROM '/docker-entrypoint-initdb.d
 
 COPY public.schema_migrations (version, dirty) FROM stdin;
 \.
-COPY public.schema_migrations (version, dirty) FROM '/docker-entrypoint-initdb.d/data_files/3117.dat';
+--COPY public.schema_migrations (version, dirty) FROM '/docker-entrypoint-initdb.d/data_files/3117.dat';
 
 --
 -- Name: inputs inputs_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres

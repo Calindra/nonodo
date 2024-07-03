@@ -62,7 +62,7 @@ type FinishStatus string
 
 // GioRequest defines model for GioRequest.
 type GioRequest struct {
-	// Domain An arbitrary number representing the request domain.
+	// Domain An arbitrary number representing the request domain. Domains less then 0x10 are reserved.
 	Domain uint16 `json:"domain"`
 
 	// Id Domain-specific information identifying the request.
@@ -107,9 +107,6 @@ type Metadata struct {
 	// ChainId Network identifier.
 	ChainId uint64 `json:"chain_id"`
 
-	// EpochIndex Deprecated. Always receives 0.
-	EpochIndex uint64 `json:"epoch_index"`
-
 	// InputIndex Input index starting from genesis.
 	InputIndex uint64 `json:"input_index"`
 
@@ -117,7 +114,7 @@ type Metadata struct {
 	MsgSender string `json:"msg_sender"`
 
 	// PrevRandao The latest RANDAO mix of the post beacon state of the previous block.
-	PrevRandao uint64 `json:"prev_randao"`
+	PrevRandao string `json:"prev_randao"`
 }
 
 // Notice defines model for Notice.

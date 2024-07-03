@@ -1,18 +1,19 @@
-package reader
+package graphile
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 )
 
-type HTTPClientImpl struct{}
+type GraphileClientImpl struct {
+	GraphileHost string
+}
 
-const GRAPHILE_ENDPOINT = "http://localhost:5001/graphql"
-
-func (c *HTTPClientImpl) Post(requestBody []byte) ([]byte, error) {
-	req, err := http.NewRequest("POST", GRAPHILE_ENDPOINT, bytes.NewBuffer(requestBody))
+func (c *GraphileClientImpl) Post(requestBody []byte) ([]byte, error) {
+	req, err := http.NewRequest("POST", fmt.Sprintf("http://%s:5000/graphql", c.GraphileHost), bytes.NewBuffer(requestBody))
 	if err != nil {
 		slog.Error("Error creating request", "error", err)
 		return nil, err

@@ -5,20 +5,24 @@ import (
 	"github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/calindra/nonodo/internal/convenience/services"
 	"github.com/calindra/nonodo/internal/convenience/synchronizer"
+	"github.com/calindra/nonodo/internal/graphile"
 	"github.com/jmoiron/sqlx"
 )
 
 // what is the best DI/IoC framework for go?
 
 type Container struct {
-	db                  *sqlx.DB
-	outputDecoder       *decoder.OutputDecoder
-	convenienceService  *services.ConvenienceService
-	repository          *repository.VoucherRepository
-	syncRepository      *repository.SynchronizerRepository
-	graphQLSynchronizer *synchronizer.Synchronizer
-	voucherFetcher      *synchronizer.VoucherFetcher
-	noticeRepository    *repository.NoticeRepository
+	db                   *sqlx.DB
+	outputDecoder        *decoder.OutputDecoder
+	convenienceService   *services.ConvenienceService
+	repository           *repository.VoucherRepository
+	syncRepository       *repository.SynchronizerRepository
+	graphQLSynchronizer  *synchronizer.Synchronizer
+	voucherFetcher       *synchronizer.VoucherFetcher
+	noticeRepository     *repository.NoticeRepository
+	graphileFetcher      *synchronizer.GraphileFetcher
+	graphileSynchronizer *synchronizer.GraphileSynchronizer
+	graphileClient       graphile.GraphileClient
 }
 
 func NewContainer(db sqlx.DB) *Container {
@@ -64,7 +68,7 @@ func (c *Container) GetSyncRepository() *repository.SynchronizerRepository {
 }
 
 func (c *Container) GetNoticeRepository() *repository.NoticeRepository {
-	if c.syncRepository != nil {
+	if c.noticeRepository != nil {
 		return c.noticeRepository
 	}
 	c.noticeRepository = &repository.NoticeRepository{
@@ -99,10 +103,51 @@ func (c *Container) GetGraphQLSynchronizer() *synchronizer.Synchronizer {
 	)
 	return c.graphQLSynchronizer
 }
+
 func (c *Container) GetVoucherFetcher() *synchronizer.VoucherFetcher {
 	if c.voucherFetcher != nil {
 		return c.voucherFetcher
 	}
 	c.voucherFetcher = synchronizer.NewVoucherFetcher()
 	return c.voucherFetcher
+}
+
+func (c *Container) GetGraphileSynchronizer(loadTestMode bool) *synchronizer.GraphileSynchronizer {
+	if c.graphileSynchronizer != nil {
+		return c.graphileSynchronizer
+	}
+
+	graphileClient := c.GetGraphileClient(loadTestMode)
+	c.graphileSynchronizer = synchronizer.NewGraphileSynchronizer(
+		c.GetOutputDecoder(),
+		c.GetSyncRepository(),
+		c.GetGraphileFetcher(graphileClient),
+	)
+	return c.graphileSynchronizer
+}
+
+func (c *Container) GetGraphileFetcher(graphileClient graphile.GraphileClient) *synchronizer.GraphileFetcher {
+	if c.graphileFetcher != nil {
+		return c.graphileFetcher
+	}
+	c.graphileFetcher = synchronizer.NewGraphileFetcher(graphileClient)
+	return c.graphileFetcher
+}
+
+func (c *Container) GetGraphileClient(loadTestMode bool) graphile.GraphileClient {
+
+	if c.graphileClient != nil {
+		return c.graphileClient
+	}
+
+	graphileHost := "localhost"
+
+	if loadTestMode {
+		graphileHost = "postgraphile-custom"
+	}
+
+	c.graphileClient = &graphile.GraphileClientImpl{
+		GraphileHost: graphileHost,
+	}
+	return c.graphileClient
 }
