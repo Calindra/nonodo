@@ -55,7 +55,7 @@ func (r *RollupAPI) Gio(ctx echo.Context) error {
 
 	if err != nil {
 		slog.Debug("Error in Fetcher: %s %d", err.Error(), err.Status())
-		return ctx.String(int(err.Status()), err.Error())
+		return ctx.String(err.Status(), err.Error())
 	}
 
 	if fetch == nil {
