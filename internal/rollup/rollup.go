@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	cModel "github.com/calindra/nonodo/internal/convenience/model"
 	mdl "github.com/calindra/nonodo/internal/model"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -35,7 +36,7 @@ type RollupAPI struct {
 }
 
 type Sequencer interface {
-	FinishAndGetNext(accept bool) mdl.Input
+	FinishAndGetNext(accept bool) cModel.Input
 }
 
 // Gio implements ServerInterface.
@@ -232,10 +233,10 @@ func checkContentType(c echo.Context) bool {
 }
 
 // Convert model input to API type.
-func convertInput(input mdl.Input) RollupRequest {
+func convertInput(input cModel.Input) RollupRequest {
 	var resp RollupRequest
 	switch input := input.(type) {
-	case mdl.AdvanceInput:
+	case cModel.AdvanceInput:
 		advance := Advance{
 			Metadata: Metadata{
 				BlockNumber:    input.BlockNumber,

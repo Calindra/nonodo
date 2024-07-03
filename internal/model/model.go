@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/calindra/nonodo/internal/convenience/model"
+	cModel "github.com/calindra/nonodo/internal/convenience/model"
+	cRepos "github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/jmoiron/sqlx"
@@ -24,10 +26,10 @@ type NonodoModel struct {
 	state            rollupsState
 	decoder          Decoder
 	reportRepository *ReportRepository
-	inputRepository  *InputRepository
+	inputRepository  *cRepos.InputRepository
 }
 
-func (m *NonodoModel) GetInputRepository() *InputRepository {
+func (m *NonodoModel) GetInputRepository() *cRepos.InputRepository {
 	return m.inputRepository
 }
 
@@ -38,7 +40,7 @@ func NewNonodoModel(decoder Decoder, db *sqlx.DB) *NonodoModel {
 	if err != nil {
 		panic(err)
 	}
-	inputRepository := InputRepository{Db: db}
+	inputRepository := cRepos.InputRepository{Db: db}
 	err = inputRepository.CreateTables()
 	if err != nil {
 		panic(err)
@@ -65,9 +67,9 @@ func (m *NonodoModel) AddAdvanceInput(
 ) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
-	input := AdvanceInput{
+	input := cModel.AdvanceInput{
 		Index:          index,
-		Status:         CompletionStatusUnprocessed,
+		Status:         cModel.CompletionStatusUnprocessed,
 		MsgSender:      sender,
 		Payload:        payload,
 		BlockTimestamp: timestamp,
@@ -94,7 +96,7 @@ func (m *NonodoModel) AddInspectInput(payload []byte) int {
 	index := len(m.inspects)
 	input := InspectInput{
 		Index:   index,
-		Status:  CompletionStatusUnprocessed,
+		Status:  cModel.CompletionStatusUnprocessed,
 		Payload: payload,
 	}
 	m.inspects = append(m.inspects, &input)
@@ -123,29 +125,29 @@ func (m *NonodoModel) GetInspectInput(index int) InspectInput {
 // If there is no input to be processed return nil.
 //
 // Note: use in v2 the sequencer instead.
-func (m *NonodoModel) FinishAndGetNext(accepted bool) Input {
+func (m *NonodoModel) FinishAndGetNext(accepted bool) cModel.Input {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
 	// finish current input
-	var status CompletionStatus
+	var status cModel.CompletionStatus
 	if accepted {
-		status = CompletionStatusAccepted
+		status = cModel.CompletionStatusAccepted
 	} else {
-		status = CompletionStatusRejected
+		status = cModel.CompletionStatusRejected
 	}
 	m.state.finish(status)
 
 	// try to get first unprocessed inspect
 	for _, input := range m.inspects {
-		if input.Status == CompletionStatusUnprocessed {
+		if input.Status == cModel.CompletionStatusUnprocessed {
 			m.state = newRollupsStateInspect(input, m.getProcessedInputCount)
 			return *input
 		}
 	}
 
 	// try to get first unprocessed advance
-	input, err := m.inputRepository.FindByStatus(CompletionStatusUnprocessed)
+	input, err := m.inputRepository.FindByStatus(cModel.CompletionStatusUnprocessed)
 	if err != nil {
 		panic(err)
 	}
@@ -216,7 +218,7 @@ func (m *NonodoModel) RegisterException(payload []byte) error {
 func (m *NonodoModel) getProcessedInputCount() int {
 	filter := []*model.ConvenienceFilter{}
 	field := "Status"
-	value := fmt.Sprintf("%d", CompletionStatusUnprocessed)
+	value := fmt.Sprintf("%d", cModel.CompletionStatusUnprocessed)
 	filter = append(filter, &model.ConvenienceFilter{
 		Field: &field,
 		Ne:    &value,

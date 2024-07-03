@@ -6,6 +6,7 @@ import (
 	"log/slog"
 
 	convenience "github.com/calindra/nonodo/internal/convenience/model"
+	cRepos "github.com/calindra/nonodo/internal/convenience/repository"
 	services "github.com/calindra/nonodo/internal/convenience/services"
 	repos "github.com/calindra/nonodo/internal/model"
 	graphql "github.com/calindra/nonodo/internal/reader/model"
@@ -15,7 +16,7 @@ import (
 
 type AdapterV1 struct {
 	reportRepository   *repos.ReportRepository
-	inputRepository    *repos.InputRepository
+	inputRepository    *cRepos.InputRepository
 	convenienceService *services.ConvenienceService
 }
 
@@ -37,7 +38,7 @@ func NewAdapterV1(
 	if err != nil {
 		panic(err)
 	}
-	inputRepository := &repos.InputRepository{
+	inputRepository := &cRepos.InputRepository{
 		Db: db,
 	}
 	err = inputRepository.CreateTables()
@@ -259,7 +260,7 @@ func (a AdapterV1) GetInputs(
 }
 
 func (a AdapterV1) convertToInputConnection(
-	inputs []repos.AdvanceInput,
+	inputs []convenience.AdvanceInput,
 	offset int, total int,
 ) (*graphql.InputConnection, error) {
 	convNodes := make([]*graphql.Input, len(inputs))

@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/calindra/nonodo/internal/contracts"
-	"github.com/calindra/nonodo/internal/model"
+	cRepos "github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -33,7 +33,7 @@ type InputterWorker struct {
 	InputBoxAddress    common.Address
 	InputBoxBlock      uint64
 	ApplicationAddress common.Address
-	Repository         model.InputRepository
+	Repository         cRepos.InputRepository
 }
 
 func (w InputterWorker) String() string {

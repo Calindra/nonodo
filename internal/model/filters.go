@@ -6,6 +6,8 @@ package model
 import (
 	"encoding/json"
 	"fmt"
+
+	cModel "github.com/calindra/nonodo/internal/convenience/model"
 )
 
 //
@@ -19,7 +21,7 @@ type InputFilter struct {
 }
 
 // Return true when the given input should be filtered.
-func (f InputFilter) Filter(i *AdvanceInput) bool {
+func (f InputFilter) Filter(i *cModel.AdvanceInput) bool {
 	return (f.IndexGreaterThan != nil && i.Index <= *f.IndexGreaterThan) ||
 		(f.IndexLowerThan != nil && i.Index >= *f.IndexLowerThan)
 }

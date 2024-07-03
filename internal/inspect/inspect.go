@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"time"
 
+	cModel "github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/model"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/labstack/echo/v4"
@@ -72,7 +73,7 @@ func (a *inspectAPI) inspect(c echo.Context, payload []byte) error {
 	defer ticker.Stop()
 	for {
 		input := a.model.GetInspectInput(index)
-		if input.Status != model.CompletionStatusUnprocessed {
+		if input.Status != cModel.CompletionStatusUnprocessed {
 			resp := convertInput(input)
 			return c.JSON(http.StatusOK, &resp)
 		}
@@ -88,13 +89,13 @@ func (a *inspectAPI) inspect(c echo.Context, payload []byte) error {
 func convertInput(input model.InspectInput) InspectResult {
 	var status CompletionStatus
 	switch input.Status {
-	case model.CompletionStatusUnprocessed:
+	case cModel.CompletionStatusUnprocessed:
 		panic("impossible")
-	case model.CompletionStatusAccepted:
+	case cModel.CompletionStatusAccepted:
 		status = Accepted
-	case model.CompletionStatusRejected:
+	case cModel.CompletionStatusRejected:
 		status = Rejected
-	case model.CompletionStatusException:
+	case cModel.CompletionStatusException:
 		status = Exception
 	default:
 		panic("invalid completion status")

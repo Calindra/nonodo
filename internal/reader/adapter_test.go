@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/calindra/nonodo/internal/commons"
+	convenience "github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/model"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
@@ -46,7 +47,7 @@ func (s *AdapterSuite) TestCreateTables() {
 }
 
 func (s *AdapterSuite) TestGetReport() {
-	_, err := s.reportRepository.Create(model.Report{
+	_, err := s.reportRepository.Create(convenience.Report{
 		InputIndex: 1,
 		Index:      2,
 		Payload:    common.Hex2Bytes("1122"),
@@ -59,7 +60,7 @@ func (s *AdapterSuite) TestGetReport() {
 
 func (s *AdapterSuite) TestGetReports() {
 	for i := 0; i < 3; i++ {
-		_, err := s.reportRepository.Create(model.Report{
+		_, err := s.reportRepository.Create(convenience.Report{
 			InputIndex: i,
 			Index:      0,
 			Payload:    common.Hex2Bytes("1122"),

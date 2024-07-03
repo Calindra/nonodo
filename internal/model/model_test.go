@@ -13,6 +13,7 @@ import (
 	"time"
 
 	cModel "github.com/calindra/nonodo/internal/convenience/model"
+	cRepos "github.com/calindra/nonodo/internal/convenience/repository"
 
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/convenience"
@@ -38,7 +39,7 @@ type ModelSuite struct {
 	blockNumbers       []uint64
 	timestamps         []time.Time
 	reportRepository   *ReportRepository
-	inputRepository    *InputRepository
+	inputRepository    *cRepos.InputRepository
 	tempDir            string
 	convenienceService *services.ConvenienceService
 }
@@ -93,7 +94,7 @@ func (s *ModelSuite) TestItAddsAndGetsAdvanceInputs() {
 	for i := 0; i < s.n; i++ {
 		input := inputs[i]
 		s.Equal(i, input.Index)
-		s.Equal(CompletionStatusUnprocessed, input.Status)
+		s.Equal(cModel.CompletionStatusUnprocessed, input.Status)
 		s.Equal(s.senders[i], input.MsgSender)
 		s.Equal(s.payloads[i], input.Payload)
 		s.Equal(s.blockNumbers[i], input.BlockNumber)
@@ -121,7 +122,7 @@ func (s *ModelSuite) TestItAddsAndGetsInspectInput() {
 	for i := 0; i < s.n; i++ {
 		input := s.m.GetInspectInput(i)
 		s.Equal(i, input.Index)
-		s.Equal(CompletionStatusUnprocessed, input.Status)
+		s.Equal(cModel.CompletionStatusUnprocessed, input.Status)
 		s.Equal(s.payloads[i], input.Payload)
 		s.Equal(0, input.ProcessedInputCount)
 		s.Empty(input.Reports)
@@ -147,7 +148,7 @@ func (s *ModelSuite) TestItGetsFirstAdvanceInput() {
 	}
 
 	// get first input
-	input, ok := s.m.FinishAndGetNext(true).(AdvanceInput)
+	input, ok := s.m.FinishAndGetNext(true).(cModel.AdvanceInput)
 	s.NotNil(input)
 	s.True(ok)
 	s.Equal(0, input.Index)
@@ -187,7 +188,7 @@ func (s *ModelSuite) TestItGetsInspectBeforeAdvance() {
 
 	// get advances
 	for i := 0; i < s.n; i++ {
-		input, ok := s.m.FinishAndGetNext(true).(AdvanceInput)
+		input, ok := s.m.FinishAndGetNext(true).(cModel.AdvanceInput)
 		s.NotNil(input)
 		s.True(ok)
 		s.Equal(i, input.Index)
@@ -215,7 +216,7 @@ func (s *ModelSuite) TestItFinishesAdvanceWithAccept() {
 	input, err := s.inputRepository.FindByIndex(0)
 	s.NoError(err)
 	s.Equal(0, input.Index)
-	s.Equal(CompletionStatusAccepted, input.Status)
+	s.Equal(cModel.CompletionStatusAccepted, input.Status)
 
 	// check vouchers
 	ctx := context.Background()
@@ -251,7 +252,7 @@ func (s *ModelSuite) TestItFinishesAdvanceWithReject() {
 	input, err := s.inputRepository.FindByIndex(0)
 	s.NoError(err)
 	s.Equal(0, input.Index)
-	s.Equal(CompletionStatusRejected, input.Status)
+	s.Equal(cModel.CompletionStatusRejected, input.Status)
 	s.Empty(input.Exception)
 	s.Empty(input.Notices)  // deprecated
 	s.Empty(input.Vouchers) // deprecated
@@ -285,7 +286,7 @@ func (s *ModelSuite) TestItFinishesInspectWithAccept() {
 	// check input
 	input := s.m.GetInspectInput(0)
 	s.Equal(0, input.Index)
-	s.Equal(CompletionStatusAccepted, input.Status)
+	s.Equal(cModel.CompletionStatusAccepted, input.Status)
 	s.Equal(s.payloads[0], input.Payload)
 	s.Equal(0, input.ProcessedInputCount)
 	s.Len(input.Reports, 1)
@@ -304,7 +305,7 @@ func (s *ModelSuite) TestItFinishesInspectWithReject() {
 	// check input
 	input := s.m.GetInspectInput(0)
 	s.Equal(0, input.Index)
-	s.Equal(CompletionStatusRejected, input.Status)
+	s.Equal(cModel.CompletionStatusRejected, input.Status)
 	s.Equal(s.payloads[0], input.Payload)
 	s.Equal(0, input.ProcessedInputCount)
 	s.Len(input.Reports, 1)
@@ -532,7 +533,7 @@ func (s *ModelSuite) TestItRegistersExceptionWhenAdvancing() {
 	input, err := s.inputRepository.FindByIndex(0)
 	s.NoError(err)
 	s.Equal(0, input.Index)
-	s.Equal(CompletionStatusException, input.Status)
+	s.Equal(cModel.CompletionStatusException, input.Status)
 	s.Empty(input.Vouchers)
 	s.Empty(input.Notices)
 	s.Empty(input.Reports)
@@ -556,7 +557,7 @@ func (s *ModelSuite) TestItRegistersExceptionWhenInspecting() {
 	// check input
 	input := s.m.GetInspectInput(0)
 	s.Equal(0, input.Index)
-	s.Equal(CompletionStatusException, input.Status)
+	s.Equal(cModel.CompletionStatusException, input.Status)
 	s.Equal(s.payloads[0], input.Payload)
 	s.Equal(0, input.ProcessedInputCount)
 	s.Len(input.Reports, 1)
@@ -581,7 +582,7 @@ func (s *ModelSuite) TestItGetsAdvanceInputs() {
 		input, err := s.inputRepository.FindByIndex(i)
 		s.NoError(err)
 		s.Equal(i, input.Index)
-		s.Equal(CompletionStatusUnprocessed, input.Status)
+		s.Equal(cModel.CompletionStatusUnprocessed, input.Status)
 		s.Equal(s.senders[i], input.MsgSender)
 		s.Equal(s.payloads[i], input.Payload)
 		s.Equal(s.blockNumbers[i], input.BlockNumber)
@@ -1341,7 +1342,7 @@ func (s *ModelSuite) teardown() {
 	defer os.RemoveAll(s.tempDir)
 }
 
-func (s *ModelSuite) getAllInputs(offset int, limit int) []AdvanceInput {
+func (s *ModelSuite) getAllInputs(offset int, limit int) []cModel.AdvanceInput {
 	if offset != 0 {
 		afterOffset := commons.EncodeCursor(offset - 1)
 		vouchers, err := s.inputRepository.

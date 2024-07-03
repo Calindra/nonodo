@@ -10,8 +10,9 @@ import (
 	"strconv"
 	"time"
 
+	cModel "github.com/calindra/nonodo/internal/convenience/model"
+	cRepos "github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/calindra/nonodo/internal/devnet"
-	"github.com/calindra/nonodo/internal/model"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/labstack/echo/v4"
 )
@@ -31,10 +32,10 @@ type FetchInputBoxContext struct {
 }
 
 type EspressoFetcher struct {
-	inputRepository *model.InputRepository
+	inputRepository *cRepos.InputRepository
 }
 
-func NewEspressoFetcher(input *model.InputRepository) Fetch {
+func NewEspressoFetcher(input *cRepos.InputRepository) Fetch {
 	return &EspressoFetcher{inputRepository: input}
 }
 
@@ -48,10 +49,10 @@ func computeEpoch(blockNumber *big.Int) (*big.Int, error) {
 	}
 }
 
-func (e *EspressoFetcher) fetchCurrentInput() (*model.AdvanceInput, error) {
+func (e *EspressoFetcher) fetchCurrentInput() (*cModel.AdvanceInput, error) {
 	// retrieve total number of inputs
 	input := e.inputRepository
-	currentInput, err := input.FindByStatusNeDesc(model.CompletionStatusUnprocessed)
+	currentInput, err := input.FindByStatusNeDesc(cModel.CompletionStatusUnprocessed)
 	if err != nil {
 		return nil, err
 	}

@@ -1,5 +1,7 @@
 package model
 
+import cModel "github.com/calindra/nonodo/internal/convenience/model"
+
 type InputBoxSequencer struct {
 	model *NonodoModel
 }
@@ -16,33 +18,33 @@ type EspressoSequencer struct {
 	model *NonodoModel
 }
 
-func (es *EspressoSequencer) FinishAndGetNext(accept bool) Input {
+func (es *EspressoSequencer) FinishAndGetNext(accept bool) cModel.Input {
 	return FinishAndGetNext(es.model, accept)
 }
 
-func FinishAndGetNext(m *NonodoModel, accept bool) Input {
+func FinishAndGetNext(m *NonodoModel, accept bool) cModel.Input {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
 	// finish current input
-	var status CompletionStatus
+	var status cModel.CompletionStatus
 	if accept {
-		status = CompletionStatusAccepted
+		status = cModel.CompletionStatusAccepted
 	} else {
-		status = CompletionStatusRejected
+		status = cModel.CompletionStatusRejected
 	}
 	m.state.finish(status)
 
 	// try to get first unprocessed inspect
 	for _, input := range m.inspects {
-		if input.Status == CompletionStatusUnprocessed {
+		if input.Status == cModel.CompletionStatusUnprocessed {
 			m.state = newRollupsStateInspect(input, m.getProcessedInputCount)
 			return *input
 		}
 	}
 
 	// try to get first unprocessed advance
-	input, err := m.inputRepository.FindByStatus(CompletionStatusUnprocessed)
+	input, err := m.inputRepository.FindByStatus(cModel.CompletionStatusUnprocessed)
 	if err != nil {
 		panic(err)
 	}
@@ -61,10 +63,10 @@ func FinishAndGetNext(m *NonodoModel, accept bool) Input {
 	return nil
 }
 
-func (ibs *InputBoxSequencer) FinishAndGetNext(accept bool) Input {
+func (ibs *InputBoxSequencer) FinishAndGetNext(accept bool) cModel.Input {
 	return FinishAndGetNext(ibs.model, accept)
 }
 
 type Sequencer interface {
-	FinishAndGetNext(accept bool) Input
+	FinishAndGetNext(accept bool) cModel.Input
 }

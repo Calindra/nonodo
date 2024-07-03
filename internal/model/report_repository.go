@@ -7,6 +7,7 @@ import (
 
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/convenience/model"
+	cModel "github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
 )
@@ -31,7 +32,7 @@ func (r *ReportRepository) CreateTables() error {
 	return err
 }
 
-func (r *ReportRepository) Create(report Report) (Report, error) {
+func (r *ReportRepository) Create(report cModel.Report) (cModel.Report, error) {
 	insertSql := `INSERT INTO reports (
 		output_index,
 		payload,
