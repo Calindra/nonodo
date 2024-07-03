@@ -6,7 +6,7 @@ import (
 
 	"github.com/calindra/nonodo/internal/commons"
 	convenience "github.com/calindra/nonodo/internal/convenience/model"
-	"github.com/calindra/nonodo/internal/model"
+	cRepos "github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/ncruces/go-sqlite3/driver"
@@ -20,14 +20,14 @@ import (
 
 type AdapterSuite struct {
 	suite.Suite
-	reportRepository *model.ReportRepository
+	reportRepository *cRepos.ReportRepository
 	adapter          Adapter
 }
 
 func (s *AdapterSuite) SetupTest() {
 	commons.ConfigureLog(slog.LevelDebug)
 	db := sqlx.MustConnect("sqlite3", ":memory:")
-	s.reportRepository = &model.ReportRepository{
+	s.reportRepository = &cRepos.ReportRepository{
 		Db: db,
 	}
 	err := s.reportRepository.CreateTables()

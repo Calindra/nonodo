@@ -29,6 +29,7 @@
         "goarch",
         "golangci",
         "gqlgen",
+        "graphile",
         "Graphile",
         "hexutil",
         "Idempotency",

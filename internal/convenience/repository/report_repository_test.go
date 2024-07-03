@@ -1,11 +1,10 @@
-package model
+package repository
 
 import (
 	"log/slog"
 	"testing"
 
 	"github.com/calindra/nonodo/internal/commons"
-	"github.com/calindra/nonodo/internal/convenience/model"
 	cModel "github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
@@ -92,11 +91,11 @@ func (s *ReportRepositorySuite) TestCreateReportAndFindAll() {
 	s.Equal(0, reports.Rows[0].InputIndex)
 	s.Equal(2, reports.Rows[len(reports.Rows)-1].InputIndex)
 
-	filter := []*model.ConvenienceFilter{}
+	filter := []*cModel.ConvenienceFilter{}
 	{
 		field := "InputIndex"
 		value := "1"
-		filter = append(filter, &model.ConvenienceFilter{
+		filter = append(filter, &cModel.ConvenienceFilter{
 			Field: &field,
 			Eq:    &value,
 		})

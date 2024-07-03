@@ -283,7 +283,7 @@ func transformToInputQuery(
 ) (string, []interface{}, int, error) {
 	query := ""
 	if len(filter) > 0 {
-		query += "WHE" + "RE "
+		query += WHERE
 	}
 	args := []interface{}{}
 	where := []string{}

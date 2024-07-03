@@ -5,17 +5,16 @@ import (
 	"fmt"
 	"log/slog"
 
-	convenience "github.com/calindra/nonodo/internal/convenience/model"
+	cModel "github.com/calindra/nonodo/internal/convenience/model"
 	cRepos "github.com/calindra/nonodo/internal/convenience/repository"
 	services "github.com/calindra/nonodo/internal/convenience/services"
-	repos "github.com/calindra/nonodo/internal/model"
 	graphql "github.com/calindra/nonodo/internal/reader/model"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
 )
 
 type AdapterV1 struct {
-	reportRepository   *repos.ReportRepository
+	reportRepository   *cRepos.ReportRepository
 	inputRepository    *cRepos.InputRepository
 	convenienceService *services.ConvenienceService
 }
@@ -31,7 +30,7 @@ func NewAdapterV1(
 	convenienceService *services.ConvenienceService,
 ) Adapter {
 	slog.Debug("NewAdapterV1")
-	reportRepository := &repos.ReportRepository{
+	reportRepository := &cRepos.ReportRepository{
 		Db: db,
 	}
 	err := reportRepository.CreateTables()
@@ -59,11 +58,11 @@ func (a AdapterV1) GetNotices(
 	before *string,
 	inputIndex *int,
 ) (*graphql.Connection[*graphql.Notice], error) {
-	filters := []*convenience.ConvenienceFilter{}
+	filters := []*cModel.ConvenienceFilter{}
 	if inputIndex != nil {
-		field := repos.INPUT_INDEX
+		field := cModel.INPUT_INDEX
 		value := fmt.Sprintf("%d", *inputIndex)
-		filters = append(filters, &convenience.ConvenienceFilter{
+		filters = append(filters, &cModel.ConvenienceFilter{
 			Field: &field,
 			Eq:    &value,
 		})
@@ -112,11 +111,11 @@ func (a AdapterV1) GetVouchers(
 	before *string,
 	inputIndex *int,
 ) (*graphql.Connection[*graphql.Voucher], error) {
-	filters := []*convenience.ConvenienceFilter{}
+	filters := []*cModel.ConvenienceFilter{}
 	if inputIndex != nil {
-		field := repos.INPUT_INDEX
+		field := cModel.INPUT_INDEX
 		value := fmt.Sprintf("%d", *inputIndex)
-		filters = append(filters, &convenience.ConvenienceFilter{
+		filters = append(filters, &cModel.ConvenienceFilter{
 			Field: &field,
 			Eq:    &value,
 		})
@@ -194,7 +193,7 @@ func (a AdapterV1) GetReports(
 }
 
 func (a AdapterV1) convertToReportConnection(
-	reports []repos.Report,
+	reports []cModel.Report,
 	offset int, total int,
 ) (*graphql.ReportConnection, error) {
 	convNodes := make([]*graphql.Report, len(reports))
@@ -205,7 +204,7 @@ func (a AdapterV1) convertToReportConnection(
 }
 
 func (a AdapterV1) convertToReport(
-	report repos.Report,
+	report cModel.Report,
 ) *graphql.Report {
 	return &graphql.Report{
 		Index:      report.Index,
@@ -228,19 +227,19 @@ func (a AdapterV1) GetInput(index int) (*graphql.Input, error) {
 func (a AdapterV1) GetInputs(
 	first *int, last *int, after *string, before *string, where *graphql.InputFilter,
 ) (*graphql.InputConnection, error) {
-	filters := []*convenience.ConvenienceFilter{}
+	filters := []*cModel.ConvenienceFilter{}
 	if where != nil {
 		field := "Index"
 		if where.IndexGreaterThan != nil {
 			value := fmt.Sprintf("%d", *where.IndexGreaterThan)
-			filters = append(filters, &convenience.ConvenienceFilter{
+			filters = append(filters, &cModel.ConvenienceFilter{
 				Field: &field,
 				Gt:    &value,
 			})
 		}
 		if where.IndexLowerThan != nil {
 			value := fmt.Sprintf("%d", *where.IndexLowerThan)
-			filters = append(filters, &convenience.ConvenienceFilter{
+			filters = append(filters, &cModel.ConvenienceFilter{
 				Field: &field,
 				Lt:    &value,
 			})
@@ -260,7 +259,7 @@ func (a AdapterV1) GetInputs(
 }
 
 func (a AdapterV1) convertToInputConnection(
-	inputs []convenience.AdvanceInput,
+	inputs []cModel.AdvanceInput,
 	offset int, total int,
 ) (*graphql.InputConnection, error) {
 	convNodes := make([]*graphql.Input, len(inputs))

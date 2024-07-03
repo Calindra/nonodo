@@ -87,14 +87,14 @@ type rollupsStateAdvance struct {
 	notices          []cModel.ConvenienceNotice
 	reports          []cModel.Report
 	decoder          Decoder
-	reportRepository *ReportRepository
+	reportRepository *cRepos.ReportRepository
 	inputRepository  *cRepos.InputRepository
 }
 
 func newRollupsStateAdvance(
 	input *cModel.AdvanceInput,
 	decoder Decoder,
-	reportRepository *ReportRepository,
+	reportRepository *cRepos.ReportRepository,
 	inputRepository *cRepos.InputRepository,
 ) *rollupsStateAdvance {
 	slog.Info("nonodo: processing advance", "index", input.Index)
@@ -152,7 +152,7 @@ func sendAllInputNoticesToDecoder(decoder Decoder, inputIndex uint64, notices []
 	}
 }
 
-func saveAllReports(reportRepository *ReportRepository, reports []cModel.Report) {
+func saveAllReports(reportRepository *cRepos.ReportRepository, reports []cModel.Report) {
 	if reportRepository == nil {
 		slog.Warn("Missing reportRepository to save reports")
 		return

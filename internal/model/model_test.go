@@ -38,7 +38,7 @@ type ModelSuite struct {
 	senders            []common.Address
 	blockNumbers       []uint64
 	timestamps         []time.Time
-	reportRepository   *ReportRepository
+	reportRepository   *cRepos.ReportRepository
 	inputRepository    *cRepos.InputRepository
 	tempDir            string
 	convenienceService *services.ConvenienceService
@@ -979,7 +979,7 @@ func (s *ModelSuite) TestItGetsVouchersWithFilter() {
 	}
 	inputIndex := 1
 	filters := []*cModel.ConvenienceFilter{}
-	field := INPUT_INDEX
+	field := cModel.INPUT_INDEX
 	value := fmt.Sprintf("%d", inputIndex)
 	filters = append(filters, &cModel.ConvenienceFilter{
 		Field: &field,
@@ -1109,7 +1109,7 @@ func (s *ModelSuite) TestItGetsNoticesWithFilter() {
 	}
 	inputIndex := 1
 	filters := []*cModel.ConvenienceFilter{}
-	field := INPUT_INDEX
+	field := cModel.INPUT_INDEX
 	value := fmt.Sprintf("%d", inputIndex)
 	filters = append(filters, &cModel.ConvenienceFilter{
 		Field: &field,
@@ -1362,7 +1362,7 @@ func (s *ModelSuite) getAllVouchers(
 	ctx := context.Background()
 	filters := []*cModel.ConvenienceFilter{}
 	if inputIndex != nil {
-		field := INPUT_INDEX
+		field := cModel.INPUT_INDEX
 		value := fmt.Sprintf("%d", *inputIndex)
 		filters = append(filters, &cModel.ConvenienceFilter{
 			Field: &field,
@@ -1389,7 +1389,7 @@ func (s *ModelSuite) getAllNotices(
 	ctx := context.Background()
 	filters := []*cModel.ConvenienceFilter{}
 	if inputIndex != nil {
-		field := INPUT_INDEX
+		field := cModel.INPUT_INDEX
 		value := fmt.Sprintf("%d", *inputIndex)
 		filters = append(filters, &cModel.ConvenienceFilter{
 			Field: &field,

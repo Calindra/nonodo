@@ -11,7 +11,6 @@ import (
 	convenience "github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/convenience/services"
 	"github.com/calindra/nonodo/internal/graphile"
-	repos "github.com/calindra/nonodo/internal/model"
 	"github.com/calindra/nonodo/internal/reader/model"
 	graphql "github.com/calindra/nonodo/internal/reader/model"
 )
@@ -377,7 +376,7 @@ func (a AdapterV2) GetNotices(
 	inputIndex *int) (*model.NoticeConnection, error) {
 	filters := []*convenience.ConvenienceFilter{}
 	if inputIndex != nil {
-		field := repos.INPUT_INDEX
+		field := convenience.INPUT_INDEX
 		value := fmt.Sprintf("%d", *inputIndex)
 		filters = append(filters, &convenience.ConvenienceFilter{
 			Field: &field,
@@ -430,7 +429,7 @@ func (a AdapterV2) GetVouchers(
 
 	filters := []*convenience.ConvenienceFilter{}
 	if inputIndex != nil {
-		field := repos.INPUT_INDEX
+		field := convenience.INPUT_INDEX
 		value := fmt.Sprintf("%d", *inputIndex)
 		filters = append(filters, &convenience.ConvenienceFilter{
 			Field: &field,

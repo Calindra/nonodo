@@ -25,7 +25,7 @@ type NonodoModel struct {
 	inspects         []*InspectInput
 	state            rollupsState
 	decoder          Decoder
-	reportRepository *ReportRepository
+	reportRepository *cRepos.ReportRepository
 	inputRepository  *cRepos.InputRepository
 }
 
@@ -35,7 +35,7 @@ func (m *NonodoModel) GetInputRepository() *cRepos.InputRepository {
 
 // Create a new model.
 func NewNonodoModel(decoder Decoder, db *sqlx.DB) *NonodoModel {
-	reportRepository := ReportRepository{Db: db}
+	reportRepository := cRepos.ReportRepository{Db: db}
 	err := reportRepository.CreateTables()
 	if err != nil {
 		panic(err)
