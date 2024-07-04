@@ -1,10 +1,18 @@
 #!/usr/bin/env node
 "use strict"
 
+import { tmpdir } from "node:os";
 import { Logger, Levels } from "./logger.js"
 import { makeRequest } from "./utils.js";
+import { parse } from "semver"
 
 const logger = new Logger("Brunodo", Levels.INFO);
+const PACKAGE_NONODO_DIR = process.env.PACKAGE_NONODO_DIR ?? tmpdir();
+
+// Check file for configuration what is installed
+async function install(signal, logger, version) {
+    throw new Error("Not implemented")
+}
 
 async function listTags(signal, logger) {
     const repo = "nonodo"
@@ -33,6 +41,20 @@ async function main() {
     switch (args[0]) {
         case "list":
             await listTags(abortCtrl.signal, logger)
+            return true
+        case "install":
+            if (args.length < 2) {
+                logger.error("Missing version")
+                return false
+            }
+            const version = parse(args[1])
+
+            if (!version) {
+                logger.error(`Invalid version: ${args[1]}`)
+                return false
+            }
+
+            await install(abortCtrl.signal, logger, args[1])
             return true
         default:
             logger.error(`Unknown command: ${args[0]}`)

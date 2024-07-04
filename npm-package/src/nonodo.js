@@ -23,6 +23,11 @@ import { makeRequest } from "./utils.js";
  * @property {string} version
  */
 
+/**
+ * @todo create .nonodorc.json when install
+ */
+
+
 // const PACKAGE_NONODO_VERSION =
 // process.env.PACKAGE_NONODO_VERSION ?? version;
 // const PACKAGE_NONODO_URL = new URL(
