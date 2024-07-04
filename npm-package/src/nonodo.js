@@ -1,6 +1,11 @@
 #!/usr/bin/env node
 "use strict";
-import { existsSync, createReadStream, readFileSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  createReadStream,
+  readFileSync,
+  writeFileSync,
+} from "node:fs";
 import { Buffer } from "node:buffer";
 import { URL } from "node:url";
 import { spawn } from "node:child_process";
@@ -223,12 +228,16 @@ function makeRequest(signal, url) {
         res.statusCode < 400 &&
         res.headers.location
       ) {
-        makeRequest(signal, new URL(res.headers.location)).then(resolve).catch(reject);
+        makeRequest(signal, new URL(res.headers.location))
+          .then(resolve)
+          .catch(reject);
         // Error
       } else {
         bar?.stop();
         reject(
-          new Error(`Error ${res.statusCode} when downloading the package: ${res.statusMessage}`),
+          new Error(
+            `Error ${res.statusCode} when downloading the package: ${res.statusMessage}`,
+          ),
         );
       }
     });
@@ -286,14 +295,17 @@ async function getNonodoAvailable(signal, nonodoUrl, releaseName, binaryName) {
   const support = `${myPlatform}-${myArch}`;
 
   if (AVAILABLE_BINARY_NAME.has(support)) {
-    logger.info(`Platform supported: ${support}`);
+    logger.debug(`Platform supported: ${support}`);
     const binaryPath = join(nonodoPath, binaryName);
 
     if (existsSync(binaryPath)) return binaryPath;
 
     logger.info(`Nonodo binary not found: ${binaryPath}`);
     logger.info(`Downloading nonodo binary...`);
-    const [hash] = await Promise.all([downloadHash(signal, nonodoUrl, releaseName), downloadBinary(signal, nonodoUrl, releaseName)]);
+    const [hash] = await Promise.all([
+      downloadHash(signal, nonodoUrl, releaseName),
+      downloadBinary(signal, nonodoUrl, releaseName),
+    ]);
 
     logger.info(`Downloaded nonodo binary.`);
     logger.info(`Verifying hash...`);
@@ -334,13 +346,18 @@ async function tryPackageNonodo(params) {
 
   try {
     const cli = new CLI({
-      version: "2.1.1-beta"
+      version: params?.version,
     });
 
     logger.info(`Running brunodo ${cli.version} for ${arch()} ${platform()}`);
 
     process.once("SIGINT", () => asyncController.abort());
-    const nonodoPath = await getNonodoAvailable(asyncController.signal, cli.url, cli.releaseName, cli.binaryName);
+    const nonodoPath = await getNonodoAvailable(
+      asyncController.signal,
+      cli.url,
+      cli.releaseName,
+      cli.binaryName,
+    );
     logger.info(`nonodo path: ${nonodoPath}`);
     await runNonodo(nonodoPath);
     return true;

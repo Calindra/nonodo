@@ -14,10 +14,13 @@ export const Levels = {
 
 
 export class Logger {
-    /** @type {string} */
     #prefix;
     #level;
 
+    /**
+     * @param {string} prefix
+     * @param {number=} level
+     */
     constructor(prefix, level = Levels.INFO) {
         this.#prefix = prefix;
         this.#level = level;
@@ -28,7 +31,7 @@ export class Logger {
      * @param {string} level
      */
     #log = (message, level) => {
-        if (Levels[level] > this.#level) {
+        if (Levels[level] && (Levels[level] > this.#level)) {
             return;
         }
 
