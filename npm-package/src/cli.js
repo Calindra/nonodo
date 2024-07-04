@@ -1,10 +1,23 @@
 import { platform } from "node:os";
-import { getArch, getPlatform } from "./utils";
+import { getArch, getPlatform } from "./utils.js";
+import { valid } from "semver"
 
 export class CLI {
     #version
     constructor({ version }) {
-        this.#version = version;
+        const v = valid(version)
+        this.#version = v;
+    }
+
+    get url() {
+        const url = new URL("https://github.com/Calindra/nonodo/releases");
+        if (this.#version) {
+            url.pathname += `/download/v${this.#version}/`;
+        } else {
+            url.pathname += "/latest/download/";
+        }
+
+        return url
     }
 
     get version() {

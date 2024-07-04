@@ -11,9 +11,9 @@ import { get as request } from "node:https";
 import { unzipSync } from "node:zlib";
 import { SingleBar, Presets } from "cli-progress";
 import AdmZip from "adm-zip";
-import { CLI } from "./cli";
-import { Levels, Logger } from "./logger";
-import { getPlatform, getArch } from "./utils";
+import { Levels, Logger } from "./logger.js";
+import { CLI } from "./cli.js";
+import { getPlatform, getArch } from "./utils.js";
 
 // const PACKAGE_NONODO_VERSION =
 // process.env.PACKAGE_NONODO_VERSION ?? version;
@@ -247,7 +247,7 @@ async function runNonodo(location) {
   });
 }
 
-async function getNonodoAvailable(signal, releaseName, binaryName) {
+async function getNonodoAvailable(signal, nonodoUrl, releaseName, binaryName) {
   const nonodoPath = PACKAGE_NONODO_DIR;
 
   const myPlatform = getPlatform();
@@ -255,13 +255,14 @@ async function getNonodoAvailable(signal, releaseName, binaryName) {
   const support = `${myPlatform}-${myArch}`;
 
   if (AVAILABLE_BINARY_NAME.has(support)) {
+    logger.info(`Platform supported: ${support}`);
     const binaryPath = join(nonodoPath, binaryName);
 
     if (existsSync(binaryPath)) return binaryPath;
 
     logger.info(`Nonodo binary not found: ${binaryPath}`);
     logger.info(`Downloading nonodo binary...`);
-    const [hash] = await Promise.all([downloadHash(), downloadBinary()]);
+    const [hash] = await Promise.all([downloadHash(signal, nonodoUrl, releaseName), downloadBinary(signal, nonodoUrl, releaseName)]);
 
     logger.info(`Downloaded nonodo binary.`);
     logger.info(`Verifying hash...`);
@@ -297,26 +298,16 @@ async function tryPackageNonodo() {
   const asyncController = new AbortController();
 
   try {
-
     const cli = new CLI({
-      version: "v2.1.1-beta"
+      version: "2.1.1-beta"
     });
 
     logger.info(`Running brunodo ${cli.version} for ${arch()} ${platform()}`);
 
-    const nonodoUrl = new URL(`https://github.com/Calindra/nonodo/releases/download/v${cli.version}`);
-    const releaseName = cli.releaseName;
-    const binaryName = cli.binaryName
-
-    // Commands
-    // Install
-    // List
-    // Uninstall
-
-    //   process.once("SIGINT", () => asyncController.abort());
-    //   const nonodoPath = await getNonodoAvailable();
-    //   logger.info("nonodo path:", nonodoPath);
-    //   await runNonodo(nonodoPath);
+    process.once("SIGINT", () => asyncController.abort());
+    const nonodoPath = await getNonodoAvailable(asyncController.signal, cli.url, cli.releaseName, cli.binaryName);
+    logger.info(`nonodo path: ${nonodoPath}`);
+    await runNonodo(nonodoPath);
     return true;
   } catch (e) {
     asyncController.abort(e);
@@ -331,6 +322,11 @@ tryPackageNonodo()
     }
   })
   .catch((e) => {
-    logger.error(e);
+    if (e instanceof Error) {
+      logger.error(e.stack);
+    } else {
+      logger.error(e);
+    }
+
     process.exit(1);
   });

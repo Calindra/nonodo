@@ -1,4 +1,5 @@
-import colorize from "chalk"
+// import colorize from "chalk"
+import { inspect } from "node:util"
 
 /**
  * Enum for log levels
@@ -32,9 +33,18 @@ export class Logger {
             return;
         }
 
+        // const color = {
+        //     ERROR: colorize.red,
+        //     WARN: colorize.yellow,
+        //     INFO: colorize.green,
+        //     DEBUG: colorize.gray,
+        // }[level];
+
         const prefixName = this.#prefix || "Brunodo";
         const prefix = `[${prefixName} ${level}] `;
-        console.log(`${prefix}${message}`);
+        const msg = inspect(message, { colors: true, depth: 4 })
+
+        console.log(`${prefix}${msg}`);
     }
 
     error = (message) => {
