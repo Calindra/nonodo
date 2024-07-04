@@ -11,6 +11,9 @@ import { get as request } from "node:https";
 import { unzipSync } from "node:zlib";
 import { SingleBar, Presets } from "cli-progress";
 import AdmZip from "adm-zip";
+import { CLI } from "./cli";
+import { Levels, Logger } from "./logger";
+import { getPlatform, getArch } from "./utils";
 
 // const PACKAGE_NONODO_VERSION =
 // process.env.PACKAGE_NONODO_VERSION ?? version;
@@ -30,34 +33,7 @@ const AVAILABLE_BINARY_NAME = new Set([
   "windows-amd64",
 ]);
 
-function getPlatform() {
-  const plat = platform();
-  if (plat === "win32") return "windows";
-  else return plat;
-}
-
-function getArch() {
-  const arc = arch();
-  if (arc === "x64") return "amd64";
-  else return arc;
-}
-
-function getReleaseName(version) {
-  const arcName = getArch();
-  const platformName = getPlatform();
-  const exe = platform() === "win32" ? ".zip" : ".tar.gz";
-  return `nonodo-v${version}-${platformName}-${arcName}${exe}`;
-}
-
-function getBinaryName(version) {
-  const arcName = getArch();
-  const platformName = getPlatform();
-  const exe = platform() === "win32" ? ".exe" : "";
-  return `nonodo-v${version}-${platformName}-${arcName}${exe}`;
-}
-
-
-const asyncController = new AbortController();
+const logger = new Logger("Nonodo", Levels.INFO);
 
 /**
  *
@@ -135,7 +111,7 @@ function extractFileFromTarball(tarballBuffer, filepath) {
   }
 }
 
-async function downloadBinary(nonodoUrl, releaseName) {
+async function downloadBinary(signal, nonodoUrl, releaseName) {
   if (!(nonodoUrl instanceof URL)) {
     throw new Error("Invalid URL");
   }
@@ -144,18 +120,18 @@ async function downloadBinary(nonodoUrl, releaseName) {
   if (!url.href.endsWith("/")) url.pathname += "/";
   url.pathname += releaseName;
 
-  console.log(`Downloading: ${url.href}`);
+  logger.info(`Downloading: ${url.href}`);
 
   const dest = join(dir, releaseName);
 
-  const binary = await makeRequest(url);
+  const binary = await makeRequest(signal, url);
 
   writeFileSync(dest, binary, {
-    signal: asyncController.signal,
+    signal,
   });
 }
 
-async function downloadHash(nonodoUrl, releaseName) {
+async function downloadHash(signal, nonodoUrl, releaseName) {
   if (!(nonodoUrl instanceof URL)) {
     throw new Error("Invalid URL");
   }
@@ -168,18 +144,18 @@ async function downloadHash(nonodoUrl, releaseName) {
   if (!url.href.endsWith("/")) url.pathname += "/";
   url.pathname += filename;
 
-  console.log(`Downloading: ${url.href}`);
+  logger.info(`Downloading: ${url.href}`);
 
   const dest = join(dir, filename);
 
-  const response = await makeRequest(url);
+  const response = await makeRequest(signal, url);
   const body = response.toString("utf-8");
 
   writeFileSync(dest, body, {
-    signal: asyncController.signal,
+    signal,
   });
 
-  console.log(`Downloaded hex: ${dest}`);
+  logger.info(`Downloaded hex: ${dest}`);
 
   return body.trim();
 }
@@ -189,7 +165,7 @@ async function downloadHash(nonodoUrl, releaseName) {
  * @param {URL} url
  * @returns {Promise<Buffer>}
  */
-function makeRequest(url) {
+function makeRequest(signal, url) {
   return new Promise((resolve, reject) => {
     /** @type {SingleBar=} */
     let bar;
@@ -200,6 +176,7 @@ function makeRequest(url) {
         return;
       }
 
+      // Ok
       if (res.statusCode >= 200 && res.statusCode < 300) {
         const contentLength = res.headers["content-length"];
         const chunks = [];
@@ -213,8 +190,6 @@ function makeRequest(url) {
         }
 
         res.on("data", (chunk) => {
-          // const percent = Math.floor(100 * size / length);
-          // console.log(`progress ${url.pathname}`, size, "/", length, "bytes");
           chunks.push(chunk);
           size += chunk.length;
           bar?.update(size);
@@ -224,17 +199,18 @@ function makeRequest(url) {
           bar?.stop();
           resolve(Buffer.concat(chunks));
         });
+        // Redirect
       } else if (
         res.statusCode >= 300 &&
         res.statusCode < 400 &&
         res.headers.location
       ) {
-        makeRequest(new URL(res.headers.location)).then(resolve).catch(reject);
+        makeRequest(signal, new URL(res.headers.location)).then(resolve).catch(reject);
+        // Error
       } else {
         bar?.stop();
-        console.error(res.statusCode, res.statusMessage);
         reject(
-          new Error(`Error ${res.statusCode} when downloading the package!`),
+          new Error(`Error ${res.statusCode} when downloading the package: ${res.statusMessage}`),
         );
       }
     });
@@ -243,7 +219,7 @@ function makeRequest(url) {
       reject(e);
     });
 
-    asyncController.signal.addEventListener("abort", () => {
+    signal.addEventListener("abort", () => {
       req.destroy();
       reject(new Error("Request aborted."));
     });
@@ -251,7 +227,7 @@ function makeRequest(url) {
 }
 
 async function runNonodo(location) {
-  console.log(`Running brunodo binary: ${location}`);
+  logger.info(`Running brunodo binary: ${location}`);
 
   const args = process.argv.slice(2);
   const nonodoBin = spawn(location, args, { stdio: "inherit" });
@@ -271,7 +247,7 @@ async function runNonodo(location) {
   });
 }
 
-async function getNonodoAvailable(releaseName, binaryName) {
+async function getNonodoAvailable(signal, releaseName, binaryName) {
   const nonodoPath = PACKAGE_NONODO_DIR;
 
   const myPlatform = getPlatform();
@@ -283,12 +259,12 @@ async function getNonodoAvailable(releaseName, binaryName) {
 
     if (existsSync(binaryPath)) return binaryPath;
 
-    console.log(`Nonodo binary not found: ${binaryPath}`);
-    console.log(`Downloading nonodo binary...`);
+    logger.info(`Nonodo binary not found: ${binaryPath}`);
+    logger.info(`Downloading nonodo binary...`);
     const [hash] = await Promise.all([downloadHash(), downloadBinary()]);
 
-    console.log(`Downloaded nonodo binary.`);
-    console.log(`Verifying hash...`);
+    logger.info(`Downloaded nonodo binary.`);
+    logger.info(`Verifying hash...`);
 
     const releasePath = join(nonodoPath, releaseName);
     const calculatedHash = await calculateHash(releasePath, HASH_ALGO);
@@ -299,7 +275,7 @@ async function getNonodoAvailable(releaseName, binaryName) {
       );
     }
 
-    console.log(`Hash verified.`);
+    logger.info(`Hash verified.`);
 
     if (getPlatform() !== "windows") {
       unpackTarball(releasePath, binaryPath);
@@ -316,37 +292,36 @@ async function getNonodoAvailable(releaseName, binaryName) {
   throw new Error(`Incompatible platform.`);
 }
 
+
 async function tryPackageNonodo() {
-  const cli = new CLI();
+  const asyncController = new AbortController();
 
-  const version = "v2.1.1-beta";
+  try {
 
-  console.error(`Running brunodo ${version} for ${arch()} ${platform()}`);
+    const cli = new CLI({
+      version: "v2.1.1-beta"
+    });
 
-  const nonodoUrl = new URL(`https://github.com/Calindra/nonodo/releases/download/v${version}`);
-  const releaseName = getReleaseName(version);
-  const binaryName = getBinaryName(version);
+    logger.info(`Running brunodo ${cli.version} for ${arch()} ${platform()}`);
 
-  // Commands
-  // Install
-  // List
-  // Uninstall
+    const nonodoUrl = new URL(`https://github.com/Calindra/nonodo/releases/download/v${cli.version}`);
+    const releaseName = cli.releaseName;
+    const binaryName = cli.binaryName
 
+    // Commands
+    // Install
+    // List
+    // Uninstall
 
-
-  return true;
-
-  // try {
-  //   process.once("SIGINT", () => asyncController.abort());
-  //   const nonodoPath = await getNonodoAvailable();
-  //   console.log("nonodo path:", nonodoPath);
-  //   await runNonodo(nonodoPath);
-  //   return true;
-  // } catch (e) {
-  //   console.error(e);
-  // }
-
-  // return false;
+    //   process.once("SIGINT", () => asyncController.abort());
+    //   const nonodoPath = await getNonodoAvailable();
+    //   logger.info("nonodo path:", nonodoPath);
+    //   await runNonodo(nonodoPath);
+    return true;
+  } catch (e) {
+    asyncController.abort(e);
+    throw e;
+  }
 }
 
 tryPackageNonodo()
@@ -356,6 +331,6 @@ tryPackageNonodo()
     }
   })
   .catch((e) => {
-    console.error(e);
+    logger.error(e);
     process.exit(1);
   });
