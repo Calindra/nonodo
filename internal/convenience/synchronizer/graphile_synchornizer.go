@@ -66,7 +66,7 @@ func (x GraphileSynchronizer) Start(ctx context.Context, ready chan<- struct{}) 
 				destination, _ := adapter.GetDestination(edge.Node.Blob)
 
 				if len(destination) == 0 {
-					panic(err)
+					panic(fmt.Errorf("graphile sync error: len(destination) is 0"))
 				}
 
 				err := x.Decoder.HandleOutput(ctx,
