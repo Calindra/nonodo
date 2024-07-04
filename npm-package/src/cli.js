@@ -2,8 +2,18 @@ import { platform } from "node:os";
 import { getArch, getPlatform } from "./utils.js";
 import { valid } from "semver"
 
+/**
+ * @typedef {Object} CLIOptions
+ * @property {string} version - The version of the CLI
+ */
+
+
 export class CLI {
     #version
+
+    /**
+     * @param {CLIOptions} param0
+     */
     constructor({ version }) {
         const v = valid(version)
         this.#version = v;

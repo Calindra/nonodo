@@ -1,4 +1,3 @@
-// import colorize from "chalk"
 import { inspect } from "node:util"
 
 /**
@@ -33,18 +32,18 @@ export class Logger {
             return;
         }
 
-        // const color = {
-        //     ERROR: colorize.red,
-        //     WARN: colorize.yellow,
-        //     INFO: colorize.green,
-        //     DEBUG: colorize.gray,
-        // }[level];
+        const writer = {
+            ERROR: console.error,
+            WARN: console.warn,
+            INFO: console.info,
+            DEBUG: console.debug,
+        }[level] ?? console.log;
 
         const prefixName = this.#prefix || "Brunodo";
-        const prefix = `[${prefixName} ${level}] `;
+        const prefix = `[${prefixName} ${level}]`;
         const msg = inspect(message, { colors: true, depth: 4 })
 
-        console.log(`${prefix}${msg}`);
+        writer(prefix, msg);
     }
 
     error = (message) => {
