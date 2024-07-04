@@ -4,7 +4,7 @@ import { valid } from "semver"
 
 /**
  * @typedef {Object} CLIOptions
- * @property {string} version - The version of the CLI
+ * @property {string?} [version] - The version of the CLI
  */
 
 

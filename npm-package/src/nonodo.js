@@ -15,6 +15,11 @@ import { Levels, Logger } from "./logger.js";
 import { CLI } from "./cli.js";
 import { getPlatform, getArch } from "./utils.js";
 
+/**
+ * @typedef {Object} RunNonodoOptions
+ * @property {string} version
+ */
+
 // const PACKAGE_NONODO_VERSION =
 // process.env.PACKAGE_NONODO_VERSION ?? version;
 // const PACKAGE_NONODO_URL = new URL(
@@ -82,7 +87,7 @@ function unpackTarball(tarballPath, destPath) {
  *
  * @param {Buffer} tarballBuffer
  * @param {string} filepath
- * @returns
+ * @returns {Buffer=}
  */
 function extractFileFromTarball(tarballBuffer, filepath) {
   // Tar archives are organized in 512 byte blocks.
@@ -111,6 +116,13 @@ function extractFileFromTarball(tarballBuffer, filepath) {
   }
 }
 
+/**
+ *
+ * @param {AbortSignal} signal
+ * @param {URL} nonodoUrl
+ * @param {string} releaseName
+ * @returns {Promise<void>}
+ */
 async function downloadBinary(signal, nonodoUrl, releaseName) {
   if (!(nonodoUrl instanceof URL)) {
     throw new Error("Invalid URL");
@@ -131,6 +143,12 @@ async function downloadBinary(signal, nonodoUrl, releaseName) {
   });
 }
 
+/**
+ * @param {AbortSignal} signal
+ * @param {URL} nonodoUrl
+ * @param {string} releaseName
+ * @returns {Promise<string>}
+ */
 async function downloadHash(signal, nonodoUrl, releaseName) {
   if (!(nonodoUrl instanceof URL)) {
     throw new Error("Invalid URL");
@@ -161,7 +179,7 @@ async function downloadHash(signal, nonodoUrl, releaseName) {
 }
 
 /**
- *
+ * @param {AbortSignal} signal
  * @param {URL} url
  * @returns {Promise<Buffer>}
  */
@@ -226,6 +244,11 @@ function makeRequest(signal, url) {
   });
 }
 
+/**
+ *
+ * @param {string} location
+ * @returns {Promise<void>}
+ */
 async function runNonodo(location) {
   logger.info(`Running brunodo binary: ${location}`);
 
@@ -247,6 +270,14 @@ async function runNonodo(location) {
   });
 }
 
+/**
+ *
+ * @param {AbortSignal} signal
+ * @param {URL} nonodoUrl
+ * @param {string} releaseName
+ * @param {string} binaryName
+ * @returns {Promise<string>}
+ */
 async function getNonodoAvailable(signal, nonodoUrl, releaseName, binaryName) {
   const nonodoPath = PACKAGE_NONODO_DIR;
 
@@ -293,8 +324,12 @@ async function getNonodoAvailable(signal, nonodoUrl, releaseName, binaryName) {
   throw new Error(`Incompatible platform.`);
 }
 
-
-async function tryPackageNonodo() {
+/**
+ *
+ * @param {RunNonodoOptions=} params
+ * @returns {Promise<boolean>}
+ */
+async function tryPackageNonodo(params) {
   const asyncController = new AbortController();
 
   try {

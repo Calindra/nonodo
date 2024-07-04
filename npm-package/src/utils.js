@@ -1,6 +1,5 @@
 "use strict";
 import { arch, platform } from "node:os";
-import { Logger } from "./logger.js";
 
 export function getPlatform() {
   const plat = platform();

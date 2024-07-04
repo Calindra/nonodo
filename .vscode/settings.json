@@ -75,5 +75,6 @@
         "versioninfo",
         "wangyoucao",
         "watchexec"
-    ]
+    ],
+    "js/ts.implicitProjectConfig.checkJs": true
 }
