@@ -16,6 +16,7 @@ async function listTags(signal) {
     logger.debug(tags)
     const names = tags.map((tag) => tag.name)
     logger.info(names)
+    return names
 }
 
 
