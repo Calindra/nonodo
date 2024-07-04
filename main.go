@@ -118,6 +118,12 @@ func init() {
 
 	cmd.Flags().BoolVar(&opts.LoadTestMode, "load-test-mode", opts.LoadTestMode,
 		"If set, enables load test mode")
+
+	cmd.Flags().StringVar(&opts.GraphileAddress, "graphile-address", opts.GraphileAddress,
+		"Address used to connect to Graphile")
+
+	cmd.Flags().StringVar(&opts.GraphilePort, "graphile-port", opts.GraphilePort,
+		"Port used to connect to Graphile")
 }
 
 func run(cmd *cobra.Command, args []string) {
