@@ -2,11 +2,26 @@
 "use strict"
 
 import { Logger, Levels } from "./logger.js"
+import { makeRequest } from "./utils.js";
 
-const logger = new Logger("Brunodo", Levels.INFO);
+const logger = new Logger("Brunodo", Levels.DEBUG);
+
+async function listTags(signal) {
+    const repo = "nonodo"
+    const namespace = "calindra"
+    const url = new URL(`https://api.github.com/repos/${namespace}/${repo}/tags`)
+    logger.info(url)
+    const res = await makeRequest(signal, url)
+    const tags = JSON.parse(res.toString())
+    logger.debug(tags)
+    const names = tags.map((tag) => tag.name)
+    logger.info(names)
+}
+
 
 async function main() {
-    logger.info("Hello, Brunodo!");
+    const abortCtrl = new AbortController()
+    await listTags(abortCtrl.signal)
 
     return false
 }

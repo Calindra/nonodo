@@ -6,19 +6,17 @@ import {
   readFileSync,
   writeFileSync,
 } from "node:fs";
-import { Buffer } from "node:buffer";
 import { URL } from "node:url";
 import { spawn } from "node:child_process";
 import { join } from "node:path";
 import { arch, platform, tmpdir } from "node:os";
 import { createHash } from "node:crypto";
-import { get as request } from "node:https";
 import { unzipSync } from "node:zlib";
-import { SingleBar, Presets } from "cli-progress";
 import AdmZip from "adm-zip";
 import { Levels, Logger } from "./logger.js";
 import { CLI } from "./cli.js";
 import { getPlatform, getArch } from "./utils.js";
+import { makeRequest } from "./utils.js";
 
 /**
  * @typedef {Object} RunNonodoOptions
@@ -184,76 +182,6 @@ async function downloadHash(signal, nonodoUrl, releaseName) {
 }
 
 /**
- * @param {AbortSignal} signal
- * @param {URL} url
- * @returns {Promise<Buffer>}
- */
-function makeRequest(signal, url) {
-  return new Promise((resolve, reject) => {
-    /** @type {SingleBar=} */
-    let bar;
-
-    const req = request(url, (res) => {
-      if (!res.statusCode) {
-        reject(new Error("No status code"));
-        return;
-      }
-
-      // Ok
-      if (res.statusCode >= 200 && res.statusCode < 300) {
-        const contentLength = res.headers["content-length"];
-        const chunks = [];
-        let size = 0;
-        if (contentLength) {
-          const length = parseInt(contentLength, 10);
-          if (!Number.isNaN(length)) {
-            bar = new SingleBar({}, Presets.shades_classic);
-            bar.start(length, 0);
-          }
-        }
-
-        res.on("data", (chunk) => {
-          chunks.push(chunk);
-          size += chunk.length;
-          bar?.update(size);
-        });
-
-        res.on("end", () => {
-          bar?.stop();
-          resolve(Buffer.concat(chunks));
-        });
-        // Redirect
-      } else if (
-        res.statusCode >= 300 &&
-        res.statusCode < 400 &&
-        res.headers.location
-      ) {
-        makeRequest(signal, new URL(res.headers.location))
-          .then(resolve)
-          .catch(reject);
-        // Error
-      } else {
-        bar?.stop();
-        reject(
-          new Error(
-            `Error ${res.statusCode} when downloading the package: ${res.statusMessage}`,
-          ),
-        );
-      }
-    });
-    req.on("error", (e) => {
-      bar?.stop();
-      reject(e);
-    });
-
-    signal.addEventListener("abort", () => {
-      req.destroy();
-      reject(new Error("Request aborted."));
-    });
-  });
-}
-
-/**
  *
  * @param {string} location
  * @returns {Promise<void>}
@@ -367,7 +295,9 @@ async function tryPackageNonodo(params) {
   }
 }
 
-tryPackageNonodo()
+tryPackageNonodo({
+  version: "2.1.1-beta",
+})
   .then((success) => {
     if (!success) {
       process.exit(1);
