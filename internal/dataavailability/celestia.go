@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/ecdsa"
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/binary"
 	"fmt"
@@ -28,7 +29,7 @@ import (
 	"github.com/calindra/nonodo/internal/contracts"
 )
 
-var CELESTIA_RELAY_ADDRESS common.Address = common.HexToAddress("0xAc4D5eeB63CCEA4195f34c8d6766594F99c9E00E")
+var CELESTIA_RELAY_ADDRESS common.Address = common.HexToAddress("0x4e64020dc800f02decb8Bd45bB4D0f74048e7535")
 
 // var CELESTIA_RELAY_ADDRESS common.Address = common.HexToAddress("0x096a7847B754647e06A887BeF0192689148A0C33")
 
@@ -238,7 +239,7 @@ func connections() (eth *ethclient.Client, trpc *http.HTTP, err error) {
 // GetShareProof returns the share proof for the given share pointer.
 // Ready to be used with the DAVerifier library.
 // RE: https://docs.celestia.org/developers/blobstream-proof-queries#example-rollup-that-uses-the-daverifier
-func GetShareProof(ctx context.Context, height uint64, start uint64, end uint64) (shareProofFinal *contracts.SharesProof, blockDataRoot [32]byte, err error) {
+func GetShareProof(ctx context.Context, height uint64, start uint64, end uint64) (shareProofFinal *contracts.ShareDigestsProof, blockDataRoot [32]byte, err error) {
 	var maxHeight uint64 = 10_000_000
 
 	eth, trpc, err := connections()
@@ -280,8 +281,19 @@ func GetShareProof(ctx context.Context, height uint64, start uint64, end uint64)
 
 	slog.Info("ShareProof", "Length", len(shareProof.ShareProofs), "Start", shareProof.ShareProofs[0].Start, "End", shareProof.ShareProofs[0].End)
 
-	return &contracts.SharesProof{
-		Data:             shareProof.Data,
+	// convert shareProof data into digests
+	// - this code replicates the code in the Blobstream Solidity method `TreeHasher.leafDigest()`, which is used when
+	//   sending a full SharesProof object the includes the full data
+	// - ref: https://github.com/celestiaorg/blobstream-contracts/blob/v4.1.0/src/lib/tree/namespace/TreeHasher.sol#L34
+	var digests [][32]byte
+	for _, s := range shareProof.Data {
+		namespaceBytes := append([]byte{byte(shareProof.NamespaceVersion)}, shareProof.NamespaceID[:]...)
+		digest := sha256.Sum256(append([]byte{0x00}, append(namespaceBytes, s...)...))
+		digests = append(digests, digest)
+	}
+
+	return &contracts.ShareDigestsProof{
+		Digests:          digests,
 		ShareProofs:      toNamespaceMerkleMultiProofs(shareProof.ShareProofs),
 		Namespace:        *namespace(shareProof.NamespaceID, uint8(shareProof.NamespaceVersion)),
 		RowRoots:         toRowRoots(shareProof.RowProof.RowRoots),
