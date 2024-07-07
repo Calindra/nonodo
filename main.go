@@ -389,7 +389,9 @@ func init() {
 	cmd.Flags().StringVar(&opts.Sequencer, "sequencer", opts.Sequencer,
 		"Set the sequencer (inputbox[default] or espresso)")
 	cmd.Flags().Uint64Var(&opts.Namespace, "namespace", opts.Namespace,
-		"Set the namespace for espresso)")
+		"Set the namespace for espresso")
+	cmd.Flags().DurationVar(&opts.TimeoutInspect, "sm-deadline-inspect-state", opts.TimeoutInspect, "Timeout for inspect requests. Example: nonodo --sm-deadline-inspect-state 30s")
+	cmd.Flags().DurationVar(&opts.TimeoutAdvance, "sm-deadline-advance-state", opts.TimeoutAdvance, "Timeout for advance requests. Example: nonodo --sm-deadline-advance-state 30s")
 
 	// disable-*
 	cmd.Flags().BoolVar(&opts.DisableDevnet, "disable-devnet", opts.DisableDevnet,
@@ -428,6 +430,12 @@ func init() {
 
 	cmd.Flags().BoolVar(&opts.LoadTestMode, "load-test-mode", opts.LoadTestMode,
 		"If set, enables load test mode")
+
+	cmd.Flags().StringVar(&opts.GraphileAddress, "graphile-address", opts.GraphileAddress,
+		"Address used to connect to Graphile")
+
+	cmd.Flags().StringVar(&opts.GraphilePort, "graphile-port", opts.GraphilePort,
+		"Port used to connect to Graphile")
 }
 
 func run(cmd *cobra.Command, args []string) {

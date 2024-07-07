@@ -27,7 +27,7 @@ func (r *InputRepository) CreateTables() error {
 		payload			text,
 		block_number	integer,
 		block_timestamp	integer,
-		prev_randao		integer,
+		prev_randao		text,
 		exception		text);`
 	_, err := r.Db.Exec(schema)
 	if err == nil {
@@ -327,7 +327,7 @@ func parseInput(res *sqlx.Rows) (*AdvanceInput, error) {
 		msgSender      string
 		payload        string
 		blockTimestamp int64
-		prevRandao     uint64
+		prevRandao     string
 		exception      string
 	)
 	err := res.Scan(

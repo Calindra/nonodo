@@ -96,12 +96,22 @@ To start NoNodo with the built-in echo application, use the `--enable-echo` flag
 nonodo --enable-echo
 ```
 
-#### Enable V1 for HTTP
+#### Flags and Commands
 
-NoNodo for default is enable for new v2 API from [openapi-interfaces](https://github.com/cartesi/openapi-interfaces). If you need the old api, you can try this flag:
+This is useful for searching for more behavior as described in this README.
+You can see any additional flags or commands with `--help` like:
 
 ```sh
-nonodo --enable-legacy
+nonodo --help
+```
+
+#### Timeout
+
+You can increase the default timeout by passing a flag.
+[Valid time](https://pkg.go.dev/time#ParseDuration) units are "ns", "us" (or "µs"), "ms", "s", "m", "h".
+
+```sh
+nonodo --sm-deadline-advance-state 30s --sm-deadline-inspect-state 30s
 ```
 
 ### Sending inputs
@@ -112,8 +122,8 @@ application.
 
 ```sh
 INPUT=0xdeadbeef; \
-INPUT_BOX_ADDRESS=0x59b22D57D4f067708AB0c00552767405926dc768; \
-APPLICATION_ADDRESS=0x70ac08179605AF2D9e75782b8DEcDD3c22aA4D0C; \
+INPUT_BOX_ADDRESS=0x58Df21fE097d4bE5dCf61e01d9ea3f6B81c2E1dB; \
+APPLICATION_ADDRESS=0xab7528bb862fb57e8a2bcd567a2e929a0be56a5e; \
 cast send \
     --mnemonic "test test test test test test test test test test test junk" \
     --rpc-url "http://localhost:8545" \
@@ -168,16 +178,22 @@ Start a PostGres instance locally, "cd" to db folder and use docker-compose.yml 
 Set PostGres connection details using environment variables
 
 ```env
-POSTGRES_HOST=localhost
-POSTGRES_PORT=5432
-POSTGRES_DB=mydatabase
-POSTGRES_USER=myuser
-POSTGRES_PASSWORD=mypassword
+export POSTGRES_HOST=localhost
+export POSTGRES_PORT=5432
+export POSTGRES_DB=mydatabase
+export POSTGRES_USER=myuser
+export POSTGRES_PASSWORD=mypassword
 ```
 
 When running nonodo, set flag db-implementation with the value postgres
 
 Graphile can be called using `http://localhost:5000/graphql` and you can test queries using  `http://localhost:5000/graphiql`
+
+You can change Graphile address and port using the flags graphile-address and graphile-port. 
+
+```sh
+/nonodo --graphile-address mygraphileaddress --graphile-port 5034
+```
 
 ## Compatibility
 

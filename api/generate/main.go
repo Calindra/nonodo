@@ -1,31 +1,35 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"strings"
+
+	"github.com/calindra/nonodo/internal/commons"
 )
 
-func getYAML(v2 string) []byte {
-	log.Println("Downloading OpenAPI from", v2)
+func getYAML(v2 string) ([]byte, error) {
+	slog.Info("Downloading OpenAPI from", slog.String("url", v2))
 	resp, err := http.Get(v2)
 	if err != nil {
-		panic("Failed to download OpenAPI from" + v2 + ":" + err.Error())
+		return nil, fmt.Errorf("Failed to download OpenAPI from %s: %s", v2, err.Error())
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		panic("Failed to download OpenAPI from " + v2 + ": status code " + resp.Status)
+		return nil, fmt.Errorf("Failed to download OpenAPI from %s: status code %s", v2, resp.Status)
 	}
 
 	data, err := io.ReadAll(resp.Body)
 
 	if err != nil {
-		panic("Failed to read OpenAPI from " + v2 + ": " + err.Error())
+		return nil, fmt.Errorf("Failed to read OpenAPI from %s: %s", v2, err.Error())
 	}
 
-	log.Println("OpenAPI downloaded successfully")
+	slog.Info("OpenAPI downloaded successfully")
 
 	// Replace GioResponse with GioResponseRollup
 	// Because oapi-codegen will generate the same name for
@@ -33,16 +37,25 @@ func getYAML(v2 string) []byte {
 	// https://github.com/deepmap/oapi-codegen/issues/386
 	var str = string(data)
 	str = strings.ReplaceAll(str, "GioResponse", "GioResponseRollup")
-	return []byte(str)
+	return []byte(str), nil
+}
+
+func checkErr(context string, err error) {
+	if err != nil {
+		log.Fatal(context, ": ", err)
+	}
 }
 
 func main() {
+	commons.ConfigureLog(slog.LevelDebug)
 	// v2URL := "https://raw.githubusercontent.com/cartesi/openapi-interfaces/v0.8.0/rollup.yaml"
-	v2URL := "https://raw.githubusercontent.com/cartesi/openapi-interfaces/fix/http-server/rollup.yaml"
+	v2URL := "https://raw.githubusercontent.com/cartesi/openapi-interfaces/b0209b2203c823a1648330236a7a211d720d48bd/rollup.yaml"
 	inspectURL := "https://raw.githubusercontent.com/cartesi/rollups-node/v1.4.0/api/openapi/inspect.yaml"
 
-	v2 := getYAML(v2URL)
-	inspect := getYAML(inspectURL)
+	v2, wrong := getYAML(v2URL)
+	checkErr("download v2", wrong)
+	inspect, wrong := getYAML(inspectURL)
+	checkErr("download inspect", wrong)
 
 	var filemode os.FileMode = 0644
 
@@ -56,5 +69,5 @@ func main() {
 		panic("Failed to write OpenAPI inspect to file: " + err.Error())
 	}
 
-	log.Println("OpenAPI written to file")
+	slog.Info("OpenAPI written to file")
 }

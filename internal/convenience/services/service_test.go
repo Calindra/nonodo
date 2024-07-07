@@ -10,7 +10,8 @@ import (
 	"github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/ncruces/go-sqlite3/driver"
+	_ "github.com/ncruces/go-sqlite3/embed"
 	"github.com/stretchr/testify/suite"
 )
 
