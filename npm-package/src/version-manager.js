@@ -3,66 +3,23 @@
 
 import { tmpdir } from "node:os";
 import { Logger, Levels } from "./logger.js";
-import { listTags } from "./utils.js";
-import { parse } from "semver";
 import { execute } from "@oclif/core";
-
-const logger = new Logger("Brunodo", Levels.INFO);
-const PACKAGE_NONODO_DIR = process.env.PACKAGE_NONODO_DIR ?? tmpdir();
-
-// Check file for configuration what is installed
-async function install(signal, logger, version) {
-  logger.info(`Installing version: ${version}`);
-  throw new Error("Not implemented");
-}
+import { Configuration } from "./config.js";
 
 async function main() {
-  // const abortCtrl = new AbortController();
-  // const logger = new Logger("Brunodo", level);
-  // const args = process.argv.slice(2);
-  // const isDebug = args.includes("--debug");
-  // const level = isDebug ? Levels.DEBUG : Levels.INFO;
+  const PACKAGE_NONODO_DIR = process.env.PACKAGE_NONODO_DIR ?? tmpdir();
+
+  const config = new Configuration();
+  if (config.existsFile(PACKAGE_NONODO_DIR)) {
+    await config.loadFromFile(PACKAGE_NONODO_DIR);
+  }
 
   await execute({
     dir: import.meta.url,
-    development: process.env.NODE_ENV === "development",
+    development: true,
   });
 
   return true;
-
-  // yargs(hideBin(process.argv))
-  //   .command("list", "List available versions", {}, () => {
-  //     listTags(abortCtrl.signal, logger);
-  //   })
-  //   .command("install <version>", "Install a specific version", {}, (args) => {
-  //     install(abortCtrl.signal, logger, args.version);
-  //   })
-  //   .help()
-  //   .demandCommand(1)
-  //   .parse();
-  //
-  // switch (args[0]) {
-  //   case "list":
-  //     await listTags(abortCtrl.signal, logger);
-  //     return true;
-  //   case "install":
-  //     if (args.length < 2) {
-  //       logger.error("Missing version");
-  //       return false;
-  //     }
-  //     const version = parse(args[1]);
-  //
-  //     if (!version) {
-  //       logger.error(`Invalid version: ${args[1]}`);
-  //       return false;
-  //     }
-  //
-  //     await install(abortCtrl.signal, logger, args[1]);
-  //     return true;
-  //   default:
-  //     logger.error(`Unknown command: ${args[0]}`);
-  //     return false;
-  // }
 }
 
 main()
@@ -72,6 +29,8 @@ main()
     }
   })
   .catch((e) => {
+    const logger = new Logger("Brunodo", Levels.INFO);
+
     if (e instanceof Error) {
       logger.error(e.stack);
     } else {

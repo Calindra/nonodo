@@ -23,11 +23,6 @@ import { makeRequest } from "./utils.js";
  * @property {string} version
  */
 
-/**
- * @todo create .nonodorc.json when install
- */
-
-
 // const PACKAGE_NONODO_VERSION =
 // process.env.PACKAGE_NONODO_VERSION ?? version;
 // const PACKAGE_NONODO_URL = new URL(
@@ -274,7 +269,7 @@ async function getNonodoAvailable(signal, nonodoUrl, releaseName, binaryName) {
  * @param {RunNonodoOptions=} params
  * @returns {Promise<boolean>}
  */
-async function tryPackageNonodo(params) {
+async function main(params) {
   const asyncController = new AbortController();
 
   try {
@@ -300,7 +295,7 @@ async function tryPackageNonodo(params) {
   }
 }
 
-tryPackageNonodo({
+main({
   version: "2.1.1-beta",
 })
   .then((success) => {
