@@ -1,9 +1,28 @@
 "use strict";
-import { SingleBar, Presets } from "cli-progress";
+import AdmZip from "adm-zip";
+import { Presets, SingleBar } from "cli-progress";
 import { Buffer } from "node:buffer";
+import { createHash } from "node:crypto";
+import { createReadStream, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { get as request } from "node:https";
-import { arch, platform } from "node:os";
+import { arch, platform, tmpdir } from "node:os";
 import { URL } from "node:url";
+import { unzipSync } from "node:zlib";
+import { join } from "path/posix";
+import { Logger } from "./logger.js";
+import { spawn } from "child_process";
+
+const PACKAGE_NONODO_DIR = process.env.PACKAGE_NONODO_DIR ?? tmpdir();
+const HASH_ALGO = "md5";
+
+const AVAILABLE_BINARY_NAME = new Set([
+  "darwin-amd64",
+  "darwin-arm64",
+  "linux-amd64",
+  "linux-arm64",
+  "windows-amd64",
+]);
+
 
 export function getPlatform() {
   const plat = platform();
@@ -98,6 +117,10 @@ export function makeRequest(signal, url) {
   });
 }
 
+/**
+ * @param {AbortSignal} signal
+ * @param {Logger} logger
+ */
 export async function listTags(signal, logger) {
   const repo = "nonodo";
   const namespace = "calindra";
@@ -109,7 +132,234 @@ export async function listTags(signal, logger) {
   if (!Array.isArray(tags)) {
     throw new Error("Invalid response");
   }
-  const names = tags.map((tag) => tag.name);
-  logger.info(`Valid tags: ${names.join(", ")}`);
-  return names;
+  logger.debug(tags);
+  return tags;
+}/**
+ *
+ * @param {Buffer} tarballBuffer
+ * @param {string} filepath
+ * @returns {Buffer=}
+ */
+export function extractFileFromTarball(tarballBuffer, filepath) {
+  // Tar archives are organized in 512 byte blocks.
+  // Blocks can either be header blocks or data blocks.
+  // Header blocks contain file names of the archive in the first 100 bytes, terminated by a null byte.
+  // The size of a file is contained in bytes 124-135 of a header block and in octal format.
+  // The following blocks will be data blocks containing the file.
+  let offset = 0;
+  while (offset < tarballBuffer.length) {
+    const header = tarballBuffer.slice(offset, offset + 512);
+    offset += 512;
+
+    const fileName = header.toString("utf-8", 0, 100).replace(/\0.*/g, "");
+    const fileSize = parseInt(
+      header.toString("utf-8", 124, 136).replace(/\0.*/g, ""),
+      8
+    );
+
+    if (fileName === filepath) {
+      return tarballBuffer.subarray(offset, offset + fileSize);
+    }
+
+    // Clamp offset to the uppoer multiple of 512
+    offset = (offset + fileSize + 511) & ~511;
+  }
 }
+/**
+ *
+ * @param {AbortSignal} signal
+ * @param {URL} nonodoUrl
+ * @param {string} releaseName
+ * @param {string} dir
+ * @param {Logger} logger
+ * @returns {Promise<void>}
+ */
+export async function downloadBinary(signal, nonodoUrl, releaseName, dir, logger) {
+  if (!(nonodoUrl instanceof URL)) {
+    throw new Error("Invalid URL");
+  }
+  const url = new URL(nonodoUrl);
+  if (!url.href.endsWith("/")) url.pathname += "/";
+  url.pathname += releaseName;
+
+  logger.info(`Downloading: ${url.href}`);
+
+  const dest = join(dir, releaseName);
+
+  const binary = await makeRequest(signal, url);
+
+  writeFileSync(dest, binary, {
+    signal,
+  });
+}
+/**
+ *
+ * @param {string} path
+ * @param {string} algorithm
+ * @returns {Promise<string>}
+ */
+export function calculateHash(path, algorithm) {
+  return new Promise((resolve, reject) => {
+    const stream = createReadStream(path);
+    const hash = createHash(algorithm);
+
+    stream.on("data", (chunk) => {
+      hash.update(chunk);
+    });
+
+    stream.on("error", (err) => {
+      reject(err);
+    });
+
+    stream.on("end", () => {
+      resolve(hash.digest("hex"));
+    });
+  });
+}
+
+/**
+ * @param {string} zipPath
+ * @param {string} destPath
+ * */
+export function unpackZip(zipPath, destPath) {
+  const zip = new AdmZip(zipPath);
+  const entry = zip.getEntry("nonodo.exe");
+  if (!entry) throw new Error("Dont find binary on zip");
+  const buffer = entry.getData();
+  writeFileSync(destPath, buffer, { mode: 493 });
+}
+export function unpackTarball(tarballPath, destPath) {
+  const tarballDownloadBuffer = readFileSync(tarballPath);
+  const tarballBuffer = unzipSync(tarballDownloadBuffer);
+  const data = extractFileFromTarball(tarballBuffer, "nonodo");
+  if (!data) throw new Error("Dont find binary on tarball");
+  writeFileSync(destPath, data, {
+    mode: 493,
+  });
+}
+/**
+ *
+ * @param {AbortSignal} signal
+ * @param {URL} nonodoUrl
+ * @param {string} releaseName
+ * @param {string} binaryName
+ * @param {Logger} logger
+ * @returns {Promise<string>}
+ */
+export async function getNonodoAvailable(signal, nonodoUrl, releaseName, binaryName, logger) {
+  const nonodoPath = PACKAGE_NONODO_DIR;
+  const myPlatform = getPlatform();
+  const myArch = getArch();
+  const support = `${myPlatform}-${myArch}`;
+
+  if (AVAILABLE_BINARY_NAME.has(support)) {
+    logger.debug(`Platform supported: ${support}`);
+    const binaryPath = join(nonodoPath, binaryName);
+
+    if (existsSync(binaryPath)) return binaryPath;
+
+    logger.info(`Nonodo binary not found: ${binaryPath}`);
+    logger.info(`Downloading nonodo binary...`);
+    const [hash] = await Promise.all([
+      downloadHash(signal, nonodoUrl, releaseName, logger),
+      downloadBinary(signal, nonodoUrl, releaseName, nonodoPath, logger),
+    ]);
+
+    logger.info(`Downloaded nonodo binary.`);
+    logger.info(`Verifying hash...`);
+
+    const releasePath = join(nonodoPath, releaseName);
+    const calculatedHash = await calculateHash(releasePath, HASH_ALGO);
+
+    if (hash !== calculatedHash) {
+      throw new Error(
+        `Hash mismatch for nonodo binary. Expected ${hash}, got ${calculatedHash}`
+      );
+    }
+
+    logger.info(`Hash verified.`);
+
+    if (getPlatform() !== "windows") {
+      unpackTarball(releasePath, binaryPath);
+    } else {
+      /** unzip this */
+      unpackZip(releasePath, binaryPath);
+    }
+
+    if (!existsSync(binaryPath)) throw new Error("Problem on unpack");
+
+    logger.info(`nonodo path: ${nonodoPath}`);
+
+    return binaryPath;
+  }
+
+  throw new Error(`Incompatible platform.`);
+}
+/**
+ * @param {AbortSignal} signal
+ * @param {URL} nonodoUrl
+ * @param {string} releaseName
+ * @param {Logger} logger
+ * @returns {Promise<string>}
+ */
+
+export async function downloadHash(signal, nonodoUrl, releaseName, logger) {
+  if (!(nonodoUrl instanceof URL)) {
+    throw new Error("Invalid URL");
+  }
+
+  const algo = HASH_ALGO;
+  const filename = `${releaseName}.${algo}`;
+
+  const dir = PACKAGE_NONODO_DIR;
+  const url = new URL(nonodoUrl);
+  if (!url.href.endsWith("/")) url.pathname += "/";
+  url.pathname += filename;
+
+  logger.info(`Downloading: ${url.href}`);
+
+  const dest = join(dir, filename);
+
+  const response = await makeRequest(signal, url);
+  const body = response.toString("utf-8");
+
+  writeFileSync(dest, body, {
+    signal,
+  });
+
+  logger.info(`Downloaded hex: ${dest}`);
+
+  return body.trim();
+}
+
+/**
+ *
+ * @param {string} location
+ * @param {AbortController} asyncController
+ * @param {Logger} logger
+ * @returns {Promise<void>}
+ */
+export async function runNonodo(location, asyncController, logger) {
+  logger.info(`Running brunodo binary: ${location}`);
+
+  const args = process.argv.slice(2);
+  const nonodoBin = spawn(location, args, { stdio: "inherit" });
+  nonodoBin.on("exit", (code, signal) => {
+    process.on("exit", () => {
+      if (signal) {
+        process.kill(process.pid, signal);
+      } else {
+        process.exit(code ?? 1);
+      }
+    });
+  });
+
+  process.on("SIGINT", function () {
+    nonodoBin.kill("SIGINT");
+    nonodoBin.kill("SIGTERM");
+    asyncController.abort()
+  });
+}
+
+
+

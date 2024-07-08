@@ -1,6 +1,7 @@
 import { Command, handle, Flags, flush } from "@oclif/core";
 import { listTags } from "../utils.js";
 import { Levels, Logger } from "../logger.js";
+import generateTable from "tty-table"
 
 export class ListTags extends Command {
   static description = "List all tags";
@@ -15,8 +16,14 @@ export class ListTags extends Command {
     try {
       const { flags } = await this.parse(ListTags);
       const level = flags.debug ? Levels.DEBUG : Levels.INFO;
-      const logger = new Logger("ListTags", level);
-      await listTags(abortCtrl.signal, logger);
+      const logger = new Logger("Tags", level);
+
+      const tags = await listTags(abortCtrl.signal, logger);
+      const headers = [{ value: "Version" }, { value: "SHA Commit" }]
+      const rows = tags.map((tag) => [tag.name, tag.commit.sha])
+      const table = generateTable(headers, rows, { compact: true })
+
+      this.log(table.render())
       await flush();
     } catch (error) {
       abortCtrl.abort(error);
