@@ -36,7 +36,7 @@ export function makeRequest(signal, url) {
         "User-Agent": "node",
       },
       signal,
-    }
+    };
 
     const req = request(options, (res) => {
       if (!res.statusCode) {
@@ -68,9 +68,11 @@ export function makeRequest(signal, url) {
           resolve(Buffer.concat(chunks));
         });
         // Redirect
-      } else if (res.statusCode >= 300 &&
+      } else if (
+        res.statusCode >= 300 &&
         res.statusCode < 400 &&
-        res.headers.location) {
+        res.headers.location
+      ) {
         makeRequest(signal, new URL(res.headers.location))
           .then(resolve)
           .catch(reject);
@@ -79,8 +81,8 @@ export function makeRequest(signal, url) {
         bar?.stop();
         reject(
           new Error(
-            `Error ${res.statusCode} when downloading the package: ${res.statusMessage}`
-          )
+            `Error ${res.statusCode} when downloading the package: ${res.statusMessage}`,
+          ),
         );
       }
     });
@@ -96,3 +98,18 @@ export function makeRequest(signal, url) {
   });
 }
 
+export async function listTags(signal, logger) {
+  const repo = "nonodo";
+  const namespace = "calindra";
+  const url = new URL(`https://api.github.com/repos/${namespace}/${repo}/tags`);
+  logger.info(`Requesting tags from ${url}`);
+  const res = await makeRequest(signal, url);
+  const tags = JSON.parse(res.toString());
+  logger.debug(tags);
+  if (!Array.isArray(tags)) {
+    throw new Error("Invalid response");
+  }
+  const names = tags.map((tag) => tag.name);
+  logger.info(`Valid tags: ${names.join(", ")}`);
+  return names;
+}
