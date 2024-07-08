@@ -5,35 +5,42 @@ import { tmpdir } from "node:os";
 import { Logger, Levels } from "./logger.js";
 import { listTags } from "./utils.js";
 import { parse } from "semver";
-import yargs from "yargs";
-import { hideBin } from "yargs/helpers";
+import { execute } from "@oclif/core";
 
 const logger = new Logger("Brunodo", Levels.INFO);
 const PACKAGE_NONODO_DIR = process.env.PACKAGE_NONODO_DIR ?? tmpdir();
 
 // Check file for configuration what is installed
 async function install(signal, logger, version) {
+  logger.info(`Installing version: ${version}`);
   throw new Error("Not implemented");
 }
 
 async function main() {
-  const abortCtrl = new AbortController();
-  const args = process.argv.slice(2);
-  const isDebug = args.includes("--debug");
-  const level = isDebug ? Levels.DEBUG : Levels.INFO;
-  const logger = new Logger("Brunodo", level);
+  // const abortCtrl = new AbortController();
+  // const logger = new Logger("Brunodo", level);
+  // const args = process.argv.slice(2);
+  // const isDebug = args.includes("--debug");
+  // const level = isDebug ? Levels.DEBUG : Levels.INFO;
 
-  yargs(hideBin(process.argv))
-    .command("list", "List available versions", {}, () => {
-      listTags(abortCtrl.signal, logger);
-    })
-    .command("install <version>", "Install a specific version", {}, (args) => {
-      install(abortCtrl.signal, logger, args.version);
-    })
-    .help()
-    .demandCommand(1)
-    .parse();
+  await execute({
+    dir: import.meta.url,
+    development: process.env.NODE_ENV === "development",
+  });
 
+  return true;
+
+  // yargs(hideBin(process.argv))
+  //   .command("list", "List available versions", {}, () => {
+  //     listTags(abortCtrl.signal, logger);
+  //   })
+  //   .command("install <version>", "Install a specific version", {}, (args) => {
+  //     install(abortCtrl.signal, logger, args.version);
+  //   })
+  //   .help()
+  //   .demandCommand(1)
+  //   .parse();
+  //
   // switch (args[0]) {
   //   case "list":
   //     await listTags(abortCtrl.signal, logger);

@@ -102,7 +102,7 @@ export async function listTags(signal, logger) {
   const repo = "nonodo";
   const namespace = "calindra";
   const url = new URL(`https://api.github.com/repos/${namespace}/${repo}/tags`);
-  logger.info(`Requesting tags from ${url}`);
+  logger.debug(`Requesting tags from ${url}`);
   const res = await makeRequest(signal, url);
   const tags = JSON.parse(res.toString());
   logger.debug(tags);
