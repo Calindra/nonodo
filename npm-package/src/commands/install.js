@@ -5,18 +5,12 @@ import { arch, platform } from "node:os";
 import { Levels, Logger } from "../logger.js";
 import { getNonodoAvailable } from "../utils.js";
 import { Configuration } from "../config.js";
-import { tmpdir } from "node:os";
-
-const PACKAGE_NONODO_DIR = process.env.PACKAGE_NONODO_DIR ?? tmpdir();
 
 export class Install extends Command {
     static description = "Install a specific version";
     static flags = {
         help: Flags.help({ char: "h" }),
         debug: Flags.boolean({ char: "d", description: "Show debug information" }),
-        dir: Flags.directory({
-            char: "D", description: "The directory where the version will be installed"
-        }),
     };
     static args = {
         version: Args.string({
@@ -31,13 +25,17 @@ export class Install extends Command {
         })
     };
     async run() {
+        await this.config.runHook("check_folders", {})
+
         const { args, flags } = await this.parse(Install);
         const level = flags.debug ? Levels.DEBUG : Levels.INFO;
         const logger = new Logger("Install", level);
         const asyncController = new AbortController();
 
         try {
-            const configDir = flags.dir ?? PACKAGE_NONODO_DIR
+            const dataDir = this.config.dataDir
+
+            const configDir = this.config.configDir
             const config = new Configuration()
             await config.tryLoadFromDir(configDir)
 
@@ -55,7 +53,7 @@ export class Install extends Command {
 
             const { hash } = await getNonodoAvailable(
                 asyncController.signal,
-                PACKAGE_NONODO_DIR,
+                dataDir,
                 cli.url,
                 cli.releaseName,
                 cli.binaryName,

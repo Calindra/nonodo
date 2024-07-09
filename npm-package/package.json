@@ -40,8 +40,5 @@
   },
   "volta": {
     "node": "20.15.0"
-  },
-  "oclif": {
-    "commands": "./src/commands"
   }
 }

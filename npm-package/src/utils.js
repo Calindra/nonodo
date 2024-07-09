@@ -169,11 +169,11 @@ export function extractFileFromTarball(tarballBuffer, filepath) {
  * @param {AbortSignal} signal
  * @param {URL} nonodoUrl
  * @param {string} releaseName
- * @param {string} dir
+ * @param {string} path
  * @param {Logger} logger
  * @returns {Promise<void>}
  */
-export async function downloadBinary(signal, nonodoUrl, releaseName, dir, logger) {
+export async function downloadBinary(signal, nonodoUrl, releaseName, path, logger) {
   if (!(nonodoUrl instanceof URL)) {
     throw new Error("Invalid URL");
   }
@@ -183,9 +183,11 @@ export async function downloadBinary(signal, nonodoUrl, releaseName, dir, logger
 
   logger.info(`Downloading: ${url.href}`);
 
-  const dest = join(dir, releaseName);
+  const dest = join(path, releaseName);
 
   const binary = await makeRequest(signal, url);
+
+  logger.info(`Downloaded binary: ${dest}`);
 
   writeFileSync(dest, binary, {
     signal,
@@ -266,23 +268,28 @@ export async function getNonodoAvailable(signal, nonodoPath, nonodoUrl, releaseN
   if (AVAILABLE_BINARY_NAME.has(support)) {
     logger.debug(`Platform supported: ${support}`);
     const binaryPath = join(nonodoPath, binaryName);
+    const compactPath = tmpdir()
 
     if (existsSync(binaryPath)) return { path: binaryPath };
 
     logger.info(`Nonodo binary not found: ${binaryPath}`);
     logger.info(`Downloading nonodo binary...`);
 
-    const [hashPromise] = await Promise.allSettled([
-      downloadHash(signal, nonodoPath, nonodoUrl, releaseName, logger),
-      downloadBinary(signal, nonodoUrl, releaseName, nonodoPath, logger)
+    const [hashPromise, binary] = await Promise.allSettled([
+      downloadHash(signal, compactPath, nonodoUrl, releaseName, logger),
+      downloadBinary(signal, nonodoUrl, releaseName, compactPath, logger)
     ])
+
+    if (binary.status === "rejected") {
+      throw binary.reason
+    }
 
     /** @type {string=} */
     let hash;
 
     logger.info(`Downloaded nonodo binary.`);
 
-    const releasePath = join(nonodoPath, releaseName);
+    const releasePath = join(compactPath, releaseName);
 
     if (hashPromise.status === "fulfilled") {
       logger.info(`Verifying hash...`);
@@ -319,14 +326,14 @@ export async function getNonodoAvailable(signal, nonodoPath, nonodoUrl, releaseN
 }
 /**
  * @param {AbortSignal} signal
- * @param {string} nonodoPath
+ * @param {string} path
  * @param {URL} nonodoUrl
  * @param {string} releaseName
  * @param {Logger} logger
  * @returns {Promise<string>}
  */
 
-export async function downloadHash(signal, nonodoPath, nonodoUrl, releaseName, logger) {
+export async function downloadHash(signal, path, nonodoUrl, releaseName, logger) {
   if (!(nonodoUrl instanceof URL)) {
     throw new Error("Invalid URL");
   }
@@ -340,10 +347,12 @@ export async function downloadHash(signal, nonodoPath, nonodoUrl, releaseName, l
 
   logger.info(`Downloading: ${url.href}`);
 
-  const dest = join(nonodoPath, filename);
+  const dest = join(path, filename);
 
   const response = await makeRequest(signal, url);
   const body = response.toString("utf-8");
+
+  logger.info(`Downloaded hash: ${dest}`);
 
   writeFileSync(dest, body, {
     signal,
