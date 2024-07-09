@@ -3,7 +3,6 @@
 import { arch, platform, tmpdir } from "node:os";
 import { Levels, Logger } from "./logger.js";
 import { CLI } from "./cli.js";
-import { getNonodoAvailable } from "./utils.js";
 import { runNonodo } from "./utils.js";
 import { Configuration } from "./config.js";
 import { join } from "node:path";
@@ -24,7 +23,7 @@ async function main() {
     const isLoaded = await config.tryLoadFromDir(configDir)
 
     if (isLoaded && config.defaultVersion) {
-      logger.info("Configuration loaded")
+      // logger.info("Configuration loaded")
       const cli = new CLI({
         version: config.defaultVersion,
       });
@@ -42,26 +41,26 @@ async function main() {
       return true;
     }
 
-    logger.info("Configuration not loaded")
-    const version = "2.1.1-beta";
-    const cli = new CLI({
-      version,
-    });
+    // logger.info("Configuration not loaded")
+    // const version = "2.1.1-beta";
+    // const cli = new CLI({
+    //   version,
+    // });
 
-    logger.info(`Running brunodo ${cli.version} for ${arch()} ${platform()}`);
+    // logger.info(`Running brunodo ${cli.version} for ${arch()} ${platform()}`);
 
-    const { path: nonodoPath, hash } = await getNonodoAvailable(
-      asyncController.signal,
-      PACKAGE_NONODO_DIR,
-      cli.url,
-      cli.releaseName,
-      cli.binaryName,
-      logger,
-    );
-    config.addVersion(version, hash ?? "")
-    await config.saveFile(configDir)
-    await runNonodo(nonodoPath, asyncController, logger);
-    return true;
+    // const { path: nonodoPath, hash } = await getNonodoAvailable(
+    //   asyncController.signal,
+    //   PACKAGE_NONODO_DIR,
+    //   cli.url,
+    //   cli.releaseName,
+    //   cli.binaryName,
+    //   logger,
+    // );
+    // config.addVersion(version, hash ?? "")
+    // await config.saveFile(configDir)
+    // await runNonodo(nonodoPath, asyncController, logger);
+    return false;
   } catch (e) {
     asyncController.abort(e);
     throw e;

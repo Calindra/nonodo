@@ -271,24 +271,35 @@ export async function getNonodoAvailable(signal, nonodoPath, nonodoUrl, releaseN
 
     logger.info(`Nonodo binary not found: ${binaryPath}`);
     logger.info(`Downloading nonodo binary...`);
-    const [hash] = await Promise.all([
+
+    const [hashPromise] = await Promise.allSettled([
       downloadHash(signal, nonodoPath, nonodoUrl, releaseName, logger),
-      downloadBinary(signal, nonodoUrl, releaseName, nonodoPath, logger),
-    ]);
+      downloadBinary(signal, nonodoUrl, releaseName, nonodoPath, logger)
+    ])
+
+    /** @type {string=} */
+    let hash;
 
     logger.info(`Downloaded nonodo binary.`);
-    logger.info(`Verifying hash...`);
 
     const releasePath = join(nonodoPath, releaseName);
-    const calculatedHash = await calculateHash(releasePath, HASH_ALGO);
 
-    if (hash !== calculatedHash) {
-      throw new Error(
-        `Hash mismatch for nonodo binary. Expected ${hash}, got ${calculatedHash}`
-      );
+    if (hashPromise.status === "fulfilled") {
+      logger.info(`Verifying hash...`);
+
+      hash = hashPromise.value;
+      const calculatedHash = await calculateHash(releasePath, HASH_ALGO);
+
+      if (hash !== calculatedHash) {
+        throw new Error(
+          `Hash mismatch for nonodo binary. Expected ${hash}, got ${calculatedHash}`
+        );
+      }
+
+      logger.info(`Hash verified.`);
+    } else {
+      logger.info("Hash not found. Skipping hash verification.");
     }
-
-    logger.info(`Hash verified.`);
 
     if (getPlatform() !== "windows") {
       unpackTarball(releasePath, binaryPath);
