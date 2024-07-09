@@ -3,7 +3,7 @@
 import { arch, platform, tmpdir } from "node:os";
 import { Levels, Logger } from "./logger.js";
 import { CLI } from "./cli.js";
-import { runNonodo } from "./utils.js";
+import { getNonodoAvailable, runNonodo } from "./utils.js";
 import { Configuration } from "./config.js";
 import { join } from "node:path";
 
@@ -40,9 +40,27 @@ async function main() {
       return true;
     }
 
-    logger.error("No default version found or configuration not loaded");
+    logger.info("No default version found or configuration not loaded");
+    const version = "2.1.1-beta";
+    const cli = new CLI({
+      version,
+    });
 
-    return false;
+    logger.info(`Running brunodo ${cli.version} for ${arch()} ${platform()}`);
+
+    const { path: nonodoPath, hash } = await getNonodoAvailable(
+      asyncController.signal,
+      PACKAGE_NONODO_DIR,
+      cli.url,
+      cli.releaseName,
+      cli.binaryName,
+      logger,
+    );
+    config.addVersion(version, hash ?? "")
+    await config.saveFile(configDir)
+    await runNonodo(nonodoPath, asyncController, logger);
+
+    return true;
   } catch (e) {
     asyncController.abort(e);
     throw e;
