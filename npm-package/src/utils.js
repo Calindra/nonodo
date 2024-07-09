@@ -2,15 +2,15 @@
 import AdmZip from "adm-zip";
 import { Presets, SingleBar } from "cli-progress";
 import { Buffer } from "node:buffer";
+import { spawn } from "node:child_process";
 import { createHash } from "node:crypto";
 import { createReadStream, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { get as request } from "node:https";
 import { arch, platform, tmpdir } from "node:os";
+import { join } from "node:path";
 import { URL } from "node:url";
 import { unzipSync } from "node:zlib";
-import { join } from "path/posix";
 import { Logger } from "./logger.js";
-import { spawn } from "child_process";
 
 const PACKAGE_NONODO_DIR = process.env.PACKAGE_NONODO_DIR ?? tmpdir();
 const HASH_ALGO = "md5";
@@ -228,6 +228,10 @@ export function unpackZip(zipPath, destPath) {
   const buffer = entry.getData();
   writeFileSync(destPath, buffer, { mode: 493 });
 }
+/**
+ * @param {string} tarballPath
+ * @param {string} destPath
+ */
 export function unpackTarball(tarballPath, destPath) {
   const tarballDownloadBuffer = readFileSync(tarballPath);
   const tarballBuffer = unzipSync(tarballDownloadBuffer);
