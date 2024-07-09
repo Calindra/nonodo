@@ -24,11 +24,18 @@ export class Configuration {
     return this.#versions;
   }
 
+  /**
+ * @param {string} dir
+ */
+
   existsFile(dir) {
     const path = join(dir, Configuration.nonodoConfigFile);
     return existsSync(path);
   }
 
+  /**
+   * @param {string} dir
+   */
   async tryLoadFromDir(dir) {
     const path = join(dir, Configuration.nonodoConfigFile);
 
@@ -44,6 +51,10 @@ export class Configuration {
 
     return true;
   }
+
+  /**
+ * @param {string} dir
+ */
 
   async saveFile(dir) {
     const path = join(dir, Configuration.nonodoConfigFile);
