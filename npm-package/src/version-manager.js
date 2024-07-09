@@ -17,9 +17,9 @@ async function main() {
   await execute({
     dir: import.meta.url,
     // development: process.env.NODE_ENV === "development",
-    loadOptions: {
-      root: import.meta.dirname,
-    }
+    // loadOptions: {
+    //   root: import.meta.dirname,
+    // }
   });
 
   return true;

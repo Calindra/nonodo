@@ -1,4 +1,4 @@
-import { Command, handle, Flags, flush } from "@oclif/core";
+import { Command, Flags } from "@oclif/core";
 import { listTags } from "../utils.js";
 import { Levels, Logger } from "../logger.js";
 import generateTable from "tty-table"
