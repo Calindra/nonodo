@@ -6,24 +6,18 @@ import { CLI } from "./cli.js";
 import { getNonodoAvailable } from "./utils.js";
 import { runNonodo } from "./utils.js";
 
-export const logger = new Logger("Nonodo", Levels.INFO);
-
-/**
- * @typedef {Object} RunNonodoOptions
- * @property {string} version
- */
+const logger = new Logger("Nonodo", Levels.INFO);
 
 /**
  *
- * @param {RunNonodoOptions=} params
  * @returns {Promise<boolean>}
  */
-async function main(params) {
+async function main() {
   const asyncController = new AbortController();
 
   try {
     const cli = new CLI({
-      version: params?.version,
+      version: "2.1.1-beta",
     });
 
     logger.info(`Running brunodo ${cli.version} for ${arch()} ${platform()}`);
@@ -43,9 +37,7 @@ async function main(params) {
   }
 }
 
-main({
-  version: "2.1.1-beta",
-})
+main()
   .then((success) => {
     if (!success) {
       process.exit(1);

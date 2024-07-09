@@ -1,6 +1,9 @@
 import { Command, Flags, Args } from "@oclif/core";
 import { valid, parse } from "semver"
-import { existsSync } from "node:fs"
+import { CLI } from "../cli";
+import { arch, platform } from "node:os";
+import { Levels, Logger } from "../logger";
+import { getNonodoAvailable, runNonodo } from "../utils";
 
 export class Install extends Command {
     static description = "Install a specific version";
@@ -25,10 +28,29 @@ export class Install extends Command {
     };
     async run() {
         const { args, flags } = await this.parse(Install);
-        const version = parse(args.version);
-        if (version === null) {
-            throw new Error(`Invalid version: ${args.version}`);
+        const level = flags.debug ? Levels.DEBUG : Levels.INFO;
+        const logger = new Logger("Install", level);
+        const asyncController = new AbortController();
+
+        try {
+            const cli = new CLI({
+                version: args.version,
+            });
+
+            this.log(`Running brunodo ${cli.version} for ${arch()} ${platform()}`);
+
+            await getNonodoAvailable(
+                asyncController.signal,
+                cli.url,
+                cli.releaseName,
+                cli.binaryName,
+                logger,
+            );
+            // await runNonodo(nonodoPath, asyncController, logger);
+        } catch (e) {
+            logger.error(e);
+            asyncController.abort(e);
+            throw e;
         }
-        console.log("Hello from install");
     }
 }

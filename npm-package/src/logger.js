@@ -1,4 +1,4 @@
-import { inspect } from "node:util";
+import { format, inspect } from "node:util";
 
 /**
  * @callback LogFn
@@ -40,10 +40,6 @@ export class Logger {
     this.#baseLogger = baseLogger;
   }
 
-  get prefix() {
-    return this.#prefix;
-  }
-
   /**
    * @param {string} message
    * @param {string} level
@@ -82,5 +78,25 @@ export class Logger {
 
   debug = (message) => {
     this.#log(message, "DEBUG");
+  };
+}
+
+
+/**
+ *
+ * @param {string} namespace
+ * @returns {import("@oclif/core/interfaces").Logger}
+ */
+export function customLogger(namespace) {
+  const myLogger = new Logger(namespace, Levels.DEBUG);
+
+  return {
+    child: (ns, delimiter) => customLogger(`${namespace}${delimiter ?? ':'}${ns}`),
+    debug: (formatter, ...args) => myLogger.debug(format(formatter, ...args)),
+    error: (formatter, ...args) => myLogger.error(format(formatter, ...args)),
+    info: (formatter, ...args) => myLogger.info(format(formatter, ...args)),
+    trace: (formatter, ...args) => myLogger.info(format(formatter, ...args)),
+    warn: (formatter, ...args) => myLogger.warn(format(formatter, ...args)),
+    namespace,
   };
 }
