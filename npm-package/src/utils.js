@@ -241,6 +241,14 @@ export function unpackTarball(tarballPath, destPath) {
     mode: 493,
   });
 }
+
+/**
+ * @typedef {Object} NonodoObj
+ * @property {string} path
+ * @property {string=} hash
+ */
+
+
 /**
  *
  * @param {AbortSignal} signal
@@ -248,7 +256,7 @@ export function unpackTarball(tarballPath, destPath) {
  * @param {string} releaseName
  * @param {string} binaryName
  * @param {Logger} logger
- * @returns {Promise<string>}
+ * @returns {Promise<NonodoObj>}
  */
 export async function getNonodoAvailable(signal, nonodoUrl, releaseName, binaryName, logger) {
   const nonodoPath = PACKAGE_NONODO_DIR;
@@ -260,7 +268,7 @@ export async function getNonodoAvailable(signal, nonodoUrl, releaseName, binaryN
     logger.debug(`Platform supported: ${support}`);
     const binaryPath = join(nonodoPath, binaryName);
 
-    if (existsSync(binaryPath)) return binaryPath;
+    if (existsSync(binaryPath)) return { path: binaryPath };
 
     logger.info(`Nonodo binary not found: ${binaryPath}`);
     logger.info(`Downloading nonodo binary...`);
@@ -294,7 +302,7 @@ export async function getNonodoAvailable(signal, nonodoUrl, releaseName, binaryN
 
     logger.info(`nonodo path: ${nonodoPath}`);
 
-    return binaryPath;
+    return { path: binaryPath, hash };
   }
 
   throw new Error(`Incompatible platform.`);

@@ -4,6 +4,10 @@ import { CLI } from "../cli.js";
 import { arch, platform } from "node:os";
 import { Levels, Logger } from "../logger.js";
 import { getNonodoAvailable } from "../utils.js";
+import { Configuration } from "../config.js";
+import { tmpdir } from "node:os";
+
+const PACKAGE_NONODO_DIR = process.env.PACKAGE_NONODO_DIR ?? tmpdir();
 
 export class Install extends Command {
     static description = "Install a specific version";
@@ -33,22 +37,37 @@ export class Install extends Command {
         const asyncController = new AbortController();
 
         try {
+            const configDir = flags.dir ?? PACKAGE_NONODO_DIR
+            const config = new Configuration()
+            await config.tryLoadFromDir(configDir)
+
+            const hasVersion = config.versions.has(args.version)
+            if (hasVersion) {
+                this.log(`Version ${args.version} already installed`)
+                return
+            }
+
             const cli = new CLI({
                 version: args.version,
             });
 
-            this.log(`Running brunodo ${cli.version} for ${arch()} ${platform()}`);
+            this.log(`Installing brunodo ${cli.version} for ${arch()} ${platform()}`);
 
-            await getNonodoAvailable(
+            const { hash } = await getNonodoAvailable(
                 asyncController.signal,
                 cli.url,
                 cli.releaseName,
                 cli.binaryName,
                 logger,
             );
-            // await runNonodo(nonodoPath, asyncController, logger);
+
+            this.log(`Installed brunodo ${cli.version} with hash ${hash}`);
+
+            config.addVersion(args.version, hash ?? "")
+            await config.saveFile(configDir)
+
+            this.log(`Version ${args.version} added to the list of installed versions`)
         } catch (e) {
-            logger.error(e);
             asyncController.abort(e);
             throw e;
         }

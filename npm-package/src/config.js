@@ -21,19 +21,29 @@ export class Configuration {
     this.#versions = new Map();
   }
 
+  get versions() {
+    return this.#versions;
+  }
+
   existsFile(dir) {
     const path = join(dir, Configuration.nonodoConfigFile);
     return existsSync(path);
   }
 
-  async loadFromFile(dir) {
+  async tryLoadFromDir(dir) {
     const path = join(dir, Configuration.nonodoConfigFile);
+
+    if (!this.existsFile(dir)) {
+      return false;
+    }
 
     const content = await readFile(path, "utf-8");
     const data = JSON.parse(content);
     for (const [version, { hash, createdAt }] of data.versions) {
       this.#versions.set(version, { version, hash, createdAt });
     }
+
+    return true;
   }
 
   async saveFile(dir) {

@@ -24,10 +24,9 @@ export class ListTags extends Command {
       const table = generateTable(headers, rows, { compact: true })
 
       this.log(table.render())
-      await flush();
     } catch (error) {
       abortCtrl.abort(error);
-      await handle(error);
+      throw error;
     }
   }
 }

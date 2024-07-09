@@ -22,7 +22,7 @@ async function main() {
 
     logger.info(`Running brunodo ${cli.version} for ${arch()} ${platform()}`);
 
-    const nonodoPath = await getNonodoAvailable(
+    const { path: nonodoPath } = await getNonodoAvailable(
       asyncController.signal,
       cli.url,
       cli.releaseName,
