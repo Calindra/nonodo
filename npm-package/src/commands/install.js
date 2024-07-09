@@ -55,6 +55,7 @@ export class Install extends Command {
 
             const { hash } = await getNonodoAvailable(
                 asyncController.signal,
+                PACKAGE_NONODO_DIR,
                 cli.url,
                 cli.releaseName,
                 cli.binaryName,

@@ -12,7 +12,6 @@ import { URL } from "node:url";
 import { unzipSync } from "node:zlib";
 import { Logger } from "./logger.js";
 
-const PACKAGE_NONODO_DIR = process.env.PACKAGE_NONODO_DIR ?? tmpdir();
 const HASH_ALGO = "md5";
 
 const AVAILABLE_BINARY_NAME = new Set([
@@ -252,14 +251,14 @@ export function unpackTarball(tarballPath, destPath) {
 /**
  *
  * @param {AbortSignal} signal
+ * @param {string} nonodoPath
  * @param {URL} nonodoUrl
  * @param {string} releaseName
  * @param {string} binaryName
  * @param {Logger} logger
  * @returns {Promise<NonodoObj>}
  */
-export async function getNonodoAvailable(signal, nonodoUrl, releaseName, binaryName, logger) {
-  const nonodoPath = PACKAGE_NONODO_DIR;
+export async function getNonodoAvailable(signal, nonodoPath, nonodoUrl, releaseName, binaryName, logger) {
   const myPlatform = getPlatform();
   const myArch = getArch();
   const support = `${myPlatform}-${myArch}`;
@@ -273,7 +272,7 @@ export async function getNonodoAvailable(signal, nonodoUrl, releaseName, binaryN
     logger.info(`Nonodo binary not found: ${binaryPath}`);
     logger.info(`Downloading nonodo binary...`);
     const [hash] = await Promise.all([
-      downloadHash(signal, nonodoUrl, releaseName, logger),
+      downloadHash(signal, nonodoPath, nonodoUrl, releaseName, logger),
       downloadBinary(signal, nonodoUrl, releaseName, nonodoPath, logger),
     ]);
 
@@ -309,13 +308,14 @@ export async function getNonodoAvailable(signal, nonodoUrl, releaseName, binaryN
 }
 /**
  * @param {AbortSignal} signal
+ * @param {string} nonodoPath
  * @param {URL} nonodoUrl
  * @param {string} releaseName
  * @param {Logger} logger
  * @returns {Promise<string>}
  */
 
-export async function downloadHash(signal, nonodoUrl, releaseName, logger) {
+export async function downloadHash(signal, nonodoPath, nonodoUrl, releaseName, logger) {
   if (!(nonodoUrl instanceof URL)) {
     throw new Error("Invalid URL");
   }
@@ -323,14 +323,13 @@ export async function downloadHash(signal, nonodoUrl, releaseName, logger) {
   const algo = HASH_ALGO;
   const filename = `${releaseName}.${algo}`;
 
-  const dir = PACKAGE_NONODO_DIR;
   const url = new URL(nonodoUrl);
   if (!url.href.endsWith("/")) url.pathname += "/";
   url.pathname += filename;
 
   logger.info(`Downloading: ${url.href}`);
 
-  const dest = join(dir, filename);
+  const dest = join(nonodoPath, filename);
 
   const response = await makeRequest(signal, url);
   const body = response.toString("utf-8");

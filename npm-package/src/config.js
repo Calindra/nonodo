@@ -16,8 +16,15 @@ export class Configuration {
    */
   #versions;
 
+  #defaultVersion
+
   constructor() {
     this.#versions = new Map();
+    this.#defaultVersion = "";
+  }
+
+  get defaultVersion() {
+    return this.#defaultVersion;
   }
 
   get versions() {
@@ -48,6 +55,7 @@ export class Configuration {
     for (const [version, { hash, createdAt }] of data.versions) {
       this.#versions.set(version, { hash, createdAt });
     }
+    this.#defaultVersion = data.defaultVersion;
 
     return true;
   }
@@ -71,10 +79,12 @@ export class Configuration {
       hash,
       createdAt: new Date().toISOString(),
     });
+    this.#defaultVersion = version;
   }
 
   toJSON() {
     return JSON.stringify({
+      defaultVersion: this.#defaultVersion,
       versions: Array.from(this.#versions.entries()),
     });
   }
