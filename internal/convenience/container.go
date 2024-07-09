@@ -112,12 +112,12 @@ func (c *Container) GetVoucherFetcher() *synchronizer.VoucherFetcher {
 	return c.voucherFetcher
 }
 
-func (c *Container) GetGraphileSynchronizer(loadTestMode bool) *synchronizer.GraphileSynchronizer {
+func (c *Container) GetGraphileSynchronizer(graphileAddress string, graphilePort string, loadTestMode bool) *synchronizer.GraphileSynchronizer {
 	if c.graphileSynchronizer != nil {
 		return c.graphileSynchronizer
 	}
 
-	graphileClient := c.GetGraphileClient(loadTestMode)
+	graphileClient := c.GetGraphileClient(graphileAddress, graphilePort, loadTestMode)
 	c.graphileSynchronizer = synchronizer.NewGraphileSynchronizer(
 		c.GetOutputDecoder(),
 		c.GetSyncRepository(),
@@ -134,20 +134,19 @@ func (c *Container) GetGraphileFetcher(graphileClient graphile.GraphileClient) *
 	return c.graphileFetcher
 }
 
-func (c *Container) GetGraphileClient(loadTestMode bool) graphile.GraphileClient {
+func (c *Container) GetGraphileClient(graphileAddress string, graphilePort string, loadTestMode bool) graphile.GraphileClient {
 
 	if c.graphileClient != nil {
 		return c.graphileClient
 	}
 
-	graphileHost := "localhost"
-
 	if loadTestMode {
-		graphileHost = "postgraphile-custom"
+		graphileAddress = "postgraphile-custom"
 	}
 
 	c.graphileClient = &graphile.GraphileClientImpl{
-		GraphileHost: graphileHost,
+		GraphileAddress: graphileAddress,
+		GraphilePort:    graphilePort,
 	}
 	return c.graphileClient
 }

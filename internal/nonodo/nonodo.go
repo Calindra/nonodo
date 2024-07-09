@@ -74,6 +74,9 @@ type NonodoOpts struct {
 
 	TimeoutInspect time.Duration
 	TimeoutAdvance time.Duration
+
+	GraphileAddress string
+	GraphilePort    string
 }
 
 // Create the options struct with default values.
@@ -104,6 +107,8 @@ func NewNonodoOpts() NonodoOpts {
 		Namespace:          DefaultNamespace,
 		TimeoutInspect:     defaultTimeout,
 		TimeoutAdvance:     defaultTimeout,
+		GraphileAddress:    "localhost",
+		GraphilePort:       "5000",
 	}
 }
 
@@ -140,7 +145,7 @@ func NewSupervisorPoC(opts NonodoOpts) supervisor.SupervisorWorker {
 	if opts.NodeVersion == "v1" {
 		adapter = reader.NewAdapterV1(db, convenienceService)
 	} else {
-		httpClient := container.GetGraphileClient(opts.LoadTestMode)
+		httpClient := container.GetGraphileClient(opts.GraphileAddress, opts.GraphilePort, opts.LoadTestMode)
 		inputBlobAdapter := reader.InputBlobAdapter{}
 		adapter = reader.NewAdapterV2(convenienceService, httpClient, inputBlobAdapter)
 	}
@@ -149,7 +154,7 @@ func NewSupervisorPoC(opts NonodoOpts) supervisor.SupervisorWorker {
 		var synchronizer supervisor.Worker
 
 		if opts.NodeVersion == "v2" {
-			synchronizer = container.GetGraphileSynchronizer(opts.LoadTestMode)
+			synchronizer = container.GetGraphileSynchronizer(opts.GraphileAddress, opts.GraphilePort, opts.LoadTestMode)
 		} else {
 			synchronizer = container.GetGraphQLSynchronizer()
 		}
