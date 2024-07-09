@@ -4,7 +4,6 @@ import { join } from "node:path"
 
 /**
  * @typedef {Object} VersionNonodo
- * @property {string} version
  * @property {string} hash
  * @property {string} createdAt
  */
@@ -40,7 +39,7 @@ export class Configuration {
     const content = await readFile(path, "utf-8");
     const data = JSON.parse(content);
     for (const [version, { hash, createdAt }] of data.versions) {
-      this.#versions.set(version, { version, hash, createdAt });
+      this.#versions.set(version, { hash, createdAt });
     }
 
     return true;
@@ -51,9 +50,13 @@ export class Configuration {
     return writeFile(path, this.toJSON(), "utf-8");
   }
 
+  /**
+   *
+   * @param {string} version
+   * @param {string} hash
+   */
   addVersion(version, hash) {
     this.#versions.set(version, {
-      version,
       hash,
       createdAt: new Date().toISOString(),
     });
