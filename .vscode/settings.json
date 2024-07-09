@@ -81,5 +81,6 @@
         "watchexec",
         "Zehui",
         "Zheng"
-    ]
+    ],
+    "js/ts.implicitProjectConfig.checkJs": true
 }

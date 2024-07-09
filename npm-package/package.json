@@ -2,6 +2,7 @@
   "name": "nonodo",
   "version": "1.0.0",
   "private": false,
+  "type": "module",
   "description": "Nonodo CLI tool",
   "homepage": "https://github.com/Calindra/nonodo#readme",
   "bugs": {
@@ -13,10 +14,12 @@
   },
   "license": "MIT",
   "bin": {
-    "nonodo": "./src/nonodo.js"
+    "nonodo": "./src/nonodo.js",
+    "brunodo": "./src/version-manager.js"
   },
   "scripts": {
-    "start": "node src/nonodo.js"
+    "start": "node src/nonodo.js",
+    "test": "node --test src/"
   },
   "publishConfig": {
     "access": "public"
@@ -24,10 +27,18 @@
   "devDependencies": {
     "@types/adm-zip": "^0.5.5",
     "@types/cli-progress": "^3.11.5",
-    "@types/node": "^20.11.30"
+    "@types/node": "^20.11.30",
+    "@types/semver": "^7.5.8",
+    "typescript": "^5.5.3"
   },
   "dependencies": {
+    "@oclif/core": "^4.0.8",
     "adm-zip": "^0.5.12",
-    "cli-progress": "^3.12.0"
+    "cli-progress": "^3.12.0",
+    "semver": "^7.6.2",
+    "tty-table": "^4.2.3"
+  },
+  "volta": {
+    "node": "20.15.0"
   }
 }
