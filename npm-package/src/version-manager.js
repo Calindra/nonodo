@@ -1,10 +1,9 @@
 #!/usr/bin/env node
 "use strict";
 
-import { customLogger } from "./logger.js";
 import { execute } from "@oclif/core";
+import { Levels, Logger } from "./logger.js";
 
-const logger = customLogger("Brunodo");
 
 async function main() {
   // const PACKAGE_NONODO_DIR = process.env.PACKAGE_NONODO_DIR ?? tmpdir();
@@ -17,10 +16,9 @@ async function main() {
 
   await execute({
     dir: import.meta.url,
-    development: true,
+    // development: process.env.NODE_ENV === "development",
     loadOptions: {
       root: import.meta.dirname,
-      logger,
     }
   });
 
@@ -34,6 +32,8 @@ main()
     }
   })
   .catch((e) => {
+    const logger = new Logger("Brunodo", Levels.ERROR)
+
     if (e instanceof Error) {
       logger.error(e.stack);
     } else {

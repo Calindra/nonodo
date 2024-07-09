@@ -1,9 +1,9 @@
 import { Command, Flags, Args } from "@oclif/core";
-import { valid, parse } from "semver"
-import { CLI } from "../cli";
+import { valid } from "semver"
+import { CLI } from "../cli.js";
 import { arch, platform } from "node:os";
-import { Levels, Logger } from "../logger";
-import { getNonodoAvailable, runNonodo } from "../utils";
+import { Levels, Logger } from "../logger.js";
+import { getNonodoAvailable } from "../utils.js";
 
 export class Install extends Command {
     static description = "Install a specific version";
