@@ -190,162 +190,46 @@ func (a AdapterV2) GetInputs(
 	before *string,
 	where *model.InputFilter) (*model.InputConnection, error) {
 
-	forward := first != nil || after != nil
-	backward := last != nil || before != nil
+	filters := []*convenience.ConvenienceFilter{}
 
-	if forward && backward {
-		return nil, commons.ErrMixedPagination
-	}
-
-	if !forward && !backward {
-		// If nothing was set, use forward pagination by default
-		forward = true
-	}
-
-	var requestBody []byte
-	var err error
-
-	if forward {
-		requestBody, _ = getInputForwardQuery(first, after, where)
-	} else {
-		requestBody, _ = getInputBackwardQuery(last, before, where)
-	}
-
-	response, err := a.graphileClient.Post(requestBody)
-
+	ctx := context.Background()
+	inputs, err := a.convenienceService.FindAllInputs(
+		ctx,
+		first,
+		last,
+		after,
+		before,
+		filters,
+	)
 	if err != nil {
-		slog.Error("Error calling Graphile Inputs", "error", err)
 		return nil, err
 	}
 
-	return a.processInputsResponse(response, after, before, forward, last)
-}
+	return graphql.ConvertToInputConnectionV1(
+		inputs.Rows,
+		int(inputs.Offset),
+		int(inputs.Total),
+	)
 
-func getInputBackwardQuery(last *int, before *string, where *graphql.InputFilter) ([]byte, error) {
-	var builder strings.Builder
-
-	builder.WriteString(`{ "query": "query { inputs(`)
-
-	paramsAdded := false
-
-	if last != nil {
-		builder.WriteString(fmt.Sprintf("last: %d", *last))
-		paramsAdded = true
-	}
-
-	if before != nil {
-		if paramsAdded {
-			builder.WriteString(", ")
-		}
-		builder.WriteString(fmt.Sprintf("before: \"%s\"", *before))
-		paramsAdded = true
-	}
-
-	if where != nil {
-		if paramsAdded {
-			builder.WriteString(", ")
-		}
-		builder.WriteString("filter: {")
-
-		filterParamsAdded := false
-
-		if where.IndexLowerThan != nil {
-			builder.WriteString(fmt.Sprintf("index: {lessThan: %d}", *where.IndexLowerThan))
-			filterParamsAdded = true
-		}
-
-		if where.IndexGreaterThan != nil {
-			if filterParamsAdded {
-				builder.WriteString(", ")
-			}
-			builder.WriteString(fmt.Sprintf("index: {greaterThan: %d}", *where.IndexGreaterThan))
-		}
-
-		builder.WriteString("}")
-	}
-
-	builder.WriteString(`) { edges { cursor node { index blob status }}} }" }`)
-
-	return []byte(builder.String()), nil
-}
-
-func getInputForwardQuery(first *int, after *string, where *graphql.InputFilter) ([]byte, error) {
-	var builder strings.Builder
-
-	builder.WriteString(`{ "query": "query { inputs(`)
-
-	paramsAdded := false
-
-	if first != nil {
-		builder.WriteString(fmt.Sprintf("first: %d", *first))
-		paramsAdded = true
-	}
-
-	if after != nil {
-		if paramsAdded {
-			builder.WriteString(", ")
-		}
-		builder.WriteString(fmt.Sprintf("after: \"%s\"", *after))
-		paramsAdded = true
-	}
-
-	if where != nil {
-		if paramsAdded {
-			builder.WriteString(", ")
-		}
-		builder.WriteString("filter: {")
-
-		filterParamsAdded := false
-
-		if where.IndexLowerThan != nil {
-			builder.WriteString(fmt.Sprintf("index: {lessThan: %d}", *where.IndexLowerThan))
-			filterParamsAdded = true
-		}
-
-		if where.IndexGreaterThan != nil {
-			if filterParamsAdded {
-				builder.WriteString(", ")
-			}
-			builder.WriteString(fmt.Sprintf("index: {greaterThan: %d}", *where.IndexGreaterThan))
-		}
-
-		builder.WriteString("}")
-	}
-
-	builder.WriteString(`) { edges { cursor node { index blob status }}} }" }`)
-
-	return []byte(builder.String()), nil
 }
 
 func (a AdapterV2) GetInput(index int) (*graphql.Input, error) {
-	slog.Info(fmt.Sprintf("Adapter V2 - GetInput %d", index))
-
-	requestBody := []byte(fmt.Sprintf(`
-        {
-			"query": "query { inputs(condition: {index: %d}) { edges { node { index blob status}}}}"
-			
-    	}`, index))
-
-	response, err := a.graphileClient.Post(requestBody)
-
+	ctx := context.Background()
+	input, err := a.convenienceService.FindInputByIndex(ctx, index)
 	if err != nil {
-		slog.Error("Error calling Graphile Inouts", "error", err)
 		return nil, err
 	}
-
-	var inputByIdResponse InputByIdResponse
-	err = json.Unmarshal(response, &inputByIdResponse)
-
-	if err != nil {
-		slog.Error("Error decoding JSON", "error", err)
-		return nil, err
+	if input == nil {
+		return nil, fmt.Errorf("input not found")
 	}
-
-	if len(inputByIdResponse.Data.Inputs.Edges) > 0 {
-		return a.InputBlobAdapter.Adapt(inputByIdResponse.Data.Inputs.Edges[0].Node)
-	}
-
-	return nil, nil
+	return &graphql.Input{
+		Index:       int(input.Index),
+		MsgSender:   input.MsgSender.String(),
+		Payload:     string(input.Payload),
+		Status:      a.convertCompletionStatus(*input),
+		Timestamp:   fmt.Sprintf("%d", input.BlockTimestamp.Unix()),
+		BlockNumber: fmt.Sprintf("%d", input.BlockNumber),
+	}, nil
 }
 
 func (a AdapterV2) GetNotice(noticeIndex int, inputIndex int) (*model.Notice, error) {
@@ -602,34 +486,18 @@ func max(a, b int) int {
 	return b
 }
 
-func (a AdapterV2) processInputsResponse(response []byte, after *string, before *string, forward bool, last *int) (*model.InputConnection, error) {
-	var inputByIdResponse InputByIdResponse
-	err := json.Unmarshal(response, &inputByIdResponse)
-	if err != nil {
-		slog.Error("Error decoding JSON", "error", err)
-		return nil, err
-	}
+func (a AdapterV2) convertCompletionStatus(input convenience.AdvanceInput) graphql.CompletionStatus {
+	switch input.Status {
+	case convenience.CompletionStatusUnprocessed:
+		return graphql.CompletionStatusUnprocessed
+	case convenience.CompletionStatusAccepted:
+		return graphql.CompletionStatusAccepted
+	case convenience.CompletionStatusRejected:
+		return graphql.CompletionStatusRejected
+	case convenience.CompletionStatusException:
+		return graphql.CompletionStatusRejected
+	default:
+		return graphql.CompletionStatusUnprocessed
 
-	inputs := make([]*graphql.Input, 0, len(inputByIdResponse.Data.Inputs.Edges))
-	for _, edge := range inputByIdResponse.Data.Inputs.Edges {
-		convertedInput, err := a.InputBlobAdapter.Adapt(edge.Node)
-		if err != nil {
-			return nil, err
-		}
-		inputs = append(inputs, convertedInput)
-	}
-
-	if forward {
-		offset, err := calculateOffset(after, len(inputByIdResponse.Data.Inputs.Edges))
-		if err != nil {
-			return nil, err
-		}
-		return graphql.NewConnection(offset, len(inputByIdResponse.Data.Inputs.Edges), inputs), nil
-	} else {
-		offset, err := calculateOffsetBefore(before, len(inputByIdResponse.Data.Inputs.Edges), last)
-		if err != nil {
-			return nil, err
-		}
-		return graphql.NewConnection(offset, len(inputByIdResponse.Data.Inputs.Edges), inputs), nil
 	}
 }

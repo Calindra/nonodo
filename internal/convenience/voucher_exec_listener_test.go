@@ -24,6 +24,7 @@ type ExecListenerSuite struct {
 	ConvenienceService *services.ConvenienceService
 	repository         *repository.VoucherRepository
 	noticeRepository   *repository.NoticeRepository
+	inputRepository    *repository.InputRepository
 }
 
 var Bob = common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
@@ -41,6 +42,7 @@ func (s *ExecListenerSuite) SetupTest() {
 	if err != nil {
 		panic(err)
 	}
+
 	s.noticeRepository = &repository.NoticeRepository{
 		Db: *db,
 	}
@@ -48,9 +50,19 @@ func (s *ExecListenerSuite) SetupTest() {
 	if err != nil {
 		panic(err)
 	}
+
+	s.inputRepository = &repository.InputRepository{
+		Db: db,
+	}
+	err = s.inputRepository.CreateTables()
+	if err != nil {
+		panic(err)
+	}
+
 	s.ConvenienceService = services.NewConvenienceService(
 		s.repository,
 		s.noticeRepository,
+		s.inputRepository,
 	)
 }
 

@@ -52,6 +52,17 @@ type ConvenienceVoucher struct {
 	// ERCX            string
 }
 
+type ConvenienceInput struct {
+	InputIndex     uint64         `db:"input_index"`
+	Status         string         `db:"status"`
+	MsgSender      common.Address `db:"msg_sender"`
+	Payload        string         `db:"payload"`
+	BlockNumber    uint64         `db:"block_number"`
+	BlockTimestamp uint64         `db:"block_timestamp"`
+	PrevRandao     string         `db:"prev_randao"`
+	Exception      string         `db:"exception"`
+}
+
 type ConvenienceFilter struct {
 	Field *string              `json:"field,omitempty"`
 	Eq    *string              `json:"eq,omitempty"`
@@ -67,11 +78,13 @@ type ConvenienceFilter struct {
 }
 
 type SynchronizerFetch struct {
-	Id             int64  `db:"id"`
-	TimestampAfter uint64 `db:"timestamp_after"`
-	IniCursorAfter string `db:"ini_cursor_after"`
-	LogVouchersIds string `db:"log_vouchers_ids"`
-	EndCursorAfter string `db:"end_cursor_after"`
+	Id                  int64  `db:"id"`
+	TimestampAfter      uint64 `db:"timestamp_after"`
+	IniCursorAfter      string `db:"ini_cursor_after"`
+	LogVouchersIds      string `db:"log_vouchers_ids"`
+	EndCursorAfter      string `db:"end_cursor_after"`
+	IniInputCursorAfter string `db:"ini_input_cursor_after"`
+	EndInputCursorAfter string `db:"end_input_cursor_after"`
 }
 
 // Rollups input, which can be advance or inspect.
@@ -86,13 +99,13 @@ type Report struct {
 
 // Rollups advance input type.
 type AdvanceInput struct {
-	Index          int
-	Status         CompletionStatus
-	MsgSender      common.Address
-	Payload        []byte
-	BlockNumber    uint64
-	BlockTimestamp time.Time
-	PrevRandao     string
+	Index          int              `db:"input_index"`
+	Status         CompletionStatus `db:"status"`
+	MsgSender      common.Address   `db:"msg_sender"`
+	Payload        []byte           `db:"payload"`
+	BlockNumber    uint64           `db:"block_number"`
+	BlockTimestamp time.Time        `db:"block_timestamp"`
+	PrevRandao     string           `db:"prev_randao"`
 	Vouchers       []ConvenienceVoucher
 	Notices        []ConvenienceNotice
 	Reports        []Report

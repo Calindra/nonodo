@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/calindra/nonodo/internal/convenience/adapter"
 	"github.com/calindra/nonodo/internal/convenience/model"
@@ -54,6 +55,28 @@ func (o *OutputDecoder) HandleOutput(
 		})
 		return err
 	}
+}
+
+func (o *OutputDecoder) HandleInput(
+	ctx context.Context,
+	index int,
+	status model.CompletionStatus,
+	msgSender common.Address,
+	payload string,
+	blockNumber uint64,
+	blockTimestamp time.Time,
+	prevRandao string,
+) error {
+	_, err := o.convenienceService.CreateInput(ctx, &model.AdvanceInput{
+		Index:          index,
+		Status:         status,
+		MsgSender:      msgSender,
+		Payload:        []byte(payload),
+		BlockNumber:    blockNumber,
+		BlockTimestamp: blockTimestamp,
+		PrevRandao:     prevRandao,
+	})
+	return err
 }
 
 func (o *OutputDecoder) GetAbi(address common.Address) (*abi.ABI, error) {

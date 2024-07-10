@@ -9,7 +9,8 @@ import (
 )
 
 const graphileQuery = `
-     query { outputs(first: %d) {
+     query { 
+	   outputs(first: %d) {
 		edges { 
 			cursor
 			node { 
@@ -35,10 +36,39 @@ const graphileQuery = `
 			startCursor
 		}
 	}
+	%s	
+	
 }`
 
+const inputQuery = `
+	inputs(first: %d) {
+		edges {
+			cursor
+			node {
+			blob
+			index
+			nodeId
+			}
+		}
+		}
+`
+
+const inputQueryWithCursor = `
+	inputs(first: %d, after: %s) {
+		edges {
+			cursor
+			node {
+			blob
+			index
+			nodeId
+			}
+		}
+		}
+`
+
 const graphileQueryWithCursor = `
-	query { outputs(first: %d, after: %s ) { 
+	query { 
+	  outputs(first: %d, after: %s ) { 
 		edges {
 			cursor
 			node {
@@ -64,6 +94,7 @@ const graphileQueryWithCursor = `
 			startCursor
 		}
 	}
+	%s	
 }`
 
 const DefaultQueryBatchSize = 10
@@ -76,12 +107,13 @@ GRAPH_QL_URL
 `
 
 type GraphileFetcher struct {
-	Url             string
-	CursorAfter     string
-	BatchSize       int
-	Query           string
-	QueryWithCursor string
-	GraphileClient  graphile.GraphileClient
+	Url              string
+	CursorAfter      string
+	CursorInputAfter string
+	BatchSize        int
+	Query            string
+	QueryWithCursor  string
+	GraphileClient   graphile.GraphileClient
 }
 
 func NewGraphileFetcher(graphileClient graphile.GraphileClient) *GraphileFetcher {
@@ -101,9 +133,17 @@ func (v *GraphileFetcher) Fetch() (*OutputResponse, error) {
 	var query string
 
 	if len(v.CursorAfter) > 0 {
-		query = fmt.Sprintf(graphileQueryWithCursor, v.BatchSize, v.CursorAfter)
+		if len(v.CursorInputAfter) > 0 {
+			query = fmt.Sprintf(graphileQueryWithCursor, v.BatchSize, v.CursorAfter, fmt.Sprintf(inputQueryWithCursor, v.BatchSize, v.CursorInputAfter))
+		} else {
+			query = fmt.Sprintf(graphileQueryWithCursor, v.BatchSize, v.CursorAfter, fmt.Sprintf(inputQuery, v.BatchSize))
+		}
 	} else {
-		query = fmt.Sprintf(graphileQuery, v.BatchSize)
+		if len(v.CursorInputAfter) > 0 {
+			query = fmt.Sprintf(graphileQuery, v.BatchSize, fmt.Sprintf(inputQueryWithCursor, v.BatchSize, v.CursorInputAfter))
+		} else {
+			query = fmt.Sprintf(graphileQuery, v.BatchSize, fmt.Sprintf(inputQuery, v.BatchSize))
+		}
 	}
 
 	payload, err := json.Marshal(map[string]interface{}{
@@ -152,5 +192,20 @@ type OutputResponse struct {
 				} `json:"node"`
 			} `json:"edges"`
 		} `json:"outputs"`
+		Inputs struct {
+			PageInfo struct {
+				StartCursor     string `json:"startCursor"`
+				EndCursor       string `json:"endCursor"`
+				HasNextPage     bool   `json:"hasNextPage"`
+				HasPreviousPage bool   `json:"hasPreviousPage"`
+			}
+			Edges []struct {
+				Cursor string `json:"cursor"`
+				Node   struct {
+					Index int    `json:"index"`
+					Blob  string `json:"blob"`
+				} `json:"node"`
+			} `json:"edges"`
+		} `json:"inputs"`
 	} `json:"data"`
 }
