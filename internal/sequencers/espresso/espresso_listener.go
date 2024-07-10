@@ -7,8 +7,9 @@ import (
 	"os"
 	"time"
 
+	cModel "github.com/calindra/nonodo/internal/convenience/model"
+	cRepos "github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/calindra/nonodo/internal/dataavailability"
-	"github.com/calindra/nonodo/internal/model"
 	"github.com/calindra/nonodo/internal/sequencers/inputter"
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -16,7 +17,7 @@ import (
 type EspressoListener struct {
 	espressoAPI     *dataavailability.EspressoAPI
 	namespace       uint64
-	InputRepository *model.InputRepository
+	InputRepository *cRepos.InputRepository
 	fromBlock       uint64
 	InputterWorker  *inputter.InputterWorker
 }
@@ -25,7 +26,7 @@ func (e EspressoListener) String() string {
 	return "espresso_listener"
 }
 
-func NewEspressoListener(namespace uint64, repository *model.InputRepository, fromBlock uint64, w *inputter.InputterWorker) *EspressoListener {
+func NewEspressoListener(namespace uint64, repository *cRepos.InputRepository, fromBlock uint64, w *inputter.InputterWorker) *EspressoListener {
 	return &EspressoListener{namespace: namespace, InputRepository: repository, fromBlock: fromBlock, InputterWorker: w}
 }
 
@@ -76,7 +77,10 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 
 			if tot > 0 {
 				fmt.Println("Fetching InputBox between Espresso block ", previousBlockHeight, " to ", currentBlockHeight)
-				readInputBox(ctx, previousBlockHeight, currentBlockHeight, e.InputterWorker)
+				err = readInputBox(ctx, previousBlockHeight, currentBlockHeight, e.InputterWorker)
+				if err != nil {
+					return err
+				}
 				previousBlockHeight = currentBlockHeight + 1
 			}
 
@@ -125,7 +129,7 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 					continue
 				}
 
-				_, err = e.InputRepository.Create(model.AdvanceInput{
+				_, err = e.InputRepository.Create(cModel.AdvanceInput{
 					Index:       int(index),
 					MsgSender:   msgSender,
 					Payload:     []byte(payload),

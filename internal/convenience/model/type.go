@@ -1,6 +1,10 @@
 package model
 
-import "github.com/ethereum/go-ethereum/common"
+import (
+	"time"
+
+	"github.com/ethereum/go-ethereum/common"
+)
 
 const EXECUTED = "Executed"
 const FALSE = "false"
@@ -8,6 +12,16 @@ const DESTINATION = "Destination"
 const VOUCHER_SELECTOR = "ef615e2f"
 const NOTICE_SELECTOR = "c258d6e5"
 const INPUT_INDEX = "InputIndex"
+
+// Completion status for inputs.
+type CompletionStatus int
+
+const (
+	CompletionStatusUnprocessed CompletionStatus = iota
+	CompletionStatusAccepted
+	CompletionStatusRejected
+	CompletionStatusException
+)
 
 type ConvenienceNotice struct {
 	Payload     string `db:"payload"`
@@ -58,4 +72,29 @@ type SynchronizerFetch struct {
 	IniCursorAfter string `db:"ini_cursor_after"`
 	LogVouchersIds string `db:"log_vouchers_ids"`
 	EndCursorAfter string `db:"end_cursor_after"`
+}
+
+// Rollups input, which can be advance or inspect.
+type Input interface{}
+
+// Rollups report type.
+type Report struct {
+	Index      int
+	InputIndex int
+	Payload    []byte
+}
+
+// Rollups advance input type.
+type AdvanceInput struct {
+	Index          int
+	Status         CompletionStatus
+	MsgSender      common.Address
+	Payload        []byte
+	BlockNumber    uint64
+	BlockTimestamp time.Time
+	PrevRandao     string
+	Vouchers       []ConvenienceVoucher
+	Notices        []ConvenienceNotice
+	Reports        []Report
+	Exception      []byte
 }

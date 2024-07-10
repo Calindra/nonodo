@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"strconv"
 
+	cModel "github.com/calindra/nonodo/internal/convenience/model"
 	convenience "github.com/calindra/nonodo/internal/convenience/model"
-	"github.com/calindra/nonodo/internal/model"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
@@ -16,22 +16,22 @@ import (
 // Nonodo -> GraphQL conversions
 //
 
-func convertCompletionStatus(status model.CompletionStatus) CompletionStatus {
+func convertCompletionStatus(status cModel.CompletionStatus) CompletionStatus {
 	switch status {
-	case model.CompletionStatusUnprocessed:
+	case cModel.CompletionStatusUnprocessed:
 		return CompletionStatusUnprocessed
-	case model.CompletionStatusAccepted:
+	case cModel.CompletionStatusAccepted:
 		return CompletionStatusAccepted
-	case model.CompletionStatusRejected:
+	case cModel.CompletionStatusRejected:
 		return CompletionStatusRejected
-	case model.CompletionStatusException:
+	case cModel.CompletionStatusException:
 		return CompletionStatusException
 	default:
 		panic("invalid completion status")
 	}
 }
 
-func ConvertInput(input model.AdvanceInput) *Input {
+func ConvertInput(input cModel.AdvanceInput) *Input {
 	return &Input{
 		Index:       input.Index,
 		Status:      convertCompletionStatus(input.Status),

@@ -9,6 +9,8 @@ import (
 	"log/slog"
 
 	"github.com/calindra/nonodo/internal/convenience/adapter"
+	cModel "github.com/calindra/nonodo/internal/convenience/model"
+	cRepos "github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
@@ -17,7 +19,7 @@ import (
 type rollupsState interface {
 
 	// Finish the current state, saving the result to the model.
-	finish(status CompletionStatus)
+	finish(status cModel.CompletionStatus)
 
 	// Add voucher to current state.
 	addVoucher(destination common.Address, payload []byte) (int, error)
@@ -54,7 +56,7 @@ func newRollupsStateIdle() *rollupsStateIdle {
 	return &rollupsStateIdle{}
 }
 
-func (s *rollupsStateIdle) finish(status CompletionStatus) {
+func (s *rollupsStateIdle) finish(status cModel.CompletionStatus) {
 	// Do nothing
 }
 
@@ -80,20 +82,20 @@ func (s *rollupsStateIdle) registerException(payload []byte) error {
 
 // In the advance state, the model accumulates the outputs from an advance.
 type rollupsStateAdvance struct {
-	input            *AdvanceInput
-	vouchers         []Voucher
-	notices          []Notice
-	reports          []Report
+	input            *cModel.AdvanceInput
+	vouchers         []cModel.ConvenienceVoucher
+	notices          []cModel.ConvenienceNotice
+	reports          []cModel.Report
 	decoder          Decoder
-	reportRepository *ReportRepository
-	inputRepository  *InputRepository
+	reportRepository *cRepos.ReportRepository
+	inputRepository  *cRepos.InputRepository
 }
 
 func newRollupsStateAdvance(
-	input *AdvanceInput,
+	input *cModel.AdvanceInput,
 	decoder Decoder,
-	reportRepository *ReportRepository,
-	inputRepository *InputRepository,
+	reportRepository *cRepos.ReportRepository,
+	inputRepository *cRepos.InputRepository,
 ) *rollupsStateAdvance {
 	slog.Info("nonodo: processing advance", "index", input.Index)
 	return &rollupsStateAdvance{
@@ -104,7 +106,7 @@ func newRollupsStateAdvance(
 	}
 }
 
-func sendAllInputVouchersToDecoder(decoder Decoder, inputIndex uint64, vouchers []Voucher) {
+func sendAllInputVouchersToDecoder(decoder Decoder, inputIndex uint64, vouchers []cModel.ConvenienceVoucher) {
 	if decoder == nil {
 		slog.Warn("Missing OutputDecoder to send vouchers")
 		return
@@ -112,14 +114,14 @@ func sendAllInputVouchersToDecoder(decoder Decoder, inputIndex uint64, vouchers 
 	ctx := context.Background()
 	for _, v := range vouchers {
 		adapted := adapter.ConvertVoucherPayloadToV2(
-			common.Bytes2Hex(v.Payload),
+			v.Payload,
 		)
 		err := decoder.HandleOutput(
 			ctx,
 			v.Destination,
 			adapted,
 			inputIndex,
-			uint64(v.Index),
+			v.OutputIndex,
 		)
 		if err != nil {
 			panic(err)
@@ -127,7 +129,7 @@ func sendAllInputVouchersToDecoder(decoder Decoder, inputIndex uint64, vouchers 
 	}
 }
 
-func sendAllInputNoticesToDecoder(decoder Decoder, inputIndex uint64, notices []Notice) {
+func sendAllInputNoticesToDecoder(decoder Decoder, inputIndex uint64, notices []cModel.ConvenienceNotice) {
 	if decoder == nil {
 		slog.Warn("Missing OutputDecoder to send notices")
 		return
@@ -135,14 +137,14 @@ func sendAllInputNoticesToDecoder(decoder Decoder, inputIndex uint64, notices []
 	ctx := context.Background()
 	for _, v := range notices {
 		adapted := adapter.ConvertNoticePayloadToV2(
-			common.Bytes2Hex(v.Payload),
+			v.Payload,
 		)
 		err := decoder.HandleOutput(
 			ctx,
 			common.Address{},
 			adapted,
 			inputIndex,
-			uint64(v.Index),
+			v.OutputIndex,
 		)
 		if err != nil {
 			panic(err)
@@ -150,7 +152,7 @@ func sendAllInputNoticesToDecoder(decoder Decoder, inputIndex uint64, notices []
 	}
 }
 
-func saveAllReports(reportRepository *ReportRepository, reports []Report) {
+func saveAllReports(reportRepository *cRepos.ReportRepository, reports []cModel.Report) {
 	if reportRepository == nil {
 		slog.Warn("Missing reportRepository to save reports")
 		return
@@ -167,9 +169,9 @@ func saveAllReports(reportRepository *ReportRepository, reports []Report) {
 	}
 }
 
-func (s *rollupsStateAdvance) finish(status CompletionStatus) {
+func (s *rollupsStateAdvance) finish(status cModel.CompletionStatus) {
 	s.input.Status = status
-	if status == CompletionStatusAccepted {
+	if status == cModel.CompletionStatusAccepted {
 		s.input.Vouchers = s.vouchers
 		s.input.Notices = s.notices
 		if s.decoder != nil {
@@ -188,11 +190,11 @@ func (s *rollupsStateAdvance) finish(status CompletionStatus) {
 
 func (s *rollupsStateAdvance) addVoucher(destination common.Address, payload []byte) (int, error) {
 	index := len(s.vouchers)
-	voucher := Voucher{
-		Index:       index,
-		InputIndex:  s.input.Index,
+	voucher := cModel.ConvenienceVoucher{
+		OutputIndex: uint64(index),
+		InputIndex:  uint64(s.input.Index),
 		Destination: destination,
-		Payload:     payload,
+		Payload:     common.Bytes2Hex(payload),
 	}
 	s.vouchers = append(s.vouchers, voucher)
 	slog.Info("nonodo: added voucher", "index", index, "destination", destination,
@@ -202,10 +204,10 @@ func (s *rollupsStateAdvance) addVoucher(destination common.Address, payload []b
 
 func (s *rollupsStateAdvance) addNotice(payload []byte) (int, error) {
 	index := len(s.notices)
-	notice := Notice{
-		Index:      index,
-		InputIndex: s.input.Index,
-		Payload:    payload,
+	notice := cModel.ConvenienceNotice{
+		OutputIndex: uint64(index),
+		InputIndex:  uint64(s.input.Index),
+		Payload:     common.Bytes2Hex(payload),
 	}
 	s.notices = append(s.notices, notice)
 	slog.Info("nonodo: added notice", "index", index, "payload", hexutil.Encode(payload))
@@ -214,7 +216,7 @@ func (s *rollupsStateAdvance) addNotice(payload []byte) (int, error) {
 
 func (s *rollupsStateAdvance) addReport(payload []byte) error {
 	index := len(s.reports)
-	report := Report{
+	report := cModel.Report{
 		Index:      index,
 		InputIndex: s.input.Index,
 		Payload:    payload,
@@ -225,7 +227,7 @@ func (s *rollupsStateAdvance) addReport(payload []byte) error {
 }
 
 func (s *rollupsStateAdvance) registerException(payload []byte) error {
-	s.input.Status = CompletionStatusException
+	s.input.Status = cModel.CompletionStatusException
 	s.input.Reports = s.reports
 	s.input.Exception = payload
 	_, err := s.inputRepository.Update(*s.input)
@@ -259,7 +261,7 @@ func newRollupsStateInspect(
 	}
 }
 
-func (s *rollupsStateInspect) finish(status CompletionStatus) {
+func (s *rollupsStateInspect) finish(status cModel.CompletionStatus) {
 	s.input.Status = status
 	s.input.ProcessedInputCount = s.getProcessedInputCount()
 	s.input.Reports = s.reports
@@ -287,7 +289,7 @@ func (s *rollupsStateInspect) addReport(payload []byte) error {
 }
 
 func (s *rollupsStateInspect) registerException(payload []byte) error {
-	s.input.Status = CompletionStatusException
+	s.input.Status = cModel.CompletionStatusException
 	s.input.ProcessedInputCount = s.getProcessedInputCount()
 	s.input.Reports = s.reports
 	s.input.Exception = payload

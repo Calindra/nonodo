@@ -1,4 +1,4 @@
-package model
+package repository
 
 import (
 	"fmt"
@@ -38,7 +38,7 @@ func (r *InputRepository) CreateTables() error {
 	return err
 }
 
-func (r *InputRepository) Create(input AdvanceInput) (*AdvanceInput, error) {
+func (r *InputRepository) Create(input model.AdvanceInput) (*model.AdvanceInput, error) {
 	exist, err := r.FindByIndex(input.Index)
 	if err != nil {
 		return nil, err
@@ -49,7 +49,7 @@ func (r *InputRepository) Create(input AdvanceInput) (*AdvanceInput, error) {
 	return r.rawCreate(input)
 }
 
-func (r *InputRepository) rawCreate(input AdvanceInput) (*AdvanceInput, error) {
+func (r *InputRepository) rawCreate(input model.AdvanceInput) (*model.AdvanceInput, error) {
 	insertSql := `INSERT INTO inputs (
 		input_index,
 		status,
@@ -86,7 +86,7 @@ func (r *InputRepository) rawCreate(input AdvanceInput) (*AdvanceInput, error) {
 	return &input, nil
 }
 
-func (r *InputRepository) Update(input AdvanceInput) (*AdvanceInput, error) {
+func (r *InputRepository) Update(input model.AdvanceInput) (*model.AdvanceInput, error) {
 	sql := `UPDATE inputs
 		SET status = $1, exception = $2
 		WHERE input_index = $3`
@@ -102,7 +102,7 @@ func (r *InputRepository) Update(input AdvanceInput) (*AdvanceInput, error) {
 	return &input, nil
 }
 
-func (r *InputRepository) FindByStatusNeDesc(status CompletionStatus) (*AdvanceInput, error) {
+func (r *InputRepository) FindByStatusNeDesc(status model.CompletionStatus) (*model.AdvanceInput, error) {
 	sql := `SELECT
 		input_index,
 		status,
@@ -130,7 +130,7 @@ func (r *InputRepository) FindByStatusNeDesc(status CompletionStatus) (*AdvanceI
 	return nil, nil
 }
 
-func (r *InputRepository) FindByStatus(status CompletionStatus) (*AdvanceInput, error) {
+func (r *InputRepository) FindByStatus(status model.CompletionStatus) (*model.AdvanceInput, error) {
 	sql := `SELECT
 		input_index,
 		status,
@@ -159,7 +159,7 @@ func (r *InputRepository) FindByStatus(status CompletionStatus) (*AdvanceInput, 
 	return nil, nil
 }
 
-func (r *InputRepository) FindByIndex(index int) (*AdvanceInput, error) {
+func (r *InputRepository) FindByIndex(index int) (*model.AdvanceInput, error) {
 	sql := `SELECT
 		input_index,
 		status,
@@ -219,7 +219,7 @@ func (c *InputRepository) FindAll(
 	after *string,
 	before *string,
 	filter []*model.ConvenienceFilter,
-) (*commons.PageResult[AdvanceInput], error) {
+) (*commons.PageResult[model.AdvanceInput], error) {
 	total, err := c.Count(filter)
 	if err != nil {
 		slog.Error("database error", "err", err)
@@ -257,7 +257,7 @@ func (c *InputRepository) FindAll(
 		return nil, err
 	}
 	defer stmt.Close()
-	var inputs []AdvanceInput
+	var inputs []model.AdvanceInput
 	rows, err := stmt.Queryx(args...)
 	if err != nil {
 		return nil, err
@@ -270,7 +270,7 @@ func (c *InputRepository) FindAll(
 		inputs = append(inputs, *input)
 	}
 
-	pageResult := &commons.PageResult[AdvanceInput]{
+	pageResult := &commons.PageResult[model.AdvanceInput]{
 		Rows:   inputs,
 		Total:  total,
 		Offset: uint64(offset),
@@ -283,7 +283,7 @@ func transformToInputQuery(
 ) (string, []interface{}, int, error) {
 	query := ""
 	if len(filter) > 0 {
-		query += "WHERE "
+		query += WHERE
 	}
 	args := []interface{}{}
 	where := []string{}
@@ -321,9 +321,9 @@ func transformToInputQuery(
 	return query, args, count, nil
 }
 
-func parseInput(res *sqlx.Rows) (*AdvanceInput, error) {
+func parseInput(res *sqlx.Rows) (*model.AdvanceInput, error) {
 	var (
-		input          AdvanceInput
+		input          model.AdvanceInput
 		msgSender      string
 		payload        string
 		blockTimestamp int64

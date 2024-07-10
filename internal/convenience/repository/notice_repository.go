@@ -164,7 +164,7 @@ func transformToNoticeQuery(
 ) (string, []interface{}, int, error) {
 	query := ""
 	if len(filter) > 0 {
-		query += "WHERE "
+		query += WHERE
 	}
 	args := []interface{}{}
 	where := []string{}

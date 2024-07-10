@@ -1,11 +1,11 @@
-package model
+package repository
 
 import (
 	"log/slog"
 	"testing"
 
 	"github.com/calindra/nonodo/internal/commons"
-	"github.com/calindra/nonodo/internal/convenience/model"
+	cModel "github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/ncruces/go-sqlite3/driver"
@@ -42,7 +42,7 @@ func (s *ReportRepositorySuite) TestCreateTables() {
 }
 
 func (s *ReportRepositorySuite) TestCreateReport() {
-	_, err := s.reportRepository.Create(Report{
+	_, err := s.reportRepository.Create(cModel.Report{
 		Index:      1,
 		InputIndex: 2,
 		Payload:    common.Hex2Bytes("1122"),
@@ -51,7 +51,7 @@ func (s *ReportRepositorySuite) TestCreateReport() {
 }
 
 func (s *ReportRepositorySuite) TestCreateReportAndFind() {
-	_, err := s.reportRepository.Create(Report{
+	_, err := s.reportRepository.Create(cModel.Report{
 		InputIndex: 1,
 		Index:      2,
 		Payload:    common.Hex2Bytes("1122"),
@@ -77,7 +77,7 @@ func (s *ReportRepositorySuite) TestReportNotFound() {
 func (s *ReportRepositorySuite) TestCreateReportAndFindAll() {
 	for i := 0; i < 3; i++ {
 		for j := 0; j < 4; j++ {
-			_, err := s.reportRepository.Create(Report{
+			_, err := s.reportRepository.Create(cModel.Report{
 				InputIndex: i,
 				Index:      j,
 				Payload:    common.Hex2Bytes("1122"),
@@ -91,11 +91,11 @@ func (s *ReportRepositorySuite) TestCreateReportAndFindAll() {
 	s.Equal(0, reports.Rows[0].InputIndex)
 	s.Equal(2, reports.Rows[len(reports.Rows)-1].InputIndex)
 
-	filter := []*model.ConvenienceFilter{}
+	filter := []*cModel.ConvenienceFilter{}
 	{
 		field := "InputIndex"
 		value := "1"
-		filter = append(filter, &model.ConvenienceFilter{
+		filter = append(filter, &cModel.ConvenienceFilter{
 			Field: &field,
 			Eq:    &value,
 		})
