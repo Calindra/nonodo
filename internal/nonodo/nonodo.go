@@ -83,7 +83,7 @@ type NonodoOpts struct {
 
 // Create the options struct with default values.
 func NewNonodoOpts() NonodoOpts {
-	defaultTimeout := 10 * time.Second
+	var defaultTimeout time.Duration = 10 * time.Second
 	return NonodoOpts{
 		AnvilAddress:       devnet.AnvilDefaultAddress,
 		AnvilPort:          devnet.AnvilDefaultPort,
