@@ -11,5 +11,6 @@ pkgs.mkShell {
 
   shellHook = ''
     export CGO_CFLAGS="-O2 -Wno-error=cpp"
+    [ -e "./nonodo" ] && source <(./nonodo completion bash)
   '';
 }

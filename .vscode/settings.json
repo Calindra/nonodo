@@ -67,15 +67,21 @@
         "readerclient",
         "rollup",
         "rollups",
+        "sepolia",
         "softprops",
         "sqlite",
         "sqlx",
         "sslmode",
         "stretchr",
         "syscoin",
+        "tendermint",
+        "trpc",
         "unmarshal",
+        "unziping",
         "versioninfo",
         "wangyoucao",
-        "watchexec"
+        "watchexec",
+        "Zehui",
+        "Zheng"
     ]
 }
