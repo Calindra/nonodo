@@ -4,9 +4,6 @@
 package model
 
 import (
-	// "time"
-
-	// cModel "github.com/calindra/nonodo/internal/convenience/model"
 	cModel "github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -44,34 +41,6 @@ type Report struct {
 func (r Report) GetInputIndex() int {
 	return r.InputIndex
 }
-
-// Completion status for inputs.
-// type CompletionStatus int
-
-// const (
-// 	CompletionStatusUnprocessed CompletionStatus = iota
-// 	CompletionStatusAccepted
-// 	CompletionStatusRejected
-// 	CompletionStatusException
-// )
-
-// Rollups input, which can be advance or inspect.
-// type Input interface{}
-
-// Rollups advance input type.
-// type AdvanceInput struct {
-// 	Index          int
-// 	Status         cModel.CompletionStatus
-// 	MsgSender      common.Address
-// 	Payload        []byte
-// 	BlockNumber    uint64
-// 	BlockTimestamp time.Time
-// 	PrevRandao     string
-// 	Vouchers       []Voucher
-// 	Notices        []Notice
-// 	Reports        []Report
-// 	Exception      []byte
-// }
 
 // Rollups inspect input type.
 type InspectInput struct {
