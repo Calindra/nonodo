@@ -29,9 +29,11 @@ import (
 	_ "github.com/lib/pq"
 )
 
-const DefaultHttpPort = 8080
-const DefaultRollupsPort = 5004
-const DefaultNamespace = 10008
+const (
+	DefaultHttpPort    = 8080
+	DefaultRollupsPort = 5004
+	DefaultNamespace   = 10008
+)
 
 // Options to nonodo.
 type NonodoOpts struct {
@@ -81,7 +83,7 @@ type NonodoOpts struct {
 
 // Create the options struct with default values.
 func NewNonodoOpts() NonodoOpts {
-	var defaultTimeout time.Duration = 10 * time.Second
+	defaultTimeout := 10 * time.Second
 	return NonodoOpts{
 		AnvilAddress:       devnet.AnvilDefaultAddress,
 		AnvilPort:          devnet.AnvilDefaultPort,
