@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/calindra/nonodo/internal/commons"
+	cModel "github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/suite"
 )
@@ -55,9 +56,9 @@ func TestStateSuite(t *testing.T) {
 
 func (s *StateSuite) TestSendAllVouchersToDecoder() {
 	decoder := FakeDecoder{}
-	vouchers := []Voucher{}
-	vouchers = append(vouchers, Voucher{
-		Payload: common.Hex2Bytes("123456"),
+	vouchers := []cModel.ConvenienceVoucher{}
+	vouchers = append(vouchers, cModel.ConvenienceVoucher{
+		Payload: "123456",
 	})
 	sendAllInputVouchersToDecoder(&decoder, 1, vouchers)
 	s.Equal(1, len(decoder.outputs))
@@ -69,9 +70,9 @@ func (s *StateSuite) TestSendAllVouchersToDecoder() {
 
 func (s *StateSuite) TestSendAllNoticesToDecoder() {
 	decoder := FakeDecoder{}
-	notices := []Notice{}
-	notices = append(notices, Notice{
-		Payload: common.Hex2Bytes("123456"),
+	notices := []cModel.ConvenienceNotice{}
+	notices = append(notices, cModel.ConvenienceNotice{
+		Payload: "123456",
 	})
 	sendAllInputNoticesToDecoder(&decoder, 1, notices)
 	s.Equal(1, len(decoder.outputs))

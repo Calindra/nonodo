@@ -15,6 +15,7 @@ import (
 
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/convenience"
+	cModel "github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/model"
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
@@ -43,7 +44,7 @@ type SequencerMock struct {
 }
 
 // FinishAndGetNext implements Sequencer.
-func (s *SequencerMock) FinishAndGetNext(accept bool) model.Input {
+func (s *SequencerMock) FinishAndGetNext(accept bool) cModel.Input {
 	panic("unimplemented")
 }
 

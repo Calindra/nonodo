@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	cModel "github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/model"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -49,7 +50,7 @@ func (m *ModelMock) setInspectInput(payload []byte) {
 	m.On("AddInspectInput", payload).Return(0)
 	m.On("GetInspectInput", 0).Return(model.InspectInput{
 		Index:               0,
-		Status:              model.CompletionStatusAccepted,
+		Status:              cModel.CompletionStatusAccepted,
 		Payload:             payload,
 		ProcessedInputCount: 0,
 		Reports: []model.Report{
@@ -164,7 +165,7 @@ func (s *InspectSuite) TestRequestFailsWithTimeout() {
 	s.model.On("AddInspectInput", []byte{}).Return(0)
 	s.model.On("GetInspectInput", 0).Return(model.InspectInput{
 		Index:  0,
-		Status: model.CompletionStatusUnprocessed,
+		Status: cModel.CompletionStatusUnprocessed,
 	})
 	status, body := s.doPostInspect([]byte{})
 	s.Equal(http.StatusServiceUnavailable, status)

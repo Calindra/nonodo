@@ -7,15 +7,16 @@ import (
 	"os"
 	"time"
 
+	cModel "github.com/calindra/nonodo/internal/convenience/model"
+	cRepos "github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/calindra/nonodo/internal/dataavailability"
-	"github.com/calindra/nonodo/internal/model"
 	"github.com/ethereum/go-ethereum/common"
 )
 
 type EspressoListener struct {
 	espressoAPI     *dataavailability.EspressoAPI
 	namespace       uint64
-	InputRepository *model.InputRepository
+	InputRepository *cRepos.InputRepository
 	fromBlock       uint64
 }
 
@@ -23,7 +24,7 @@ func (e EspressoListener) String() string {
 	return "espresso_listener"
 }
 
-func NewEspressoListener(namespace uint64, repository *model.InputRepository, fromBlock uint64) *EspressoListener {
+func NewEspressoListener(namespace uint64, repository *cRepos.InputRepository, fromBlock uint64) *EspressoListener {
 	return &EspressoListener{namespace: namespace, InputRepository: repository, fromBlock: fromBlock}
 }
 
@@ -115,7 +116,7 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 					continue
 				}
 
-				_, err = e.InputRepository.Create(model.AdvanceInput{
+				_, err = e.InputRepository.Create(cModel.AdvanceInput{
 					Index:       int(index),
 					MsgSender:   msgSender,
 					Payload:     []byte(payload),

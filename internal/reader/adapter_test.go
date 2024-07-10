@@ -5,7 +5,8 @@ import (
 	"testing"
 
 	"github.com/calindra/nonodo/internal/commons"
-	"github.com/calindra/nonodo/internal/model"
+	convenience "github.com/calindra/nonodo/internal/convenience/model"
+	cRepos "github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/ncruces/go-sqlite3/driver"
@@ -19,14 +20,14 @@ import (
 
 type AdapterSuite struct {
 	suite.Suite
-	reportRepository *model.ReportRepository
+	reportRepository *cRepos.ReportRepository
 	adapter          Adapter
 }
 
 func (s *AdapterSuite) SetupTest() {
 	commons.ConfigureLog(slog.LevelDebug)
 	db := sqlx.MustConnect("sqlite3", ":memory:")
-	s.reportRepository = &model.ReportRepository{
+	s.reportRepository = &cRepos.ReportRepository{
 		Db: db,
 	}
 	err := s.reportRepository.CreateTables()
@@ -46,7 +47,7 @@ func (s *AdapterSuite) TestCreateTables() {
 }
 
 func (s *AdapterSuite) TestGetReport() {
-	_, err := s.reportRepository.Create(model.Report{
+	_, err := s.reportRepository.Create(convenience.Report{
 		InputIndex: 1,
 		Index:      2,
 		Payload:    common.Hex2Bytes("1122"),
@@ -59,7 +60,7 @@ func (s *AdapterSuite) TestGetReport() {
 
 func (s *AdapterSuite) TestGetReports() {
 	for i := 0; i < 3; i++ {
-		_, err := s.reportRepository.Create(model.Report{
+		_, err := s.reportRepository.Create(convenience.Report{
 			InputIndex: i,
 			Index:      0,
 			Payload:    common.Hex2Bytes("1122"),

@@ -1,4 +1,4 @@
-package model
+package repository
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/calindra/nonodo/internal/commons"
-	"github.com/calindra/nonodo/internal/convenience/model"
+	cModel "github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
 )
@@ -31,7 +31,7 @@ func (r *ReportRepository) CreateTables() error {
 	return err
 }
 
-func (r *ReportRepository) Create(report Report) (Report, error) {
+func (r *ReportRepository) Create(report cModel.Report) (cModel.Report, error) {
 	insertSql := `INSERT INTO reports (
 		output_index,
 		payload,
@@ -48,7 +48,7 @@ func (r *ReportRepository) Create(report Report) (Report, error) {
 func (r *ReportRepository) FindByInputAndOutputIndex(
 	inputIndex uint64,
 	outputIndex uint64,
-) (*Report, error) {
+) (*cModel.Report, error) {
 	rows, err := r.Db.Queryx(`
 		SELECT payload FROM reports
 			WHERE input_index = $1 and output_index = $2
@@ -65,7 +65,7 @@ func (r *ReportRepository) FindByInputAndOutputIndex(
 		if err := rows.Scan(&payload); err != nil {
 			return nil, err
 		}
-		report := &Report{
+		report := &cModel.Report{
 			InputIndex: int(inputIndex),
 			Index:      int(outputIndex),
 			Payload:    common.Hex2Bytes(payload),
@@ -77,7 +77,7 @@ func (r *ReportRepository) FindByInputAndOutputIndex(
 }
 
 func (c *ReportRepository) Count(
-	filter []*model.ConvenienceFilter,
+	filter []*cModel.ConvenienceFilter,
 ) (uint64, error) {
 	query := `SELECT count(*) FROM reports `
 	where, args, _, err := transformToReportQuery(filter)
@@ -108,12 +108,12 @@ func (c *ReportRepository) FindAllByInputIndex(
 	after *string,
 	before *string,
 	inputIndex *int,
-) (*commons.PageResult[Report], error) {
-	filter := []*model.ConvenienceFilter{}
+) (*commons.PageResult[cModel.Report], error) {
+	filter := []*cModel.ConvenienceFilter{}
 	if inputIndex != nil {
 		field := INPUT_INDEX
 		value := fmt.Sprintf("%d", *inputIndex)
-		filter = append(filter, &model.ConvenienceFilter{
+		filter = append(filter, &cModel.ConvenienceFilter{
 			Field: &field,
 			Eq:    &value,
 		})
@@ -132,8 +132,8 @@ func (c *ReportRepository) FindAll(
 	last *int,
 	after *string,
 	before *string,
-	filter []*model.ConvenienceFilter,
-) (*commons.PageResult[Report], error) {
+	filter []*cModel.ConvenienceFilter,
+) (*commons.PageResult[cModel.Report], error) {
 	total, err := c.Count(filter)
 	if err != nil {
 		slog.Error("database error", "err", err)
@@ -163,7 +163,7 @@ func (c *ReportRepository) FindAll(
 		return nil, err
 	}
 	defer stmt.Close()
-	var reports []Report
+	var reports []cModel.Report
 	rows, err := stmt.Queryx(args...)
 	if err != nil {
 		return nil, err
@@ -175,7 +175,7 @@ func (c *ReportRepository) FindAll(
 		if err := rows.Scan(&inputIndex, &outputIndex, &payload); err != nil {
 			return nil, err
 		}
-		report := &Report{
+		report := &cModel.Report{
 			InputIndex: inputIndex,
 			Index:      outputIndex,
 			Payload:    common.Hex2Bytes(payload),
@@ -183,7 +183,7 @@ func (c *ReportRepository) FindAll(
 		reports = append(reports, *report)
 	}
 
-	pageResult := &commons.PageResult[Report]{
+	pageResult := &commons.PageResult[cModel.Report]{
 		Rows:   reports,
 		Total:  total,
 		Offset: uint64(offset),
@@ -192,11 +192,11 @@ func (c *ReportRepository) FindAll(
 }
 
 func transformToReportQuery(
-	filter []*model.ConvenienceFilter,
+	filter []*cModel.ConvenienceFilter,
 ) (string, []interface{}, int, error) {
 	query := ""
 	if len(filter) > 0 {
-		query += "WHERE "
+		query += WHERE
 	}
 	args := []interface{}{}
 	where := []string{}

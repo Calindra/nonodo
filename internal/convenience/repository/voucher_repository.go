@@ -272,7 +272,7 @@ func transformToQuery(
 			} else {
 				return "", nil, 0, fmt.Errorf("operation not implemented")
 			}
-		} else if *filter.Field == "InputIndex" {
+		} else if *filter.Field == model.INPUT_INDEX {
 			if filter.Eq != nil {
 				where = append(where, fmt.Sprintf("input_index = $%d ", count))
 				args = append(args, *filter.Eq)
