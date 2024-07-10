@@ -89,27 +89,8 @@ func (x VoucherExecListener) Start(ctx context.Context, ready chan<- struct{}) e
 	return x.WatchExecutions(ctx, client)
 }
 
-func (x *VoucherExecListener) WatchExecutions(ctx context.Context, client *ethclient.Client) error {
-
-	// ABI of your contract
-	abi, err := contracts.ApplicationMetaData.GetAbi()
-
-	if abi == nil {
-		return fmt.Errorf("error parsing abi")
-	}
-	if err != nil {
-		slog.Error(err.Error())
-	}
-	contractABI := *abi
-
-	slog.Debug("Reading executions", "FromBlock", x.FromBlock)
-
-	// Subscribe to event
-	query := ethereum.FilterQuery{
-		FromBlock: x.FromBlock,
-		Addresses: []common.Address{x.ApplicationAddress},
-		Topics:    [][]common.Hash{{contractABI.Events[x.EventName].ID}},
-	}
+func (x *VoucherExecListener) ReadPastExecutions(client *ethclient.Client, contractABI abi.ABI, query ethereum.FilterQuery) error {
+	slog.Debug("ReadPastExecutions", "FromBlock", x.FromBlock)
 
 	// Retrieve logs for the specified block range
 	oldLogs, err := client.FilterLogs(context.Background(), query)
@@ -123,6 +104,34 @@ func (x *VoucherExecListener) WatchExecutions(ctx context.Context, client *ethcl
 			slog.Error(err.Error())
 			continue
 		}
+	}
+
+	return nil
+}
+
+func (x *VoucherExecListener) WatchExecutions(ctx context.Context, client *ethclient.Client) error {
+
+	// ABI of your contract
+	abi, err := contracts.ApplicationMetaData.GetAbi()
+
+	if abi == nil {
+		return fmt.Errorf("error parsing abi")
+	}
+	if err != nil {
+		slog.Error(err.Error())
+	}
+	contractABI := *abi
+
+	// Subscribe to event
+	query := ethereum.FilterQuery{
+		FromBlock: x.FromBlock,
+		Addresses: []common.Address{x.ApplicationAddress},
+		Topics:    [][]common.Hash{{contractABI.Events[x.EventName].ID}},
+	}
+
+	err = x.ReadPastExecutions(client, contractABI, query)
+	if err != nil {
+		return err
 	}
 
 	// subscribe to new logs
