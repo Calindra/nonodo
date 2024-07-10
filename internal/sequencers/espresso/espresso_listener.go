@@ -9,6 +9,7 @@ import (
 
 	"github.com/calindra/nonodo/internal/dataavailability"
 	"github.com/calindra/nonodo/internal/model"
+	"github.com/calindra/nonodo/internal/sequencers/inputter"
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -17,14 +18,15 @@ type EspressoListener struct {
 	namespace       uint64
 	InputRepository *model.InputRepository
 	fromBlock       uint64
+	InputterWorker  *inputter.InputterWorker
 }
 
 func (e EspressoListener) String() string {
 	return "espresso_listener"
 }
 
-func NewEspressoListener(namespace uint64, repository *model.InputRepository, fromBlock uint64) *EspressoListener {
-	return &EspressoListener{namespace: namespace, InputRepository: repository, fromBlock: fromBlock}
+func NewEspressoListener(namespace uint64, repository *model.InputRepository, fromBlock uint64, w *inputter.InputterWorker) *EspressoListener {
+	return &EspressoListener{namespace: namespace, InputRepository: repository, fromBlock: fromBlock, InputterWorker: w}
 }
 
 func (e EspressoListener) getBaseUrl() string {
@@ -46,6 +48,7 @@ func (e EspressoListener) Start(ctx context.Context, ready chan<- struct{}) erro
 func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 	slog.Debug("Espresso: watchNewTransactions", "fromBlock", e.fromBlock)
 	currentBlockHeight := e.fromBlock
+	previousBlockHeight := currentBlockHeight
 
 	// keep track of msgSender -> nonce
 	nonceMap := make(map[common.Address]int64)
@@ -70,6 +73,13 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 				return err
 			}
 			tot := len(transactions.Transactions)
+
+			if tot > 0 {
+				fmt.Println("Fetching InputBox between Espresso block ", previousBlockHeight, " to ", currentBlockHeight)
+				readInputBox(ctx, previousBlockHeight, currentBlockHeight, e.InputterWorker)
+				previousBlockHeight = currentBlockHeight + 1
+			}
+
 			slog.Debug("Espresso:", "transactionsLen", tot)
 			for i := 0; i < tot; i++ {
 				transaction := transactions.Transactions[i]
