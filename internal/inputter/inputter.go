@@ -93,8 +93,6 @@ func (w InputterWorker) watchNewInputs(
 	var err error
 	seconds := 5
 	reconnectDelay := time.Duration(seconds) * time.Second
-	retryCount := 0
-	maxRetry := 3
 	currentBlock := w.InputBoxBlock
 	for {
 		// First, read the event logs to get the past inputs; then, watch the event logs to get the
@@ -103,14 +101,10 @@ func (w InputterWorker) watchNewInputs(
 		// we accept this race condition.
 		err = w.readPastInputs(ctx, client, inputBox, currentBlock)
 		if err != nil {
-			if retryCount > maxRetry {
-				return fmt.Errorf("readPastInputs: %w", err)
-			} else {
-				slog.Error("Inputter", "error", err)
-				slog.Info("Inputter reconnecting", "reconnectDelay", reconnectDelay)
-				time.Sleep(reconnectDelay)
-				continue
-			}
+			slog.Error("Inputter", "error", err)
+			slog.Info("Inputter reconnecting", "reconnectDelay", reconnectDelay)
+			time.Sleep(reconnectDelay)
+			continue
 		}
 
 		// Create a new subscription
@@ -121,14 +115,10 @@ func (w InputterWorker) watchNewInputs(
 		filter := []common.Address{w.ApplicationAddress}
 		sub, err = inputBox.WatchInputAdded(&opts, logs, filter, nil)
 		if err != nil {
-			if retryCount > maxRetry {
-				return fmt.Errorf("inputter: watch input added: %w", err)
-			} else {
-				slog.Error("Inputter", "error", err)
-				slog.Info("Inputter reconnecting", "reconnectDelay", reconnectDelay)
-				time.Sleep(reconnectDelay)
-				continue
-			}
+			slog.Error("Inputter", "error", err)
+			slog.Info("Inputter reconnecting", "reconnectDelay", reconnectDelay)
+			time.Sleep(reconnectDelay)
+			continue
 		}
 
 		// Handle the subscription in a separate goroutine
@@ -143,7 +133,6 @@ func (w InputterWorker) watchNewInputs(
 					errCh <- err
 					return
 				case event := <-logs:
-					retryCount = 0
 					currentBlock = event.Raw.BlockNumber - 1
 					if err := w.addInput(ctx, client, event); err != nil {
 						errCh <- err
