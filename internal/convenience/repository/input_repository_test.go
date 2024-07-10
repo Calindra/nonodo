@@ -219,6 +219,33 @@ func (s *InputRepositorySuite) TestFindByIndexLt() {
 	s.Equal(3, int(resp.Total))
 }
 
+func (s *InputRepositorySuite) TestFindByMsgSender() {
+	defer s.teardown()
+	for i := 0; i < 5; i++ {
+		input, err := s.inputRepository.Create(convenience.AdvanceInput{
+			Index:          i,
+			Status:         convenience.CompletionStatusUnprocessed,
+			MsgSender:      common.HexToAddress(fmt.Sprintf("000000000000000000000000000000000000000%d", i)),
+			Payload:        common.Hex2Bytes("0x1122"),
+			BlockNumber:    1,
+			BlockTimestamp: time.Now(),
+		})
+		s.NoError(err)
+		s.Equal(i, input.Index)
+	}
+	filters := []*convenience.ConvenienceFilter{}
+	value := "0x0000000000000000000000000000000000000002"
+	field := "MsgSender"
+	filters = append(filters, &convenience.ConvenienceFilter{
+		Field: &field,
+		Eq:    &value,
+	})
+	resp, err := s.inputRepository.FindAll(nil, nil, nil, nil, filters)
+	s.NoError(err)
+	s.Equal(1, int(resp.Total))
+	s.Equal(common.HexToAddress(value), resp.Rows[0].MsgSender)
+}
+
 func (s *InputRepositorySuite) teardown() {
 	defer os.RemoveAll(s.tempDir)
 }

@@ -1136,6 +1136,9 @@ input InputFilter {
   indexLowerThan: Int
   "Filter only inputs with index greater than a given value"
   indexGreaterThan: Int
+
+  "Filter only inputs with the message sender"
+  msgSender: String
 }
 
 scalar BigInt
@@ -8116,7 +8119,7 @@ func (ec *executionContext) unmarshalInputInputFilter(ctx context.Context, obj i
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"indexLowerThan", "indexGreaterThan"}
+	fieldsInOrder := [...]string{"indexLowerThan", "indexGreaterThan", "msgSender"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -8137,6 +8140,13 @@ func (ec *executionContext) unmarshalInputInputFilter(ctx context.Context, obj i
 				return it, err
 			}
 			it.IndexGreaterThan = data
+		case "msgSender":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("msgSender"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.MsgSender = data
 		}
 	}
 
