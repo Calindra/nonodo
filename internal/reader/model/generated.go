@@ -37,6 +37,8 @@ type InputFilter struct {
 	IndexLowerThan *int `json:"indexLowerThan,omitempty"`
 	// Filter only inputs with index greater than a given value
 	IndexGreaterThan *int `json:"indexGreaterThan,omitempty"`
+	// Filter only inputs with the message sender
+	MsgSender *string `json:"msgSender,omitempty"`
 }
 
 // Page metadata for the cursor-based Connection pagination pattern

@@ -313,6 +313,14 @@ func transformToInputQuery(
 			} else {
 				return "", nil, 0, fmt.Errorf("operation not implemented")
 			}
+		} else if *filter.Field == "MsgSender" {
+			if filter.Eq != nil {
+				where = append(where, fmt.Sprintf("msg_sender = $%d ", count))
+				args = append(args, *filter.Eq)
+				count += 1
+			} else {
+				return "", nil, 0, fmt.Errorf("operation not implemented")
+			}
 		} else {
 			return "", nil, 0, fmt.Errorf("unexpected field %s", *filter.Field)
 		}

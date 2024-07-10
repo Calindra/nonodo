@@ -161,6 +161,9 @@ input InputFilter {
   indexLowerThan: Int
   "Filter only inputs with index greater than a given value"
   indexGreaterThan: Int
+
+  "Filter only inputs with the message sender"
+  msgSender: String
 }
 
 scalar BigInt

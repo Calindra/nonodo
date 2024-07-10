@@ -244,6 +244,13 @@ func (a AdapterV1) GetInputs(
 				Lt:    &value,
 			})
 		}
+		if where.MsgSender != nil {
+			msgSenderField := "MsgSender"
+			filters = append(filters, &cModel.ConvenienceFilter{
+				Field: &msgSenderField,
+				Eq:    where.MsgSender,
+			})
+		}
 	}
 	inputs, err := a.inputRepository.FindAll(
 		first, last, after, before, filters,
