@@ -297,6 +297,11 @@ ALTER TABLE ONLY public.notices
 INSERT INTO public.notices VALUES ('OX1223', 1, 1);
 INSERT INTO public.notices VALUES ('OX1223', 2, 2);
 
+ALTER TABLE ONLY public.convenience_inputs
+    ADD CONSTRAINT cinputs_pkey PRIMARY KEY (id);
+
+INSERT INTO public.convenience_inputs (id, input_index) VALUES (1, 1)
+INSERT INTO public.convenience_inputs (id, input_index) VALUES (2, 2)
 
 --
 -- PostgreSQL database dump complete
