@@ -42,7 +42,7 @@ func TestAdapterV2Suite(t *testing.T) {
 }
 
 func (s *GraphileFetcherTestSuite) TestFetchWithoutCursor() {
-	blob := GenerateBlob()
+	blob := GenerateOutputBlob()
 	s.graphileClient.PostFunc = func(body []byte) ([]byte, error) {
 		return []byte(fmt.Sprintf(`{
  "data": {
@@ -77,7 +77,7 @@ func (s *GraphileFetcherTestSuite) TestFetchWithoutCursor() {
 }
 
 func (s *GraphileFetcherTestSuite) TestFetchWithCursor() {
-	blob := GenerateBlob()
+	blob := GenerateOutputBlob()
 	s.graphileClient.PostFunc = func(body []byte) ([]byte, error) {
 		return []byte(fmt.Sprintf(`{
  "data": {
@@ -112,11 +112,14 @@ func (s *GraphileFetcherTestSuite) TestFetchWithCursor() {
 }
 
 func (s *GraphileFetcherTestSuite) TestPrintInputBlob() {
-
 	slog.Info("Blob", "Input Blob", GenerateInputBlob())
 }
 
-func GenerateBlob() string {
+func (s *GraphileFetcherTestSuite) TestPrintOutputBlob() {
+	slog.Info("Blob", "Output Blob", GenerateOutputBlob())
+}
+
+func GenerateOutputBlob() string {
 	// Parse the ABI JSON
 	abiParsed, err := contracts.OutputsMetaData.GetAbi()
 
