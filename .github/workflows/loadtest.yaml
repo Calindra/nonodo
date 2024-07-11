@@ -111,4 +111,5 @@ jobs:
           docker logs postgraphile-custom
           docker ps
           k6 run loadtesting/test.js
+          docker logs nonodo
          
