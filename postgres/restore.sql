@@ -297,7 +297,7 @@ ALTER TABLE ONLY public.notices
 INSERT INTO public.notices VALUES ('OX1223', 1, 1);
 INSERT INTO public.notices VALUES ('OX1223', 2, 2);
 
-CREATE TABLE IF NOT EXISTS convenience_inputs (
+CREATE TABLE IF NOT EXISTS public.convenience_inputs (
 		id 				integer,
 		input_index		integer,
 		status	 		text,
