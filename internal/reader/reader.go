@@ -4,6 +4,7 @@
 // This package is responsible for serving the GraphQL reader API.
 package reader
 
+//go:generate go run ./generate
 //go:generate go run github.com/99designs/gqlgen generate
 
 import (
