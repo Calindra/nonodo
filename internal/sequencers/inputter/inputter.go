@@ -63,7 +63,7 @@ func (w *InputterWorker) ReadPastInputs(
 ) error {
 	slog.Debug("readPastInputs",
 		"startBlockNumber", startBlockNumber,
-		"endBlockNumber", endBlockNumber,
+		"endBlockNumber", *endBlockNumber,
 		"dappAddress", w.ApplicationAddress,
 	)
 	opts := bind.FilterOpts{
