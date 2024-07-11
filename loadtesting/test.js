@@ -11,7 +11,7 @@ export let options = {
     }
 };
 
-const GRAPHQL_ENDPOINT = 'http://localhost:8181/graphql'
+const GRAPHQL_ENDPOINT = 'http://localhost:8080/graphql'
 
 function testVoucherNotFound() {
     const payload = JSON.stringify({
@@ -206,14 +206,14 @@ function testInputs() {
 }
 
 export default function () {
-//    testVoucherNotFound()
-//    testVoucherFound()
-//    testNoticeFound()
+   testVoucherNotFound()
+   testVoucherFound()
+   testNoticeFound()
    testInputFound()
-//    testReportFound()
-//    testConvenientVouchers()
-//    testVouchers()
-//    testNotices()
-//    testReports()
+   testReportFound()
+   testConvenientVouchers()
+   testVouchers()
+   testNotices()
+   testReports()
    testInputs()
 }
