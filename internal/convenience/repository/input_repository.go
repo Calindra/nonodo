@@ -241,7 +241,9 @@ func (c *InputRepository) FindAll(
 	}
 	query += where
 	query += `ORDER BY input_index ASC `
+
 	offset, limit, err := commons.ComputePage(first, last, after, before, int(total))
+
 	if err != nil {
 		return nil, err
 	}

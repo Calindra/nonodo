@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"math/big"
 	"strings"
 	"time"
 
@@ -115,20 +116,20 @@ func (x GraphileSynchronizer) handleGraphileResponse(outputResp OutputResponse, 
 
 		adapted, _ := adapter.GetConvertedInput(input.Node.Blob)
 
-		inputIndex := adapted[1].(int)
-		msgSender := common.HexToAddress(adapted[3].(string))
-		payload := adapted[3].(string)
-		blockNumber := adapted[4].(uint64)
-		blockTimestamp := adapted[5].(time.Time)
-		prevRandao := adapted[6].(string)
+		inputIndex := input.Node.Index
+		msgSender := adapted[2].(common.Address)
+		payload := string(adapted[7].([]uint8))
+		blockNumber := adapted[3].(*big.Int)
+		blockTimestamp := adapted[4].(*big.Int).Int64()
+		prevRandao := adapted[5].(*big.Int).String()
 
 		err := x.Decoder.HandleInput(ctx,
 			inputIndex,
 			model.CompletionStatusUnprocessed,
 			msgSender,
 			payload,
-			blockNumber,
-			blockTimestamp,
+			blockNumber.Uint64(),
+			time.Unix(blockTimestamp, 0),
 			prevRandao)
 
 		if err != nil {

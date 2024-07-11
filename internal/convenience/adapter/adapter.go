@@ -51,8 +51,6 @@ func GetConvertedInput(payload string) ([]interface{}, error) {
 		return make([]interface{}, 0), err
 	}
 
-	slog.Info("payload", "payload", payload)
-
 	values, err := abiParsed.Methods["EvmAdvance"].Inputs.Unpack(common.Hex2Bytes(payload[10:]))
 
 	if err != nil {

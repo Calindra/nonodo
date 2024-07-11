@@ -169,8 +169,6 @@ func (v *GraphileFetcher) Fetch() (*OutputResponse, error) {
 		return nil, err
 	}
 
-	slog.Info("response is ", "responseparsed", response)
-
 	return &response, nil
 }
 
