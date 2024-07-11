@@ -19,7 +19,7 @@ type InputRepository struct {
 }
 
 func (r *InputRepository) CreateTables() error {
-	schema := `CREATE TABLE IF NOT EXISTS inputs (
+	schema := `CREATE TABLE IF NOT EXISTS convenience_inputs (
 		id 				INTEGER NOT NULL PRIMARY KEY,
 		input_index		integer,
 		status	 		text,
@@ -50,7 +50,7 @@ func (r *InputRepository) Create(input model.AdvanceInput) (*model.AdvanceInput,
 }
 
 func (r *InputRepository) rawCreate(input model.AdvanceInput) (*model.AdvanceInput, error) {
-	insertSql := `INSERT INTO inputs (
+	insertSql := `INSERT INTO convenience_inputs (
 		input_index,
 		status,
 		msg_sender,
@@ -87,7 +87,7 @@ func (r *InputRepository) rawCreate(input model.AdvanceInput) (*model.AdvanceInp
 }
 
 func (r *InputRepository) Update(input model.AdvanceInput) (*model.AdvanceInput, error) {
-	sql := `UPDATE inputs
+	sql := `UPDATE convenience_inputs
 		SET status = $1, exception = $2
 		WHERE input_index = $3`
 	_, err := r.Db.Exec(
@@ -110,7 +110,7 @@ func (r *InputRepository) FindByStatusNeDesc(status model.CompletionStatus) (*mo
 		payload,
 		block_number,
 		timestamp,
-		exception FROM inputs WHERE status <> $1
+		exception FROM convenience_inputs WHERE status <> $1
 		ORDER BY input_index DESC`
 	res, err := r.Db.Queryx(
 		sql,
@@ -139,7 +139,7 @@ func (r *InputRepository) FindByStatus(status model.CompletionStatus) (*model.Ad
 		block_number,
 		block_timestamp,
 		prev_randao,
-		exception FROM inputs WHERE status = $1
+		exception FROM convenience_inputs WHERE status = $1
 		ORDER BY input_index ASC`
 	res, err := r.Db.Queryx(
 		sql,
@@ -168,7 +168,7 @@ func (r *InputRepository) FindByIndex(index int) (*model.AdvanceInput, error) {
 		block_number,
 		block_timestamp,
 		prev_randao,
-		exception FROM inputs WHERE input_index = $1`
+		exception FROM convenience_inputs WHERE input_index = $1`
 	res, err := r.Db.Queryx(
 		sql,
 		index,
@@ -190,7 +190,7 @@ func (r *InputRepository) FindByIndex(index int) (*model.AdvanceInput, error) {
 func (c *InputRepository) Count(
 	filter []*model.ConvenienceFilter,
 ) (uint64, error) {
-	query := `SELECT count(*) FROM inputs `
+	query := `SELECT count(*) FROM convenience_inputs `
 	where, args, _, err := transformToInputQuery(filter)
 	if err != nil {
 		slog.Error("Count execution error")
@@ -233,7 +233,7 @@ func (c *InputRepository) FindAll(
 		block_number,
 		block_timestamp,
 		prev_randao,
-		exception FROM inputs `
+		exception FROM convenience_inputs `
 	where, args, argsCount, err := transformToInputQuery(filter)
 	if err != nil {
 		slog.Error("database error", "err", err)

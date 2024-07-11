@@ -294,6 +294,21 @@ ALTER TABLE ONLY public.notices
 INSERT INTO public.notices VALUES ('OX1223', 1, 1);
 INSERT INTO public.notices VALUES ('OX1223', 2, 2);
 
+CREATE TABLE IF NOT EXISTS public.convenience_inputs (
+		id 				integer,
+		input_index		integer,
+		status	 		text,
+		msg_sender	 	text,
+		payload			text,
+		block_number	integer,
+		block_timestamp	integer,
+		prev_randao		text,
+		exception		text);
+
+ALTER TABLE ONLY public.convenience_inputs
+    ADD CONSTRAINT cinputs_pkey PRIMARY KEY (id);
+
+INSERT INTO public.convenience_inputs (id, input_index) VALUES (1, 1)
 
 --
 -- PostgreSQL database dump complete

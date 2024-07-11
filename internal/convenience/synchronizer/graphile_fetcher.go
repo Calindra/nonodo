@@ -45,12 +45,18 @@ const inputQuery = `
 		edges {
 			cursor
 			node {
-			blob
-			index
-			nodeId
+				blob
+				index
+				nodeId
 			}
 		}
+		pageInfo {
+			endCursor
+			hasNextPage
+			hasPreviousPage
+			startCursor
 		}
+	}
 `
 
 const inputQueryWithCursor = `
@@ -58,12 +64,18 @@ const inputQueryWithCursor = `
 		edges {
 			cursor
 			node {
-			blob
-			index
-			nodeId
+				blob
+				index
+				nodeId
 			}
 		}
+		pageInfo {
+			endCursor
+			hasNextPage
+			hasPreviousPage
+			startCursor
 		}
+	}
 `
 
 const graphileQueryWithCursor = `
@@ -128,7 +140,7 @@ func NewGraphileFetcher(graphileClient graphile.GraphileClient) *GraphileFetcher
 }
 
 func (v *GraphileFetcher) Fetch() (*OutputResponse, error) {
-	slog.Debug("Graphile querying", "after", v.CursorAfter)
+	slog.Debug("Graphile querying", "afterOutput", v.CursorAfter, "afterInput", v.CursorInputAfter)
 
 	var query string
 
