@@ -29,9 +29,11 @@ import (
 	_ "github.com/lib/pq"
 )
 
-const DefaultHttpPort = 8080
-const DefaultRollupsPort = 5004
-const DefaultNamespace = 10008
+const (
+	DefaultHttpPort    = 8080
+	DefaultRollupsPort = 5004
+	DefaultNamespace   = 10008
+)
 
 // Options to nonodo.
 type NonodoOpts struct {
