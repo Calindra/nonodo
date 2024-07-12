@@ -52,6 +52,7 @@ type ConvenienceVoucher struct {
 	// ERCX            string
 }
 
+
 type ConvenienceFilter struct {
 	Field *string              `json:"field,omitempty"`
 	Eq    *string              `json:"eq,omitempty"`
