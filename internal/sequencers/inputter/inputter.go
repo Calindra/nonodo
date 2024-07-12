@@ -61,11 +61,18 @@ func (w *InputterWorker) ReadPastInputs(
 	startBlockNumber uint64,
 	endBlockNumber *uint64,
 ) error {
-	slog.Debug("readPastInputs",
-		"startBlockNumber", startBlockNumber,
-		"endBlockNumber", *endBlockNumber,
-		"dappAddress", w.ApplicationAddress,
-	)
+	if endBlockNumber != nil {
+		slog.Debug("readPastInputs",
+			"startBlockNumber", startBlockNumber,
+			"endBlockNumber", *endBlockNumber,
+			"dappAddress", w.ApplicationAddress,
+		)
+	} else {
+		slog.Debug("readPastInputs",
+			"startBlockNumber", startBlockNumber,
+			"dappAddress", w.ApplicationAddress,
+		)
+	}
 	opts := bind.FilterOpts{
 		Context: ctx,
 		Start:   startBlockNumber,
