@@ -209,11 +209,11 @@ export default function () {
    testVoucherNotFound()
    testVoucherFound()
    testNoticeFound()
-  // testInputFound()
+   testInputFound()
    testReportFound()
    testConvenientVouchers()
    testVouchers()
    testNotices()
    testReports()
-  // testInputs()
+   testInputs()
 }

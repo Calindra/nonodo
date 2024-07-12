@@ -74,13 +74,13 @@ func (s *ConvenienceService) CreateInput(
 	ctx context.Context,
 	input *model.AdvanceInput,
 ) (*model.AdvanceInput, error) {
-	noticeInDb, err := s.inputRepository.FindByIndex(ctx, input.Index)
+	inputInDb, err := s.inputRepository.FindByIndex(ctx, input.Index)
 
 	if err != nil {
 		return nil, err
 	}
 
-	if noticeInDb != nil {
+	if inputInDb != nil {
 		return s.inputRepository.Update(ctx, *input)
 	}
 	return s.inputRepository.Create(ctx, *input)

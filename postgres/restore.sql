@@ -308,6 +308,8 @@ CREATE TABLE IF NOT EXISTS public.convenience_inputs (
 		prev_randao		text,
 		exception		text);
 
+ALTER TABLE public.convenience_inputs OWNER TO myuser;
+
 ALTER TABLE ONLY public.convenience_inputs
     ADD CONSTRAINT cinputs_pkey PRIMARY KEY (id);
 
