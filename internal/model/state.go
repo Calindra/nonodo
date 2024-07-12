@@ -180,8 +180,10 @@ func (s *rollupsStateAdvance) finish(status cModel.CompletionStatus) {
 		}
 	}
 	// s.input.Reports = s.reports
+	ctx := context.Background()
+
 	saveAllReports(s.reportRepository, s.reports)
-	_, err := s.inputRepository.Update(*s.input)
+	_, err := s.inputRepository.Update(ctx, *s.input)
 	if err != nil {
 		panic(err)
 	}
@@ -230,7 +232,8 @@ func (s *rollupsStateAdvance) registerException(payload []byte) error {
 	s.input.Status = cModel.CompletionStatusException
 	s.input.Reports = s.reports
 	s.input.Exception = payload
-	_, err := s.inputRepository.Update(*s.input)
+	ctx := context.Background()
+	_, err := s.inputRepository.Update(ctx, *s.input)
 	if err != nil {
 		panic(err)
 	}

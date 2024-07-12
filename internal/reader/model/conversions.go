@@ -203,6 +203,17 @@ func ConvertToNoticeConnectionV1(
 	return NewConnection(offset, total, convNodes), nil
 }
 
+func ConvertToInputConnectionV1(
+	inputs []cModel.AdvanceInput,
+	offset int, total int,
+) (*InputConnection, error) {
+	convNodes := make([]*Input, len(inputs))
+	for i := range inputs {
+		convNodes[i] = ConvertInput(inputs[i])
+	}
+	return NewConnection(offset, total, convNodes), nil
+}
+
 //
 // GraphQL -> Nonodo conversions
 //

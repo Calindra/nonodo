@@ -3,7 +3,6 @@ package reader
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log/slog"
 	"testing"
 
@@ -24,6 +23,7 @@ type AdapterV2TestSuite struct {
 	adapter           Adapter
 	voucherRepository repository.VoucherRepository
 	noticeRepository  repository.NoticeRepository
+	inputRepository   repository.InputRepository
 	httpClient        *MockHttpClient
 }
 
@@ -46,18 +46,23 @@ func (s *AdapterV2TestSuite) SetupTest() {
 
 	voucherRepository := &repository.VoucherRepository{Db: *db}
 	noticeRepository := &repository.NoticeRepository{Db: *db}
+	inputRepository := &repository.InputRepository{Db: *db}
 
-	convenienceService := services.NewConvenienceService(voucherRepository, noticeRepository)
+	convenienceService := services.NewConvenienceService(voucherRepository, noticeRepository, inputRepository)
 	httpClient := &MockHttpClient{}
 
 	s.voucherRepository = *voucherRepository
 	s.noticeRepository = *noticeRepository
+	s.inputRepository = *inputRepository
 	s.httpClient = httpClient
 
 	err := s.voucherRepository.CreateTables()
 	s.NoError(err)
 
 	err = s.noticeRepository.CreateTables()
+	s.NoError(err)
+
+	err = s.inputRepository.CreateTables()
 	s.NoError(err)
 
 	inputBlobAdapter := InputBlobAdapter{}
@@ -175,51 +180,24 @@ func (s *AdapterV2TestSuite) TestGetAllNotices() {
 }
 
 func (s *AdapterV2TestSuite) TestGetInputFound() {
-	blob := GenerateBlob()
-	s.httpClient.PostFunc = func(body []byte) ([]byte, error) {
-		return []byte(fmt.Sprintf(`{
- "data": {
-   "inputs": {
-     "edges": [
-       {
-         "cursor": "WyJwcmltYXJ5X2tleV9hc2MiLFsxXV0=",
-         "node": {
-           "index": 1,
-           "blob": "%s",
-           "status": "ACCEPTED"
-         }
-       }
-     ]
-   }
- }
-}`, blob)), nil
-	}
+	ctx := context.Background()
 
-	input := 2
-
-	inputResponse, err := s.adapter.GetInput(input)
+	_, err := s.inputRepository.Create(ctx, model.AdvanceInput{
+		Index: 1,
+	})
 
 	s.NoError(err)
-	s.NotNil(inputResponse)
+
+	index := 1
+	input, err := s.adapter.GetInput(index)
+	s.NoError(err)
+	s.Equal(index, input.Index)
 }
 
 func (s *AdapterV2TestSuite) TestGetInputNotFound() {
-	s.httpClient.PostFunc = func(body []byte) ([]byte, error) {
-		return []byte(`{
-  "data": {
-    "inputs": {
-      "edges": []
-    }
-  }
-}`), nil
-	}
-
-	input := 2
-
-	inputResponse, err := s.adapter.GetInput(input)
-
-	s.NoError(err)
-	s.Nil(inputResponse)
+	index := 100
+	_, err := s.adapter.GetInput(index)
+	s.Error(err, "input not found")
 }
 
 func (s *AdapterV2TestSuite) TestGetReportFound() {
@@ -316,17 +294,8 @@ func (s *AdapterV2TestSuite) TestGetReportsFound() {
 }
 
 func (s *AdapterV2TestSuite) TestGetInputsNotFound() {
-	s.httpClient.PostFunc = func(body []byte) ([]byte, error) {
-		return []byte(`{
-  "data": {
-    "inputs": {
-      "edges": []
-    }
-  }
-}`), nil
-	}
-
-	inputs, err := s.adapter.GetInputs(nil, nil, nil, nil, nil)
+	batch := 10
+	inputs, err := s.adapter.GetInputs(&batch, nil, nil, nil, nil)
 
 	s.NoError(err)
 	s.NotNil(inputs)
@@ -334,31 +303,25 @@ func (s *AdapterV2TestSuite) TestGetInputsNotFound() {
 }
 
 func (s *AdapterV2TestSuite) TestGetInputsFound() {
-	blob := GenerateBlob()
-	s.httpClient.PostFunc = func(body []byte) ([]byte, error) {
-		return []byte(fmt.Sprintf(`{
- "data": {
-   "inputs": {
-     "edges": [
-       {
-         "cursor": "WyJwcmltYXJ5X2tleV9hc2MiLFsxXV0=",
-         "node": {
-           "index": 1,
-           "blob": "%s",
-           "status": "ACCEPTED"
-         }
-       }
-     ]
-   }
- }
-}`, blob)), nil
-	}
+	ctx := context.Background()
 
-	inputs, err := s.adapter.GetInputs(nil, nil, nil, nil, nil)
+	_, err := s.inputRepository.Create(ctx, model.AdvanceInput{
+		Index: 1,
+	})
 
 	s.NoError(err)
-	s.NotNil(inputs)
-	s.Equal(inputs.TotalCount, 1)
+
+	_, error := s.inputRepository.Create(ctx, model.AdvanceInput{
+		Index: 2,
+	})
+
+	s.NoError(error)
+
+	batch := 10
+	inputs, err := s.adapter.GetInputs(&batch, nil, nil, nil, nil)
+
+	s.NoError(err)
+	s.Equal(inputs.TotalCount, 2)
 }
 
 func (s *AdapterV2TestSuite) TestGetProof() {

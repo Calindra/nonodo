@@ -19,6 +19,7 @@ type OutputDecoderSuite struct {
 	decoder           *OutputDecoder
 	voucherRepository *repository.VoucherRepository
 	noticeRepository  *repository.NoticeRepository
+	inputRepository   *repository.InputRepository
 }
 
 func (s *OutputDecoderSuite) SetupTest() {
@@ -30,6 +31,7 @@ func (s *OutputDecoderSuite) SetupTest() {
 	if err != nil {
 		panic(err)
 	}
+
 	s.noticeRepository = &repository.NoticeRepository{
 		Db: *db,
 	}
@@ -37,10 +39,21 @@ func (s *OutputDecoderSuite) SetupTest() {
 	if err != nil {
 		panic(err)
 	}
+
+	s.inputRepository = &repository.InputRepository{
+		Db: *db,
+	}
+	err = s.inputRepository.CreateTables()
+
+	if err != nil {
+		panic(err)
+	}
+
 	s.decoder = &OutputDecoder{
 		convenienceService: *services.NewConvenienceService(
 			s.voucherRepository,
 			s.noticeRepository,
+			s.inputRepository,
 		),
 	}
 }

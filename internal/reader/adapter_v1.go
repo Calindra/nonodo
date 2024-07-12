@@ -38,7 +38,7 @@ func NewAdapterV1(
 		panic(err)
 	}
 	inputRepository := &cRepos.InputRepository{
-		Db: db,
+		Db: *db,
 	}
 	err = inputRepository.CreateTables()
 	if err != nil {
@@ -214,7 +214,8 @@ func (a AdapterV1) convertToReport(
 }
 
 func (a AdapterV1) GetInput(index int) (*graphql.Input, error) {
-	input, err := a.inputRepository.FindByIndex(index)
+	ctx := context.Background()
+	input, err := a.inputRepository.FindByIndex(ctx, index)
 	if err != nil {
 		return nil, err
 	}
@@ -252,8 +253,9 @@ func (a AdapterV1) GetInputs(
 			})
 		}
 	}
+	ctx := context.Background()
 	inputs, err := a.inputRepository.FindAll(
-		first, last, after, before, filters,
+		ctx, first, last, after, before, filters,
 	)
 	if err != nil {
 		return nil, err

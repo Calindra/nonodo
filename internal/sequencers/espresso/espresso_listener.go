@@ -76,8 +76,9 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 				transaction := transactions.Transactions[i]
 				slog.Debug("transaction", "currentBlockHeight", currentBlockHeight, "transaction", transaction)
 
+				ctx := context.Background()
 				// transform and add to InputRepository
-				index, err := e.InputRepository.Count(nil)
+				index, err := e.InputRepository.Count(ctx, nil)
 				if err != nil {
 					return err
 				}
@@ -116,7 +117,7 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 					continue
 				}
 
-				_, err = e.InputRepository.Create(cModel.AdvanceInput{
+				_, err = e.InputRepository.Create(ctx, cModel.AdvanceInput{
 					Index:       int(index),
 					MsgSender:   msgSender,
 					Payload:     []byte(payload),

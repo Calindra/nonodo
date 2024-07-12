@@ -11,15 +11,18 @@ import (
 type ConvenienceService struct {
 	voucherRepository *repository.VoucherRepository
 	noticeRepository  *repository.NoticeRepository
+	inputRepository   *repository.InputRepository
 }
 
 func NewConvenienceService(
 	voucherRepository *repository.VoucherRepository,
 	noticeRepository *repository.NoticeRepository,
+	inputRepository *repository.InputRepository,
 ) *ConvenienceService {
 	return &ConvenienceService{
 		voucherRepository: voucherRepository,
 		noticeRepository:  noticeRepository,
+		inputRepository:   inputRepository,
 	}
 }
 
@@ -65,6 +68,22 @@ func (s *ConvenienceService) CreateVoucher(
 	}
 
 	return s.voucherRepository.CreateVoucher(ctx, voucher)
+}
+
+func (s *ConvenienceService) CreateInput(
+	ctx context.Context,
+	input *model.AdvanceInput,
+) (*model.AdvanceInput, error) {
+	inputInDb, err := s.inputRepository.FindByIndex(ctx, input.Index)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if inputInDb != nil {
+		return s.inputRepository.Update(ctx, *input)
+	}
+	return s.inputRepository.Create(ctx, *input)
 }
 
 func (c *ConvenienceService) UpdateExecuted(
@@ -117,6 +136,24 @@ func (c *ConvenienceService) FindAllNotices(
 	)
 }
 
+func (c *ConvenienceService) FindAllInputs(
+	ctx context.Context,
+	first *int,
+	last *int,
+	after *string,
+	before *string,
+	filter []*model.ConvenienceFilter,
+) (*commons.PageResult[model.AdvanceInput], error) {
+	return c.inputRepository.FindAll(
+		ctx,
+		first,
+		last,
+		after,
+		before,
+		filter,
+	)
+}
+
 func (c *ConvenienceService) FindVoucherByInputAndOutputIndex(
 	ctx context.Context, inputIndex uint64, outputIndex uint64,
 ) (*model.ConvenienceVoucher, error) {
@@ -131,4 +168,10 @@ func (c *ConvenienceService) FindNoticeByInputAndOutputIndex(
 	return c.noticeRepository.FindByInputAndOutputIndex(
 		ctx, inputIndex, outputIndex,
 	)
+}
+
+func (c *ConvenienceService) FindInputByIndex(
+	ctx context.Context, index int,
+) (*model.AdvanceInput, error) {
+	return c.inputRepository.FindByIndex(ctx, index)
 }

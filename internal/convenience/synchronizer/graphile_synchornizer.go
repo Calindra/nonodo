@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"math/big"
 	"strings"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/calindra/nonodo/internal/convenience/decoder"
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/convenience/repository"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 type GraphileSynchronizer struct {
@@ -36,6 +38,7 @@ func (x GraphileSynchronizer) Start(ctx context.Context, ready chan<- struct{}) 
 
 	if lastFetch != nil {
 		x.GraphileFetcher.CursorAfter = lastFetch.EndCursorAfter
+		x.GraphileFetcher.CursorInputAfter = lastFetch.EndInputCursorAfter
 	}
 
 	for {
@@ -47,54 +50,7 @@ func (x GraphileSynchronizer) Start(ctx context.Context, ready chan<- struct{}) 
 				"error", err.Error(),
 			)
 		} else {
-			// Handle response data
-			voucherIds := []string{}
-			for _, edge := range voucherResp.Data.Outputs.Edges {
-				outputIndex := edge.Node.Index
-				inputIndex := edge.Node.InputIndex
-				slog.Debug("Add Voucher",
-					"inputIndex", inputIndex,
-					"outputIndex", outputIndex,
-				)
-				voucherIds = append(
-					voucherIds,
-					fmt.Sprintf("%d:%d", inputIndex, outputIndex),
-				)
-				adapted := adapter.ConvertVoucherPayloadToV2(
-					edge.Node.Blob[2:],
-				)
-				destination, _ := adapter.GetDestination(edge.Node.Blob)
-
-				if len(destination) == 0 {
-					panic(fmt.Errorf("graphile sync error: len(destination) is 0"))
-				}
-
-				err := x.Decoder.HandleOutput(ctx,
-					destination,
-					adapted,
-					uint64(inputIndex),
-					uint64(outputIndex),
-				)
-				if err != nil {
-					panic(err)
-				}
-			}
-
-			if len(voucherResp.Data.Outputs.PageInfo.EndCursor) > 0 {
-				initCursorAfter := x.GraphileFetcher.CursorAfter
-				x.GraphileFetcher.CursorAfter = voucherResp.Data.Outputs.PageInfo.EndCursor
-				_, err := x.SynchronizerRepository.Create(
-					ctx, &model.SynchronizerFetch{
-						TimestampAfter: uint64(time.Now().UnixMilli()),
-						IniCursorAfter: initCursorAfter,
-						EndCursorAfter: x.GraphileFetcher.CursorAfter,
-						LogVouchersIds: strings.Join(voucherIds, ";"),
-					})
-				if err != nil {
-					slog.Error("Deu erro", "erro", err)
-					panic(err)
-				}
-			}
+			x.handleGraphileResponse(*voucherResp, ctx)
 		}
 		select {
 		// Wait a little before doing another request
@@ -104,6 +60,104 @@ func (x GraphileSynchronizer) Start(ctx context.Context, ready chan<- struct{}) 
 			return nil
 		}
 
+	}
+
+}
+
+func (x GraphileSynchronizer) handleGraphileResponse(outputResp OutputResponse, ctx context.Context) {
+	// Handle response data
+	voucherIds := []string{}
+	var initCursorAfter string
+	var initInputCursorAfter string
+
+	for _, output := range outputResp.Data.Outputs.Edges {
+		outputIndex := output.Node.Index
+		inputIndex := output.Node.InputIndex
+		slog.Debug("Add Voucher/Notices",
+			"inputIndex", inputIndex,
+			"outputIndex", outputIndex,
+		)
+		voucherIds = append(
+			voucherIds,
+			fmt.Sprintf("%d:%d", inputIndex, outputIndex),
+		)
+		adapted := adapter.ConvertVoucherPayloadToV2(
+			output.Node.Blob[2:],
+		)
+		destination, _ := adapter.GetDestination(output.Node.Blob)
+
+		if len(destination) == 0 {
+			panic(fmt.Errorf("graphile sync error: len(destination) is 0"))
+		}
+
+		err := x.Decoder.HandleOutput(ctx,
+			destination,
+			adapted,
+			uint64(inputIndex),
+			uint64(outputIndex),
+		)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	hasMoreOutputs := len(outputResp.Data.Outputs.PageInfo.EndCursor) > 0
+
+	if hasMoreOutputs {
+		initCursorAfter = x.GraphileFetcher.CursorAfter
+		x.GraphileFetcher.CursorAfter = outputResp.Data.Outputs.PageInfo.EndCursor
+	}
+
+	for _, input := range outputResp.Data.Inputs.Edges {
+
+		slog.Debug("Add Input",
+			"Index", input.Node.Index,
+		)
+
+		adapted, _ := adapter.GetConvertedInput(input.Node.Blob)
+
+		inputIndex := input.Node.Index
+		msgSender := adapted[2].(common.Address)
+		payload := string(adapted[7].([]uint8))
+		blockNumber := adapted[3].(*big.Int)
+		blockTimestamp := adapted[4].(*big.Int).Int64()
+		prevRandao := adapted[5].(*big.Int).String()
+
+		err := x.Decoder.HandleInput(ctx,
+			inputIndex,
+			model.CompletionStatusUnprocessed,
+			msgSender,
+			payload,
+			blockNumber.Uint64(),
+			time.Unix(blockTimestamp, 0),
+			prevRandao)
+
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	hasMoreInputs := len(outputResp.Data.Inputs.PageInfo.EndCursor) > 0
+
+	if hasMoreInputs {
+		initInputCursorAfter = x.GraphileFetcher.CursorInputAfter
+		x.GraphileFetcher.CursorInputAfter = outputResp.Data.Outputs.PageInfo.EndCursor
+	}
+
+	if hasMoreInputs || hasMoreOutputs {
+		_, err := x.SynchronizerRepository.Create(
+			ctx, &model.SynchronizerFetch{
+				TimestampAfter:      uint64(time.Now().UnixMilli()),
+				IniCursorAfter:      initCursorAfter,
+				EndCursorAfter:      x.GraphileFetcher.CursorAfter,
+				LogVouchersIds:      strings.Join(voucherIds, ";"),
+				IniInputCursorAfter: initInputCursorAfter,
+				EndInputCursorAfter: x.GraphileFetcher.CursorInputAfter,
+			})
+		if err != nil {
+			slog.Error("Deu erro", "erro", err)
+			panic(err)
+		}
 	}
 
 }
