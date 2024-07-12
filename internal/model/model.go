@@ -41,7 +41,7 @@ func NewNonodoModel(decoder Decoder, db *sqlx.DB) *NonodoModel {
 	if err != nil {
 		panic(err)
 	}
-	inputRepository := cRepos.InputRepository{Db: db}
+	inputRepository := cRepos.InputRepository{Db: *db}
 	err = inputRepository.CreateTables()
 	if err != nil {
 		panic(err)

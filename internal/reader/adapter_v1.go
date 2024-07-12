@@ -38,7 +38,7 @@ func NewAdapterV1(
 		panic(err)
 	}
 	inputRepository := &cRepos.InputRepository{
-		Db: db,
+		Db: *db,
 	}
 	err = inputRepository.CreateTables()
 	if err != nil {

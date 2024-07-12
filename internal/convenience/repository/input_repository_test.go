@@ -34,7 +34,7 @@ func (s *InputRepositorySuite) SetupTest() {
 	// db := sqlx.MustConnect("sqlite3", ":memory:")
 	db := sqlx.MustConnect("sqlite3", sqliteFileName)
 	s.inputRepository = &InputRepository{
-		Db: db,
+		Db: *db,
 	}
 	err = s.inputRepository.CreateTables()
 	s.NoError(err)

@@ -87,7 +87,7 @@ func (c *Container) GetInputRepository() *repository.InputRepository {
 		return c.inputRepository
 	}
 	c.inputRepository = &repository.InputRepository{
-		Db: c.db,
+		Db: *c.db,
 	}
 	err := c.inputRepository.CreateTables()
 	if err != nil {

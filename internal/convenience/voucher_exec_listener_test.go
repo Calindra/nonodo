@@ -52,7 +52,7 @@ func (s *ExecListenerSuite) SetupTest() {
 	}
 
 	s.inputRepository = &repository.InputRepository{
-		Db: db,
+		Db: *db,
 	}
 	err = s.inputRepository.CreateTables()
 	if err != nil {

@@ -46,7 +46,7 @@ func (s *AdapterV2TestSuite) SetupTest() {
 
 	voucherRepository := &repository.VoucherRepository{Db: *db}
 	noticeRepository := &repository.NoticeRepository{Db: *db}
-	inputRepository := &repository.InputRepository{Db: db}
+	inputRepository := &repository.InputRepository{Db: *db}
 
 	convenienceService := services.NewConvenienceService(voucherRepository, noticeRepository, inputRepository)
 	httpClient := &MockHttpClient{}

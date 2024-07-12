@@ -16,7 +16,7 @@ import (
 const INDEX_FIELD = "Index"
 
 type InputRepository struct {
-	Db *sqlx.DB
+	Db sqlx.DB
 }
 
 func (r *InputRepository) CreateTables() error {
