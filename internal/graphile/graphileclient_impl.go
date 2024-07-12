@@ -14,7 +14,7 @@ type GraphileClientImpl struct {
 }
 
 func (c *GraphileClientImpl) Post(requestBody []byte) ([]byte, error) {
-	req, err := http.NewRequest("POST", fmt.Sprintf("http://%s:%s/graphql", "localhost", c.GraphilePort), bytes.NewBuffer(requestBody))
+	req, err := http.NewRequest("POST", fmt.Sprintf("http://%s:%s/graphql", c.GraphileAddress, c.GraphilePort), bytes.NewBuffer(requestBody))
 	if err != nil {
 		slog.Error("Error creating request", "error", err)
 		return nil, err
