@@ -112,4 +112,8 @@ jobs:
           docker ps
           k6 run loadtesting/test.js
           docker logs nonodo
+      - name: Get Nonodo logs
+        id: nonodologs
+        run: |
+          docker logs nonodo
          
