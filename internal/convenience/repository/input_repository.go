@@ -19,6 +19,17 @@ type InputRepository struct {
 	Db sqlx.DB
 }
 
+type inputRow struct {
+	Index          int    `db:"input_index"`
+	Status         int    `db:"status"`
+	MsgSender      string `db:"msg_sender"`
+	Payload        string `db:"payload"`
+	BlockNumber    int    `db:"block_number"`
+	BlockTimestamp int    `db:"block_timestamp"`
+	PrevRandao     string `db:"prev_randao"`
+	Exception      string `db:"exception"`
+}
+
 func (r *InputRepository) CreateTables() error {
 	schema := `CREATE TABLE IF NOT EXISTS convenience_inputs (
 		id 				INTEGER NOT NULL PRIMARY KEY,
@@ -265,20 +276,21 @@ func (c *InputRepository) FindAll(
 	slog.Debug("Query", "query", query, "args", args, "total", total)
 	stmt, err := c.Db.PreparexContext(ctx, query)
 	if err != nil {
+		slog.Error("Find all error", "error", err)
 		return nil, err
 	}
 	defer stmt.Close()
-	var inputs []model.AdvanceInput
-	rows, err := stmt.QueryxContext(ctx, args...)
-	if err != nil {
-		return nil, err
+	var rows []inputRow
+	erro := stmt.SelectContext(ctx, &rows, args...)
+	if erro != nil {
+		slog.Error("Find all error", "error", erro)
+		return nil, erro
 	}
-	for rows.Next() {
-		input, err := parseInput(rows)
-		if err != nil {
-			return nil, err
-		}
-		inputs = append(inputs, *input)
+
+	inputs := make([]model.AdvanceInput, len(rows))
+
+	for i, row := range rows {
+		inputs[i] = parseRowInput(row)
 	}
 
 	pageResult := &commons.PageResult[model.AdvanceInput]{
@@ -330,6 +342,19 @@ func transformToInputQuery(
 	}
 	query += strings.Join(where, " and ")
 	return query, args, count, nil
+}
+
+func parseRowInput(row inputRow) model.AdvanceInput {
+	return model.AdvanceInput{
+		Index:          row.Index,
+		Status:         model.CompletionStatus(row.Status),
+		MsgSender:      common.HexToAddress(row.MsgSender),
+		Payload:        common.Hex2Bytes(row.Payload),
+		BlockNumber:    uint64(row.BlockNumber),
+		BlockTimestamp: time.UnixMilli(int64(row.BlockTimestamp)),
+		PrevRandao:     row.PrevRandao,
+		Exception:      common.Hex2Bytes(row.Exception),
+	}
 }
 
 func parseInput(res *sqlx.Rows) (*model.AdvanceInput, error) {

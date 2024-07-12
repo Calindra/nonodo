@@ -215,5 +215,5 @@ export default function () {
    testVouchers()
    testNotices()
    testReports()
-   //testInputs()
+   testInputs()
 }
