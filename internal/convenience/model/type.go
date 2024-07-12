@@ -52,17 +52,6 @@ type ConvenienceVoucher struct {
 	// ERCX            string
 }
 
-type ConvenienceInput struct {
-	InputIndex     uint64         `db:"input_index"`
-	Status         string         `db:"status"`
-	MsgSender      common.Address `db:"msg_sender"`
-	Payload        string         `db:"payload"`
-	BlockNumber    uint64         `db:"block_number"`
-	BlockTimestamp uint64         `db:"block_timestamp"`
-	PrevRandao     string         `db:"prev_randao"`
-	Exception      string         `db:"exception"`
-}
-
 type ConvenienceFilter struct {
 	Field *string              `json:"field,omitempty"`
 	Eq    *string              `json:"eq,omitempty"`
