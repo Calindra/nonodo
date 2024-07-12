@@ -74,16 +74,16 @@ func (s *ConvenienceService) CreateInput(
 	ctx context.Context,
 	input *model.AdvanceInput,
 ) (*model.AdvanceInput, error) {
-	noticeInDb, err := s.inputRepository.FindByIndex(input.Index)
+	noticeInDb, err := s.inputRepository.FindByIndex(ctx, input.Index)
 
 	if err != nil {
 		return nil, err
 	}
 
 	if noticeInDb != nil {
-		return s.inputRepository.Update(*input)
+		return s.inputRepository.Update(ctx, *input)
 	}
-	return s.inputRepository.Create(*input)
+	return s.inputRepository.Create(ctx, *input)
 }
 
 func (c *ConvenienceService) UpdateExecuted(
@@ -145,6 +145,7 @@ func (c *ConvenienceService) FindAllInputs(
 	filter []*model.ConvenienceFilter,
 ) (*commons.PageResult[model.AdvanceInput], error) {
 	return c.inputRepository.FindAll(
+		ctx,
 		first,
 		last,
 		after,
@@ -172,5 +173,5 @@ func (c *ConvenienceService) FindNoticeByInputAndOutputIndex(
 func (c *ConvenienceService) FindInputByIndex(
 	ctx context.Context, index int,
 ) (*model.AdvanceInput, error) {
-	return c.inputRepository.FindByIndex(index)
+	return c.inputRepository.FindByIndex(ctx, index)
 }

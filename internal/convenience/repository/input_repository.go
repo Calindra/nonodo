@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -38,18 +39,18 @@ func (r *InputRepository) CreateTables() error {
 	return err
 }
 
-func (r *InputRepository) Create(input model.AdvanceInput) (*model.AdvanceInput, error) {
-	exist, err := r.FindByIndex(input.Index)
+func (r *InputRepository) Create(ctx context.Context, input model.AdvanceInput) (*model.AdvanceInput, error) {
+	exist, err := r.FindByIndex(ctx, input.Index)
 	if err != nil {
 		return nil, err
 	}
 	if exist != nil {
 		return exist, nil
 	}
-	return r.rawCreate(input)
+	return r.rawCreate(ctx, input)
 }
 
-func (r *InputRepository) rawCreate(input model.AdvanceInput) (*model.AdvanceInput, error) {
+func (r *InputRepository) rawCreate(ctx context.Context, input model.AdvanceInput) (*model.AdvanceInput, error) {
 	insertSql := `INSERT INTO convenience_inputs (
 		input_index,
 		status,
@@ -69,7 +70,8 @@ func (r *InputRepository) rawCreate(input model.AdvanceInput) (*model.AdvanceInp
 		$7,
 		$8
 	);`
-	_, err := r.Db.Exec(
+	_, err := r.Db.ExecContext(
+		ctx,
 		insertSql,
 		input.Index,
 		input.Status,
@@ -80,17 +82,19 @@ func (r *InputRepository) rawCreate(input model.AdvanceInput) (*model.AdvanceInp
 		input.PrevRandao,
 		common.Bytes2Hex(input.Exception),
 	)
+
 	if err != nil {
 		return nil, err
 	}
 	return &input, nil
 }
 
-func (r *InputRepository) Update(input model.AdvanceInput) (*model.AdvanceInput, error) {
+func (r *InputRepository) Update(ctx context.Context, input model.AdvanceInput) (*model.AdvanceInput, error) {
 	sql := `UPDATE convenience_inputs
 		SET status = $1, exception = $2
 		WHERE input_index = $3`
-	_, err := r.Db.Exec(
+	_, err := r.Db.ExecContext(
+		ctx,
 		sql,
 		input.Status,
 		common.Bytes2Hex(input.Exception),
@@ -102,7 +106,7 @@ func (r *InputRepository) Update(input model.AdvanceInput) (*model.AdvanceInput,
 	return &input, nil
 }
 
-func (r *InputRepository) FindByStatusNeDesc(status model.CompletionStatus) (*model.AdvanceInput, error) {
+func (r *InputRepository) FindByStatusNeDesc(ctx context.Context, status model.CompletionStatus) (*model.AdvanceInput, error) {
 	sql := `SELECT
 		input_index,
 		status,
@@ -112,7 +116,8 @@ func (r *InputRepository) FindByStatusNeDesc(status model.CompletionStatus) (*mo
 		timestamp,
 		exception FROM convenience_inputs WHERE status <> $1
 		ORDER BY input_index DESC`
-	res, err := r.Db.Queryx(
+	res, err := r.Db.QueryxContext(
+		ctx,
 		sql,
 		status,
 	)
@@ -130,7 +135,7 @@ func (r *InputRepository) FindByStatusNeDesc(status model.CompletionStatus) (*mo
 	return nil, nil
 }
 
-func (r *InputRepository) FindByStatus(status model.CompletionStatus) (*model.AdvanceInput, error) {
+func (r *InputRepository) FindByStatus(ctx context.Context, status model.CompletionStatus) (*model.AdvanceInput, error) {
 	sql := `SELECT
 		input_index,
 		status,
@@ -141,7 +146,8 @@ func (r *InputRepository) FindByStatus(status model.CompletionStatus) (*model.Ad
 		prev_randao,
 		exception FROM convenience_inputs WHERE status = $1
 		ORDER BY input_index ASC`
-	res, err := r.Db.Queryx(
+	res, err := r.Db.QueryxContext(
+		ctx,
 		sql,
 		status,
 	)
@@ -159,7 +165,7 @@ func (r *InputRepository) FindByStatus(status model.CompletionStatus) (*model.Ad
 	return nil, nil
 }
 
-func (r *InputRepository) FindByIndex(index int) (*model.AdvanceInput, error) {
+func (r *InputRepository) FindByIndex(ctx context.Context, index int) (*model.AdvanceInput, error) {
 	sql := `SELECT
 		input_index,
 		status,
@@ -169,7 +175,8 @@ func (r *InputRepository) FindByIndex(index int) (*model.AdvanceInput, error) {
 		block_timestamp,
 		prev_randao,
 		exception FROM convenience_inputs WHERE input_index = $1`
-	res, err := r.Db.Queryx(
+	res, err := r.Db.QueryxContext(
+		ctx,
 		sql,
 		index,
 	)
@@ -188,6 +195,7 @@ func (r *InputRepository) FindByIndex(index int) (*model.AdvanceInput, error) {
 }
 
 func (c *InputRepository) Count(
+	ctx context.Context,
 	filter []*model.ConvenienceFilter,
 ) (uint64, error) {
 	query := `SELECT count(*) FROM convenience_inputs `
@@ -205,7 +213,7 @@ func (c *InputRepository) Count(
 	}
 	defer stmt.Close()
 	var count uint64
-	err = stmt.Get(&count, args...)
+	err = stmt.GetContext(ctx, &count, args...)
 	if err != nil {
 		slog.Error("Count execution error")
 		return 0, err
@@ -214,13 +222,14 @@ func (c *InputRepository) Count(
 }
 
 func (c *InputRepository) FindAll(
+	ctx context.Context,
 	first *int,
 	last *int,
 	after *string,
 	before *string,
 	filter []*model.ConvenienceFilter,
 ) (*commons.PageResult[model.AdvanceInput], error) {
-	total, err := c.Count(filter)
+	total, err := c.Count(ctx, filter)
 	if err != nil {
 		slog.Error("database error", "err", err)
 		return nil, err
@@ -254,13 +263,13 @@ func (c *InputRepository) FindAll(
 	args = append(args, offset)
 
 	slog.Debug("Query", "query", query, "args", args, "total", total)
-	stmt, err := c.Db.Preparex(query)
+	stmt, err := c.Db.PreparexContext(ctx, query)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
 	var inputs []model.AdvanceInput
-	rows, err := stmt.Queryx(args...)
+	rows, err := stmt.QueryxContext(ctx, args...)
 	if err != nil {
 		return nil, err
 	}

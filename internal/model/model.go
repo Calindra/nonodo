@@ -5,6 +5,7 @@
 package model
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"sync"
@@ -75,7 +76,8 @@ func (m *NonodoModel) AddAdvanceInput(
 		BlockTimestamp: timestamp,
 		BlockNumber:    blockNumber,
 	}
-	_, err := m.inputRepository.Create(input)
+	ctx := context.Background()
+	_, err := m.inputRepository.Create(ctx, input)
 	if err != nil {
 		panic(err)
 	}
@@ -126,6 +128,7 @@ func (m *NonodoModel) GetInspectInput(index int) InspectInput {
 //
 // Note: use in v2 the sequencer instead.
 func (m *NonodoModel) FinishAndGetNext(accepted bool) cModel.Input {
+	ctx := context.Background()
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
@@ -147,7 +150,7 @@ func (m *NonodoModel) FinishAndGetNext(accepted bool) cModel.Input {
 	}
 
 	// try to get first unprocessed advance
-	input, err := m.inputRepository.FindByStatus(cModel.CompletionStatusUnprocessed)
+	input, err := m.inputRepository.FindByStatus(ctx, cModel.CompletionStatusUnprocessed)
 	if err != nil {
 		panic(err)
 	}
@@ -216,6 +219,7 @@ func (m *NonodoModel) RegisterException(payload []byte) error {
 //
 
 func (m *NonodoModel) getProcessedInputCount() int {
+	ctx := context.Background()
 	filter := []*model.ConvenienceFilter{}
 	field := "Status"
 	value := fmt.Sprintf("%d", cModel.CompletionStatusUnprocessed)
@@ -223,7 +227,7 @@ func (m *NonodoModel) getProcessedInputCount() int {
 		Field: &field,
 		Ne:    &value,
 	})
-	total, err := m.inputRepository.Count(filter)
+	total, err := m.inputRepository.Count(ctx, filter)
 	if err != nil {
 		panic(err)
 	}

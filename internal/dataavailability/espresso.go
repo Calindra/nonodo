@@ -1,6 +1,7 @@
 package dataavailability
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -52,7 +53,8 @@ func computeEpoch(blockNumber *big.Int) (*big.Int, error) {
 func (e *EspressoFetcher) fetchCurrentInput() (*cModel.AdvanceInput, error) {
 	// retrieve total number of inputs
 	input := e.inputRepository
-	currentInput, err := input.FindByStatusNeDesc(cModel.CompletionStatusUnprocessed)
+	ctx := context.Background()
+	currentInput, err := input.FindByStatusNeDesc(ctx, cModel.CompletionStatusUnprocessed)
 	if err != nil {
 		return nil, err
 	}

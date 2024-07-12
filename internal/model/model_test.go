@@ -213,13 +213,13 @@ func (s *ModelSuite) TestItFinishesAdvanceWithAccept() {
 	s.m.FinishAndGetNext(true) // finish
 
 	// check input
-	input, err := s.inputRepository.FindByIndex(0)
+	ctx := context.Background()
+	input, err := s.inputRepository.FindByIndex(ctx, 0)
 	s.NoError(err)
 	s.Equal(0, input.Index)
 	s.Equal(cModel.CompletionStatusAccepted, input.Status)
 
 	// check vouchers
-	ctx := context.Background()
 	vouchers, err := s.convenienceService.FindAllVouchers(ctx, nil, nil, nil, nil, nil)
 	s.NoError(err)
 	s.Len(vouchers.Rows, 1)
@@ -249,7 +249,8 @@ func (s *ModelSuite) TestItFinishesAdvanceWithReject() {
 	s.m.FinishAndGetNext(false) // finish
 
 	// check input
-	input, err := s.inputRepository.FindByIndex(0)
+	ctx := context.Background()
+	input, err := s.inputRepository.FindByIndex(ctx, 0)
 	s.NoError(err)
 	s.Equal(0, input.Index)
 	s.Equal(cModel.CompletionStatusRejected, input.Status)
@@ -258,7 +259,7 @@ func (s *ModelSuite) TestItFinishesAdvanceWithReject() {
 	s.Empty(input.Vouchers) // deprecated
 
 	// check vouchers
-	ctx := context.Background()
+
 	vouchers, err := s.convenienceService.FindAllVouchers(ctx, nil, nil, nil, nil, nil)
 	s.NoError(err)
 	s.Len(vouchers.Rows, 0)
@@ -530,7 +531,8 @@ func (s *ModelSuite) TestItRegistersExceptionWhenAdvancing() {
 	s.Nil(err)
 
 	// check input
-	input, err := s.inputRepository.FindByIndex(0)
+	ctx := context.Background()
+	input, err := s.inputRepository.FindByIndex(ctx, 0)
 	s.NoError(err)
 	s.Equal(0, input.Index)
 	s.Equal(cModel.CompletionStatusException, input.Status)
@@ -577,9 +579,10 @@ func (s *ModelSuite) TestItFailsToRegisterExceptionWhenIdle() {
 
 func (s *ModelSuite) TestItGetsAdvanceInputs() {
 	defer s.teardown()
+	ctx := context.Background()
 	for i := 0; i < s.n; i++ {
 		s.m.AddAdvanceInput(s.senders[i], s.payloads[i], s.blockNumbers[i], s.timestamps[i], i)
-		input, err := s.inputRepository.FindByIndex(i)
+		input, err := s.inputRepository.FindByIndex(ctx, i)
 		s.NoError(err)
 		s.Equal(i, input.Index)
 		s.Equal(cModel.CompletionStatusUnprocessed, input.Status)
@@ -592,7 +595,8 @@ func (s *ModelSuite) TestItGetsAdvanceInputs() {
 
 func (s *ModelSuite) TestItFailsToGetAdvanceInput() {
 	defer s.teardown()
-	input, err := s.inputRepository.FindByIndex(0)
+	ctx := context.Background()
+	input, err := s.inputRepository.FindByIndex(ctx, 0)
 	s.NoError(err)
 	s.Nil(input)
 }
@@ -739,7 +743,8 @@ func (s *ModelSuite) TestItFailsToGetReportFromExistingInput() {
 
 func (s *ModelSuite) TestItGetsNumInputs() {
 	defer s.teardown()
-	n, err := s.inputRepository.Count(nil)
+	ctx := context.Background()
+	n, err := s.inputRepository.Count(ctx, nil)
 	s.NoError(err)
 	s.Equal(0, int(n))
 
@@ -747,7 +752,7 @@ func (s *ModelSuite) TestItGetsNumInputs() {
 		s.m.AddAdvanceInput(s.senders[i], s.payloads[i], s.blockNumbers[i], s.timestamps[i], i)
 	}
 
-	n, err = s.inputRepository.Count(nil)
+	n, err = s.inputRepository.Count(ctx, nil)
 	s.NoError(err)
 	s.Equal(s.n, int(n))
 
@@ -763,7 +768,7 @@ func (s *ModelSuite) TestItGetsNumInputs() {
 		Field: &field,
 		Lt:    &indexLowerThan,
 	})
-	n, err = s.inputRepository.Count(filter)
+	n, err = s.inputRepository.Count(ctx, filter)
 	s.NoError(err)
 	s.Equal(1, int(n))
 }
@@ -870,6 +875,7 @@ func (s *ModelSuite) TestItGetsInputs() {
 
 func (s *ModelSuite) TestItGetsInputsWithFilter() {
 	defer s.teardown()
+	ctx := context.Background()
 	for i := 0; i < s.n; i++ {
 		s.m.AddAdvanceInput(s.senders[i], s.payloads[i], s.blockNumbers[i], s.timestamps[i], i)
 	}
@@ -885,7 +891,7 @@ func (s *ModelSuite) TestItGetsInputsWithFilter() {
 		Field: &field,
 		Lt:    &indexLowerThan,
 	})
-	page, err := s.inputRepository.FindAll(nil, nil, nil, nil, filter)
+	page, err := s.inputRepository.FindAll(ctx, nil, nil, nil, nil, filter)
 	s.NoError(err)
 	inputs := page.Rows
 	s.Len(inputs, 1)
@@ -1343,14 +1349,15 @@ func (s *ModelSuite) teardown() {
 }
 
 func (s *ModelSuite) getAllInputs(offset int, limit int) []cModel.AdvanceInput {
+	ctx := context.Background()
 	if offset != 0 {
 		afterOffset := commons.EncodeCursor(offset - 1)
 		vouchers, err := s.inputRepository.
-			FindAll(&limit, nil, &afterOffset, nil, nil)
+			FindAll(ctx, &limit, nil, &afterOffset, nil, nil)
 		s.NoError(err)
 		return vouchers.Rows
 	} else {
-		page, err := s.inputRepository.FindAll(&limit, nil, nil, nil, nil)
+		page, err := s.inputRepository.FindAll(ctx, &limit, nil, nil, nil, nil)
 		s.NoError(err)
 		return page.Rows
 	}

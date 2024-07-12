@@ -180,7 +180,9 @@ func (s *AdapterV2TestSuite) TestGetAllNotices() {
 }
 
 func (s *AdapterV2TestSuite) TestGetInputFound() {
-	_, err := s.inputRepository.Create(model.AdvanceInput{
+	ctx := context.Background()
+
+	_, err := s.inputRepository.Create(ctx, model.AdvanceInput{
 		Index: 1,
 	})
 
@@ -301,13 +303,15 @@ func (s *AdapterV2TestSuite) TestGetInputsNotFound() {
 }
 
 func (s *AdapterV2TestSuite) TestGetInputsFound() {
-	_, err := s.inputRepository.Create(model.AdvanceInput{
+	ctx := context.Background()
+
+	_, err := s.inputRepository.Create(ctx, model.AdvanceInput{
 		Index: 1,
 	})
 
 	s.NoError(err)
 
-	_, error := s.inputRepository.Create(model.AdvanceInput{
+	_, error := s.inputRepository.Create(ctx, model.AdvanceInput{
 		Index: 2,
 	})
 
