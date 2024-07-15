@@ -62,7 +62,7 @@ const inputQuery = `
 `
 
 const inputQueryWithCursor = `
-	inputs(first: %d, after: %s) {
+	inputs(first: %d, after: "%s") {
 		edges {
 			cursor
 			node {
@@ -82,7 +82,7 @@ const inputQueryWithCursor = `
 
 const outputQueryWithCursor = `
 	query { 
-		outputs(first: %d, after: %s ) { 
+		outputs(first: %d, after: "%s") { 
 			edges {
 				cursor
 				node {
@@ -123,16 +123,28 @@ const reportQuery = `
 				inputIndex
 			}
 		}
+		pageInfo {
+			endCursor
+			hasNextPage
+			hasPreviousPage
+			startCursor
+		}
 	}
 `
 const reportQueryWithCursor = `
-	reports(first: %d, after: %s) {
+	reports(first: %d, after: "%s") {
 		edges {
 			node {
 				blob
 				index
 				inputIndex
 			}
+		}
+		pageInfo {
+			endCursor
+			hasNextPage
+			hasPreviousPage
+			startCursor
 		}
 	}
 `
@@ -176,6 +188,24 @@ func (v *GraphileFetcher) GetReportQuery() string {
 	}
 }
 
+func (v *GraphileFetcher) GetInputQuery() string {
+	if len(v.CursorInputAfter) > 0 {
+		return fmt.Sprintf(inputQueryWithCursor, v.BatchSize, v.CursorInputAfter)
+	} else {
+		return fmt.Sprintf(inputQuery, v.BatchSize)
+	}
+}
+
+func (v *GraphileFetcher) GetFullQuery() string {
+	reportQueryWithVars := v.GetReportQuery()
+	inputQueryWithVars := v.GetInputQuery()
+	if len(v.CursorAfter) > 0 {
+		return fmt.Sprintf(outputQueryWithCursor, v.BatchSize, v.CursorAfter, inputQueryWithVars, reportQueryWithVars)
+	} else {
+		return fmt.Sprintf(outputQuery, v.BatchSize, inputQueryWithVars, reportQueryWithVars)
+	}
+}
+
 func (v *GraphileFetcher) Fetch() (*OutputResponse, error) {
 	slog.Debug("Graphile querying",
 		"afterOutput", v.CursorAfter,
@@ -183,22 +213,7 @@ func (v *GraphileFetcher) Fetch() (*OutputResponse, error) {
 		"afterReport", v.CursorReportAfter,
 	)
 
-	var query string
-
-	reportQueryWithVars := v.GetReportQuery()
-	if len(v.CursorAfter) > 0 {
-		if len(v.CursorInputAfter) > 0 {
-			query = fmt.Sprintf(outputQueryWithCursor, v.BatchSize, v.CursorAfter, fmt.Sprintf(inputQueryWithCursor, v.BatchSize, v.CursorInputAfter), reportQueryWithVars)
-		} else {
-			query = fmt.Sprintf(outputQueryWithCursor, v.BatchSize, v.CursorAfter, fmt.Sprintf(inputQuery, v.BatchSize), reportQueryWithVars)
-		}
-	} else {
-		if len(v.CursorInputAfter) > 0 {
-			query = fmt.Sprintf(outputQuery, v.BatchSize, fmt.Sprintf(inputQueryWithCursor, v.BatchSize, v.CursorInputAfter), reportQueryWithVars)
-		} else {
-			query = fmt.Sprintf(outputQuery, v.BatchSize, fmt.Sprintf(inputQuery, v.BatchSize), reportQueryWithVars)
-		}
-	}
+	query := v.GetFullQuery()
 
 	payload, err := json.Marshal(map[string]interface{}{
 		"query": query,
