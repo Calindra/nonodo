@@ -247,6 +247,13 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 				opts.Namespace,
 				modelInstance.GetInputRepository(),
 				opts.FromBlock,
+				&inputter.InputterWorker{
+					Model:              modelInstance,
+					Provider:           opts.RpcUrl,
+					InputBoxAddress:    common.HexToAddress(opts.InputBoxAddress),
+					InputBoxBlock:      opts.InputBoxBlock,
+					ApplicationAddress: common.HexToAddress(opts.ApplicationAddress),
+				},
 			))
 		} else {
 			panic("sequencer not supported")
