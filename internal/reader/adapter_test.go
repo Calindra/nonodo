@@ -1,6 +1,7 @@
 package reader
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"testing"
@@ -37,7 +38,7 @@ func (s *AdapterSuite) SetupTest() {
 	err := s.reportRepository.CreateTables()
 	s.NoError(err)
 	s.inputRepository = &cRepos.InputRepository{
-		Db: db,
+		Db: *db,
 	}
 	err = s.inputRepository.CreateTables()
 	s.NoError(err)
@@ -88,8 +89,9 @@ func (s *AdapterSuite) TestGetReports() {
 }
 
 func (s *AdapterSuite) TestGetInputs() {
+	ctx := context.Background()
 	for i := 0; i < 3; i++ {
-		_, err := s.inputRepository.Create(convenience.AdvanceInput{
+		_, err := s.inputRepository.Create(ctx, convenience.AdvanceInput{
 			Index:          i,
 			Status:         convenience.CompletionStatusUnprocessed,
 			MsgSender:      common.HexToAddress(fmt.Sprintf("000000000000000000000000000000000000000%d", i)),

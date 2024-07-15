@@ -229,8 +229,9 @@ func (s *InputRepositorySuite) TestFindByIndexLt() {
 
 func (s *InputRepositorySuite) TestFindByMsgSender() {
 	defer s.teardown()
+	ctx := context.Background()
 	for i := 0; i < 5; i++ {
-		input, err := s.inputRepository.Create(convenience.AdvanceInput{
+		input, err := s.inputRepository.Create(ctx, convenience.AdvanceInput{
 			Index:          i,
 			Status:         convenience.CompletionStatusUnprocessed,
 			MsgSender:      common.HexToAddress(fmt.Sprintf("000000000000000000000000000000000000000%d", i)),
@@ -248,7 +249,7 @@ func (s *InputRepositorySuite) TestFindByMsgSender() {
 		Field: &field,
 		Eq:    &value,
 	})
-	resp, err := s.inputRepository.FindAll(nil, nil, nil, nil, filters)
+	resp, err := s.inputRepository.FindAll(ctx, nil, nil, nil, nil, filters)
 	s.NoError(err)
 	s.Equal(1, int(resp.Total))
 	s.Equal(common.HexToAddress(value), resp.Rows[0].MsgSender)
