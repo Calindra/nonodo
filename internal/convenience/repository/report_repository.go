@@ -32,17 +32,24 @@ func (r *ReportRepository) CreateTables() error {
 	return err
 }
 
-func (r *ReportRepository) Create(report cModel.Report) (cModel.Report, error) {
+func (r *ReportRepository) Create(ctx context.Context, report cModel.Report) (cModel.Report, error) {
 	insertSql := `INSERT INTO reports (
 		output_index,
 		payload,
 		input_index) VALUES ($1, $2, $3)`
-	r.Db.MustExec(
+
+	_, err := r.Db.ExecContext(
+		ctx,
 		insertSql,
 		report.Index,
 		common.Bytes2Hex(report.Payload),
 		report.InputIndex,
 	)
+
+	if err != nil {
+		slog.Error("database error", "err", err)
+		return cModel.Report{}, err
+	}
 	return report, nil
 }
 

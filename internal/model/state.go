@@ -161,8 +161,9 @@ func saveAllReports(reportRepository *cRepos.ReportRepository, reports []cModel.
 		slog.Warn("Missing reportRepository.Db to save reports")
 		return
 	}
+	ctx := context.Background()
 	for _, r := range reports {
-		_, err := reportRepository.Create(r)
+		_, err := reportRepository.Create(ctx, r)
 		if err != nil {
 			panic(err)
 		}
