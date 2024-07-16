@@ -38,3 +38,23 @@ Run the nonodo with HL GraphQL flag enabled
 ```
 ./nonodo --high-level-graphql --enable-debug --node-version v2
 ```
+
+```
+export POSTGRES_HOST=127.0.0.1
+export POSTGRES_PORT=5432
+export POSTGRES_DB=mydatabase
+export POSTGRES_USER=myuser
+export POSTGRES_PASSWORD=mypassword
+./nonodo --http-address=0.0.0.0 --high-level-graphql --enable-debug --node-version v2 --load-test-mode --db-implementation postgres
+```
+
+Disable sync
+
+```
+export POSTGRES_HOST=127.0.0.1
+export POSTGRES_PORT=5432
+export POSTGRES_DB=mydatabase
+export POSTGRES_USER=myuser
+export POSTGRES_PASSWORD=mypassword
+./nonodo --http-address=0.0.0.0 --high-level-graphql --enable-debug --node-version v2 --db-implementation postgres --graphile-disable-sync
+```
