@@ -79,6 +79,20 @@ func (o *OutputDecoder) HandleInput(
 	return err
 }
 
+func (o *OutputDecoder) HandleReport(
+	ctx context.Context,
+	index int,
+	outputIndex int,
+	payload string,
+) error {
+	_, err := o.convenienceService.CreateReport(ctx, &model.Report{
+		Index:      outputIndex,
+		InputIndex: index,
+		Payload:    []byte(payload),
+	})
+	return err
+}
+
 func (o *OutputDecoder) GetAbi(address common.Address) (*abi.ABI, error) {
 	baseURL := "https://api.etherscan.io/api"
 	contextPath := "?module=contract&action=getsourcecode&address="

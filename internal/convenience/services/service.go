@@ -12,6 +12,7 @@ type ConvenienceService struct {
 	voucherRepository *repository.VoucherRepository
 	noticeRepository  *repository.NoticeRepository
 	inputRepository   *repository.InputRepository
+	reportRepository  *repository.ReportRepository
 }
 
 func NewConvenienceService(
@@ -84,6 +85,14 @@ func (s *ConvenienceService) CreateInput(
 		return s.inputRepository.Update(ctx, *input)
 	}
 	return s.inputRepository.Create(ctx, *input)
+}
+
+func (s *ConvenienceService) CreateReport(
+	ctx context.Context,
+	report *model.Report,
+) (*model.Report, error) {
+	reportDb, err := s.reportRepository.Create(ctx, *report)
+	return &reportDb, err
 }
 
 func (c *ConvenienceService) UpdateExecuted(

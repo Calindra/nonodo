@@ -67,13 +67,15 @@ type ConvenienceFilter struct {
 }
 
 type SynchronizerFetch struct {
-	Id                  int64  `db:"id"`
-	TimestampAfter      uint64 `db:"timestamp_after"`
-	IniCursorAfter      string `db:"ini_cursor_after"`
-	LogVouchersIds      string `db:"log_vouchers_ids"`
-	EndCursorAfter      string `db:"end_cursor_after"`
-	IniInputCursorAfter string `db:"ini_input_cursor_after"`
-	EndInputCursorAfter string `db:"end_input_cursor_after"`
+	Id                   int64  `db:"id"`
+	TimestampAfter       uint64 `db:"timestamp_after"`
+	IniCursorAfter       string `db:"ini_cursor_after"`
+	LogVouchersIds       string `db:"log_vouchers_ids"`
+	EndCursorAfter       string `db:"end_cursor_after"`
+	IniInputCursorAfter  string `db:"ini_input_cursor_after"`
+	EndInputCursorAfter  string `db:"end_input_cursor_after"`
+	IniReportCursorAfter string `db:"ini_report_cursor_after"`
+	EndReportCursorAfter string `db:"end_report_cursor_after"`
 }
 
 // Rollups input, which can be advance or inspect.

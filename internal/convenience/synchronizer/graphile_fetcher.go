@@ -274,5 +274,20 @@ type OutputResponse struct {
 				} `json:"node"`
 			} `json:"edges"`
 		} `json:"inputs"`
+		Reports struct {
+			Edges []struct {
+				Node struct {
+					Index      int    `json:"index"`
+					InputIndex int    `json:"inputIndex"`
+					Blob       string `json:"blob"`
+				} `json:"node"`
+			}
+			PageInfo struct {
+				StartCursor     string `json:"startCursor"`
+				EndCursor       string `json:"endCursor"`
+				HasNextPage     bool   `json:"hasNextPage"`
+				HasPreviousPage bool   `json:"hasPreviousPage"`
+			}
+		}
 	} `json:"data"`
 }
