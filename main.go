@@ -431,6 +431,9 @@ func init() {
 	cmd.Flags().BoolVar(&opts.LoadTestMode, "load-test-mode", opts.LoadTestMode,
 		"If set, enables load test mode")
 
+	cmd.Flags().BoolVar(&opts.GraphileDisableSync, "graphile-disable-sync", opts.GraphileDisableSync,
+		"If set, disable graphile synchronization")
+
 	cmd.Flags().StringVar(&opts.GraphileAddress, "graphile-address", opts.GraphileAddress,
 		"Address used to connect to Graphile")
 
