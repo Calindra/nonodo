@@ -12,17 +12,20 @@ type ConvenienceService struct {
 	voucherRepository *repository.VoucherRepository
 	noticeRepository  *repository.NoticeRepository
 	inputRepository   *repository.InputRepository
+	reportRepository  *repository.ReportRepository
 }
 
 func NewConvenienceService(
 	voucherRepository *repository.VoucherRepository,
 	noticeRepository *repository.NoticeRepository,
 	inputRepository *repository.InputRepository,
+	reportRepository *repository.ReportRepository,
 ) *ConvenienceService {
 	return &ConvenienceService{
 		voucherRepository: voucherRepository,
 		noticeRepository:  noticeRepository,
 		inputRepository:   inputRepository,
+		reportRepository:  reportRepository,
 	}
 }
 
@@ -84,6 +87,14 @@ func (s *ConvenienceService) CreateInput(
 		return s.inputRepository.Update(ctx, *input)
 	}
 	return s.inputRepository.Create(ctx, *input)
+}
+
+func (s *ConvenienceService) CreateReport(
+	ctx context.Context,
+	report *model.Report,
+) (*model.Report, error) {
+	reportDb, err := s.reportRepository.Create(ctx, *report)
+	return &reportDb, err
 }
 
 func (c *ConvenienceService) UpdateExecuted(
@@ -151,6 +162,24 @@ func (c *ConvenienceService) FindAllInputs(
 		after,
 		before,
 		filter,
+	)
+}
+
+func (c *ConvenienceService) FindAllByInputIndex(
+	ctx context.Context,
+	first *int,
+	last *int,
+	after *string,
+	before *string,
+	inputIndex *int,
+) (*commons.PageResult[model.Report], error) {
+	return c.reportRepository.FindAllByInputIndex(
+		ctx,
+		first,
+		last,
+		after,
+		before,
+		inputIndex,
 	)
 }
 

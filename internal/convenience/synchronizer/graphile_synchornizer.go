@@ -69,6 +69,7 @@ func (x GraphileSynchronizer) handleGraphileResponse(outputResp OutputResponse, 
 	voucherIds := []string{}
 	var initCursorAfter string
 	var initInputCursorAfter string
+	var initReportCursorAfter string
 
 	for _, output := range outputResp.Data.Outputs.Edges {
 		outputIndex := output.Node.Index
@@ -137,22 +138,46 @@ func (x GraphileSynchronizer) handleGraphileResponse(outputResp OutputResponse, 
 		}
 	}
 
+	for _, report := range outputResp.Data.Reports.Edges {
+		slog.Debug("Add Report",
+			"Index", report.Node.Index,
+			"InputIndex", report.Node.InputIndex,
+		)
+		err := x.Decoder.HandleReport(
+			ctx,
+			report.Node.InputIndex,
+			report.Node.Index,
+			report.Node.Blob,
+		)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	hasMoreReports := len(outputResp.Data.Reports.PageInfo.EndCursor) > 0
+	if hasMoreReports {
+		initReportCursorAfter = x.GraphileFetcher.CursorReportAfter
+		x.GraphileFetcher.CursorReportAfter = outputResp.Data.Reports.PageInfo.EndCursor
+	}
+
 	hasMoreInputs := len(outputResp.Data.Inputs.PageInfo.EndCursor) > 0
 
 	if hasMoreInputs {
 		initInputCursorAfter = x.GraphileFetcher.CursorInputAfter
-		x.GraphileFetcher.CursorInputAfter = outputResp.Data.Outputs.PageInfo.EndCursor
+		x.GraphileFetcher.CursorInputAfter = outputResp.Data.Inputs.PageInfo.EndCursor
 	}
 
 	if hasMoreInputs || hasMoreOutputs {
 		_, err := x.SynchronizerRepository.Create(
 			ctx, &model.SynchronizerFetch{
-				TimestampAfter:      uint64(time.Now().UnixMilli()),
-				IniCursorAfter:      initCursorAfter,
-				EndCursorAfter:      x.GraphileFetcher.CursorAfter,
-				LogVouchersIds:      strings.Join(voucherIds, ";"),
-				IniInputCursorAfter: initInputCursorAfter,
-				EndInputCursorAfter: x.GraphileFetcher.CursorInputAfter,
+				TimestampAfter:       uint64(time.Now().UnixMilli()),
+				IniCursorAfter:       initCursorAfter,
+				EndCursorAfter:       x.GraphileFetcher.CursorAfter,
+				LogVouchersIds:       strings.Join(voucherIds, ";"),
+				IniInputCursorAfter:  initInputCursorAfter,
+				EndInputCursorAfter:  x.GraphileFetcher.CursorInputAfter,
+				IniReportCursorAfter: initReportCursorAfter,
+				EndReportCursorAfter: x.GraphileFetcher.CursorReportAfter,
 			})
 		if err != nil {
 			slog.Error("Deu erro", "erro", err)

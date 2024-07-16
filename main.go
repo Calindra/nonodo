@@ -491,7 +491,7 @@ func run(cmd *cobra.Command, args []string) {
 		}
 	}()
 	if opts.HLGraphQL {
-		err := nonodo.NewSupervisorPoC(opts).Start(ctx, ready)
+		err := nonodo.NewSupervisorHLGraphQL(opts).Start(ctx, ready)
 		cobra.CheckErr(err)
 	} else {
 		err := nonodo.NewSupervisor(opts).Start(ctx, ready)

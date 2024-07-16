@@ -10,10 +10,12 @@ type Adapter interface {
 	GetReport(reportIndex int, inputIndex int) (*graphql.Report, error)
 
 	GetReports(
+		ctx context.Context,
 		first *int, last *int, after *string, before *string, inputIndex *int,
 	) (*graphql.ReportConnection, error)
 
 	GetInputs(
+		ctx context.Context,
 		first *int, last *int, after *string, before *string, where *graphql.InputFilter,
 	) (*graphql.InputConnection, error)
 

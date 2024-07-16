@@ -24,6 +24,7 @@ type AdapterV2TestSuite struct {
 	voucherRepository repository.VoucherRepository
 	noticeRepository  repository.NoticeRepository
 	inputRepository   repository.InputRepository
+	reportRepository  repository.ReportRepository
 	httpClient        *MockHttpClient
 }
 
@@ -47,13 +48,20 @@ func (s *AdapterV2TestSuite) SetupTest() {
 	voucherRepository := &repository.VoucherRepository{Db: *db}
 	noticeRepository := &repository.NoticeRepository{Db: *db}
 	inputRepository := &repository.InputRepository{Db: *db}
+	reportRepository := &repository.ReportRepository{Db: db}
 
-	convenienceService := services.NewConvenienceService(voucherRepository, noticeRepository, inputRepository)
+	convenienceService := services.NewConvenienceService(
+		voucherRepository,
+		noticeRepository,
+		inputRepository,
+		reportRepository,
+	)
 	httpClient := &MockHttpClient{}
 
 	s.voucherRepository = *voucherRepository
 	s.noticeRepository = *noticeRepository
 	s.inputRepository = *inputRepository
+	s.reportRepository = *reportRepository
 	s.httpClient = httpClient
 
 	err := s.voucherRepository.CreateTables()
@@ -63,6 +71,9 @@ func (s *AdapterV2TestSuite) SetupTest() {
 	s.NoError(err)
 
 	err = s.inputRepository.CreateTables()
+	s.NoError(err)
+
+	err = reportRepository.CreateTables()
 	s.NoError(err)
 
 	inputBlobAdapter := InputBlobAdapter{}
@@ -259,8 +270,8 @@ func (s *AdapterV2TestSuite) TestGetReportsNotFound() {
   }
 }`), nil
 	}
-
-	reports, err := s.adapter.GetReports(nil, nil, nil, nil, nil)
+	ctx := context.Background()
+	reports, err := s.adapter.GetReports(ctx, nil, nil, nil, nil, nil)
 
 	s.NoError(err)
 	s.NotNil(reports)
@@ -268,34 +279,25 @@ func (s *AdapterV2TestSuite) TestGetReportsNotFound() {
 }
 
 func (s *AdapterV2TestSuite) TestGetReportsFound() {
-	s.httpClient.PostFunc = func(body []byte) ([]byte, error) {
-		return []byte(`{
-  "data": {
-    "reports": {
-      "edges": [
-        {
-          "node": {
-            "blob": "\\x4772656574696e67",
-            "index": 2,
-            "inputIndex": 1
-          }
-        }
-      ]
-    }
-  }
-}`), nil
-	}
+	ctx := context.Background()
+	_, err := s.reportRepository.Create(ctx, model.Report{
+		Index:      0,
+		InputIndex: 0,
+		Payload:    common.Hex2Bytes("deadbeef"),
+	})
+	s.NoError(err)
 
-	reports, err := s.adapter.GetReports(nil, nil, nil, nil, nil)
+	reports, err := s.adapter.GetReports(ctx, nil, nil, nil, nil, nil)
 
 	s.NoError(err)
 	s.NotNil(reports)
-	s.Equal(reports.TotalCount, 1)
+	s.Equal(1, reports.TotalCount)
 }
 
 func (s *AdapterV2TestSuite) TestGetInputsNotFound() {
+	ctx := context.Background()
 	batch := 10
-	inputs, err := s.adapter.GetInputs(&batch, nil, nil, nil, nil)
+	inputs, err := s.adapter.GetInputs(ctx, &batch, nil, nil, nil, nil)
 
 	s.NoError(err)
 	s.NotNil(inputs)
@@ -318,7 +320,7 @@ func (s *AdapterV2TestSuite) TestGetInputsFound() {
 	s.NoError(error)
 
 	batch := 10
-	inputs, err := s.adapter.GetInputs(&batch, nil, nil, nil, nil)
+	inputs, err := s.adapter.GetInputs(ctx, &batch, nil, nil, nil, nil)
 
 	s.NoError(err)
 	s.Equal(inputs.TotalCount, 2)

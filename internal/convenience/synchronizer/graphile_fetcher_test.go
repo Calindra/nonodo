@@ -119,6 +119,14 @@ func (s *GraphileFetcherTestSuite) TestPrintOutputBlob() {
 	slog.Info("Blob", "Output Blob", GenerateOutputBlob())
 }
 
+func (s *GraphileFetcherTestSuite) TestGetFullQueryWithReport() {
+	s.graphileFetcher.BatchSize = 1
+	s.graphileFetcher.CursorReportAfter = "WyJwcmltYXJ5X2tleV9hc2MiLFsxLDFdXQ=="
+	query := s.graphileFetcher.GetFullQuery()
+	reportStartQuery := `reports(first: 1, after: "WyJwcmltYXJ5X2tleV9hc2MiLFsxLDFdXQ==")`
+	s.Contains(query, reportStartQuery)
+}
+
 func GenerateOutputBlob() string {
 	// Parse the ABI JSON
 	abiParsed, err := contracts.OutputsMetaData.GetAbi()

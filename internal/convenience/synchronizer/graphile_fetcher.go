@@ -8,37 +8,39 @@ import (
 	"github.com/calindra/nonodo/internal/graphile"
 )
 
-const graphileQuery = `
-     query { 
-	   outputs(first: %d) {
-		edges { 
-			cursor
-			node { 
-				blob
-				index
-				inputIndex
-				nodeId
-				proofByInputIndexAndOutputIndex {
-					validityOutputIndexWithinInput
-					validityOutputHashesRootHash
-					validityOutputHashesInEpochSiblings
-					validityOutputHashInOutputHashesSiblings
-					validityOutputEpochRootHash
-					validityMachineStateHash
-					validityInputIndexWithinEpoch
+const outputQuery = `
+	query { 
+		outputs(first: %d) {
+			edges { 
+				cursor
+				node { 
+					blob
+					index
+					inputIndex
+					nodeId
+					proofByInputIndexAndOutputIndex {
+						validityOutputIndexWithinInput
+						validityOutputHashesRootHash
+						validityOutputHashesInEpochSiblings
+						validityOutputHashInOutputHashesSiblings
+						validityOutputEpochRootHash
+						validityMachineStateHash
+						validityInputIndexWithinEpoch
+					}
 				}
 			}
+			pageInfo {
+				endCursor
+				hasNextPage
+				hasPreviousPage
+				startCursor
+			}
 		}
-		pageInfo {
-			endCursor
-			hasNextPage
-			hasPreviousPage
-			startCursor
-		}
-	}
-	%s	
-	
-}`
+		%s	
+
+		#report
+		%s
+	}`
 
 const inputQuery = `
 	inputs(first: %d) {
@@ -60,7 +62,7 @@ const inputQuery = `
 `
 
 const inputQueryWithCursor = `
-	inputs(first: %d, after: %s) {
+	inputs(first: %d, after: "%s") {
 		edges {
 			cursor
 			node {
@@ -78,25 +80,47 @@ const inputQueryWithCursor = `
 	}
 `
 
-const graphileQueryWithCursor = `
+const outputQueryWithCursor = `
 	query { 
-	  outputs(first: %d, after: %s ) { 
+		outputs(first: %d, after: "%s") { 
+			edges {
+				cursor
+				node {
+					blob
+					index
+					inputIndex
+					nodeId
+					proofByInputIndexAndOutputIndex {
+						validityOutputIndexWithinInput
+						validityOutputHashesRootHash
+						validityOutputHashesInEpochSiblings
+						validityOutputHashInOutputHashesSiblings
+						validityOutputEpochRootHash
+						validityMachineStateHash
+						validityInputIndexWithinEpoch
+					}
+				}
+			}
+			pageInfo {
+				endCursor
+				hasNextPage
+				hasPreviousPage
+				startCursor
+			}
+		}
+		%s	
+
+		#report
+		%s
+	}`
+
+const reportQuery = `
+	reports(first: %d) {
 		edges {
-			cursor
 			node {
 				blob
 				index
 				inputIndex
-				nodeId
-				proofByInputIndexAndOutputIndex {
-					validityOutputIndexWithinInput
-					validityOutputHashesRootHash
-					validityOutputHashesInEpochSiblings
-					validityOutputHashInOutputHashesSiblings
-					validityOutputEpochRootHash
-					validityMachineStateHash
-					validityInputIndexWithinEpoch
-				}
 			}
 		}
 		pageInfo {
@@ -106,8 +130,24 @@ const graphileQueryWithCursor = `
 			startCursor
 		}
 	}
-	%s	
-}`
+`
+const reportQueryWithCursor = `
+	reports(first: %d, after: "%s") {
+		edges {
+			node {
+				blob
+				index
+				inputIndex
+			}
+		}
+		pageInfo {
+			endCursor
+			hasNextPage
+			hasPreviousPage
+			startCursor
+		}
+	}
+`
 
 const DefaultQueryBatchSize = 10
 
@@ -119,13 +159,14 @@ GRAPH_QL_URL
 `
 
 type GraphileFetcher struct {
-	Url              string
-	CursorAfter      string
-	CursorInputAfter string
-	BatchSize        int
-	Query            string
-	QueryWithCursor  string
-	GraphileClient   graphile.GraphileClient
+	Url               string
+	CursorAfter       string
+	CursorInputAfter  string
+	CursorReportAfter string
+	BatchSize         int
+	Query             string
+	QueryWithCursor   string
+	GraphileClient    graphile.GraphileClient
 }
 
 func NewGraphileFetcher(graphileClient graphile.GraphileClient) *GraphileFetcher {
@@ -133,30 +174,46 @@ func NewGraphileFetcher(graphileClient graphile.GraphileClient) *GraphileFetcher
 		Url:             "http://localhost:5000/graphql",
 		CursorAfter:     "",
 		BatchSize:       DefaultQueryBatchSize,
-		Query:           graphileQuery,
-		QueryWithCursor: graphileQueryWithCursor,
+		Query:           outputQuery,
+		QueryWithCursor: outputQueryWithCursor,
 		GraphileClient:  graphileClient,
 	}
 }
 
-func (v *GraphileFetcher) Fetch() (*OutputResponse, error) {
-	slog.Debug("Graphile querying", "afterOutput", v.CursorAfter, "afterInput", v.CursorInputAfter)
-
-	var query string
-
-	if len(v.CursorAfter) > 0 {
-		if len(v.CursorInputAfter) > 0 {
-			query = fmt.Sprintf(graphileQueryWithCursor, v.BatchSize, v.CursorAfter, fmt.Sprintf(inputQueryWithCursor, v.BatchSize, v.CursorInputAfter))
-		} else {
-			query = fmt.Sprintf(graphileQueryWithCursor, v.BatchSize, v.CursorAfter, fmt.Sprintf(inputQuery, v.BatchSize))
-		}
+func (v *GraphileFetcher) GetReportQuery() string {
+	if len(v.CursorReportAfter) > 0 {
+		return fmt.Sprintf(reportQueryWithCursor, v.BatchSize, v.CursorReportAfter)
 	} else {
-		if len(v.CursorInputAfter) > 0 {
-			query = fmt.Sprintf(graphileQuery, v.BatchSize, fmt.Sprintf(inputQueryWithCursor, v.BatchSize, v.CursorInputAfter))
-		} else {
-			query = fmt.Sprintf(graphileQuery, v.BatchSize, fmt.Sprintf(inputQuery, v.BatchSize))
-		}
+		return fmt.Sprintf(reportQuery, v.BatchSize)
 	}
+}
+
+func (v *GraphileFetcher) GetInputQuery() string {
+	if len(v.CursorInputAfter) > 0 {
+		return fmt.Sprintf(inputQueryWithCursor, v.BatchSize, v.CursorInputAfter)
+	} else {
+		return fmt.Sprintf(inputQuery, v.BatchSize)
+	}
+}
+
+func (v *GraphileFetcher) GetFullQuery() string {
+	reportQueryWithVars := v.GetReportQuery()
+	inputQueryWithVars := v.GetInputQuery()
+	if len(v.CursorAfter) > 0 {
+		return fmt.Sprintf(outputQueryWithCursor, v.BatchSize, v.CursorAfter, inputQueryWithVars, reportQueryWithVars)
+	} else {
+		return fmt.Sprintf(outputQuery, v.BatchSize, inputQueryWithVars, reportQueryWithVars)
+	}
+}
+
+func (v *GraphileFetcher) Fetch() (*OutputResponse, error) {
+	slog.Debug("Graphile querying",
+		"afterOutput", v.CursorAfter,
+		"afterInput", v.CursorInputAfter,
+		"afterReport", v.CursorReportAfter,
+	)
+
+	query := v.GetFullQuery()
 
 	payload, err := json.Marshal(map[string]interface{}{
 		"query": query,
@@ -217,5 +274,20 @@ type OutputResponse struct {
 				} `json:"node"`
 			} `json:"edges"`
 		} `json:"inputs"`
+		Reports struct {
+			Edges []struct {
+				Node struct {
+					Index      int    `json:"index"`
+					InputIndex int    `json:"inputIndex"`
+					Blob       string `json:"blob"`
+				} `json:"node"`
+			}
+			PageInfo struct {
+				StartCursor     string `json:"startCursor"`
+				EndCursor       string `json:"endCursor"`
+				HasNextPage     bool   `json:"hasNextPage"`
+				HasPreviousPage bool   `json:"hasPreviousPage"`
+			}
+		}
 	} `json:"data"`
 }

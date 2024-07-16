@@ -20,6 +20,7 @@ type OutputDecoderSuite struct {
 	voucherRepository *repository.VoucherRepository
 	noticeRepository  *repository.NoticeRepository
 	inputRepository   *repository.InputRepository
+	reportRepository  *repository.ReportRepository
 }
 
 func (s *OutputDecoderSuite) SetupTest() {
@@ -54,6 +55,7 @@ func (s *OutputDecoderSuite) SetupTest() {
 			s.voucherRepository,
 			s.noticeRepository,
 			s.inputRepository,
+			s.reportRepository,
 		),
 	}
 }

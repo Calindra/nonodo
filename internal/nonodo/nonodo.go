@@ -114,7 +114,7 @@ func NewNonodoOpts() NonodoOpts {
 	}
 }
 
-func NewSupervisorPoC(opts NonodoOpts) supervisor.SupervisorWorker {
+func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 	var w supervisor.SupervisorWorker
 
 	var db *sqlx.DB
@@ -175,7 +175,11 @@ func NewSupervisorPoC(opts NonodoOpts) supervisor.SupervisorWorker {
 		w.Workers = append(w.Workers, execVoucherListener)
 	}
 
-	model := model.NewNonodoModel(decoder, db)
+	model := model.NewNonodoModel(
+		decoder,
+		container.GetReportRepository(),
+		container.GetInputRepository(),
+	)
 
 	e := echo.New()
 	e.Use(middleware.CORS())
@@ -202,7 +206,10 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	decoder := container.GetOutputDecoder()
 	convenienceService := container.GetConvenienceService()
 	adapter := reader.NewAdapterV1(db, convenienceService)
-	modelInstance := model.NewNonodoModel(decoder, db)
+	modelInstance := model.NewNonodoModel(decoder,
+		container.GetReportRepository(),
+		container.GetInputRepository(),
+	)
 	e := echo.New()
 	e.Use(middleware.CORS())
 	e.Use(middleware.Recover())

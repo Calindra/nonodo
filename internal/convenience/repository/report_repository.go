@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -18,7 +19,7 @@ type ReportRepository struct {
 }
 
 func (r *ReportRepository) CreateTables() error {
-	schema := `CREATE TABLE IF NOT EXISTS reports (
+	schema := `CREATE TABLE IF NOT EXISTS convenience_reports (
 		output_index	integer,
 		payload 		text,
 		input_index 	integer);`
@@ -31,28 +32,40 @@ func (r *ReportRepository) CreateTables() error {
 	return err
 }
 
-func (r *ReportRepository) Create(report cModel.Report) (cModel.Report, error) {
-	insertSql := `INSERT INTO reports (
+func (r *ReportRepository) Create(ctx context.Context, report cModel.Report) (cModel.Report, error) {
+	insertSql := `INSERT INTO convenience_reports (
 		output_index,
 		payload,
 		input_index) VALUES ($1, $2, $3)`
-	r.Db.MustExec(
+
+	_, err := r.Db.ExecContext(
+		ctx,
 		insertSql,
 		report.Index,
 		common.Bytes2Hex(report.Payload),
 		report.InputIndex,
 	)
+
+	if err != nil {
+		slog.Error("database error", "err", err)
+		return cModel.Report{}, err
+	}
+	slog.Debug("Report created",
+		"outputIndex", report.Index,
+		"inputIndex", report.InputIndex,
+	)
 	return report, nil
 }
 
 func (r *ReportRepository) FindByInputAndOutputIndex(
+	ctx context.Context,
 	inputIndex uint64,
 	outputIndex uint64,
 ) (*cModel.Report, error) {
-	rows, err := r.Db.Queryx(`
-		SELECT payload FROM reports
-			WHERE input_index = $1 and output_index = $2
-			LIMIT 1`,
+	rows, err := r.Db.QueryxContext(ctx, `
+		SELECT payload FROM convenience_reports
+		WHERE input_index = $1 AND output_index = $2
+		LIMIT 1`,
 		inputIndex, outputIndex,
 	)
 	if err != nil {
@@ -60,6 +73,7 @@ func (r *ReportRepository) FindByInputAndOutputIndex(
 		return nil, err
 	}
 	defer rows.Close()
+
 	if rows.Next() {
 		var payload string
 		if err := rows.Scan(&payload); err != nil {
@@ -71,15 +85,20 @@ func (r *ReportRepository) FindByInputAndOutputIndex(
 			Payload:    common.Hex2Bytes(payload),
 		}
 		return report, nil
-	} else {
-		return nil, nil
 	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return nil, nil
 }
 
 func (c *ReportRepository) Count(
+	ctx context.Context,
 	filter []*cModel.ConvenienceFilter,
 ) (uint64, error) {
-	query := `SELECT count(*) FROM reports `
+	query := `SELECT count(*) FROM convenience_reports `
 	where, args, _, err := transformToReportQuery(filter)
 	if err != nil {
 		slog.Error("Count execution error")
@@ -87,7 +106,7 @@ func (c *ReportRepository) Count(
 	}
 	query += where
 	slog.Debug("Query", "query", query, "args", args)
-	stmt, err := c.Db.Preparex(query)
+	stmt, err := c.Db.PreparexContext(ctx, query)
 	if err != nil {
 		slog.Error("Count execution error")
 		return 0, err
@@ -103,6 +122,7 @@ func (c *ReportRepository) Count(
 }
 
 func (c *ReportRepository) FindAllByInputIndex(
+	ctx context.Context,
 	first *int,
 	last *int,
 	after *string,
@@ -119,6 +139,7 @@ func (c *ReportRepository) FindAllByInputIndex(
 		})
 	}
 	return c.FindAll(
+		ctx,
 		first,
 		last,
 		after,
@@ -128,18 +149,20 @@ func (c *ReportRepository) FindAllByInputIndex(
 }
 
 func (c *ReportRepository) FindAll(
+	ctx context.Context,
 	first *int,
 	last *int,
 	after *string,
 	before *string,
 	filter []*cModel.ConvenienceFilter,
 ) (*commons.PageResult[cModel.Report], error) {
-	total, err := c.Count(filter)
+	total, err := c.Count(ctx, filter)
 	if err != nil {
 		slog.Error("database error", "err", err)
 		return nil, err
 	}
-	query := `SELECT input_index, output_index, payload FROM reports `
+
+	query := `SELECT input_index, output_index, payload FROM convenience_reports `
 	where, args, argsCount, err := transformToReportQuery(filter)
 	if err != nil {
 		slog.Error("database error", "err", err)
@@ -147,6 +170,7 @@ func (c *ReportRepository) FindAll(
 	}
 	query += where
 	query += `ORDER BY input_index ASC, output_index ASC `
+
 	offset, limit, err := commons.ComputePage(first, last, after, before, int(total))
 	if err != nil {
 		return nil, err
@@ -158,16 +182,19 @@ func (c *ReportRepository) FindAll(
 	args = append(args, offset)
 
 	slog.Debug("Query", "query", query, "args", args, "total", total)
-	stmt, err := c.Db.Preparex(query)
+	stmt, err := c.Db.PreparexContext(ctx, query)
 	if err != nil {
 		return nil, err
 	}
 	defer stmt.Close()
+
 	var reports []cModel.Report
-	rows, err := stmt.Queryx(args...)
+	rows, err := stmt.QueryxContext(ctx, args...)
 	if err != nil {
 		return nil, err
 	}
+	defer rows.Close()
+
 	for rows.Next() {
 		var payload string
 		var inputIndex int
@@ -181,6 +208,10 @@ func (c *ReportRepository) FindAll(
 			Payload:    common.Hex2Bytes(payload),
 		}
 		reports = append(reports, *report)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
 	}
 
 	pageResult := &commons.PageResult[cModel.Report]{
