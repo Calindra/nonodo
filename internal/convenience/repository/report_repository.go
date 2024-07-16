@@ -19,7 +19,7 @@ type ReportRepository struct {
 }
 
 func (r *ReportRepository) CreateTables() error {
-	schema := `CREATE TABLE IF NOT EXISTS reports (
+	schema := `CREATE TABLE IF NOT EXISTS convenience_reports (
 		output_index	integer,
 		payload 		text,
 		input_index 	integer);`
@@ -33,7 +33,7 @@ func (r *ReportRepository) CreateTables() error {
 }
 
 func (r *ReportRepository) Create(ctx context.Context, report cModel.Report) (cModel.Report, error) {
-	insertSql := `INSERT INTO reports (
+	insertSql := `INSERT INTO convenience_reports (
 		output_index,
 		payload,
 		input_index) VALUES ($1, $2, $3)`
@@ -50,6 +50,10 @@ func (r *ReportRepository) Create(ctx context.Context, report cModel.Report) (cM
 		slog.Error("database error", "err", err)
 		return cModel.Report{}, err
 	}
+	slog.Debug("Report created",
+		"outputIndex", report.Index,
+		"inputIndex", report.InputIndex,
+	)
 	return report, nil
 }
 
@@ -59,7 +63,7 @@ func (r *ReportRepository) FindByInputAndOutputIndex(
 	outputIndex uint64,
 ) (*cModel.Report, error) {
 	rows, err := r.Db.QueryxContext(ctx, `
-		SELECT payload FROM reports
+		SELECT payload FROM convenience_reports
 		WHERE input_index = $1 AND output_index = $2
 		LIMIT 1`,
 		inputIndex, outputIndex,
@@ -94,7 +98,7 @@ func (c *ReportRepository) Count(
 	ctx context.Context,
 	filter []*cModel.ConvenienceFilter,
 ) (uint64, error) {
-	query := `SELECT count(*) FROM reports `
+	query := `SELECT count(*) FROM convenience_reports `
 	where, args, _, err := transformToReportQuery(filter)
 	if err != nil {
 		slog.Error("Count execution error")
@@ -158,7 +162,7 @@ func (c *ReportRepository) FindAll(
 		return nil, err
 	}
 
-	query := `SELECT input_index, output_index, payload FROM reports `
+	query := `SELECT input_index, output_index, payload FROM convenience_reports `
 	where, args, argsCount, err := transformToReportQuery(filter)
 	if err != nil {
 		slog.Error("database error", "err", err)

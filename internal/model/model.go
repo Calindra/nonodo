@@ -16,7 +16,6 @@ import (
 	cRepos "github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/jmoiron/sqlx"
 )
 
 // Nonodo model shared among the internal workers.
@@ -35,22 +34,16 @@ func (m *NonodoModel) GetInputRepository() *cRepos.InputRepository {
 }
 
 // Create a new model.
-func NewNonodoModel(decoder Decoder, db *sqlx.DB) *NonodoModel {
-	reportRepository := cRepos.ReportRepository{Db: db}
-	err := reportRepository.CreateTables()
-	if err != nil {
-		panic(err)
-	}
-	inputRepository := cRepos.InputRepository{Db: *db}
-	err = inputRepository.CreateTables()
-	if err != nil {
-		panic(err)
-	}
+func NewNonodoModel(
+	decoder Decoder,
+	reportRepository *cRepos.ReportRepository,
+	inputRepository *cRepos.InputRepository,
+) *NonodoModel {
 	return &NonodoModel{
 		state:            &rollupsStateIdle{},
 		decoder:          decoder,
-		reportRepository: &reportRepository,
-		inputRepository:  &inputRepository,
+		reportRepository: reportRepository,
+		inputRepository:  inputRepository,
 	}
 }
 

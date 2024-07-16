@@ -19,11 +19,13 @@ func NewConvenienceService(
 	voucherRepository *repository.VoucherRepository,
 	noticeRepository *repository.NoticeRepository,
 	inputRepository *repository.InputRepository,
+	reportRepository *repository.ReportRepository,
 ) *ConvenienceService {
 	return &ConvenienceService{
 		voucherRepository: voucherRepository,
 		noticeRepository:  noticeRepository,
 		inputRepository:   inputRepository,
+		reportRepository:  reportRepository,
 	}
 }
 
@@ -160,6 +162,24 @@ func (c *ConvenienceService) FindAllInputs(
 		after,
 		before,
 		filter,
+	)
+}
+
+func (c *ConvenienceService) FindAllByInputIndex(
+	ctx context.Context,
+	first *int,
+	last *int,
+	after *string,
+	before *string,
+	inputIndex *int,
+) (*commons.PageResult[model.Report], error) {
+	return c.reportRepository.FindAllByInputIndex(
+		ctx,
+		first,
+		last,
+		after,
+		before,
+		inputIndex,
 	)
 }
 

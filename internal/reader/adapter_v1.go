@@ -178,9 +178,9 @@ func (a AdapterV1) GetReport(
 }
 
 func (a AdapterV1) GetReports(
+	ctx context.Context,
 	first *int, last *int, after *string, before *string, inputIndex *int,
 ) (*graphql.ReportConnection, error) {
-	ctx := context.Background()
 	reports, err := a.reportRepository.FindAllByInputIndex(
 		ctx,
 		first, last, after, before, inputIndex,
@@ -230,6 +230,7 @@ func (a AdapterV1) GetInput(index int) (*graphql.Input, error) {
 }
 
 func (a AdapterV1) GetInputs(
+	ctx context.Context,
 	first *int, last *int, after *string, before *string, where *graphql.InputFilter,
 ) (*graphql.InputConnection, error) {
 	filters := []*cModel.ConvenienceFilter{}
@@ -257,7 +258,6 @@ func (a AdapterV1) GetInputs(
 			})
 		}
 	}
-	ctx := context.Background()
 	inputs, err := a.inputRepository.FindAll(
 		ctx, first, last, after, before, filters,
 	)

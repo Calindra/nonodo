@@ -5,14 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"strings"
 
-	"github.com/calindra/nonodo/internal/commons"
 	convenience "github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/convenience/services"
 	"github.com/calindra/nonodo/internal/graphile"
-	"github.com/calindra/nonodo/internal/reader/model"
 	graphql "github.com/calindra/nonodo/internal/reader/model"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 type AdapterV2 struct {
@@ -146,53 +144,61 @@ func (a AdapterV2) GetReport(reportIndex int, inputIndex int) (*graphql.Report, 
 }
 
 func (a AdapterV2) GetReports(
+	ctx context.Context,
 	first *int,
 	last *int,
 	after *string,
 	before *string,
-	inputIndex *int) (*model.ReportConnection, error) {
-
-	forward := first != nil || after != nil
-	backward := last != nil || before != nil
-
-	if forward && backward {
-		return nil, commons.ErrMixedPagination
-	}
-
-	if !forward && !backward {
-		// If nothing was set, use forward pagination by default
-		forward = true
-	}
-
-	var requestBody []byte
-	var err error
-
-	if forward {
-		requestBody, _ = createForwardRequestBody(first, after, inputIndex)
-	} else {
-		requestBody, _ = createBackwardRequestBody(last, before, inputIndex)
-	}
-
-	response, err := a.graphileClient.Post(requestBody)
-
+	inputIndex *int) (*graphql.ReportConnection, error) {
+	slog.Debug("adapter_v2.GetReports",
+		"first", first,
+	)
+	reports, err := a.convenienceService.FindAllByInputIndex(
+		ctx,
+		first, last, after, before, inputIndex,
+	)
 	if err != nil {
-		slog.Error("Error calling Graphile Reports", "error", err)
+		slog.Error("Adapter GetReports", "error", err)
 		return nil, err
 	}
+	return a.convertToReportConnection(
+		reports.Rows,
+		int(reports.Offset),
+		int(reports.Total),
+	)
+}
 
-	return processReportsResponse(response, after, before, forward, last)
+func (a AdapterV2) convertToReportConnection(
+	reports []convenience.Report,
+	offset int, total int,
+) (*graphql.ReportConnection, error) {
+	convNodes := make([]*graphql.Report, len(reports))
+	for i := range reports {
+		convNodes[i] = a.convertToReport(reports[i])
+	}
+	return graphql.NewConnection(offset, total, convNodes), nil
+}
+
+func (a AdapterV2) convertToReport(
+	report convenience.Report,
+) *graphql.Report {
+	return &graphql.Report{
+		Index:      report.Index,
+		InputIndex: report.InputIndex,
+		Payload:    fmt.Sprintf("0x%s", common.Bytes2Hex(report.Payload)),
+	}
 }
 
 func (a AdapterV2) GetInputs(
+	ctx context.Context,
 	first *int,
 	last *int,
 	after *string,
 	before *string,
-	where *model.InputFilter) (*model.InputConnection, error) {
+	where *graphql.InputFilter) (*graphql.InputConnection, error) {
 
 	filters := []*convenience.ConvenienceFilter{}
 
-	ctx := context.Background()
 	inputs, err := a.convenienceService.FindAllInputs(
 		ctx,
 		first,
@@ -232,7 +238,7 @@ func (a AdapterV2) GetInput(index int) (*graphql.Input, error) {
 	}, nil
 }
 
-func (a AdapterV2) GetNotice(noticeIndex int, inputIndex int) (*model.Notice, error) {
+func (a AdapterV2) GetNotice(noticeIndex int, inputIndex int) (*graphql.Notice, error) {
 	ctx := context.Background()
 	notice, err := a.convenienceService.FindNoticeByInputAndOutputIndex(
 		ctx,
@@ -257,7 +263,7 @@ func (a AdapterV2) GetNotices(
 	last *int,
 	after *string,
 	before *string,
-	inputIndex *int) (*model.NoticeConnection, error) {
+	inputIndex *int) (*graphql.NoticeConnection, error) {
 	filters := []*convenience.ConvenienceFilter{}
 	if inputIndex != nil {
 		field := convenience.INPUT_INDEX
@@ -286,7 +292,7 @@ func (a AdapterV2) GetNotices(
 	)
 }
 
-func (a AdapterV2) GetVoucher(voucherIndex int, inputIndex int) (*model.Voucher, error) {
+func (a AdapterV2) GetVoucher(voucherIndex int, inputIndex int) (*graphql.Voucher, error) {
 	ctx := context.Background()
 	voucher, err := a.convenienceService.FindVoucherByInputAndOutputIndex(
 		ctx, uint64(inputIndex), uint64(voucherIndex))
@@ -309,7 +315,7 @@ func (a AdapterV2) GetVouchers(
 	last *int,
 	after *string,
 	before *string,
-	inputIndex *int) (*model.VoucherConnection, error) {
+	inputIndex *int) (*graphql.VoucherConnection, error) {
 
 	filters := []*convenience.ConvenienceFilter{}
 	if inputIndex != nil {
@@ -351,141 +357,6 @@ func convertReport(node struct {
 	}, nil
 }
 
-func createForwardRequestBody(first *int, after *string, inputIndex *int) ([]byte, error) {
-	var builder strings.Builder
-
-	builder.WriteString(`{ "query": "query { reports(`)
-
-	if first != nil {
-		builder.WriteString(fmt.Sprintf("first: %d", *first))
-	}
-
-	if after != nil {
-		if first != nil {
-			builder.WriteString(", ")
-		}
-		builder.WriteString(fmt.Sprintf("after: \"%s\"", *after))
-	}
-
-	if inputIndex != nil {
-		if first != nil || after != nil {
-			builder.WriteString(", ")
-		}
-		builder.WriteString(fmt.Sprintf("condition: {inputIndex: %d}", *inputIndex))
-	}
-
-	builder.WriteString(`) { edges { cursor node { index inputIndex blob }}} }" }`)
-
-	return []byte(builder.String()), nil
-}
-
-func createBackwardRequestBody(last *int, before *string, inputIndex *int) ([]byte, error) {
-	var builder strings.Builder
-
-	builder.WriteString(`{ "query": "query { reports(`)
-
-	paramsAdded := false
-
-	if last != nil {
-		builder.WriteString(fmt.Sprintf("last: %d", *last))
-		paramsAdded = true
-	}
-
-	if before != nil {
-		if paramsAdded {
-			builder.WriteString(", ")
-		}
-		builder.WriteString(fmt.Sprintf("before: \"%s\"", *before))
-		paramsAdded = true
-	}
-
-	if inputIndex != nil {
-		if paramsAdded {
-			builder.WriteString(", ")
-		}
-		builder.WriteString(fmt.Sprintf("condition: {inputIndex: %d}", *inputIndex))
-	}
-
-	builder.WriteString(`) { edges { cursor node { index inputIndex blob }}} }" }`)
-
-	return []byte(builder.String()), nil
-}
-
-func processReportsResponse(response []byte, after *string, before *string, forward bool, last *int) (*model.ReportConnection, error) {
-	var reportByIdResponse ReportByIdResponse
-	err := json.Unmarshal(response, &reportByIdResponse)
-	if err != nil {
-		slog.Error("Error decoding JSON", "error", err)
-		return nil, err
-	}
-
-	reports := make([]*graphql.Report, 0, len(reportByIdResponse.Data.Reports.Edges))
-	for _, edge := range reportByIdResponse.Data.Reports.Edges {
-		convertedReport, err := convertReport(edge.Node)
-		if err != nil {
-			return nil, err
-		}
-		reports = append(reports, convertedReport)
-	}
-
-	if forward {
-		offset, err := calculateOffset(after, len(reportByIdResponse.Data.Reports.Edges))
-		if err != nil {
-			return nil, err
-		}
-		return graphql.NewConnection(offset, len(reportByIdResponse.Data.Reports.Edges), reports), nil
-	} else {
-		offset, err := calculateOffsetBefore(before, len(reportByIdResponse.Data.Reports.Edges), last)
-		if err != nil {
-			return nil, err
-		}
-		return graphql.NewConnection(offset, len(reportByIdResponse.Data.Reports.Edges), reports), nil
-	}
-}
-
-func calculateOffset(after *string, length int) (int, error) {
-	if after != nil {
-		offset, err := commons.DecodeCursor(*after, length)
-		if err != nil {
-			return 0, err
-		}
-		return offset + 1, nil
-	}
-	return 0, nil
-}
-
-func calculateOffsetBefore(before *string, length int, last *int) (int, error) {
-	var beforeOffset int
-	if before != nil {
-		offset, err := commons.DecodeCursor(*before, length)
-		if err != nil {
-			return 0, err
-		}
-		beforeOffset = offset
-	} else {
-		beforeOffset = length
-	}
-
-	var limit int
-	if last != nil {
-		if *last < 0 {
-			return 0, commons.ErrInvalidLimit
-		}
-		limit = *last
-	} else {
-		limit = commons.DefaultPaginationLimit
-	}
-
-	return max(0, beforeOffset-limit), nil
-}
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
-
 func (a AdapterV2) convertCompletionStatus(input convenience.AdvanceInput) graphql.CompletionStatus {
 	switch input.Status {
 	case convenience.CompletionStatusUnprocessed:
@@ -498,6 +369,5 @@ func (a AdapterV2) convertCompletionStatus(input convenience.AdvanceInput) graph
 		return graphql.CompletionStatusRejected
 	default:
 		return graphql.CompletionStatusUnprocessed
-
 	}
 }

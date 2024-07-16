@@ -68,7 +68,10 @@ func (s *RollupSuite) SetupTest() {
 	db := sqlx.MustConnect("sqlite3", sqliteFileName)
 	container := convenience.NewContainer(*db)
 	decoder := container.GetOutputDecoder()
-	nonodoModel := model.NewNonodoModel(decoder, db)
+	nonodoModel := model.NewNonodoModel(decoder,
+		container.GetReportRepository(),
+		container.GetInputRepository(),
+	)
 
 	// Sequencer
 	var sequencer model.Sequencer = &SequencerMock{}

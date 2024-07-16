@@ -53,9 +53,13 @@ func (s *ModelSuite) SetupTest() {
 	db := sqlx.MustConnect("sqlite3", sqliteFileName)
 	container := convenience.NewContainer(*db)
 	decoder := container.GetOutputDecoder()
-	s.m = NewNonodoModel(decoder, db)
-	s.reportRepository = s.m.reportRepository
-	s.inputRepository = s.m.inputRepository
+	s.reportRepository = container.GetReportRepository()
+	s.inputRepository = container.GetInputRepository()
+	s.m = NewNonodoModel(
+		decoder,
+		s.reportRepository,
+		s.inputRepository,
+	)
 	s.convenienceService = container.GetConvenienceService()
 	s.n = 3
 	s.payloads = make([][]byte, s.n)

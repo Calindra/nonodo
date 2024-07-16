@@ -24,6 +24,7 @@ type Container struct {
 	graphileSynchronizer *synchronizer.GraphileSynchronizer
 	graphileClient       graphile.GraphileClient
 	inputRepository      *repository.InputRepository
+	reportRepository     *repository.ReportRepository
 }
 
 func NewContainer(db sqlx.DB) *Container {
@@ -96,6 +97,20 @@ func (c *Container) GetInputRepository() *repository.InputRepository {
 	return c.inputRepository
 }
 
+func (c *Container) GetReportRepository() *repository.ReportRepository {
+	if c.reportRepository != nil {
+		return c.reportRepository
+	}
+	c.reportRepository = &repository.ReportRepository{
+		Db: c.db,
+	}
+	err := c.reportRepository.CreateTables()
+	if err != nil {
+		panic(err)
+	}
+	return c.reportRepository
+}
+
 func (c *Container) GetConvenienceService() *services.ConvenienceService {
 	if c.convenienceService != nil {
 		return c.convenienceService
@@ -104,6 +119,7 @@ func (c *Container) GetConvenienceService() *services.ConvenienceService {
 		c.GetRepository(),
 		c.GetNoticeRepository(),
 		c.GetInputRepository(),
+		c.GetReportRepository(),
 	)
 	return c.convenienceService
 }

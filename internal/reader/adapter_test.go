@@ -80,12 +80,12 @@ func (s *AdapterSuite) TestGetReports() {
 		})
 		s.NoError(err)
 	}
-	res, err := s.adapter.GetReports(nil, nil, nil, nil, nil)
+	res, err := s.adapter.GetReports(ctx, nil, nil, nil, nil, nil)
 	s.NoError(err)
 	s.Equal(3, res.TotalCount)
 
 	inputIndex := 1
-	res, err = s.adapter.GetReports(nil, nil, nil, nil, &inputIndex)
+	res, err = s.adapter.GetReports(ctx, nil, nil, nil, nil, &inputIndex)
 	s.NoError(err)
 	s.Equal(1, res.TotalCount)
 }
@@ -103,7 +103,7 @@ func (s *AdapterSuite) TestGetInputs() {
 		})
 		s.NoError(err)
 	}
-	res, err := s.adapter.GetInputs(nil, nil, nil, nil, nil)
+	res, err := s.adapter.GetInputs(ctx, nil, nil, nil, nil, nil)
 	s.NoError(err)
 	s.Equal(3, res.TotalCount)
 
@@ -111,7 +111,7 @@ func (s *AdapterSuite) TestGetInputs() {
 	filter := model.InputFilter{
 		MsgSender: &msgSender,
 	}
-	res, err = s.adapter.GetInputs(nil, nil, nil, nil, &filter)
+	res, err = s.adapter.GetInputs(ctx, nil, nil, nil, nil, &filter)
 	s.NoError(err)
 	s.Equal(1, res.TotalCount)
 	s.Equal(res.Edges[0].Node.MsgSender, msgSender)
