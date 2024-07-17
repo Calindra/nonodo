@@ -1,11 +1,16 @@
 package synchronizer
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"testing"
 
+	"github.com/calindra/nonodo/internal/convenience/decoder"
+	"github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -23,10 +28,7 @@ func (m *AdapterMock) ConvertVoucherPayloadToV2(payloadV1 string) string {
 	return args.String(0)
 }
 
-func TestWhenThereIsNoDestination(t *testing.T) {
-	amount := 500.0
-	expected := 5.0
-
+func TestGetDestination_Failure(t *testing.T) {
 	jsonData := `{
 		"data": {
 			"outputs": {
@@ -106,35 +108,28 @@ func TestWhenThereIsNoDestination(t *testing.T) {
 		}
 	}`
 
-	// Convertendo JSON para a estrutura OutputResponse
 	var response OutputResponse
+
 	err := json.Unmarshal([]byte(jsonData), &response)
 	if err != nil {
 		fmt.Println("Erro ao fazer Unmarshal:", err)
 		return
 	}
 
-	// Imprimindo a estrutura populada
-	fmt.Printf("Estrutura OutputResponse: %+v\n", response)
-
-	// Convertendo a estrutura OutputResponse para JSON
-	jsonOutput, err := json.Marshal(response)
-	if err != nil {
-		fmt.Println("Erro ao fazer Marshal:", err)
-		return
-	}
-
-	// Imprimindo o JSON resultante
-	fmt.Println("JSON resultante:")
-	fmt.Println(string(jsonOutput))
-
+	ctx := context.Background()
 	adapterMock := &AdapterMock{}
-
-	adapterMock.On("ConvertVoucherPayloadToV2", mock.Anything).Return("1a2b3c")
-	adapterMock.On("GetDestination", mock.Anything).Return(common.Address{}, nil)
-
-	result := handleGraphileResponseTwo(amount, response, adapterMock)
-	if result != expected {
-		t.Errorf("Expected %f but got %f", expected, result)
+	synchronizer := GraphileSynchronizer{
+		Decoder:                &decoder.OutputDecoder{},
+		SynchronizerRepository: &repository.SynchronizerRepository{},
+		GraphileFetcher:        &GraphileFetcher{},
 	}
+
+	erro := errors.New("error")
+	adapterMock.On("ConvertVoucherPayloadToV2", mock.Anything).Return("1a2b3c")
+	adapterMock.On("GetDestination", mock.Anything).Return(common.Address{}, erro)
+
+	err = synchronizer.handleGraphileResponseTwo(ctx, response, adapterMock)
+
+	assert.Error(t, err)
+	assert.EqualError(t, err, "error retrieving destination for node blob '0x1a2b3c': error")
 }

@@ -22,8 +22,8 @@ type GraphileSynchronizer struct {
 }
 
 type Adapater interface {
-	GetDestination(payload string) (common.Address, error)
 	ConvertVoucherPayloadToV2(payloadV1 string) string
+	GetDestination(payload string) (common.Address, error)
 }
 
 func (x GraphileSynchronizer) String() string {
@@ -92,6 +92,7 @@ func (x GraphileSynchronizer) handleGraphileResponse(outputResp OutputResponse, 
 		)
 		destination, _ := adapter.GetDestination(output.Node.Blob)
 
+		//elegível a ser apagado
 		if len(destination) == 0 {
 			panic(fmt.Errorf("graphile sync error: len(destination) is 0"))
 		}
@@ -192,7 +193,7 @@ func (x GraphileSynchronizer) handleGraphileResponse(outputResp OutputResponse, 
 
 }
 
-func handleGraphileResponseTwo(amount float64, outputResp OutputResponse, adapter Adapater) float64 {
+func (x GraphileSynchronizer) handleGraphileResponseTwo(ctx context.Context, outputResp OutputResponse, adapter Adapater) error {
 
 	// Handle response data
 	voucherIds := []string{}
@@ -215,28 +216,27 @@ func handleGraphileResponseTwo(amount float64, outputResp OutputResponse, adapte
 			output.Node.Blob[2:],
 		)
 		fmt.Printf("Adapted: %+v\n", adapted)
-		destination, _ := adapter.GetDestination(output.Node.Blob)
+		destination, err := adapter.GetDestination(output.Node.Blob)
+
+		if err != nil {
+			slog.Error("Failed to retrieve destination for node blob '%s': %v", output.Node.Blob, err)
+			return fmt.Errorf("error retrieving destination for node blob '%s': %w", output.Node.Blob, err)
+		}
 
 		fmt.Printf("Destination: %+v\n", destination)
 
-		if len(destination) == 0 {
-			panic(fmt.Errorf("graphile sync error: len(destination) is 0"))
+		err = x.Decoder.HandleOutput(ctx,
+			destination,
+			adapted,
+			uint64(inputIndex),
+			uint64(outputIndex),
+		)
+		if err != nil {
+			panic(err)
 		}
+	}
 
-		// err := x.Decoder.HandleOutput(ctx,
-		// 	destination,
-		// 	adapted,
-		// 	uint64(inputIndex),
-		// 	uint64(outputIndex),
-		// )
-		// if err != nil {
-		// 	panic(err)
-		// }
-	}
-	if amount >= 1000 {
-		return 10.0
-	}
-	return 4.0
+	return nil
 }
 
 func NewGraphileSynchronizer(
