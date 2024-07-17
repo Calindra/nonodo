@@ -77,7 +77,10 @@ func (x GraphileSynchronizer) Start(ctx context.Context, ready chan<- struct{}) 
 			)
 		} else {
 			var adapterInterface AdapaterInterface
-			x.handleGraphileResponse(*voucherResp, ctx, adapterInterface)
+			err := x.handleGraphileResponse(*voucherResp, ctx, adapterInterface)
+			if err != nil {
+				panic(err)
+			}
 		}
 		select {
 		// Wait a little before doing another request
@@ -91,7 +94,7 @@ func (x GraphileSynchronizer) Start(ctx context.Context, ready chan<- struct{}) 
 
 }
 
-func (x GraphileSynchronizer) handleGraphileResponse(outputResp OutputResponse, ctx context.Context, adapter AdapaterInterface) {
+func (x GraphileSynchronizer) handleGraphileResponse(outputResp OutputResponse, ctx context.Context, adapter AdapaterInterface) error {
 	// Handle response data
 	voucherIds := []string{}
 	var initCursorAfter string
@@ -110,14 +113,14 @@ func (x GraphileSynchronizer) handleGraphileResponse(outputResp OutputResponse, 
 			fmt.Sprintf("%d:%d", inputIndex, outputIndex),
 		)
 		adapted := adapter.ConvertVoucherPayloadToV2Two(output)
-		destination, _ := adapter.GetDestinationTwo(output)
+		destination, err := adapter.GetDestinationTwo(output)
 
-		//elegível a ser apagado
-		if len(destination) == 0 {
-			panic(fmt.Errorf("graphile sync error: len(destination) is 0"))
+		if err != nil {
+			slog.Error("Failed to retrieve destination for node blob '%s': %v", output.Node.Blob, err)
+			return fmt.Errorf("error retrieving destination for node blob '%s': %w", output.Node.Blob, err)
 		}
 
-		err := x.Decoder.HandleOutput(ctx,
+		err = x.Decoder.HandleOutput(ctx,
 			destination,
 			adapted,
 			uint64(inputIndex),
@@ -210,50 +213,6 @@ func (x GraphileSynchronizer) handleGraphileResponse(outputResp OutputResponse, 
 			panic(err)
 		}
 	}
-
-}
-
-func (x GraphileSynchronizer) handleGraphileResponseTwo(ctx context.Context, outputResp OutputResponse, adapter AdapaterInterface) error {
-
-	// Handle response data
-	voucherIds := []string{}
-	// var initCursorAfter string
-	// var initInputCursorAfter string
-	// var initReportCursorAfter string
-
-	for _, output := range outputResp.Data.Outputs.Edges {
-		outputIndex := output.Node.Index
-		inputIndex := output.Node.InputIndex
-		slog.Debug("Add Voucher/Notices",
-			"inputIndex", inputIndex,
-			"outputIndex", outputIndex,
-		)
-		voucherIds = append(
-			voucherIds,
-			fmt.Sprintf("%d:%d", inputIndex, outputIndex),
-		)
-		adapted := adapter.ConvertVoucherPayloadToV2Two(output)
-		fmt.Printf("Adapted: %+v\n", adapted)
-		destination, err := adapter.GetDestinationTwo(output)
-
-		if err != nil {
-			slog.Error("Failed to retrieve destination for node blob '%s': %v", output.Node.Blob, err)
-			return fmt.Errorf("error retrieving destination for node blob '%s': %w", output.Node.Blob, err)
-		}
-
-		fmt.Printf("Destination: %+v\n", destination)
-
-		err = x.Decoder.HandleOutput(ctx,
-			destination,
-			adapted,
-			uint64(inputIndex),
-			uint64(outputIndex),
-		)
-		if err != nil {
-			panic(err)
-		}
-	}
-
 	return nil
 }
 
