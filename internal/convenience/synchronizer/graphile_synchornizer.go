@@ -139,7 +139,7 @@ func (x GraphileSynchronizer) handleGraphileResponse(outputResp OutputResponse, 
 	}
 
 	for _, report := range outputResp.Data.Reports.Edges {
-		slog.Debug("Add Report",
+		slog.Debug("Call HandleReport",
 			"Index", report.Node.Index,
 			"InputIndex", report.Node.InputIndex,
 		)
@@ -167,7 +167,7 @@ func (x GraphileSynchronizer) handleGraphileResponse(outputResp OutputResponse, 
 		x.GraphileFetcher.CursorInputAfter = outputResp.Data.Inputs.PageInfo.EndCursor
 	}
 
-	if hasMoreInputs || hasMoreOutputs {
+	if hasMoreInputs || hasMoreOutputs || hasMoreReports {
 		_, err := x.SynchronizerRepository.Create(
 			ctx, &model.SynchronizerFetch{
 				TimestampAfter:       uint64(time.Now().UnixMilli()),
