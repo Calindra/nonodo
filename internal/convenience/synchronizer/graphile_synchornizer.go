@@ -21,6 +21,11 @@ type GraphileSynchronizer struct {
 	GraphileFetcher        *GraphileFetcher
 }
 
+type Adapater interface {
+	GetDestination(payload string) (common.Address, error)
+	ConvertVoucherPayloadToV2(payloadV1 string) string
+}
+
 func (x GraphileSynchronizer) String() string {
 	return "GraphileSynchronizer"
 }
@@ -185,6 +190,53 @@ func (x GraphileSynchronizer) handleGraphileResponse(outputResp OutputResponse, 
 		}
 	}
 
+}
+
+func handleGraphileResponseTwo(amount float64, outputResp OutputResponse, adapter Adapater) float64 {
+
+	// Handle response data
+	voucherIds := []string{}
+	// var initCursorAfter string
+	// var initInputCursorAfter string
+	// var initReportCursorAfter string
+
+	for _, output := range outputResp.Data.Outputs.Edges {
+		outputIndex := output.Node.Index
+		inputIndex := output.Node.InputIndex
+		slog.Debug("Add Voucher/Notices",
+			"inputIndex", inputIndex,
+			"outputIndex", outputIndex,
+		)
+		voucherIds = append(
+			voucherIds,
+			fmt.Sprintf("%d:%d", inputIndex, outputIndex),
+		)
+		adapted := adapter.ConvertVoucherPayloadToV2(
+			output.Node.Blob[2:],
+		)
+		fmt.Printf("Adapted: %+v\n", adapted)
+		destination, _ := adapter.GetDestination(output.Node.Blob)
+
+		fmt.Printf("Destination: %+v\n", destination)
+
+		if len(destination) == 0 {
+			panic(fmt.Errorf("graphile sync error: len(destination) is 0"))
+		}
+
+		// err := x.Decoder.HandleOutput(ctx,
+		// 	destination,
+		// 	adapted,
+		// 	uint64(inputIndex),
+		// 	uint64(outputIndex),
+		// )
+		// if err != nil {
+		// 	panic(err)
+		// }
+	}
+	if amount >= 1000 {
+		return 10.0
+	}
+	return 4.0
 }
 
 func NewGraphileSynchronizer(
