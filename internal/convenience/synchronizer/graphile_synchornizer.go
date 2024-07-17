@@ -76,8 +76,8 @@ func (x GraphileSynchronizer) Start(ctx context.Context, ready chan<- struct{}) 
 				"error", err.Error(),
 			)
 		} else {
-			// a := x.Adapater
-			x.handleGraphileResponse(*voucherResp, ctx)
+			var adapterInterface AdapaterInterface
+			x.handleGraphileResponse(*voucherResp, ctx, adapterInterface)
 		}
 		select {
 		// Wait a little before doing another request
@@ -91,7 +91,7 @@ func (x GraphileSynchronizer) Start(ctx context.Context, ready chan<- struct{}) 
 
 }
 
-func (x GraphileSynchronizer) handleGraphileResponse(outputResp OutputResponse, ctx context.Context) {
+func (x GraphileSynchronizer) handleGraphileResponse(outputResp OutputResponse, ctx context.Context, adapter AdapaterInterface) {
 	// Handle response data
 	voucherIds := []string{}
 	var initCursorAfter string
@@ -109,10 +109,8 @@ func (x GraphileSynchronizer) handleGraphileResponse(outputResp OutputResponse, 
 			voucherIds,
 			fmt.Sprintf("%d:%d", inputIndex, outputIndex),
 		)
-		adapted := adapter.ConvertVoucherPayloadToV2(
-			output.Node.Blob[2:],
-		)
-		destination, _ := adapter.GetDestination(output.Node.Blob)
+		adapted := adapter.ConvertVoucherPayloadToV2Two(output)
+		destination, _ := adapter.GetDestinationTwo(output)
 
 		//elegível a ser apagado
 		if len(destination) == 0 {
