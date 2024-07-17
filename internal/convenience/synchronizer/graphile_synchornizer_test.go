@@ -18,13 +18,13 @@ type AdapterMock struct {
 	mock.Mock
 }
 
-func (m *AdapterMock) GetDestination(payload string) (common.Address, error) {
-	args := m.Called(payload)
+func (m *AdapterMock) GetDestinationTwo(output Edge) (common.Address, error) {
+	args := m.Called(output)
 	return args.Get(0).(common.Address), args.Error(1)
 }
 
-func (m *AdapterMock) ConvertVoucherPayloadToV2(payloadV1 string) string {
-	args := m.Called(payloadV1)
+func (m *AdapterMock) ConvertVoucherPayloadToV2Two(output Edge) string {
+	args := m.Called(output)
 	return args.String(0)
 }
 
@@ -125,8 +125,8 @@ func TestGetDestination_Failure(t *testing.T) {
 	}
 
 	erro := errors.New("error")
-	adapterMock.On("ConvertVoucherPayloadToV2", mock.Anything).Return("1a2b3c")
-	adapterMock.On("GetDestination", mock.Anything).Return(common.Address{}, erro)
+	adapterMock.On("ConvertVoucherPayloadToV2Two", mock.Anything).Return("1a2b3c")
+	adapterMock.On("GetDestinationTwo", mock.Anything).Return(common.Address{}, erro)
 
 	err = synchronizer.handleGraphileResponseTwo(ctx, response, adapterMock)
 

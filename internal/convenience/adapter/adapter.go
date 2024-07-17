@@ -9,7 +9,13 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
+type Adapter struct{}
+
 func ConvertVoucherPayloadToV2(payloadV1 string) string {
+	return fmt.Sprintf("0x%s%s", model.VOUCHER_SELECTOR, payloadV1)
+}
+
+func (a *Adapter) ConvertVoucherPayloadToV2Two(payloadV1 string) string {
 	return fmt.Sprintf("0x%s%s", model.VOUCHER_SELECTOR, payloadV1)
 }
 
@@ -24,6 +30,26 @@ func RemoveSelector(payload string) string {
 }
 
 func GetDestination(payload string) (common.Address, error) {
+	abiParsed, err := contracts.OutputsMetaData.GetAbi()
+
+	if err != nil {
+		slog.Error("Error parsing abi", "err", err)
+		return common.Address{}, err
+	}
+
+	slog.Info("payload", "payload", payload)
+
+	values, err := abiParsed.Methods["Voucher"].Inputs.Unpack(common.Hex2Bytes(payload[10:]))
+
+	if err != nil {
+		slog.Error("Error unpacking abi", "err", err)
+		return common.Address{}, err
+	}
+
+	return values[0].(common.Address), nil
+}
+
+func (a *Adapter) GetDestinationTwo(payload string) (common.Address, error) {
 	abiParsed, err := contracts.OutputsMetaData.GetAbi()
 
 	if err != nil {

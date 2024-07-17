@@ -21,9 +21,30 @@ type GraphileSynchronizer struct {
 	GraphileFetcher        *GraphileFetcher
 }
 
-type Adapater interface {
-	ConvertVoucherPayloadToV2(payloadV1 string) string
-	GetDestination(payload string) (common.Address, error)
+type AdapterService struct {
+	adapt adapter.Adapter
+}
+type AdapaterInterface interface {
+	ConvertVoucherPayloadToV2Two(output Edge) string
+	GetDestinationTwo(output Edge) (common.Address, error)
+}
+
+type Edge struct {
+	Cursor string `json:"cursor"`
+	Node   struct {
+		Index      int    `json:"index"`
+		Blob       string `json:"blob"`
+		InputIndex int    `json:"inputIndex"`
+	} `json:"node"`
+}
+
+func (m *AdapterService) ConvertVoucherPayloadToV2Two(output Edge) string {
+	adapted := m.adapt.ConvertVoucherPayloadToV2Two(output.Node.Blob[2:])
+	return adapted
+}
+
+func (m *AdapterService) GetDestinationTwo(output Edge) (common.Address, error) {
+	return m.adapt.GetDestinationTwo(output.Node.Blob)
 }
 
 func (x GraphileSynchronizer) String() string {
@@ -55,6 +76,7 @@ func (x GraphileSynchronizer) Start(ctx context.Context, ready chan<- struct{}) 
 				"error", err.Error(),
 			)
 		} else {
+			// a := x.Adapater
 			x.handleGraphileResponse(*voucherResp, ctx)
 		}
 		select {
@@ -193,7 +215,7 @@ func (x GraphileSynchronizer) handleGraphileResponse(outputResp OutputResponse, 
 
 }
 
-func (x GraphileSynchronizer) handleGraphileResponseTwo(ctx context.Context, outputResp OutputResponse, adapter Adapater) error {
+func (x GraphileSynchronizer) handleGraphileResponseTwo(ctx context.Context, outputResp OutputResponse, adapter AdapaterInterface) error {
 
 	// Handle response data
 	voucherIds := []string{}
@@ -212,11 +234,9 @@ func (x GraphileSynchronizer) handleGraphileResponseTwo(ctx context.Context, out
 			voucherIds,
 			fmt.Sprintf("%d:%d", inputIndex, outputIndex),
 		)
-		adapted := adapter.ConvertVoucherPayloadToV2(
-			output.Node.Blob[2:],
-		)
+		adapted := adapter.ConvertVoucherPayloadToV2Two(output)
 		fmt.Printf("Adapted: %+v\n", adapted)
-		destination, err := adapter.GetDestination(output.Node.Blob)
+		destination, err := adapter.GetDestinationTwo(output)
 
 		if err != nil {
 			slog.Error("Failed to retrieve destination for node blob '%s': %v", output.Node.Blob, err)
