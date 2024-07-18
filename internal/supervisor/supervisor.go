@@ -41,7 +41,6 @@ func (w SupervisorWorker) Start(ctx context.Context, ready chan<- struct{}) erro
 	var wg sync.WaitGroup
 Loop:
 	for _, worker := range w.Workers {
-		worker := worker
 		logger := slog.With("worker", worker)
 		wg.Add(1)
 		innerReady := make(chan struct{})

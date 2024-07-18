@@ -38,9 +38,10 @@ const anvilCommand = "anvil"
 
 // Start the anvil process in the host machine.
 type AnvilWorker struct {
-	Address string
-	Port    int
-	Verbose bool
+	Address  string
+	Port     int
+	Verbose  bool
+	AnvilCmd string
 }
 
 // Define a struct to represent the structure of your JSON data
@@ -81,10 +82,9 @@ func CheckAnvilAndInstall(ctx context.Context) (string, error) {
 		}
 		slog.Info("anvil: installed anvil", "location", location)
 		return location, nil
-	} else {
-		slog.Info("anvil: anvil is installed")
 	}
 
+	slog.Info("anvil: anvil is installed")
 	return anvilCommand, nil
 }
 
@@ -117,8 +117,6 @@ func ShowAddresses() {
 }
 
 func (w AnvilWorker) Start(ctx context.Context, ready chan<- struct{}) error {
-	anvilCmd := anvilCommand
-
 	dir, err := makeStateTemp()
 	if err != nil {
 		return err
@@ -126,21 +124,9 @@ func (w AnvilWorker) Start(ctx context.Context, ready chan<- struct{}) error {
 	defer removeTemp(dir)
 	slog.Debug("anvil: created temp dir with state file", "dir", dir)
 
-	// if !IsAnvilInstalled() {
-	// 	location, err := InstallAnvil(ctx)
-
-	// 	if err != nil {
-	// 		return fmt.Errorf("anvil: failed to install anvil %s", err.Error())
-	// 	}
-
-	// 	slog.Info("anvil: installed anvil", "location", location)
-	// }
-
-	// slog.Debug("anvil: anvil is installed")
-
 	var server supervisor.ServerWorker
 	server.Name = anvilCommand
-	server.Command = anvilCmd
+	server.Command = w.AnvilCmd
 	server.Port = w.Port
 	server.Args = append(server.Args, "--host", fmt.Sprint(w.Address))
 	server.Args = append(server.Args, "--port", fmt.Sprint(w.Port))

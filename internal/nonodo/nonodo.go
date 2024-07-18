@@ -224,18 +224,28 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	}))
 
 	if opts.RpcUrl == "" && !opts.DisableDevnet {
-		var timeout time.Duration = 10 * time.Minute
-		ctx, canc := context.WithTimeout(context.Background(), timeout)
-		defer canc()
+		var timeoutAnvil time.Duration = 10 * time.Minute
+		ctx, cancel := context.WithTimeout(context.Background(), timeoutAnvil)
+		defer cancel()
 
-		if _, err := devnet.CheckAnvilAndInstall(ctx); err != nil {
+		go func() {
+			<-ctx.Done()
+			if ctx.Err() == context.DeadlineExceeded {
+				slog.Error("Timeout waiting for anvil")
+			}
+		}()
+
+		anvilLocation, err := devnet.CheckAnvilAndInstall(ctx)
+
+		if err != nil {
 			panic(err)
 		}
 
 		w.Workers = append(w.Workers, devnet.AnvilWorker{
-			Address: opts.AnvilAddress,
-			Port:    opts.AnvilPort,
-			Verbose: opts.AnvilVerbose,
+			Address:  opts.AnvilAddress,
+			Port:     opts.AnvilPort,
+			Verbose:  opts.AnvilVerbose,
+			AnvilCmd: anvilLocation,
 		})
 		opts.RpcUrl = fmt.Sprintf("ws://%s:%v", opts.AnvilAddress, opts.AnvilPort)
 	}
