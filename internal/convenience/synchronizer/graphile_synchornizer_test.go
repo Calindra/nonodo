@@ -18,12 +18,12 @@ type AdapterInterfaceMock struct {
 	mock.Mock
 }
 
-func (m *AdapterInterfaceMock) GetDestinationTwo(output Edge) (common.Address, error) {
+func (m *AdapterInterfaceMock) RetrieveDestination(output Edge) (common.Address, error) {
 	args := m.Called(output)
 	return args.Get(0).(common.Address), args.Error(1)
 }
 
-func (m *AdapterInterfaceMock) ConvertVoucherPayloadToV2Two(output Edge) string {
+func (m *AdapterInterfaceMock) ConvertVoucher(output Edge) string {
 	args := m.Called(output)
 	return args.String(0)
 }
@@ -127,13 +127,14 @@ func TestGetDestination_Failure(t *testing.T) {
 		Decoder:                &decoder.OutputDecoder{},
 		SynchronizerRepository: &repository.SynchronizerRepository{},
 		GraphileFetcher:        &GraphileFetcher{},
+		Adapter:                adapterMock,
 	}
 
 	erro := errors.New("error")
-	adapterMock.On("ConvertVoucherPayloadToV2Two", mock.Anything).Return("1a2b3c")
-	adapterMock.On("GetDestinationTwo", mock.Anything).Return(common.Address{}, erro)
+	adapterMock.On("ConvertVoucher", mock.Anything).Return("1a2b3c")
+	adapterMock.On("RetrieveDestination", mock.Anything).Return(common.Address{}, erro)
 
-	err = synchronizer.handleGraphileResponse(response, ctx, adapterMock)
+	err = synchronizer.handleGraphileResponse(response, ctx)
 
 	assert.Error(t, err)
 	assert.EqualError(t, err, "error retrieving destination for node blob '0x1a2b3c': error")

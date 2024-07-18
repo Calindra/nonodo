@@ -19,14 +19,22 @@ type GraphileSynchronizer struct {
 	Decoder                *decoder.OutputDecoder
 	SynchronizerRepository *repository.SynchronizerRepository
 	GraphileFetcher        *GraphileFetcher
+	Adapter                AdapterConnector
 }
 
 type AdapterService struct {
-	adapt adapter.Adapter
+	adapter adapter.Adapter
 }
-type AdapaterInterface interface {
-	ConvertVoucherPayloadToV2Two(output Edge) string
-	GetDestinationTwo(output Edge) (common.Address, error)
+
+type InputTransactionRecord struct {
+	Destination common.Address
+	Payload     string
+	InputIndex  uint64
+	OutputIndex uint64
+}
+type AdapterConnector interface {
+	ConvertVoucher(output Edge) string
+	RetrieveDestination(output Edge) (common.Address, error)
 	GetConvertedInput(output InputEdge) ([]interface{}, error)
 }
 
@@ -47,18 +55,22 @@ type InputEdge struct {
 	} `json:"node"`
 }
 
-func (m *AdapterService) ConvertVoucherPayloadToV2Two(output Edge) string {
-	adapted := m.adapt.ConvertVoucherPayloadToV2Two(output.Node.Blob[2:])
+func (m *AdapterService) ConvertVoucher(output Edge) string {
+	adapted := m.adapter.ConvertVoucherPayloadToV2Two(output.Node.Blob[2:])
 	return adapted
 }
 
-func (m *AdapterService) GetDestinationTwo(output Edge) (common.Address, error) {
-	return m.adapt.GetDestinationTwo(output.Node.Blob)
+func (m *AdapterService) RetrieveDestination(output Edge) (common.Address, error) {
+	return m.adapter.GetDestinationTwo(output.Node.Blob)
 }
 
 func (m *AdapterService) GetConvertedInput(input InputEdge) ([]interface{}, error) {
-	return m.adapt.GetConvertedInput(input.Node.Blob)
+	return m.adapter.GetConvertedInput(input.Node.Blob)
 }
+
+// func (m *AdapterService) HandleOutput(ctx context.Context, inputTransactionRecord InputTransactionRecord) {
+// 	return m.adapter.GetConvertedInput(input.Node.Blob)
+// }
 
 func (x GraphileSynchronizer) String() string {
 	return "GraphileSynchronizer"
@@ -72,6 +84,7 @@ func (x GraphileSynchronizer) Start(ctx context.Context, ready chan<- struct{}) 
 	lastFetch, err := x.SynchronizerRepository.GetLastFetched(ctx)
 
 	if err != nil {
+		//Com panic
 		panic(err)
 	}
 
@@ -89,9 +102,9 @@ func (x GraphileSynchronizer) Start(ctx context.Context, ready chan<- struct{}) 
 				"error", err.Error(),
 			)
 		} else {
-			var adapterInterface AdapaterInterface
-			err := x.handleGraphileResponse(*voucherResp, ctx, adapterInterface)
+			err := x.handleGraphileResponse(*voucherResp, ctx)
 			if err != nil {
+				//Sem panic
 				panic(err)
 			}
 		}
@@ -107,7 +120,7 @@ func (x GraphileSynchronizer) Start(ctx context.Context, ready chan<- struct{}) 
 
 }
 
-func (x GraphileSynchronizer) handleGraphileResponse(outputResp OutputResponse, ctx context.Context, adapter AdapaterInterface) error {
+func (x GraphileSynchronizer) handleGraphileResponse(outputResp OutputResponse, ctx context.Context) error {
 	// Handle response data
 	voucherIds := []string{}
 	var initCursorAfter string
@@ -125,8 +138,8 @@ func (x GraphileSynchronizer) handleGraphileResponse(outputResp OutputResponse, 
 			voucherIds,
 			fmt.Sprintf("%d:%d", inputIndex, outputIndex),
 		)
-		adapted := adapter.ConvertVoucherPayloadToV2Two(output)
-		destination, err := adapter.GetDestinationTwo(output)
+		adapted := x.Adapter.ConvertVoucher(output)
+		destination, err := x.Adapter.RetrieveDestination(output)
 
 		if err != nil {
 			slog.Error("Failed to retrieve destination for node blob '%s': %v", output.Node.Blob, err)
@@ -157,7 +170,7 @@ func (x GraphileSynchronizer) handleGraphileResponse(outputResp OutputResponse, 
 			"Index", input.Node.Index,
 		)
 
-		adapted, _ := adapter.GetConvertedInput(input)
+		adapted, _ := x.Adapter.GetConvertedInput(input)
 
 		inputIndex := input.Node.Index
 		msgSender := adapted[2].(common.Address)
