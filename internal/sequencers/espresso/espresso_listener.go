@@ -3,19 +3,26 @@ package espresso
 import (
 	"context"
 	"fmt"
+	"io"
 	"log/slog"
+	"net/http"
 	"os"
+	"strconv"
 	"time"
 
+	"github.com/calindra/nonodo/internal/contracts"
 	cModel "github.com/calindra/nonodo/internal/convenience/model"
 	cRepos "github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/calindra/nonodo/internal/dataavailability"
 	"github.com/calindra/nonodo/internal/sequencers/inputter"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/tidwall/gjson"
 )
 
 type EspressoListener struct {
 	espressoAPI     *dataavailability.EspressoAPI
+	espressoUrl     string
 	namespace       uint64
 	InputRepository *cRepos.InputRepository
 	fromBlock       uint64
@@ -26,16 +33,12 @@ func (e EspressoListener) String() string {
 	return "espresso_listener"
 }
 
-func NewEspressoListener(namespace uint64, repository *cRepos.InputRepository, fromBlock uint64, w *inputter.InputterWorker) *EspressoListener {
-	return &EspressoListener{namespace: namespace, InputRepository: repository, fromBlock: fromBlock, InputterWorker: w}
+func NewEspressoListener(espressoUrl string, namespace uint64, repository *cRepos.InputRepository, fromBlock uint64, w *inputter.InputterWorker) *EspressoListener {
+	return &EspressoListener{espressoUrl: espressoUrl, namespace: namespace, InputRepository: repository, fromBlock: fromBlock, InputterWorker: w}
 }
 
 func (e EspressoListener) getBaseUrl() string {
-	url := os.Getenv("ESPRESSO_URL")
-	if url == "" {
-		url = "https://query.cappuccino.testnet.espresso.network/"
-	}
-	return url
+	return e.espressoUrl
 }
 
 func (e EspressoListener) Start(ctx context.Context, ready chan<- struct{}) error {
@@ -76,8 +79,8 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 			tot := len(transactions.Transactions)
 
 			if tot > 0 {
-				l1FinalizedPrevHeight := getL1FinalizedHeight(previousBlockHeight)
-				l1FinalizedCurrentHeight := getL1FinalizedHeight(currentBlockHeight)
+				l1FinalizedPrevHeight := e.getL1FinalizedHeight(previousBlockHeight)
+				l1FinalizedCurrentHeight := e.getL1FinalizedHeight(currentBlockHeight)
 				slog.Debug("L1 finalized", "from", l1FinalizedPrevHeight, "to", l1FinalizedCurrentHeight)
 
 				// read L1 if there might be update
@@ -138,8 +141,8 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 					Index:          int(index),
 					MsgSender:      msgSender,
 					Payload:        []byte(payload),
-					BlockNumber:    getL1FinalizedHeight(currentBlockHeight),
-					BlockTimestamp: getL1FinalizedTimestamp(currentBlockHeight),
+					BlockNumber:    e.getL1FinalizedHeight(currentBlockHeight),
+					BlockTimestamp: e.getL1FinalizedTimestamp(currentBlockHeight),
 				})
 				if err != nil {
 					return err
@@ -147,4 +150,56 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 			}
 		}
 	}
+}
+
+func (e EspressoListener) readEspressoHeader(espressoBlockHeight uint64) string {
+	requestURL := fmt.Sprintf("%s/availability/header/%d", e.espressoUrl, espressoBlockHeight)
+	res, err := http.Get(requestURL)
+	if err != nil {
+		slog.Error("error making http request", "err", err)
+		os.Exit(1)
+	}
+	resBody, err := io.ReadAll(res.Body)
+	if err != nil {
+		slog.Error("could not read response body", "err", err)
+		os.Exit(1)
+	}
+
+	return string(resBody)
+}
+
+func (e EspressoListener) getL1FinalizedTimestamp(espressoBlockHeight uint64) time.Time {
+	espressoHeader := e.readEspressoHeader(espressoBlockHeight)
+	value := gjson.Get(espressoHeader, "l1_finalized.timestamp")
+	timestampStr := value.Str
+	timestampInt, err := strconv.ParseInt(timestampStr[2:], 16, 64)
+	if err != nil {
+		slog.Error("hex to int conversion failed", "err", err)
+		os.Exit(1)
+	}
+	return time.Unix(timestampInt, 0)
+}
+
+func (e EspressoListener) getL1FinalizedHeight(espressoBlockHeight uint64) uint64 {
+	espressoHeader := e.readEspressoHeader(espressoBlockHeight)
+	value := gjson.Get(espressoHeader, "l1_finalized.number")
+	return value.Uint()
+}
+
+func readInputBox(ctx context.Context, l1FinalizedPrevHeight uint64, l1FinalizedCurrentHeight uint64, w *inputter.InputterWorker) error {
+	client, err := ethclient.DialContext(ctx, w.Provider)
+	if err != nil {
+		return fmt.Errorf("espresso inputter: dial: %w", err)
+	}
+	inputBox, err := contracts.NewInputBox(w.InputBoxAddress, client)
+	if err != nil {
+		return fmt.Errorf("espresso inputter: bind input box: %w", err)
+	}
+
+	err = w.ReadPastInputs(ctx, client, inputBox, l1FinalizedPrevHeight, &l1FinalizedCurrentHeight)
+	if err != nil {
+		return fmt.Errorf("espresso inputter: read past inputs: %w", err)
+	}
+
+	return nil
 }
