@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/fs"
 	"log/slog"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -88,8 +89,20 @@ func (a *AnvilRelease) DownloadAsset(ctx context.Context, release *ReleaseAsset)
 
 	if redirect != "" {
 		slog.Info("Redirect", "url", redirect)
-		defer rc.Close()
+
+		res, err := http.Get(redirect)
+		if err != nil {
+			return "", fmt.Errorf("anvil: failed to download asset %s", err.Error())
+		}
+
+		rc = res.Body
 	}
+
+	defer func() {
+		if rc != nil {
+			rc.Close()
+		}
+	}()
 
 	if err != nil {
 		return "", fmt.Errorf("anvil: failed to download asset %s", err.Error())
@@ -103,7 +116,7 @@ func (a *AnvilRelease) DownloadAsset(ctx context.Context, release *ReleaseAsset)
 	slog.Info("Downloaded asset", "size", len(data))
 
 	var permission fs.FileMode = 0644
-	err = os.WriteFile(tmp, data, permission)
+	err = os.WriteFile(location, data, permission)
 	if err != nil {
 		return "", fmt.Errorf("anvil: failed to write asset %s", err.Error())
 	}

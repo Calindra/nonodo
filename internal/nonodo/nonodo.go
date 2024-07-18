@@ -6,6 +6,7 @@
 package nonodo
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"math/big"
@@ -223,6 +224,14 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	}))
 
 	if opts.RpcUrl == "" && !opts.DisableDevnet {
+		var timeout time.Duration = 10 * time.Minute
+		ctx, canc := context.WithTimeout(context.Background(), timeout)
+		defer canc()
+
+		if _, err := devnet.CheckAnvilAndInstall(ctx); err != nil {
+			panic(err)
+		}
+
 		w.Workers = append(w.Workers, devnet.AnvilWorker{
 			Address: opts.AnvilAddress,
 			Port:    opts.AnvilPort,

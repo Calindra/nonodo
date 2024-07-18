@@ -54,12 +54,12 @@ func (w AnvilWorker) String() string {
 	return anvilCommand
 }
 
-func (w AnvilWorker) IsAnvilInstalled() bool {
+func IsAnvilInstalled() bool {
 	_, err := exec.LookPath(anvilCommand)
 	return err == nil
 }
 
-func (w AnvilWorker) InstallAnvil(ctx context.Context) (string, error) {
+func InstallAnvil(ctx context.Context) (string, error) {
 	// Try to install anvil
 	anvilClient := commons.NewAnvilRelease()
 	latest, err := anvilClient.GetLatestReleaseCompatible(ctx)
@@ -71,7 +71,21 @@ func (w AnvilWorker) InstallAnvil(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("anvil: failed to download asset: %w", err)
 	}
 	return location, nil
+}
 
+func CheckAnvilAndInstall(ctx context.Context) (string, error) {
+	if !IsAnvilInstalled() {
+		location, err := InstallAnvil(ctx)
+		if err != nil {
+			return "", fmt.Errorf("anvil: failed to install anvil %s", err.Error())
+		}
+		slog.Info("anvil: installed anvil", "location", location)
+		return location, nil
+	} else {
+		slog.Info("anvil: anvil is installed")
+	}
+
+	return anvilCommand, nil
 }
 
 func ShowAddresses() {
@@ -112,17 +126,17 @@ func (w AnvilWorker) Start(ctx context.Context, ready chan<- struct{}) error {
 	defer removeTemp(dir)
 	slog.Debug("anvil: created temp dir with state file", "dir", dir)
 
-	if !w.IsAnvilInstalled() {
-		location, err := w.InstallAnvil(ctx)
+	// if !IsAnvilInstalled() {
+	// 	location, err := InstallAnvil(ctx)
 
-		if err != nil {
-			return fmt.Errorf("anvil: failed to install anvil %s", err.Error())
-		}
+	// 	if err != nil {
+	// 		return fmt.Errorf("anvil: failed to install anvil %s", err.Error())
+	// 	}
 
-		slog.Info("anvil: installed anvil", "location", location)
-	}
+	// 	slog.Info("anvil: installed anvil", "location", location)
+	// }
 
-	slog.Debug("anvil: anvil is installed")
+	// slog.Debug("anvil: anvil is installed")
 
 	var server supervisor.ServerWorker
 	server.Name = anvilCommand
