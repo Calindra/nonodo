@@ -27,6 +27,7 @@ type AdapterService struct {
 type AdapaterInterface interface {
 	ConvertVoucherPayloadToV2Two(output Edge) string
 	GetDestinationTwo(output Edge) (common.Address, error)
+	GetConvertedInput(output InputEdge) ([]interface{}, error)
 }
 
 type Edge struct {
@@ -38,6 +39,14 @@ type Edge struct {
 	} `json:"node"`
 }
 
+type InputEdge struct {
+	Cursor string `json:"cursor"`
+	Node   struct {
+		Index int    `json:"index"`
+		Blob  string `json:"blob"`
+	} `json:"node"`
+}
+
 func (m *AdapterService) ConvertVoucherPayloadToV2Two(output Edge) string {
 	adapted := m.adapt.ConvertVoucherPayloadToV2Two(output.Node.Blob[2:])
 	return adapted
@@ -45,6 +54,10 @@ func (m *AdapterService) ConvertVoucherPayloadToV2Two(output Edge) string {
 
 func (m *AdapterService) GetDestinationTwo(output Edge) (common.Address, error) {
 	return m.adapt.GetDestinationTwo(output.Node.Blob)
+}
+
+func (m *AdapterService) GetConvertedInput(input InputEdge) ([]interface{}, error) {
+	return m.adapt.GetConvertedInput(input.Node.Blob)
 }
 
 func (x GraphileSynchronizer) String() string {
@@ -144,7 +157,7 @@ func (x GraphileSynchronizer) handleGraphileResponse(outputResp OutputResponse, 
 			"Index", input.Node.Index,
 		)
 
-		adapted, _ := adapter.GetConvertedInput(input.Node.Blob)
+		adapted, _ := adapter.GetConvertedInput(input)
 
 		inputIndex := input.Node.Index
 		msgSender := adapted[2].(common.Address)

@@ -14,18 +14,23 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-type AdapterMock struct {
+type AdapterInterfaceMock struct {
 	mock.Mock
 }
 
-func (m *AdapterMock) GetDestinationTwo(output Edge) (common.Address, error) {
+func (m *AdapterInterfaceMock) GetDestinationTwo(output Edge) (common.Address, error) {
 	args := m.Called(output)
 	return args.Get(0).(common.Address), args.Error(1)
 }
 
-func (m *AdapterMock) ConvertVoucherPayloadToV2Two(output Edge) string {
+func (m *AdapterInterfaceMock) ConvertVoucherPayloadToV2Two(output Edge) string {
 	args := m.Called(output)
 	return args.String(0)
+}
+
+func (m *AdapterInterfaceMock) GetConvertedInput(input InputEdge) ([]interface{}, error) {
+	args := m.Called(input)
+	return args.Get(0).([]interface{}), args.Error(1)
 }
 
 func TestGetDestination_Failure(t *testing.T) {
@@ -117,7 +122,7 @@ func TestGetDestination_Failure(t *testing.T) {
 	}
 
 	ctx := context.Background()
-	adapterMock := &AdapterMock{}
+	adapterMock := &AdapterInterfaceMock{}
 	synchronizer := GraphileSynchronizer{
 		Decoder:                &decoder.OutputDecoder{},
 		SynchronizerRepository: &repository.SynchronizerRepository{},
@@ -128,7 +133,7 @@ func TestGetDestination_Failure(t *testing.T) {
 	adapterMock.On("ConvertVoucherPayloadToV2Two", mock.Anything).Return("1a2b3c")
 	adapterMock.On("GetDestinationTwo", mock.Anything).Return(common.Address{}, erro)
 
-	err = synchronizer.handleGraphileResponseTwo(ctx, response, adapterMock)
+	err = synchronizer.handleGraphileResponse(response, ctx, adapterMock)
 
 	assert.Error(t, err)
 	assert.EqualError(t, err, "error retrieving destination for node blob '0x1a2b3c': error")

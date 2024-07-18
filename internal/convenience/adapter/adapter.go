@@ -69,7 +69,7 @@ func (a *Adapter) GetDestinationTwo(payload string) (common.Address, error) {
 	return values[0].(common.Address), nil
 }
 
-func GetConvertedInput(payload string) ([]interface{}, error) {
+func (a *Adapter) GetConvertedInput(payload string) ([]interface{}, error) {
 	abiParsed, err := contracts.InputsMetaData.GetAbi()
 
 	if err != nil {
