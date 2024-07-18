@@ -214,6 +214,6 @@ func TestGetConvertedInput_Failure(t *testing.T) {
 	err := synchronizer.handleGraphileResponse(response, ctx)
 
 	assert.Error(t, err)
-	assert.EqualError(t, err, "error handling output: Decoder Handler Output Failure")
+	assert.EqualError(t, err, "error getting converted input: Get Converted Input Failure")
 
 }

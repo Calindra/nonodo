@@ -201,7 +201,12 @@ func (x GraphileSynchronizer) handleGraphileResponse(outputResp OutputResponse, 
 			"Index", input.Node.Index,
 		)
 
-		adapted, _ := x.Adapter.GetConvertedInput(input)
+		adapted, err := x.Adapter.GetConvertedInput(input)
+
+		if err != nil {
+			slog.Error("Failed to get converted:", err)
+			return fmt.Errorf("error getting converted input: %w", err)
+		}
 
 		inputIndex := input.Node.Index
 		msgSender := adapted[2].(common.Address)
@@ -210,7 +215,7 @@ func (x GraphileSynchronizer) handleGraphileResponse(outputResp OutputResponse, 
 		blockTimestamp := adapted[4].(*big.Int).Int64()
 		prevRandao := adapted[5].(*big.Int).String()
 
-		err := x.Decoder.GetHandleInput(ctx,
+		err = x.Decoder.GetHandleInput(ctx,
 			inputIndex,
 			model.CompletionStatusUnprocessed,
 			msgSender,
