@@ -15,7 +15,7 @@ func ConvertVoucherPayloadToV2(payloadV1 string) string {
 	return fmt.Sprintf("0x%s%s", model.VOUCHER_SELECTOR, payloadV1)
 }
 
-func (a *Adapter) ConvertVoucherPayloadToV2Two(payloadV1 string) string {
+func (a *Adapter) ConvertVoucherPayloadToV3(payloadV1 string) string {
 	return fmt.Sprintf("0x%s%s", model.VOUCHER_SELECTOR, payloadV1)
 }
 
@@ -49,7 +49,7 @@ func GetDestination(payload string) (common.Address, error) {
 	return values[0].(common.Address), nil
 }
 
-func (a *Adapter) GetDestinationTwo(payload string) (common.Address, error) {
+func (a *Adapter) GetDestinationV2(payload string) (common.Address, error) {
 	abiParsed, err := contracts.OutputsMetaData.GetAbi()
 
 	if err != nil {
@@ -69,7 +69,26 @@ func (a *Adapter) GetDestinationTwo(payload string) (common.Address, error) {
 	return values[0].(common.Address), nil
 }
 
-func (a *Adapter) GetConvertedInput(payload string) ([]interface{}, error) {
+func GetConvertedInput(payload string) ([]interface{}, error) {
+	abiParsed, err := contracts.InputsMetaData.GetAbi()
+
+	if err != nil {
+		slog.Error("Error parsing abi", "err", err)
+		return make([]interface{}, 0), err
+	}
+
+	values, err := abiParsed.Methods["EvmAdvance"].Inputs.Unpack(common.Hex2Bytes(payload[10:]))
+
+	if err != nil {
+		slog.Error("Error unpacking abi", "err", err)
+		return make([]interface{}, 0), err
+	}
+
+	return values, nil
+
+}
+
+func (a *Adapter) GetConvertedInputV2(payload string) ([]interface{}, error) {
 	abiParsed, err := contracts.InputsMetaData.GetAbi()
 
 	if err != nil {

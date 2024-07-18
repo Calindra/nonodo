@@ -56,16 +56,16 @@ type InputEdge struct {
 }
 
 func (m *AdapterService) ConvertVoucher(output Edge) string {
-	adapted := m.adapter.ConvertVoucherPayloadToV2Two(output.Node.Blob[2:])
+	adapted := m.adapter.ConvertVoucherPayloadToV3(output.Node.Blob[2:])
 	return adapted
 }
 
 func (m *AdapterService) RetrieveDestination(output Edge) (common.Address, error) {
-	return m.adapter.GetDestinationTwo(output.Node.Blob)
+	return m.adapter.GetDestinationV2(output.Node.Blob)
 }
 
-func (m *AdapterService) GetConvertedInput(input InputEdge) ([]interface{}, error) {
-	return m.adapter.GetConvertedInput(input.Node.Blob)
+func (m *AdapterService) RetrieveConvertedInput(input InputEdge) ([]interface{}, error) {
+	return m.adapter.GetConvertedInputV2(input.Node.Blob)
 }
 
 // func (m *AdapterService) HandleOutput(ctx context.Context, inputTransactionRecord InputTransactionRecord) {
