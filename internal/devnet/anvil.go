@@ -10,10 +10,12 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"os/exec"
 	"path"
 	"sort"
 	"strings"
 
+	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/supervisor"
 )
 
@@ -52,6 +54,30 @@ func (w AnvilWorker) String() string {
 	return anvilCommand
 }
 
+func (w AnvilWorker) CheckIfAnvilIsInstalled() error {
+	_, err := exec.LookPath(anvilCommand)
+	if err != nil {
+		return fmt.Errorf("anvil: anvil is not installed %s", err.Error())
+	}
+
+	return nil
+}
+
+func (w AnvilWorker) InstallAnvil(ctx context.Context) (string, error) {
+	// Try to install anvil
+	anvilClient := commons.NewAnvilRelease()
+	latest, err := anvilClient.GetLatestReleaseCompatible(ctx)
+	if err != nil {
+		return "", fmt.Errorf("anvil: failed to get latest release: %w", err)
+	}
+	location, err := anvilClient.DownloadAsset(ctx, latest.Id)
+	if err != nil {
+		return "", fmt.Errorf("anvil: failed to download asset: %w", err)
+	}
+	return location, nil
+
+}
+
 func ShowAddresses() {
 	var contracts ContractInfo
 	if err := json.Unmarshal(localhost, &contracts); err != nil {
@@ -81,6 +107,8 @@ func ShowAddresses() {
 }
 
 func (w AnvilWorker) Start(ctx context.Context, ready chan<- struct{}) error {
+	anvilCmd := anvilCommand
+
 	dir, err := makeStateTemp()
 	if err != nil {
 		return err
@@ -88,9 +116,22 @@ func (w AnvilWorker) Start(ctx context.Context, ready chan<- struct{}) error {
 	defer removeTemp(dir)
 	slog.Debug("anvil: created temp dir with state file", "dir", dir)
 
+	err = w.CheckIfAnvilIsInstalled()
+	if err != nil {
+		location, err := w.InstallAnvil(ctx)
+
+		if err != nil {
+			return fmt.Errorf("anvil: failed to install anvil %s", err.Error())
+		}
+
+		slog.Info("anvil: installed anvil", "location", location)
+	}
+
+	slog.Debug("anvil: anvil is installed")
+
 	var server supervisor.ServerWorker
 	server.Name = anvilCommand
-	server.Command = anvilCommand
+	server.Command = anvilCmd
 	server.Port = w.Port
 	server.Args = append(server.Args, "--host", fmt.Sprint(w.Address))
 	server.Args = append(server.Args, "--port", fmt.Sprint(w.Port))
