@@ -26,7 +26,12 @@ func (c *SynchronizerRepository) CreateTables() error {
 		timestamp_after bigint,
 		ini_cursor_after text,
 		log_vouchers_ids text,
-		end_cursor_after text);`, idType)
+		end_cursor_after text,
+		ini_input_cursor_after text,
+		end_input_cursor_after text,
+		ini_report_cursor_after text,
+		end_report_cursor_after text
+		);`, idType)
 
 	// execute a query on the server
 	_, err := c.Db.Exec(schema)
@@ -39,13 +44,22 @@ func (c *SynchronizerRepository) Create(
 		timestamp_after,
 		ini_cursor_after,
 		log_vouchers_ids,
-		end_cursor_after) VALUES ($1, $2, $3, $4)`
+		end_cursor_after,
+		ini_input_cursor_after,
+		end_input_cursor_after,
+		ini_report_cursor_after,
+		end_report_cursor_after
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
 	c.Db.MustExec(
 		insertSql,
 		data.TimestampAfter,
 		data.IniCursorAfter,
 		data.LogVouchersIds,
 		data.EndCursorAfter,
+		data.IniInputCursorAfter,
+		data.EndInputCursorAfter,
+		data.IniReportCursorAfter,
+		data.EndReportCursorAfter,
 	)
 	return data, nil
 }

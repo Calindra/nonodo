@@ -5,6 +5,7 @@
 package model
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"sync"
@@ -15,7 +16,6 @@ import (
 	cRepos "github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/jmoiron/sqlx"
 )
 
 // Nonodo model shared among the internal workers.
@@ -34,22 +34,16 @@ func (m *NonodoModel) GetInputRepository() *cRepos.InputRepository {
 }
 
 // Create a new model.
-func NewNonodoModel(decoder Decoder, db *sqlx.DB) *NonodoModel {
-	reportRepository := cRepos.ReportRepository{Db: db}
-	err := reportRepository.CreateTables()
-	if err != nil {
-		panic(err)
-	}
-	inputRepository := cRepos.InputRepository{Db: db}
-	err = inputRepository.CreateTables()
-	if err != nil {
-		panic(err)
-	}
+func NewNonodoModel(
+	decoder Decoder,
+	reportRepository *cRepos.ReportRepository,
+	inputRepository *cRepos.InputRepository,
+) *NonodoModel {
 	return &NonodoModel{
 		state:            &rollupsStateIdle{},
 		decoder:          decoder,
-		reportRepository: &reportRepository,
-		inputRepository:  &inputRepository,
+		reportRepository: reportRepository,
+		inputRepository:  inputRepository,
 	}
 }
 
@@ -75,7 +69,8 @@ func (m *NonodoModel) AddAdvanceInput(
 		BlockTimestamp: timestamp,
 		BlockNumber:    blockNumber,
 	}
-	_, err := m.inputRepository.Create(input)
+	ctx := context.Background()
+	_, err := m.inputRepository.Create(ctx, input)
 	if err != nil {
 		panic(err)
 	}
@@ -126,6 +121,7 @@ func (m *NonodoModel) GetInspectInput(index int) InspectInput {
 //
 // Note: use in v2 the sequencer instead.
 func (m *NonodoModel) FinishAndGetNext(accepted bool) cModel.Input {
+	ctx := context.Background()
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
@@ -147,7 +143,7 @@ func (m *NonodoModel) FinishAndGetNext(accepted bool) cModel.Input {
 	}
 
 	// try to get first unprocessed advance
-	input, err := m.inputRepository.FindByStatus(cModel.CompletionStatusUnprocessed)
+	input, err := m.inputRepository.FindByStatus(ctx, cModel.CompletionStatusUnprocessed)
 	if err != nil {
 		panic(err)
 	}
@@ -216,6 +212,7 @@ func (m *NonodoModel) RegisterException(payload []byte) error {
 //
 
 func (m *NonodoModel) getProcessedInputCount() int {
+	ctx := context.Background()
 	filter := []*model.ConvenienceFilter{}
 	field := "Status"
 	value := fmt.Sprintf("%d", cModel.CompletionStatusUnprocessed)
@@ -223,7 +220,7 @@ func (m *NonodoModel) getProcessedInputCount() int {
 		Field: &field,
 		Ne:    &value,
 	})
-	total, err := m.inputRepository.Count(filter)
+	total, err := m.inputRepository.Count(ctx, filter)
 	if err != nil {
 		panic(err)
 	}

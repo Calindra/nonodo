@@ -40,7 +40,24 @@ func GetDestination(payload string) (common.Address, error) {
 		return common.Address{}, err
 	}
 
-	slog.Info("values", "values", values)
-
 	return values[0].(common.Address), nil
+}
+
+func GetConvertedInput(payload string) ([]interface{}, error) {
+	abiParsed, err := contracts.InputsMetaData.GetAbi()
+
+	if err != nil {
+		slog.Error("Error parsing abi", "err", err)
+		return make([]interface{}, 0), err
+	}
+
+	values, err := abiParsed.Methods["EvmAdvance"].Inputs.Unpack(common.Hex2Bytes(payload[10:]))
+
+	if err != nil {
+		slog.Error("Error unpacking abi", "err", err)
+		return make([]interface{}, 0), err
+	}
+
+	return values, nil
+
 }

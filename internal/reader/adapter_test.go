@@ -1,6 +1,7 @@
 package reader
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"testing"
@@ -37,7 +38,7 @@ func (s *AdapterSuite) SetupTest() {
 	err := s.reportRepository.CreateTables()
 	s.NoError(err)
 	s.inputRepository = &cRepos.InputRepository{
-		Db: db,
+		Db: *db,
 	}
 	err = s.inputRepository.CreateTables()
 	s.NoError(err)
@@ -57,7 +58,8 @@ func (s *AdapterSuite) TestCreateTables() {
 }
 
 func (s *AdapterSuite) TestGetReport() {
-	_, err := s.reportRepository.Create(convenience.Report{
+	ctx := context.Background()
+	_, err := s.reportRepository.Create(ctx, convenience.Report{
 		InputIndex: 1,
 		Index:      2,
 		Payload:    common.Hex2Bytes("1122"),
@@ -69,27 +71,29 @@ func (s *AdapterSuite) TestGetReport() {
 }
 
 func (s *AdapterSuite) TestGetReports() {
+	ctx := context.Background()
 	for i := 0; i < 3; i++ {
-		_, err := s.reportRepository.Create(convenience.Report{
+		_, err := s.reportRepository.Create(ctx, convenience.Report{
 			InputIndex: i,
 			Index:      0,
 			Payload:    common.Hex2Bytes("1122"),
 		})
 		s.NoError(err)
 	}
-	res, err := s.adapter.GetReports(nil, nil, nil, nil, nil)
+	res, err := s.adapter.GetReports(ctx, nil, nil, nil, nil, nil)
 	s.NoError(err)
 	s.Equal(3, res.TotalCount)
 
 	inputIndex := 1
-	res, err = s.adapter.GetReports(nil, nil, nil, nil, &inputIndex)
+	res, err = s.adapter.GetReports(ctx, nil, nil, nil, nil, &inputIndex)
 	s.NoError(err)
 	s.Equal(1, res.TotalCount)
 }
 
 func (s *AdapterSuite) TestGetInputs() {
+	ctx := context.Background()
 	for i := 0; i < 3; i++ {
-		_, err := s.inputRepository.Create(convenience.AdvanceInput{
+		_, err := s.inputRepository.Create(ctx, convenience.AdvanceInput{
 			Index:          i,
 			Status:         convenience.CompletionStatusUnprocessed,
 			MsgSender:      common.HexToAddress(fmt.Sprintf("000000000000000000000000000000000000000%d", i)),
@@ -99,7 +103,7 @@ func (s *AdapterSuite) TestGetInputs() {
 		})
 		s.NoError(err)
 	}
-	res, err := s.adapter.GetInputs(nil, nil, nil, nil, nil)
+	res, err := s.adapter.GetInputs(ctx, nil, nil, nil, nil, nil)
 	s.NoError(err)
 	s.Equal(3, res.TotalCount)
 
@@ -107,7 +111,7 @@ func (s *AdapterSuite) TestGetInputs() {
 	filter := model.InputFilter{
 		MsgSender: &msgSender,
 	}
-	res, err = s.adapter.GetInputs(nil, nil, nil, nil, &filter)
+	res, err = s.adapter.GetInputs(ctx, nil, nil, nil, nil, &filter)
 	s.NoError(err)
 	s.Equal(1, res.TotalCount)
 	s.Equal(res.Edges[0].Node.MsgSender, msgSender)

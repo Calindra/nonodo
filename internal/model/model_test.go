@@ -53,9 +53,13 @@ func (s *ModelSuite) SetupTest() {
 	db := sqlx.MustConnect("sqlite3", sqliteFileName)
 	container := convenience.NewContainer(*db)
 	decoder := container.GetOutputDecoder()
-	s.m = NewNonodoModel(decoder, db)
-	s.reportRepository = s.m.reportRepository
-	s.inputRepository = s.m.inputRepository
+	s.reportRepository = container.GetReportRepository()
+	s.inputRepository = container.GetInputRepository()
+	s.m = NewNonodoModel(
+		decoder,
+		s.reportRepository,
+		s.inputRepository,
+	)
 	s.convenienceService = container.GetConvenienceService()
 	s.n = 3
 	s.payloads = make([][]byte, s.n)
@@ -213,13 +217,13 @@ func (s *ModelSuite) TestItFinishesAdvanceWithAccept() {
 	s.m.FinishAndGetNext(true) // finish
 
 	// check input
-	input, err := s.inputRepository.FindByIndex(0)
+	ctx := context.Background()
+	input, err := s.inputRepository.FindByIndex(ctx, 0)
 	s.NoError(err)
 	s.Equal(0, input.Index)
 	s.Equal(cModel.CompletionStatusAccepted, input.Status)
 
 	// check vouchers
-	ctx := context.Background()
 	vouchers, err := s.convenienceService.FindAllVouchers(ctx, nil, nil, nil, nil, nil)
 	s.NoError(err)
 	s.Len(vouchers.Rows, 1)
@@ -230,7 +234,7 @@ func (s *ModelSuite) TestItFinishesAdvanceWithAccept() {
 	s.Len(notices.Rows, 1)
 
 	inputIndex := 0
-	reportPage, err := s.reportRepository.FindAllByInputIndex(nil, nil, nil, nil, &inputIndex)
+	reportPage, err := s.reportRepository.FindAllByInputIndex(ctx, nil, nil, nil, nil, &inputIndex)
 	s.NoError(err)
 	s.Equal(1, int(reportPage.Total))
 }
@@ -249,7 +253,8 @@ func (s *ModelSuite) TestItFinishesAdvanceWithReject() {
 	s.m.FinishAndGetNext(false) // finish
 
 	// check input
-	input, err := s.inputRepository.FindByIndex(0)
+	ctx := context.Background()
+	input, err := s.inputRepository.FindByIndex(ctx, 0)
 	s.NoError(err)
 	s.Equal(0, input.Index)
 	s.Equal(cModel.CompletionStatusRejected, input.Status)
@@ -258,7 +263,7 @@ func (s *ModelSuite) TestItFinishesAdvanceWithReject() {
 	s.Empty(input.Vouchers) // deprecated
 
 	// check vouchers
-	ctx := context.Background()
+
 	vouchers, err := s.convenienceService.FindAllVouchers(ctx, nil, nil, nil, nil, nil)
 	s.NoError(err)
 	s.Len(vouchers.Rows, 0)
@@ -269,7 +274,7 @@ func (s *ModelSuite) TestItFinishesAdvanceWithReject() {
 	s.Len(notices.Rows, 0)
 
 	inputIndex := 0
-	page, err := s.reportRepository.FindAllByInputIndex(nil, nil, nil, nil, &inputIndex)
+	page, err := s.reportRepository.FindAllByInputIndex(ctx, nil, nil, nil, nil, &inputIndex)
 	s.NoError(err)
 	s.Equal(1, int(page.Total))
 }
@@ -443,6 +448,8 @@ func (s *ModelSuite) TestItFailsToAddNoticeWhenIdle() {
 
 func (s *ModelSuite) TestItAddsReportWhenAdvancing() {
 	defer s.teardown()
+	ctx := context.Background()
+
 	// add input and get it
 	s.m.AddAdvanceInput(s.senders[0], s.payloads[0], s.blockNumbers[0], s.timestamps[0], 0)
 	s.m.FinishAndGetNext(true)
@@ -454,7 +461,7 @@ func (s *ModelSuite) TestItAddsReportWhenAdvancing() {
 	}
 
 	// check reports are not there before finish
-	reports, err := s.reportRepository.FindAll(nil, nil, nil, nil, nil)
+	reports, err := s.reportRepository.FindAll(ctx, nil, nil, nil, nil, nil)
 	s.NoError(err)
 	s.Empty(reports.Rows)
 
@@ -462,11 +469,11 @@ func (s *ModelSuite) TestItAddsReportWhenAdvancing() {
 	s.m.FinishAndGetNext(true)
 
 	// check reports
-	count, err := s.reportRepository.Count(nil)
+	count, err := s.reportRepository.Count(ctx, nil)
 	s.NoError(err)
 	s.Equal(s.n, int(count))
 
-	page, err := s.reportRepository.FindAll(nil, nil, nil, nil, nil)
+	page, err := s.reportRepository.FindAll(ctx, nil, nil, nil, nil, nil)
 	s.NoError(err)
 	for i := 0; i < s.n; i++ {
 		s.Equal(0, page.Rows[i].InputIndex)
@@ -517,6 +524,7 @@ func (s *ModelSuite) TestItFailsToAddReportWhenIdle() {
 
 func (s *ModelSuite) TestItRegistersExceptionWhenAdvancing() {
 	defer s.teardown()
+	ctx := context.Background()
 	// add input and process it
 	s.m.AddAdvanceInput(s.senders[0], s.payloads[0], s.blockNumbers[0], s.timestamps[0], 0)
 	s.m.FinishAndGetNext(true) // get
@@ -530,7 +538,7 @@ func (s *ModelSuite) TestItRegistersExceptionWhenAdvancing() {
 	s.Nil(err)
 
 	// check input
-	input, err := s.inputRepository.FindByIndex(0)
+	input, err := s.inputRepository.FindByIndex(ctx, 0)
 	s.NoError(err)
 	s.Equal(0, input.Index)
 	s.Equal(cModel.CompletionStatusException, input.Status)
@@ -539,7 +547,7 @@ func (s *ModelSuite) TestItRegistersExceptionWhenAdvancing() {
 	s.Empty(input.Reports)
 	s.Equal(s.payloads[0], input.Exception)
 
-	total, err := s.reportRepository.Count(nil)
+	total, err := s.reportRepository.Count(ctx, nil)
 	s.NoError(err)
 	s.Equal(1, int(total))
 }
@@ -577,9 +585,10 @@ func (s *ModelSuite) TestItFailsToRegisterExceptionWhenIdle() {
 
 func (s *ModelSuite) TestItGetsAdvanceInputs() {
 	defer s.teardown()
+	ctx := context.Background()
 	for i := 0; i < s.n; i++ {
 		s.m.AddAdvanceInput(s.senders[i], s.payloads[i], s.blockNumbers[i], s.timestamps[i], i)
-		input, err := s.inputRepository.FindByIndex(i)
+		input, err := s.inputRepository.FindByIndex(ctx, i)
 		s.NoError(err)
 		s.Equal(i, input.Index)
 		s.Equal(cModel.CompletionStatusUnprocessed, input.Status)
@@ -592,7 +601,8 @@ func (s *ModelSuite) TestItGetsAdvanceInputs() {
 
 func (s *ModelSuite) TestItFailsToGetAdvanceInput() {
 	defer s.teardown()
-	input, err := s.inputRepository.FindByIndex(0)
+	ctx := context.Background()
+	input, err := s.inputRepository.FindByIndex(ctx, 0)
 	s.NoError(err)
 	s.Nil(input)
 }
@@ -693,6 +703,7 @@ func (s *ModelSuite) TestItFailsToGetNoticeFromExistingInput() {
 
 func (s *ModelSuite) TestItGetsReport() {
 	defer s.teardown()
+	ctx := context.Background()
 	for i := 0; i < s.n; i++ {
 		s.m.AddAdvanceInput(s.senders[i], s.payloads[i], s.blockNumbers[i], s.timestamps[i], i)
 		s.m.FinishAndGetNext(true) // get
@@ -705,6 +716,7 @@ func (s *ModelSuite) TestItGetsReport() {
 	for i := 0; i < s.n; i++ {
 		for j := 0; j < s.n; j++ {
 			report, err := s.reportRepository.FindByInputAndOutputIndex(
+				ctx,
 				uint64(i),
 				uint64(j),
 			)
@@ -718,17 +730,19 @@ func (s *ModelSuite) TestItGetsReport() {
 
 func (s *ModelSuite) TestItFailsToGetReportFromNonExistingInput() {
 	defer s.teardown()
-	report, err := s.reportRepository.FindByInputAndOutputIndex(0, 0)
+	ctx := context.Background()
+	report, err := s.reportRepository.FindByInputAndOutputIndex(ctx, 0, 0)
 	s.NoError(err)
 	s.Nil(report)
 }
 
 func (s *ModelSuite) TestItFailsToGetReportFromExistingInput() {
 	defer s.teardown()
+	ctx := context.Background()
 	s.m.AddAdvanceInput(s.senders[0], s.payloads[0], s.blockNumbers[0], s.timestamps[0], 0)
 	s.m.FinishAndGetNext(true) // get
 	s.m.FinishAndGetNext(true) // finish
-	report, err := s.reportRepository.FindByInputAndOutputIndex(0, 0)
+	report, err := s.reportRepository.FindByInputAndOutputIndex(ctx, 0, 0)
 	s.NoError(err)
 	s.Nil(report)
 }
@@ -739,7 +753,8 @@ func (s *ModelSuite) TestItFailsToGetReportFromExistingInput() {
 
 func (s *ModelSuite) TestItGetsNumInputs() {
 	defer s.teardown()
-	n, err := s.inputRepository.Count(nil)
+	ctx := context.Background()
+	n, err := s.inputRepository.Count(ctx, nil)
 	s.NoError(err)
 	s.Equal(0, int(n))
 
@@ -747,7 +762,7 @@ func (s *ModelSuite) TestItGetsNumInputs() {
 		s.m.AddAdvanceInput(s.senders[i], s.payloads[i], s.blockNumbers[i], s.timestamps[i], i)
 	}
 
-	n, err = s.inputRepository.Count(nil)
+	n, err = s.inputRepository.Count(ctx, nil)
 	s.NoError(err)
 	s.Equal(s.n, int(n))
 
@@ -763,7 +778,7 @@ func (s *ModelSuite) TestItGetsNumInputs() {
 		Field: &field,
 		Lt:    &indexLowerThan,
 	})
-	n, err = s.inputRepository.Count(filter)
+	n, err = s.inputRepository.Count(ctx, filter)
 	s.NoError(err)
 	s.Equal(1, int(n))
 }
@@ -823,9 +838,10 @@ func (s *ModelSuite) TestItGetsNumNotices() {
 //
 
 func (s *ModelSuite) TestItGetsNumReports() {
+	ctx := context.Background()
 	defer s.teardown()
 	inputIndex := 0
-	page, err := s.reportRepository.FindAllByInputIndex(nil, nil, nil, nil, nil)
+	page, err := s.reportRepository.FindAllByInputIndex(ctx, nil, nil, nil, nil, nil)
 	s.NoError(err)
 	s.Equal(0, int(page.Total))
 
@@ -837,10 +853,10 @@ func (s *ModelSuite) TestItGetsNumReports() {
 		s.m.FinishAndGetNext(true) // finish
 	}
 
-	page, err = s.reportRepository.FindAllByInputIndex(nil, nil, nil, nil, nil)
+	page, err = s.reportRepository.FindAllByInputIndex(ctx, nil, nil, nil, nil, nil)
 	s.NoError(err)
 	s.Equal(s.n, int(page.Total))
-	page, err = s.reportRepository.FindAllByInputIndex(nil, nil, nil, nil, &inputIndex)
+	page, err = s.reportRepository.FindAllByInputIndex(ctx, nil, nil, nil, nil, &inputIndex)
 	s.NoError(err)
 	s.Equal(1, int(page.Total))
 }
@@ -870,6 +886,7 @@ func (s *ModelSuite) TestItGetsInputs() {
 
 func (s *ModelSuite) TestItGetsInputsWithFilter() {
 	defer s.teardown()
+	ctx := context.Background()
 	for i := 0; i < s.n; i++ {
 		s.m.AddAdvanceInput(s.senders[i], s.payloads[i], s.blockNumbers[i], s.timestamps[i], i)
 	}
@@ -885,7 +902,7 @@ func (s *ModelSuite) TestItGetsInputsWithFilter() {
 		Field: &field,
 		Lt:    &indexLowerThan,
 	})
-	page, err := s.inputRepository.FindAll(nil, nil, nil, nil, filter)
+	page, err := s.inputRepository.FindAll(ctx, nil, nil, nil, nil, filter)
 	s.NoError(err)
 	inputs := page.Rows
 	s.Len(inputs, 1)
@@ -1218,13 +1235,15 @@ func (s *ModelSuite) TestItGetsNoNoticesWhenOffsetIsGreaterThanInputs() {
 //
 
 func (s *ModelSuite) TestItGetsNoReports() {
+	ctx := context.Background()
 	defer s.teardown()
-	reports, err := s.reportRepository.FindAll(nil, nil, nil, nil, nil)
+	reports, err := s.reportRepository.FindAll(ctx, nil, nil, nil, nil, nil)
 	s.NoError(err)
 	s.Empty(reports.Rows)
 }
 
 func (s *ModelSuite) TestItGetsReports() {
+	ctx := context.Background()
 	defer s.teardown()
 	for i := 0; i < s.n; i++ {
 		s.m.AddAdvanceInput(s.senders[i], s.payloads[i], s.blockNumbers[i], s.timestamps[i], i)
@@ -1235,7 +1254,7 @@ func (s *ModelSuite) TestItGetsReports() {
 		}
 		s.m.FinishAndGetNext(true) // finish
 	}
-	page, err := s.reportRepository.FindAll(nil, nil, nil, nil, nil)
+	page, err := s.reportRepository.FindAll(ctx, nil, nil, nil, nil, nil)
 	s.NoError(err)
 	s.Len(page.Rows, s.n*s.n)
 	for i := 0; i < s.n; i++ {
@@ -1249,6 +1268,7 @@ func (s *ModelSuite) TestItGetsReports() {
 }
 
 func (s *ModelSuite) TestItGetsReportsWithFilter() {
+	ctx := context.Background()
 	defer s.teardown()
 	for i := 0; i < s.n; i++ {
 		s.m.AddAdvanceInput(s.senders[i], s.payloads[i], s.blockNumbers[i], s.timestamps[i], i)
@@ -1260,7 +1280,7 @@ func (s *ModelSuite) TestItGetsReportsWithFilter() {
 		s.m.FinishAndGetNext(true) // finish
 	}
 	inputIndex := 1
-	page, err := s.reportRepository.FindAllByInputIndex(nil, nil, nil, nil, &inputIndex)
+	page, err := s.reportRepository.FindAllByInputIndex(ctx, nil, nil, nil, nil, &inputIndex)
 	s.NoError(err)
 	s.Len(page.Rows, s.n)
 	for i := 0; i < s.n; i++ {
@@ -1271,6 +1291,7 @@ func (s *ModelSuite) TestItGetsReportsWithFilter() {
 }
 
 func (s *ModelSuite) TestItGetsReportsWithOffset() {
+	ctx := context.Background()
 	defer s.teardown()
 	s.m.AddAdvanceInput(s.senders[0], s.payloads[0], s.blockNumbers[0], s.timestamps[0], 0)
 	s.m.FinishAndGetNext(true) // get
@@ -1281,7 +1302,7 @@ func (s *ModelSuite) TestItGetsReportsWithOffset() {
 	s.m.FinishAndGetNext(true) // finish
 
 	after := commons.EncodeCursor(3)
-	page, err := s.reportRepository.FindAllByInputIndex(nil, nil, &after, nil, nil)
+	page, err := s.reportRepository.FindAllByInputIndex(ctx, nil, nil, &after, nil, nil)
 	s.NoError(err)
 	s.Require().Len(page.Rows, 2)
 	s.Equal(4, page.Rows[0].Index)
@@ -1290,6 +1311,7 @@ func (s *ModelSuite) TestItGetsReportsWithOffset() {
 
 func (s *ModelSuite) TestItGetsReportsWithLimit() {
 	defer s.teardown()
+	ctx := context.Background()
 	s.m.AddAdvanceInput(s.senders[0], s.payloads[0], s.blockNumbers[0], s.timestamps[0], 0)
 	s.m.FinishAndGetNext(true) // get
 	for i := 0; i < s.n; i++ {
@@ -1299,7 +1321,7 @@ func (s *ModelSuite) TestItGetsReportsWithLimit() {
 	s.m.FinishAndGetNext(true) // finish
 
 	first := 2
-	page, err := s.reportRepository.FindAllByInputIndex(&first, nil, nil, nil, nil)
+	page, err := s.reportRepository.FindAllByInputIndex(ctx, &first, nil, nil, nil, nil)
 	s.NoError(err)
 	s.Len(page.Rows, 2)
 	s.Equal(0, page.Rows[0].Index)
@@ -1308,6 +1330,7 @@ func (s *ModelSuite) TestItGetsReportsWithLimit() {
 
 func (s *ModelSuite) TestItGetsNoReportsWithZeroLimit() {
 	defer s.teardown()
+	ctx := context.Background()
 	s.m.AddAdvanceInput(s.senders[0], s.payloads[0], s.blockNumbers[0], s.timestamps[0], 0)
 	s.m.FinishAndGetNext(true) // get
 	for i := 0; i < s.n; i++ {
@@ -1316,13 +1339,14 @@ func (s *ModelSuite) TestItGetsNoReportsWithZeroLimit() {
 	}
 	s.m.FinishAndGetNext(true) // finish
 	firstLimit := 0
-	reports, err := s.reportRepository.FindAll(&firstLimit, nil, nil, nil, nil)
+	reports, err := s.reportRepository.FindAll(ctx, &firstLimit, nil, nil, nil, nil)
 	s.NoError(err)
 	s.Empty(reports.Rows)
 }
 
 func (s *ModelSuite) TestItGetsNoReportsWhenOffsetIsGreaterThanInputs() {
 	defer s.teardown()
+	ctx := context.Background()
 	s.m.AddAdvanceInput(s.senders[0], s.payloads[0], s.blockNumbers[0], s.timestamps[0], 0)
 	s.m.FinishAndGetNext(true) // get
 	for i := 0; i < s.n; i++ {
@@ -1333,7 +1357,7 @@ func (s *ModelSuite) TestItGetsNoReportsWhenOffsetIsGreaterThanInputs() {
 
 	afterOffset := commons.EncodeCursor(2)
 	firstLimit := 10
-	reports, err := s.reportRepository.FindAll(&firstLimit, nil, &afterOffset, nil, nil)
+	reports, err := s.reportRepository.FindAll(ctx, &firstLimit, nil, &afterOffset, nil, nil)
 	s.NoError(err)
 	s.Empty(reports.Rows)
 }
@@ -1343,14 +1367,15 @@ func (s *ModelSuite) teardown() {
 }
 
 func (s *ModelSuite) getAllInputs(offset int, limit int) []cModel.AdvanceInput {
+	ctx := context.Background()
 	if offset != 0 {
 		afterOffset := commons.EncodeCursor(offset - 1)
 		vouchers, err := s.inputRepository.
-			FindAll(&limit, nil, &afterOffset, nil, nil)
+			FindAll(ctx, &limit, nil, &afterOffset, nil, nil)
 		s.NoError(err)
 		return vouchers.Rows
 	} else {
-		page, err := s.inputRepository.FindAll(&limit, nil, nil, nil, nil)
+		page, err := s.inputRepository.FindAll(ctx, &limit, nil, nil, nil, nil)
 		s.NoError(err)
 		return page.Rows
 	}

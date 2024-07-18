@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"math/rand"
@@ -33,7 +34,7 @@ func (s *InputRepositorySuite) SetupTest() {
 	// db := sqlx.MustConnect("sqlite3", ":memory:")
 	db := sqlx.MustConnect("sqlite3", sqliteFileName)
 	s.inputRepository = &InputRepository{
-		Db: db,
+		Db: *db,
 	}
 	err = s.inputRepository.CreateTables()
 	s.NoError(err)
@@ -52,7 +53,8 @@ func (s *InputRepositorySuite) TestCreateTables() {
 
 func (s *InputRepositorySuite) TestCreateInput() {
 	defer s.teardown()
-	input, err := s.inputRepository.Create(convenience.AdvanceInput{
+	ctx := context.Background()
+	input, err := s.inputRepository.Create(ctx, convenience.AdvanceInput{
 		Index:          0,
 		Status:         convenience.CompletionStatusUnprocessed,
 		MsgSender:      common.Address{},
@@ -66,7 +68,8 @@ func (s *InputRepositorySuite) TestCreateInput() {
 
 func (s *InputRepositorySuite) TestFixCreateInputDuplicated() {
 	defer s.teardown()
-	input, err := s.inputRepository.Create(convenience.AdvanceInput{
+	ctx := context.Background()
+	input, err := s.inputRepository.Create(ctx, convenience.AdvanceInput{
 		Index:          0,
 		Status:         convenience.CompletionStatusUnprocessed,
 		MsgSender:      common.Address{},
@@ -76,7 +79,7 @@ func (s *InputRepositorySuite) TestFixCreateInputDuplicated() {
 	})
 	s.NoError(err)
 	s.Equal(0, input.Index)
-	input, err = s.inputRepository.Create(convenience.AdvanceInput{
+	input, err = s.inputRepository.Create(ctx, convenience.AdvanceInput{
 		Index:          0,
 		Status:         convenience.CompletionStatusUnprocessed,
 		MsgSender:      common.Address{},
@@ -86,14 +89,15 @@ func (s *InputRepositorySuite) TestFixCreateInputDuplicated() {
 	})
 	s.NoError(err)
 	s.Equal(0, input.Index)
-	count, err := s.inputRepository.Count(nil)
+	count, err := s.inputRepository.Count(ctx, nil)
 	s.NoError(err)
 	s.Equal(uint64(1), count)
 }
 
 func (s *InputRepositorySuite) TestCreateAndFindInputByIndex() {
 	defer s.teardown()
-	input, err := s.inputRepository.Create(convenience.AdvanceInput{
+	ctx := context.Background()
+	input, err := s.inputRepository.Create(ctx, convenience.AdvanceInput{
 		Index:          123,
 		Status:         convenience.CompletionStatusUnprocessed,
 		MsgSender:      common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
@@ -104,7 +108,7 @@ func (s *InputRepositorySuite) TestCreateAndFindInputByIndex() {
 	s.NoError(err)
 	s.Equal(123, input.Index)
 
-	input2, err := s.inputRepository.FindByIndex(123)
+	input2, err := s.inputRepository.FindByIndex(ctx, 123)
 	s.NoError(err)
 	s.Equal(123, input.Index)
 	s.Equal(input.Status, input2.Status)
@@ -116,7 +120,8 @@ func (s *InputRepositorySuite) TestCreateAndFindInputByIndex() {
 
 func (s *InputRepositorySuite) TestCreateInputAndUpdateStatus() {
 	defer s.teardown()
-	input, err := s.inputRepository.Create(convenience.AdvanceInput{
+	ctx := context.Background()
+	input, err := s.inputRepository.Create(ctx, convenience.AdvanceInput{
 		Index:          2222,
 		Status:         convenience.CompletionStatusUnprocessed,
 		MsgSender:      common.Address{},
@@ -128,17 +133,18 @@ func (s *InputRepositorySuite) TestCreateInputAndUpdateStatus() {
 	s.Equal(2222, input.Index)
 
 	input.Status = convenience.CompletionStatusAccepted
-	_, err = s.inputRepository.Update(*input)
+	_, err = s.inputRepository.Update(ctx, *input)
 	s.NoError(err)
 
-	input2, err := s.inputRepository.FindByIndex(2222)
+	input2, err := s.inputRepository.FindByIndex(ctx, 2222)
 	s.NoError(err)
 	s.Equal(convenience.CompletionStatusAccepted, input2.Status)
 }
 
 func (s *InputRepositorySuite) TestCreateInputFindByStatus() {
 	defer s.teardown()
-	input, err := s.inputRepository.Create(convenience.AdvanceInput{
+	ctx := context.Background()
+	input, err := s.inputRepository.Create(ctx, convenience.AdvanceInput{
 		Index:          2222,
 		Status:         convenience.CompletionStatusUnprocessed,
 		MsgSender:      common.Address{},
@@ -150,27 +156,28 @@ func (s *InputRepositorySuite) TestCreateInputFindByStatus() {
 	s.NoError(err)
 	s.Equal(2222, input.Index)
 
-	input2, err := s.inputRepository.FindByStatus(convenience.CompletionStatusUnprocessed)
+	input2, err := s.inputRepository.FindByStatus(ctx, convenience.CompletionStatusUnprocessed)
 	s.NoError(err)
 	s.Equal(2222, input2.Index)
 
 	input.Status = convenience.CompletionStatusAccepted
-	_, err = s.inputRepository.Update(*input)
+	_, err = s.inputRepository.Update(ctx, *input)
 	s.NoError(err)
 
-	input2, err = s.inputRepository.FindByStatus(convenience.CompletionStatusUnprocessed)
+	input2, err = s.inputRepository.FindByStatus(ctx, convenience.CompletionStatusUnprocessed)
 	s.NoError(err)
 	s.Nil(input2)
 
-	input2, err = s.inputRepository.FindByStatus(convenience.CompletionStatusAccepted)
+	input2, err = s.inputRepository.FindByStatus(ctx, convenience.CompletionStatusAccepted)
 	s.NoError(err)
 	s.Equal(2222, input2.Index)
 }
 
 func (s *InputRepositorySuite) TestFindByIndexGt() {
 	defer s.teardown()
+	ctx := context.Background()
 	for i := 0; i < 5; i++ {
-		input, err := s.inputRepository.Create(convenience.AdvanceInput{
+		input, err := s.inputRepository.Create(ctx, convenience.AdvanceInput{
 			Index:          i,
 			Status:         convenience.CompletionStatusUnprocessed,
 			MsgSender:      common.Address{},
@@ -188,15 +195,16 @@ func (s *InputRepositorySuite) TestFindByIndexGt() {
 		Field: &field,
 		Gt:    &value,
 	})
-	resp, err := s.inputRepository.FindAll(nil, nil, nil, nil, filters)
+	resp, err := s.inputRepository.FindAll(ctx, nil, nil, nil, nil, filters)
 	s.NoError(err)
 	s.Equal(3, int(resp.Total))
 }
 
 func (s *InputRepositorySuite) TestFindByIndexLt() {
 	defer s.teardown()
+	ctx := context.Background()
 	for i := 0; i < 5; i++ {
-		input, err := s.inputRepository.Create(convenience.AdvanceInput{
+		input, err := s.inputRepository.Create(ctx, convenience.AdvanceInput{
 			Index:          i,
 			Status:         convenience.CompletionStatusUnprocessed,
 			MsgSender:      common.Address{},
@@ -214,15 +222,16 @@ func (s *InputRepositorySuite) TestFindByIndexLt() {
 		Field: &field,
 		Lt:    &value,
 	})
-	resp, err := s.inputRepository.FindAll(nil, nil, nil, nil, filters)
+	resp, err := s.inputRepository.FindAll(ctx, nil, nil, nil, nil, filters)
 	s.NoError(err)
 	s.Equal(3, int(resp.Total))
 }
 
 func (s *InputRepositorySuite) TestFindByMsgSender() {
 	defer s.teardown()
+	ctx := context.Background()
 	for i := 0; i < 5; i++ {
-		input, err := s.inputRepository.Create(convenience.AdvanceInput{
+		input, err := s.inputRepository.Create(ctx, convenience.AdvanceInput{
 			Index:          i,
 			Status:         convenience.CompletionStatusUnprocessed,
 			MsgSender:      common.HexToAddress(fmt.Sprintf("000000000000000000000000000000000000000%d", i)),
@@ -240,7 +249,7 @@ func (s *InputRepositorySuite) TestFindByMsgSender() {
 		Field: &field,
 		Eq:    &value,
 	})
-	resp, err := s.inputRepository.FindAll(nil, nil, nil, nil, filters)
+	resp, err := s.inputRepository.FindAll(ctx, nil, nil, nil, nil, filters)
 	s.NoError(err)
 	s.Equal(1, int(resp.Total))
 	s.Equal(common.HexToAddress(value), resp.Rows[0].MsgSender)

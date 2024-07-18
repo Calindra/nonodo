@@ -38,7 +38,7 @@ func NewAdapterV1(
 		panic(err)
 	}
 	inputRepository := &cRepos.InputRepository{
-		Db: db,
+		Db: *db,
 	}
 	err = inputRepository.CreateTables()
 	if err != nil {
@@ -162,7 +162,9 @@ func (a AdapterV1) GetNotice(noticeIndex int, inputIndex int) (*graphql.Notice, 
 func (a AdapterV1) GetReport(
 	reportIndex int, inputIndex int,
 ) (*graphql.Report, error) {
+	ctx := context.Background()
 	report, err := a.reportRepository.FindByInputAndOutputIndex(
+		ctx,
 		uint64(inputIndex),
 		uint64(reportIndex),
 	)
@@ -176,9 +178,11 @@ func (a AdapterV1) GetReport(
 }
 
 func (a AdapterV1) GetReports(
+	ctx context.Context,
 	first *int, last *int, after *string, before *string, inputIndex *int,
 ) (*graphql.ReportConnection, error) {
 	reports, err := a.reportRepository.FindAllByInputIndex(
+		ctx,
 		first, last, after, before, inputIndex,
 	)
 	if err != nil {
@@ -214,7 +218,8 @@ func (a AdapterV1) convertToReport(
 }
 
 func (a AdapterV1) GetInput(index int) (*graphql.Input, error) {
-	input, err := a.inputRepository.FindByIndex(index)
+	ctx := context.Background()
+	input, err := a.inputRepository.FindByIndex(ctx, index)
 	if err != nil {
 		return nil, err
 	}
@@ -225,6 +230,7 @@ func (a AdapterV1) GetInput(index int) (*graphql.Input, error) {
 }
 
 func (a AdapterV1) GetInputs(
+	ctx context.Context,
 	first *int, last *int, after *string, before *string, where *graphql.InputFilter,
 ) (*graphql.InputConnection, error) {
 	filters := []*cModel.ConvenienceFilter{}
@@ -253,7 +259,7 @@ func (a AdapterV1) GetInputs(
 		}
 	}
 	inputs, err := a.inputRepository.FindAll(
-		first, last, after, before, filters,
+		ctx, first, last, after, before, filters,
 	)
 	if err != nil {
 		return nil, err

@@ -1,6 +1,10 @@
 package model
 
-import cModel "github.com/calindra/nonodo/internal/convenience/model"
+import (
+	"context"
+
+	cModel "github.com/calindra/nonodo/internal/convenience/model"
+)
 
 type InputBoxSequencer struct {
 	model *NonodoModel
@@ -43,8 +47,10 @@ func FinishAndGetNext(m *NonodoModel, accept bool) cModel.Input {
 		}
 	}
 
+	ctx := context.Background()
+
 	// try to get first unprocessed advance
-	input, err := m.inputRepository.FindByStatus(cModel.CompletionStatusUnprocessed)
+	input, err := m.inputRepository.FindByStatus(ctx, cModel.CompletionStatusUnprocessed)
 	if err != nil {
 		panic(err)
 	}

@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/convenience/model"
@@ -11,15 +12,21 @@ import (
 type ConvenienceService struct {
 	voucherRepository *repository.VoucherRepository
 	noticeRepository  *repository.NoticeRepository
+	inputRepository   *repository.InputRepository
+	reportRepository  *repository.ReportRepository
 }
 
 func NewConvenienceService(
 	voucherRepository *repository.VoucherRepository,
 	noticeRepository *repository.NoticeRepository,
+	inputRepository *repository.InputRepository,
+	reportRepository *repository.ReportRepository,
 ) *ConvenienceService {
 	return &ConvenienceService{
 		voucherRepository: voucherRepository,
 		noticeRepository:  noticeRepository,
+		inputRepository:   inputRepository,
+		reportRepository:  reportRepository,
 	}
 }
 
@@ -46,6 +53,7 @@ func (s *ConvenienceService) CreateNotice(
 	}
 	return s.noticeRepository.Create(ctx, notice)
 }
+
 func (s *ConvenienceService) CreateVoucher(
 	ctx context.Context,
 	voucher *model.ConvenienceVoucher,
@@ -65,6 +73,48 @@ func (s *ConvenienceService) CreateVoucher(
 	}
 
 	return s.voucherRepository.CreateVoucher(ctx, voucher)
+}
+
+func (s *ConvenienceService) CreateInput(
+	ctx context.Context,
+	input *model.AdvanceInput,
+) (*model.AdvanceInput, error) {
+	inputInDb, err := s.inputRepository.FindByIndex(ctx, input.Index)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if inputInDb != nil {
+		return s.inputRepository.Update(ctx, *input)
+	}
+	return s.inputRepository.Create(ctx, *input)
+}
+
+func (s *ConvenienceService) CreateReport(
+	ctx context.Context,
+	report *model.Report,
+) (*model.Report, error) {
+	reportInDb, err := s.reportRepository.FindByInputAndOutputIndex(ctx,
+		uint64(report.InputIndex),
+		uint64(report.Index),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if reportInDb != nil {
+		slog.Debug("Report exist",
+			"inputIndex", report.InputIndex,
+			"outputIndex", report.Index,
+		)
+		return s.reportRepository.Update(ctx, *reportInDb)
+	}
+	reportCreated, err := s.reportRepository.Create(ctx, *report)
+	if err != nil {
+		return nil, err
+	}
+	return &reportCreated, err
 }
 
 func (c *ConvenienceService) UpdateExecuted(
@@ -117,6 +167,42 @@ func (c *ConvenienceService) FindAllNotices(
 	)
 }
 
+func (c *ConvenienceService) FindAllInputs(
+	ctx context.Context,
+	first *int,
+	last *int,
+	after *string,
+	before *string,
+	filter []*model.ConvenienceFilter,
+) (*commons.PageResult[model.AdvanceInput], error) {
+	return c.inputRepository.FindAll(
+		ctx,
+		first,
+		last,
+		after,
+		before,
+		filter,
+	)
+}
+
+func (c *ConvenienceService) FindAllByInputIndex(
+	ctx context.Context,
+	first *int,
+	last *int,
+	after *string,
+	before *string,
+	inputIndex *int,
+) (*commons.PageResult[model.Report], error) {
+	return c.reportRepository.FindAllByInputIndex(
+		ctx,
+		first,
+		last,
+		after,
+		before,
+		inputIndex,
+	)
+}
+
 func (c *ConvenienceService) FindVoucherByInputAndOutputIndex(
 	ctx context.Context, inputIndex uint64, outputIndex uint64,
 ) (*model.ConvenienceVoucher, error) {
@@ -131,4 +217,10 @@ func (c *ConvenienceService) FindNoticeByInputAndOutputIndex(
 	return c.noticeRepository.FindByInputAndOutputIndex(
 		ctx, inputIndex, outputIndex,
 	)
+}
+
+func (c *ConvenienceService) FindInputByIndex(
+	ctx context.Context, index int,
+) (*model.AdvanceInput, error) {
+	return c.inputRepository.FindByIndex(ctx, index)
 }

@@ -54,19 +54,29 @@ func (w InputterWorker) Start(ctx context.Context, ready chan<- struct{}) error 
 }
 
 // Read inputs starting from the input box deployment block until the latest block.
-func (w *InputterWorker) readPastInputs(
+func (w *InputterWorker) ReadPastInputs(
 	ctx context.Context,
 	client *ethclient.Client,
 	inputBox *contracts.InputBox,
 	startBlockNumber uint64,
+	endBlockNumber *uint64,
 ) error {
-	slog.Debug("readPastInputs",
-		"startBlockNumber", startBlockNumber,
-		"dappAddress", w.ApplicationAddress,
-	)
+	if endBlockNumber != nil {
+		slog.Debug("readPastInputs",
+			"startBlockNumber", startBlockNumber,
+			"endBlockNumber", *endBlockNumber,
+			"dappAddress", w.ApplicationAddress,
+		)
+	} else {
+		slog.Debug("readPastInputs",
+			"startBlockNumber", startBlockNumber,
+			"dappAddress", w.ApplicationAddress,
+		)
+	}
 	opts := bind.FilterOpts{
 		Context: ctx,
 		Start:   startBlockNumber,
+		End:     endBlockNumber,
 	}
 	filter := []common.Address{w.ApplicationAddress}
 	it, err := inputBox.FilterInputAdded(&opts, filter, nil)
@@ -99,7 +109,7 @@ func (w InputterWorker) watchNewInputs(
 		// new ones. There is a race condition where we might lose inputs sent between the
 		// readPastInputs call and the watchNewInputs call. Given that nonodo is a development node,
 		// we accept this race condition.
-		err := w.readPastInputs(ctx, client, inputBox, currentBlock)
+		err := w.ReadPastInputs(ctx, client, inputBox, currentBlock, nil)
 		if err != nil {
 			slog.Error("Inputter", "error", err)
 			slog.Info("Inputter reconnecting", "reconnectDelay", reconnectDelay)

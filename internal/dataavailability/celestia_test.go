@@ -43,7 +43,9 @@ func (s *CelestiaSuite) createGioID(blockHeight uint64, shareStart uint64, share
 	return gioID
 }
 
-func (s *CelestiaSuite) XTestTendermint(t *testing.T) {
+// skipped start failing at
+// https://github.com/Calindra/nonodo/actions/runs/9980967891/job/27613380799
+func (s *CelestiaSuite) XTestTendermint() {
 	ctx := context.Background()
 	gioID := s.createGioID(2034386, 10, 11)
 	slog.Debug("FetchFromTendermint", "gioID", gioID)

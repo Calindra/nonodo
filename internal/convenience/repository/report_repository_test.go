@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"log/slog"
 	"testing"
 
@@ -42,7 +43,8 @@ func (s *ReportRepositorySuite) TestCreateTables() {
 }
 
 func (s *ReportRepositorySuite) TestCreateReport() {
-	_, err := s.reportRepository.Create(cModel.Report{
+	ctx := context.Background()
+	_, err := s.reportRepository.Create(ctx, cModel.Report{
 		Index:      1,
 		InputIndex: 2,
 		Payload:    common.Hex2Bytes("1122"),
@@ -51,13 +53,15 @@ func (s *ReportRepositorySuite) TestCreateReport() {
 }
 
 func (s *ReportRepositorySuite) TestCreateReportAndFind() {
-	_, err := s.reportRepository.Create(cModel.Report{
+	ctx := context.Background()
+	_, err := s.reportRepository.Create(ctx, cModel.Report{
 		InputIndex: 1,
 		Index:      2,
 		Payload:    common.Hex2Bytes("1122"),
 	})
 	s.NoError(err)
 	report, err := s.reportRepository.FindByInputAndOutputIndex(
+		ctx,
 		uint64(1),
 		uint64(2),
 	)
@@ -66,7 +70,9 @@ func (s *ReportRepositorySuite) TestCreateReportAndFind() {
 }
 
 func (s *ReportRepositorySuite) TestReportNotFound() {
+	ctx := context.Background()
 	report, err := s.reportRepository.FindByInputAndOutputIndex(
+		ctx,
 		uint64(404),
 		uint64(404),
 	)
@@ -75,17 +81,20 @@ func (s *ReportRepositorySuite) TestReportNotFound() {
 }
 
 func (s *ReportRepositorySuite) TestCreateReportAndFindAll() {
+	ctx := context.Background()
 	for i := 0; i < 3; i++ {
 		for j := 0; j < 4; j++ {
-			_, err := s.reportRepository.Create(cModel.Report{
-				InputIndex: i,
-				Index:      j,
-				Payload:    common.Hex2Bytes("1122"),
-			})
+			_, err := s.reportRepository.Create(
+				ctx,
+				cModel.Report{
+					InputIndex: i,
+					Index:      j,
+					Payload:    common.Hex2Bytes("1122"),
+				})
 			s.NoError(err)
 		}
 	}
-	reports, err := s.reportRepository.FindAll(nil, nil, nil, nil, nil)
+	reports, err := s.reportRepository.FindAll(ctx, nil, nil, nil, nil, nil)
 	s.NoError(err)
 	s.Equal(12, int(reports.Total))
 	s.Equal(0, reports.Rows[0].InputIndex)
@@ -100,7 +109,7 @@ func (s *ReportRepositorySuite) TestCreateReportAndFindAll() {
 			Eq:    &value,
 		})
 	}
-	reports, err = s.reportRepository.FindAll(nil, nil, nil, nil, filter)
+	reports, err = s.reportRepository.FindAll(ctx, nil, nil, nil, nil, filter)
 	s.NoError(err)
 	s.Equal(4, int(reports.Total))
 	s.Equal(1, reports.Rows[0].InputIndex)

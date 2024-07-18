@@ -39,7 +39,7 @@ func (r *inputResolver) Notices(ctx context.Context, obj *model.Input, first *in
 
 // Reports is the resolver for the reports field.
 func (r *inputResolver) Reports(ctx context.Context, obj *model.Input, first *int, last *int, after *string, before *string) (*model.Connection[*model.Report], error) {
-	return r.adapter.GetReports(first, last, after, before, &obj.Index)
+	return r.adapter.GetReports(ctx, first, last, after, before, &obj.Index)
 }
 
 // Input is the resolver for the input field.
@@ -77,7 +77,7 @@ func (r *queryResolver) Report(ctx context.Context, reportIndex int, inputIndex 
 
 // Inputs is the resolver for the inputs field.
 func (r *queryResolver) Inputs(ctx context.Context, first *int, last *int, after *string, before *string, where *model.InputFilter) (*model.Connection[*model.Input], error) {
-	return r.adapter.GetInputs(first, last, after, before, where)
+	return r.adapter.GetInputs(ctx, first, last, after, before, where)
 }
 
 // Vouchers is the resolver for the vouchers field.
@@ -92,7 +92,7 @@ func (r *queryResolver) Notices(ctx context.Context, first *int, last *int, afte
 
 // Reports is the resolver for the reports field.
 func (r *queryResolver) Reports(ctx context.Context, first *int, last *int, after *string, before *string) (*model.Connection[*model.Report], error) {
-	return r.adapter.GetReports(first, last, after, before, nil)
+	return r.adapter.GetReports(ctx, first, last, after, before, nil)
 }
 
 // ConvenientVouchers is the resolver for the convenientVouchers field.

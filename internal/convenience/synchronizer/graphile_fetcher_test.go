@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"log/slog"
 	"math/big"
 	"testing"
 
@@ -41,7 +42,7 @@ func TestAdapterV2Suite(t *testing.T) {
 }
 
 func (s *GraphileFetcherTestSuite) TestFetchWithoutCursor() {
-	blob := GenerateBlob()
+	blob := GenerateOutputBlob()
 	s.graphileClient.PostFunc = func(body []byte) ([]byte, error) {
 		return []byte(fmt.Sprintf(`{
  "data": {
@@ -76,7 +77,7 @@ func (s *GraphileFetcherTestSuite) TestFetchWithoutCursor() {
 }
 
 func (s *GraphileFetcherTestSuite) TestFetchWithCursor() {
-	blob := GenerateBlob()
+	blob := GenerateOutputBlob()
 	s.graphileClient.PostFunc = func(body []byte) ([]byte, error) {
 		return []byte(fmt.Sprintf(`{
  "data": {
@@ -110,7 +111,23 @@ func (s *GraphileFetcherTestSuite) TestFetchWithCursor() {
 	s.NotNil(resp)
 }
 
-func GenerateBlob() string {
+func (s *GraphileFetcherTestSuite) TestPrintInputBlob() {
+	slog.Info("Blob", "Input Blob", GenerateInputBlob())
+}
+
+func (s *GraphileFetcherTestSuite) TestPrintOutputBlob() {
+	slog.Info("Blob", "Output Blob", GenerateOutputBlob())
+}
+
+func (s *GraphileFetcherTestSuite) TestGetFullQueryWithReport() {
+	s.graphileFetcher.BatchSize = 1
+	s.graphileFetcher.CursorReportAfter = "WyJwcmltYXJ5X2tleV9hc2MiLFsxLDFdXQ=="
+	query := s.graphileFetcher.GetFullQuery()
+	reportStartQuery := `reports(first: 1, after: "WyJwcmltYXJ5X2tleV9hc2MiLFsxLDFdXQ==")`
+	s.Contains(query, reportStartQuery)
+}
+
+func GenerateOutputBlob() string {
 	// Parse the ABI JSON
 	abiParsed, err := contracts.OutputsMetaData.GetAbi()
 
@@ -124,6 +141,36 @@ func GenerateBlob() string {
 	inputData, _ := abiParsed.Pack("Vouchers",
 		destination,
 		value,
+		payload,
+	)
+
+	return fmt.Sprintf("0x%s", common.Bytes2Hex(inputData))
+}
+
+func GenerateInputBlob() string {
+	// Parse the ABI JSON
+	abiParsed, err := contracts.InputsMetaData.GetAbi()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	chainId := big.NewInt(1000000000000000000)
+	appContract := common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
+	blockNumber := big.NewInt(1000000000000000000)
+	blockTimestamp := big.NewInt(1720701841)
+	payload := common.Hex2Bytes("11223344556677889900")
+	prevRandao := big.NewInt(1000000000000000000)
+	index := big.NewInt(1000000000000000000)
+	msgSender := common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
+	inputData, _ := abiParsed.Pack("EvmAdvance",
+		chainId,
+		appContract,
+		msgSender,
+		blockNumber,
+		blockTimestamp,
+		prevRandao,
+		index,
 		payload,
 	)
 
