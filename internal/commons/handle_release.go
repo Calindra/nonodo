@@ -84,7 +84,7 @@ func (a *AnvilRelease) ExtractAsset(archive []byte, filename string, destDir str
 	} else if strings.HasSuffix(filename, ".tar.gz") {
 		return ExtractTarGz(archive, destDir)
 	} else {
-		return fmt.Errorf("formato de arquivo não suportado: %s", filename)
+		return fmt.Errorf("format unsupported: %s", filename)
 	}
 }
 
