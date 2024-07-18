@@ -22,7 +22,7 @@ Input encoded by rollups-contract V2
 
 Run the postgraphile
 
-```
+```bash
 docker network create mynetwork
 docker build -t postgresteste:latest ./postgres
 docker run -d --network mynetwork -p 5432:5432 --name postgres postgresteste:latest
@@ -37,4 +37,24 @@ Run the nonodo with HL GraphQL flag enabled
 
 ```
 ./nonodo --high-level-graphql --enable-debug --node-version v2
+```
+
+```
+export POSTGRES_HOST=127.0.0.1
+export POSTGRES_PORT=5432
+export POSTGRES_DB=mydatabase
+export POSTGRES_USER=myuser
+export POSTGRES_PASSWORD=mypassword
+./nonodo --http-address=0.0.0.0 --high-level-graphql --enable-debug --node-version v2 --db-implementation postgres
+```
+
+Disable sync
+
+```
+export POSTGRES_HOST=127.0.0.1
+export POSTGRES_PORT=5432
+export POSTGRES_DB=mydatabase
+export POSTGRES_USER=myuser
+export POSTGRES_PASSWORD=mypassword
+./nonodo --http-address=0.0.0.0 --high-level-graphql --enable-debug --node-version v2 --db-implementation postgres --graphile-disable-sync
 ```

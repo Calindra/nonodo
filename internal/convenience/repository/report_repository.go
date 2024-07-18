@@ -57,6 +57,23 @@ func (r *ReportRepository) Create(ctx context.Context, report cModel.Report) (cM
 	return report, nil
 }
 
+func (r *ReportRepository) Update(ctx context.Context, report cModel.Report) (*cModel.Report, error) {
+	sql := `UPDATE convenience_reports
+		SET payload = $1
+		WHERE input_index = $2 and output_index = $3 `
+	_, err := r.Db.ExecContext(
+		ctx,
+		sql,
+		common.Bytes2Hex(report.Payload),
+		report.InputIndex,
+		report.Index,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &report, nil
+}
+
 func (r *ReportRepository) FindByInputAndOutputIndex(
 	ctx context.Context,
 	inputIndex uint64,

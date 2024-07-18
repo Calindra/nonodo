@@ -1,6 +1,8 @@
 package convenience
 
 import (
+	"log/slog"
+
 	"github.com/calindra/nonodo/internal/convenience/decoder"
 	"github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/calindra/nonodo/internal/convenience/services"
@@ -175,7 +177,10 @@ func (c *Container) GetGraphileClient(graphileAddress string, graphilePort strin
 	if loadTestMode {
 		graphileAddress = "postgraphile-custom"
 	}
-
+	slog.Debug("GraphileClient",
+		"graphileAddress", graphileAddress,
+		"graphilePort", graphilePort,
+	)
 	c.graphileClient = &graphile.GraphileClientImpl{
 		GraphileAddress: graphileAddress,
 		GraphilePort:    graphilePort,
