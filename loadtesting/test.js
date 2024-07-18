@@ -110,25 +110,6 @@ function testReportFound() {
     });
 }
 
-function testConvenientVouchers() {
-    const payload = JSON.stringify({
-        query: "query { convenientVouchers(first: 10) { edges { node { index }}}}"
-    }); 
-
-    const params = {
-        headers: {
-            'Content-Type': 'application/json',
-        },
-    };
-
-    const response = http.post(GRAPHQL_ENDPOINT, payload, params);
-
-    check(response, {
-        'testConvenientVouchers is status 200': (r) => r.status === 200,
-        'testConvenientVouchers response body contains expected content': (r) => r.body.includes('{"data":{"convenientVouchers":{"edges":[{"node":{"index":1}},{"node":{"index":2}}]}}}'), 
-    });
-}
-
 function testReports() {
     const payload = JSON.stringify({
         query: "query { reports(first: 10) { edges { node { index }}}}"
@@ -211,7 +192,6 @@ export default function () {
    testNoticeFound()
    testInputFound()
    testReportFound()
-   testConvenientVouchers()
    testVouchers()
    testNotices()
    testReports()

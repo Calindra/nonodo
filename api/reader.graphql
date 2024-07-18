@@ -73,6 +73,9 @@ type Voucher {
   payload: String!
   "Proof object that allows this voucher to be validated and executed on the base layer blockchain"
   proof: Proof
+
+  "Indicates whether the voucher has been executed on the base layer blockchain"
+  executed: Boolean
 }
 
 "Top level queries"
@@ -88,13 +91,11 @@ type Query {
   "Get inputs with support for pagination"
   inputs(first: Int, last: Int, after: String, before: String, where: InputFilter): InputConnection!
   "Get vouchers with support for pagination"
-  vouchers(first: Int, last: Int, after: String, before: String): VoucherConnection!
+  vouchers(first: Int, last: Int, after: String, before: String, filter: [ConvenientFilter]): VoucherConnection!
   "Get notices with support for pagination"
   notices(first: Int, last: Int, after: String, before: String): NoticeConnection!
   "Get reports with support for pagination"
   reports(first: Int, last: Int, after: String, before: String): ReportConnection!
-  "Get a convenient voucher based on its index or filter"
-  convenientVouchers(first: Int, last: Int, after: String, before: String, filter: [ConvenientFilter]): ConvenientVoucherConnection! @deprecated(reason: "This field is hidden from introspection.")
 }
 
 "Pagination entry"
@@ -218,44 +219,6 @@ type VoucherEdge {
 
 schema {
   query: Query
-}
-
-
-#----------------------#
-#  Convenient Voucher  #
-#----------------------#
-
-type ConvenientVoucher {
-  "Voucher index within the context of the input that produced it"
-  index: Int!
-  "Input whose processing produced the voucher"
-  input: Input!
-  "Transaction destination address in Ethereum hex binary format (20 bytes), starting with '0x'"
-  destination: String!
-  "Transaction payload in Ethereum hex binary format, starting with '0x'"
-  payload: String!
-  "Proof object that allows this voucher to be validated and executed on the base layer blockchain"
-  proof: Proof
-  "Executed"
-  executed: Boolean
-}
-
-"Pagination result"
-type ConvenientVoucherConnection {
-  "Total number of entries that match the query"
-  totalCount: Int!
-  "Pagination entries returned for the current page"
-  edges: [ConvenientVoucherEdge!]!
-  "Pagination metadata"
-  pageInfo: PageInfo!
-}
-
-"Pagination entry"
-type ConvenientVoucherEdge {
-  "Node instance"
-  node: ConvenientVoucher!
-  "Pagination cursor"
-  cursor: String!
 }
 
 input AddressFilterInput {
