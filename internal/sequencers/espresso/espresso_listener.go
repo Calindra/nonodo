@@ -76,10 +76,17 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 			tot := len(transactions.Transactions)
 
 			if tot > 0 {
-				fmt.Println("Fetching InputBox between Espresso block ", previousBlockHeight, " to ", currentBlockHeight)
-				err = readInputBox(ctx, previousBlockHeight, currentBlockHeight, e.InputterWorker)
-				if err != nil {
-					return err
+				l1FinalizedPrevHeight := getL1FinalizedHeight(previousBlockHeight)
+				l1FinalizedCurrentHeight := getL1FinalizedHeight(currentBlockHeight)
+				slog.Debug("L1 finalized", "from", l1FinalizedPrevHeight, "to", l1FinalizedCurrentHeight)
+
+				// read L1 if there might be update
+				if l1FinalizedCurrentHeight > l1FinalizedPrevHeight || previousBlockHeight == e.fromBlock {
+					slog.Debug("Fetching InputBox between Espresso blocks", "from", previousBlockHeight, "to", currentBlockHeight)
+					err = readInputBox(ctx, l1FinalizedPrevHeight, l1FinalizedCurrentHeight, e.InputterWorker)
+					if err != nil {
+						return err
+					}
 				}
 				previousBlockHeight = currentBlockHeight + 1
 			}
@@ -105,36 +112,34 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 				if err != nil {
 					return err
 				}
-				fmt.Println("msg sender ", msgSender.String())
 				// type EspressoMessage struct {
 				// 	nonce   uint32 `json:"nonce"`
 				// 	payload string `json:"payload"`
 				// }
 				nonce := int64(typedData.Message["nonce"].(float64)) // by default, JSON number is float64
 				payload, ok := typedData.Message["payload"].(string)
-				fmt.Println("nonce ", nonce)
-				fmt.Println("payload ", payload)
 				if !ok {
 					return fmt.Errorf("type assertion error")
 				}
+				slog.Debug("Espresso input", "msgSender", msgSender, "nonce", nonce, "payload", payload)
 
 				// update nonce maps
 				// no need to consider node exits abruptly and restarts from where it left
 				// app has to start `nonce` from 1 and increment by 1 for each payload
 				if nonceMap[msgSender] == nonce-1 {
 					nonceMap[msgSender] = nonce
-					// fmt.Println("nonce is now ", nonce)
 				} else {
 					// nonce repeated
-					fmt.Println("duplicated or incorrect nonce")
+					slog.Debug("duplicated or incorrect nonce", "nonce", nonce)
 					continue
 				}
 
 				_, err = e.InputRepository.Create(ctx, cModel.AdvanceInput{
-					Index:       int(index),
-					MsgSender:   msgSender,
-					Payload:     []byte(payload),
-					BlockNumber: currentBlockHeight,
+					Index:          int(index),
+					MsgSender:      msgSender,
+					Payload:        []byte(payload),
+					BlockNumber:    getL1FinalizedHeight(currentBlockHeight),
+					BlockTimestamp: getL1FinalizedTimestamp(currentBlockHeight),
 				})
 				if err != nil {
 					return err
