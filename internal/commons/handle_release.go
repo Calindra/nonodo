@@ -141,7 +141,10 @@ func getAssetsFromLastReleaseGitHub(ctx context.Context, client *github.Client, 
 	// List the tags of the GitHub repository
 	slog.Info("Listing tags for", namespace, repository)
 
-	release, _, err := client.Repositories.GetLatestRelease(ctx, namespace, repository)
+	releases, _, err := client.Repositories.ListReleases(ctx, namespace, repository, &github.ListOptions{
+		PerPage: 1,
+	})
+	// release, _, err := client.Repositories.GetLatestRelease(ctx, namespace, repository)
 
 	if err != nil {
 		return nil, fmt.Errorf("%s(%s): failed to list releases %s", namespace, repository, err.Error())
@@ -149,14 +152,16 @@ func getAssetsFromLastReleaseGitHub(ctx context.Context, client *github.Client, 
 
 	fv := make([]ReleaseAsset, 0)
 
-	for _, a := range release.Assets {
-		slog.Info("Asset", "name", a.GetName(), "url", a.GetBrowserDownloadURL())
-		fv = append(fv, ReleaseAsset{
-			Tag:      release.GetTagName(),
-			Id:       a.GetID(),
-			Filename: a.GetName(),
-			Url:      a.GetBrowserDownloadURL(),
-		})
+	for _, r := range releases {
+		for _, a := range r.Assets {
+			slog.Info("Asset", "name", a.GetName(), "url", a.GetBrowserDownloadURL())
+			fv = append(fv, ReleaseAsset{
+				Tag:      r.GetTagName(),
+				Id:       a.GetID(),
+				Filename: a.GetName(),
+				Url:      a.GetBrowserDownloadURL(),
+			})
+		}
 	}
 
 	return fv, nil
