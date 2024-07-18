@@ -191,3 +191,29 @@ func TestDecoderHandleOutput_Failure(t *testing.T) {
 	assert.EqualError(t, err, "error handling output: Decoder Handler Output Failure")
 
 }
+
+func TestGetConvertedInput_Failure(t *testing.T) {
+	response := getTestOutputResponse()
+	ctx := context.Background()
+
+	adapterMock := &AdapterInterfaceMock{}
+	decoderMock := &DecoderInterfaceMock{}
+
+	synchronizer := GraphileSynchronizer{
+		Decoder:                decoderMock,
+		SynchronizerRepository: &repository.SynchronizerRepository{},
+		GraphileFetcher:        &GraphileFetcher{},
+		Adapter:                adapterMock,
+	}
+	erro := errors.New("Get Converted Input Failure")
+	adapterMock.On("ConvertVoucher", mock.Anything).Return("1a2b3c")
+	adapterMock.On("RetrieveDestination", mock.Anything).Return(common.Address{}, nil)
+	decoderMock.On("GetHandleOutput", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	adapterMock.On("GetConvertedInput", mock.Anything).Return(make([]interface{}, 0), erro)
+
+	err := synchronizer.handleGraphileResponse(response, ctx)
+
+	assert.Error(t, err)
+	assert.EqualError(t, err, "error handling output: Decoder Handler Output Failure")
+
+}
