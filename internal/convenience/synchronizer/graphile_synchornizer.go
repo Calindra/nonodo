@@ -16,26 +16,48 @@ import (
 )
 
 type GraphileSynchronizer struct {
-	Decoder                *decoder.OutputDecoder
+	Decoder                DecoderConnector
 	SynchronizerRepository *repository.SynchronizerRepository
 	GraphileFetcher        *GraphileFetcher
 	Adapter                AdapterConnector
 }
 
-type AdapterService struct {
-	adapter adapter.Adapter
-}
-
-type InputTransactionRecord struct {
-	Destination common.Address
-	Payload     string
-	InputIndex  uint64
-	OutputIndex uint64
+type Service struct {
+	adapter        adapter.Adapter
+	decoderService *decoder.OutputDecoder
 }
 type AdapterConnector interface {
 	ConvertVoucher(output Edge) string
 	RetrieveDestination(output Edge) (common.Address, error)
 	GetConvertedInput(output InputEdge) ([]interface{}, error)
+}
+
+type DecoderConnector interface {
+	GetHandleOutput(
+		ctx context.Context,
+		destination common.Address,
+		payload string,
+		inputIndex uint64,
+		outputIndex uint64,
+	) error
+
+	GetHandleInput(
+		ctx context.Context,
+		index int,
+		status model.CompletionStatus,
+		msgSender common.Address,
+		payload string,
+		blockNumber uint64,
+		blockTimestamp time.Time,
+		prevRandao string,
+	) error
+
+	GetHandleReport(
+		ctx context.Context,
+		index int,
+		outputIndex int,
+		payload string,
+	) error
 }
 
 type Edge struct {
@@ -55,22 +77,30 @@ type InputEdge struct {
 	} `json:"node"`
 }
 
-func (m *AdapterService) ConvertVoucher(output Edge) string {
+func (m *Service) ConvertVoucher(output Edge) string {
 	adapted := m.adapter.ConvertVoucherPayloadToV3(output.Node.Blob[2:])
 	return adapted
 }
 
-func (m *AdapterService) RetrieveDestination(output Edge) (common.Address, error) {
+func (m *Service) RetrieveDestination(output Edge) (common.Address, error) {
 	return m.adapter.GetDestinationV2(output.Node.Blob)
 }
 
-func (m *AdapterService) RetrieveConvertedInput(input InputEdge) ([]interface{}, error) {
+func (m *Service) RetrieveConvertedInput(input InputEdge) ([]interface{}, error) {
 	return m.adapter.GetConvertedInputV2(input.Node.Blob)
 }
 
-// func (m *AdapterService) HandleOutput(ctx context.Context, inputTransactionRecord InputTransactionRecord) {
-// 	return m.adapter.GetConvertedInput(input.Node.Blob)
-// }
+func (m *Service) GetHandleOutput(ctx context.Context, destination common.Address, payload string, inputIndex uint64, outputIndex uint64) error {
+	return m.decoderService.HandleOutput(ctx, destination, payload, inputIndex, outputIndex)
+}
+
+func (m *Service) GetHandleInput(ctx context.Context, index int, status model.CompletionStatus, msgSender common.Address, payload string, blockNumber uint64, blockTimestamp time.Time, prevRandao string) error {
+	return m.decoderService.HandleInput(ctx, index, status, msgSender, payload, blockNumber, blockTimestamp, prevRandao)
+}
+
+func (m *Service) GetHandleReport(ctx context.Context, index int, outputIndex int, payload string) error {
+	return m.decoderService.HandleReport(ctx, index, outputIndex, payload)
+}
 
 func (x GraphileSynchronizer) String() string {
 	return "GraphileSynchronizer"
@@ -146,14 +176,15 @@ func (x GraphileSynchronizer) handleGraphileResponse(outputResp OutputResponse, 
 			return fmt.Errorf("error retrieving destination for node blob '%s': %w", output.Node.Blob, err)
 		}
 
-		err = x.Decoder.HandleOutput(ctx,
+		err = x.Decoder.GetHandleOutput(ctx,
 			destination,
 			adapted,
 			uint64(inputIndex),
 			uint64(outputIndex),
 		)
 		if err != nil {
-			panic(err)
+			slog.Error("Failed to handle output: %v", err)
+			return fmt.Errorf("error handling output: %w", err)
 		}
 	}
 
@@ -179,7 +210,7 @@ func (x GraphileSynchronizer) handleGraphileResponse(outputResp OutputResponse, 
 		blockTimestamp := adapted[4].(*big.Int).Int64()
 		prevRandao := adapted[5].(*big.Int).String()
 
-		err := x.Decoder.HandleInput(ctx,
+		err := x.Decoder.GetHandleInput(ctx,
 			inputIndex,
 			model.CompletionStatusUnprocessed,
 			msgSender,
@@ -198,7 +229,7 @@ func (x GraphileSynchronizer) handleGraphileResponse(outputResp OutputResponse, 
 			"Index", report.Node.Index,
 			"InputIndex", report.Node.InputIndex,
 		)
-		err := x.Decoder.HandleReport(
+		err := x.Decoder.GetHandleReport(
 			ctx,
 			report.Node.InputIndex,
 			report.Node.Index,
@@ -243,12 +274,14 @@ func (x GraphileSynchronizer) handleGraphileResponse(outputResp OutputResponse, 
 }
 
 func NewGraphileSynchronizer(
-	decoder *decoder.OutputDecoder,
+	decoder DecoderConnector,
 	synchronizerRepository *repository.SynchronizerRepository,
 	graphileFetcher *GraphileFetcher,
+	adapter AdapterConnector,
 ) *GraphileSynchronizer {
 	return &GraphileSynchronizer{
 		Decoder:                decoder,
 		SynchronizerRepository: synchronizerRepository,
-		GraphileFetcher:        graphileFetcher}
+		GraphileFetcher:        graphileFetcher,
+		Adapter:                adapter}
 }
