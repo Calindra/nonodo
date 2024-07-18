@@ -54,13 +54,9 @@ func (w AnvilWorker) String() string {
 	return anvilCommand
 }
 
-func (w AnvilWorker) CheckIfAnvilIsInstalled() error {
+func (w AnvilWorker) IsAnvilInstalled() bool {
 	_, err := exec.LookPath(anvilCommand)
-	if err != nil {
-		return fmt.Errorf("anvil: anvil is not installed %s", err.Error())
-	}
-
-	return nil
+	return err == nil
 }
 
 func (w AnvilWorker) InstallAnvil(ctx context.Context) (string, error) {
@@ -70,7 +66,7 @@ func (w AnvilWorker) InstallAnvil(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("anvil: failed to get latest release: %w", err)
 	}
-	location, err := anvilClient.DownloadAsset(ctx, latest.Id)
+	location, err := anvilClient.DownloadAsset(ctx, latest)
 	if err != nil {
 		return "", fmt.Errorf("anvil: failed to download asset: %w", err)
 	}
@@ -116,8 +112,7 @@ func (w AnvilWorker) Start(ctx context.Context, ready chan<- struct{}) error {
 	defer removeTemp(dir)
 	slog.Debug("anvil: created temp dir with state file", "dir", dir)
 
-	err = w.CheckIfAnvilIsInstalled()
-	if err != nil {
+	if !w.IsAnvilInstalled() {
 		location, err := w.InstallAnvil(ctx)
 
 		if err != nil {

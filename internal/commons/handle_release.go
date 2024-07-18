@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"runtime"
 
 	"github.com/google/go-github/github"
@@ -24,7 +25,7 @@ type HandleRelease interface {
 	PlatformCompatible() (string, error)
 	ListRelease(ctx context.Context) ([]ReleaseAsset, error)
 	GetLatestReleaseCompatible(ctx context.Context) (*ReleaseAsset, error)
-	DownloadAsset(ctx context.Context, id int64) (string, error)
+	DownloadAsset(ctx context.Context, release *ReleaseAsset) (string, error)
 }
 
 type AnvilRelease struct {
@@ -72,21 +73,27 @@ func (a AnvilRelease) PlatformCompatible() (string, error) {
 }
 
 // DownloadAsset implements HandleRelease.
-func (a *AnvilRelease) DownloadAsset(ctx context.Context, id int64) (string, error) {
-	tmp, err := os.MkdirTemp("", "anvil")
+func (a *AnvilRelease) DownloadAsset(ctx context.Context, release *ReleaseAsset) (string, error) {
+	tmp, err := os.MkdirTemp("", release.Tag)
 
 	if err != nil {
 		return "", fmt.Errorf("anvil: failed to create temp dir %s", err.Error())
 	}
 
-	slog.Info("Downloading asset", "id", id, "to", tmp)
+	location := filepath.Join(tmp, release.Filename)
 
-	rc, _, err := a.Client.Repositories.DownloadReleaseAsset(ctx, a.Namespace, a.Repository, id)
+	slog.Info("Downloading asset", "id", release.Id, "to", location)
+
+	rc, redirect, err := a.Client.Repositories.DownloadReleaseAsset(ctx, a.Namespace, a.Repository, release.Id)
+
+	if redirect != "" {
+		slog.Info("Redirect", "url", redirect)
+		defer rc.Close()
+	}
 
 	if err != nil {
 		return "", fmt.Errorf("anvil: failed to download asset %s", err.Error())
 	}
-	defer rc.Close()
 
 	data, err := io.ReadAll(rc)
 	if err != nil {
@@ -101,7 +108,7 @@ func (a *AnvilRelease) DownloadAsset(ctx context.Context, id int64) (string, err
 		return "", fmt.Errorf("anvil: failed to write asset %s", err.Error())
 	}
 
-	return tmp, nil
+	return location, nil
 }
 
 // ListRelease implements HandleRelease.
@@ -134,36 +141,22 @@ func getAssetsFromLastReleaseGitHub(ctx context.Context, client *github.Client, 
 	// List the tags of the GitHub repository
 	slog.Info("Listing tags for", namespace, repository)
 
-	releases, _, err := client.Repositories.ListReleases(ctx, namespace, repository, &github.ListOptions{
-		PerPage: 1,
-	})
-
-	if _, ok := err.(*github.RateLimitError); ok {
-		return nil, fmt.Errorf("%s(%s): rate limit exceeded %s", namespace, repository, err.Error())
-	}
+	release, _, err := client.Repositories.GetLatestRelease(ctx, namespace, repository)
 
 	if err != nil {
 		return nil, fmt.Errorf("%s(%s): failed to list releases %s", namespace, repository, err.Error())
 	}
 
-	first := releases[0]
-
-	if first == nil {
-		return nil, fmt.Errorf("%s(%s): no releases found", namespace, repository)
-	}
-
 	fv := make([]ReleaseAsset, 0)
 
-	for _, r := range releases {
-		for _, a := range r.Assets {
-			slog.Info("Asset", "name", a.GetName(), "url", a.GetBrowserDownloadURL())
-			fv = append(fv, ReleaseAsset{
-				Tag:      r.GetTagName(),
-				Id:       a.GetID(),
-				Filename: a.GetName(),
-				Url:      a.GetBrowserDownloadURL(),
-			})
-		}
+	for _, a := range release.Assets {
+		slog.Info("Asset", "name", a.GetName(), "url", a.GetBrowserDownloadURL())
+		fv = append(fv, ReleaseAsset{
+			Tag:      release.GetTagName(),
+			Id:       a.GetID(),
+			Filename: a.GetName(),
+			Url:      a.GetBrowserDownloadURL(),
+		})
 	}
 
 	return fv, nil
