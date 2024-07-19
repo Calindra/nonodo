@@ -124,6 +124,10 @@ func (w AnvilWorker) Start(ctx context.Context, ready chan<- struct{}) error {
 	defer removeTemp(dir)
 	slog.Debug("anvil: created temp dir with state file", "dir", dir)
 
+	if w.AnvilCmd == "" {
+		w.AnvilCmd = anvilCommand
+	}
+
 	var server supervisor.ServerWorker
 	server.Name = anvilCommand
 	server.Command = w.AnvilCmd
