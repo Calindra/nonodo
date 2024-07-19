@@ -4,7 +4,6 @@ FROM golang:1.22
 # Instale Clang
 RUN apt-get update && apt-get install -y clang
 
-
 # Instale Foundry
 RUN curl -L https://foundry.paradigm.xyz | bash
 
