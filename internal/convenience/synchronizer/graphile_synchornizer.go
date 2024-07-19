@@ -7,8 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/calindra/nonodo/internal/convenience/adapter"
-	"github.com/calindra/nonodo/internal/convenience/decoder"
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/ethereum/go-ethereum/common"
@@ -21,17 +19,13 @@ type GraphileSynchronizer struct {
 	Adapter                AdapterConnector
 }
 
-type Service struct {
-	adapter        adapter.Adapter
-	decoderService *decoder.OutputDecoder
-}
 type AdapterConnector interface {
 	RetrieveDestination(output model.OutputEdge) (common.Address, error)
 	GetConvertedInput(output model.InputEdge) (model.ConvertedInput, error)
 }
 
 type DecoderConnector interface {
-	GetHandleOutput(
+	HandleOutput(
 		ctx context.Context,
 		destination common.Address,
 		payload string,
@@ -39,7 +33,7 @@ type DecoderConnector interface {
 		outputIndex uint64,
 	) error
 
-	GetHandleInput(
+	HandleInput(
 		ctx context.Context,
 		index int,
 		status model.CompletionStatus,
@@ -50,37 +44,12 @@ type DecoderConnector interface {
 		prevRandao string,
 	) error
 
-	GetHandleReport(
+	HandleReport(
 		ctx context.Context,
 		index int,
 		outputIndex int,
 		payload string,
 	) error
-}
-
-// func (m *Service) ConvertVoucher(output Edge) string {
-// 	adapted := m.adapter.ConvertVoucherPayloadToV3(output.Node.Blob[2:])
-// 	return adapted
-// }
-
-func (m *Service) RetrieveDestination(output model.OutputEdge) (common.Address, error) {
-	return m.adapter.GetDestinationV2(output.Node.Blob)
-}
-
-func (m *Service) GetConvertedInput(input model.InputEdge) (model.ConvertedInput, error) {
-	return m.adapter.GetConvertedInputV2(input.Node.Blob)
-}
-
-func (m *Service) GetHandleOutput(ctx context.Context, destination common.Address, payload string, inputIndex uint64, outputIndex uint64) error {
-	return m.decoderService.HandleOutput(ctx, destination, payload, inputIndex, outputIndex)
-}
-
-func (m *Service) GetHandleInput(ctx context.Context, index int, status model.CompletionStatus, msgSender common.Address, payload string, blockNumber uint64, blockTimestamp time.Time, prevRandao string) error {
-	return m.decoderService.HandleInput(ctx, index, status, msgSender, payload, blockNumber, blockTimestamp, prevRandao)
-}
-
-func (m *Service) GetHandleReport(ctx context.Context, index int, outputIndex int, payload string) error {
-	return m.decoderService.HandleReport(ctx, index, outputIndex, payload)
 }
 
 func (x GraphileSynchronizer) String() string {
@@ -158,7 +127,7 @@ func (x GraphileSynchronizer) handleGraphileResponse(outputResp OutputResponse, 
 			return fmt.Errorf("error retrieving destination for node blob '%s': %w", output.Node.Blob, err)
 		}
 
-		err = x.Decoder.GetHandleOutput(ctx,
+		err = x.Decoder.HandleOutput(ctx,
 			destination,
 			blob,
 			uint64(inputIndex),
@@ -197,7 +166,7 @@ func (x GraphileSynchronizer) handleGraphileResponse(outputResp OutputResponse, 
 		blockTimestamp := convertedInput.BlockTimestamp
 		prevRandao := convertedInput.PrevRandao
 
-		err = x.Decoder.GetHandleInput(ctx,
+		err = x.Decoder.HandleInput(ctx,
 			inputIndex,
 			model.CompletionStatusUnprocessed,
 			msgSender,
@@ -216,7 +185,7 @@ func (x GraphileSynchronizer) handleGraphileResponse(outputResp OutputResponse, 
 			"Index", report.Node.Index,
 			"InputIndex", report.Node.InputIndex,
 		)
-		err := x.Decoder.GetHandleReport(
+		err := x.Decoder.HandleReport(
 			ctx,
 			report.Node.InputIndex,
 			report.Node.Index,

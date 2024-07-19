@@ -37,17 +37,17 @@ func (m *AdapterInterfaceMock) GetConvertedInput(input model.InputEdge) (model.C
 	return args.Get(0).(model.ConvertedInput), args.Error(1)
 }
 
-func (m *DecoderInterfaceMock) GetHandleOutput(ctx context.Context, destination common.Address, payload string, inputIndex uint64, outputIndex uint64) error {
+func (m *DecoderInterfaceMock) HandleOutput(ctx context.Context, destination common.Address, payload string, inputIndex uint64, outputIndex uint64) error {
 	args := m.Called(ctx, destination, payload, inputIndex, outputIndex)
 	return args.Error(0)
 }
 
-func (m *DecoderInterfaceMock) GetHandleInput(ctx context.Context, index int, status model.CompletionStatus, msgSender common.Address, payload string, blockNumber uint64, blockTimestamp time.Time, prevRandao string) error {
+func (m *DecoderInterfaceMock) HandleInput(ctx context.Context, index int, status model.CompletionStatus, msgSender common.Address, payload string, blockNumber uint64, blockTimestamp time.Time, prevRandao string) error {
 	args := m.Called(ctx, index, status, msgSender, payload, blockNumber, blockTimestamp, prevRandao)
 	return args.Error(0)
 }
 
-func (m *DecoderInterfaceMock) GetHandleReport(ctx context.Context, index int, outputIndex int, payload string) error {
+func (m *DecoderInterfaceMock) HandleReport(ctx context.Context, index int, outputIndex int, payload string) error {
 	args := m.Called(ctx, index, outputIndex, payload)
 	return args.Error(0)
 }
@@ -183,7 +183,7 @@ func TestDecoderHandleOutput_Failure(t *testing.T) {
 	erro := errors.New("Decoder Handler Output Failure")
 	// adapterMock.On("ConvertVoucher", mock.Anything).Return("1a2b3c")
 	adapterMock.On("RetrieveDestination", mock.Anything).Return(common.Address{}, nil)
-	decoderMock.On("GetHandleOutput", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(erro)
+	decoderMock.On("HandleOutput", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(erro)
 
 	err := synchronizer.handleGraphileResponse(response, ctx)
 
@@ -208,7 +208,7 @@ func TestGetConvertedInput_Failure(t *testing.T) {
 	erro := errors.New("Get Converted Input Failure")
 	// adapterMock.On("ConvertVoucher", mock.Anything).Return("1a2b3c")
 	adapterMock.On("RetrieveDestination", mock.Anything).Return(common.Address{}, nil)
-	decoderMock.On("GetHandleOutput", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	decoderMock.On("HandleOutput", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	adapterMock.On("GetConvertedInput", mock.Anything).Return(make([]interface{}, 0), erro)
 
 	err := synchronizer.handleGraphileResponse(response, ctx)
