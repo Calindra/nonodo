@@ -22,19 +22,19 @@ type DecoderInterfaceMock struct {
 	mock.Mock
 }
 
-func (m *AdapterInterfaceMock) RetrieveDestination(output Edge) (common.Address, error) {
+func (m *AdapterInterfaceMock) RetrieveDestination(output model.OutputEdge) (common.Address, error) {
 	args := m.Called(output)
 	return args.Get(0).(common.Address), args.Error(1)
 }
 
-func (m *AdapterInterfaceMock) ConvertVoucher(output Edge) string {
-	args := m.Called(output)
-	return args.String(0)
-}
+// func (m *AdapterInterfaceMock) ConvertVoucher(output Edge) string {
+// 	args := m.Called(output)
+// 	return args.String(0)
+// }
 
-func (m *AdapterInterfaceMock) GetConvertedInput(input InputEdge) ([]interface{}, error) {
+func (m *AdapterInterfaceMock) GetConvertedInput(input model.InputEdge) (model.ConvertedInput, error) {
 	args := m.Called(input)
-	return args.Get(0).([]interface{}), args.Error(1)
+	return args.Get(0).(model.ConvertedInput), args.Error(1)
 }
 
 func (m *DecoderInterfaceMock) GetHandleOutput(ctx context.Context, destination common.Address, payload string, inputIndex uint64, outputIndex uint64) error {
@@ -158,7 +158,7 @@ func TestGetDestination_Failure(t *testing.T) {
 	}
 
 	erro := errors.New("error")
-	adapterMock.On("ConvertVoucher", mock.Anything).Return("1a2b3c")
+	// adapterMock.On("ConvertVoucher", mock.Anything).Return("1a2b3c")
 	adapterMock.On("RetrieveDestination", mock.Anything).Return(common.Address{}, erro)
 
 	err := synchronizer.handleGraphileResponse(response, ctx)
@@ -181,7 +181,7 @@ func TestDecoderHandleOutput_Failure(t *testing.T) {
 		Adapter:                adapterMock,
 	}
 	erro := errors.New("Decoder Handler Output Failure")
-	adapterMock.On("ConvertVoucher", mock.Anything).Return("1a2b3c")
+	// adapterMock.On("ConvertVoucher", mock.Anything).Return("1a2b3c")
 	adapterMock.On("RetrieveDestination", mock.Anything).Return(common.Address{}, nil)
 	decoderMock.On("GetHandleOutput", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(erro)
 
@@ -206,7 +206,7 @@ func TestGetConvertedInput_Failure(t *testing.T) {
 		Adapter:                adapterMock,
 	}
 	erro := errors.New("Get Converted Input Failure")
-	adapterMock.On("ConvertVoucher", mock.Anything).Return("1a2b3c")
+	// adapterMock.On("ConvertVoucher", mock.Anything).Return("1a2b3c")
 	adapterMock.On("RetrieveDestination", mock.Anything).Return(common.Address{}, nil)
 	decoderMock.On("GetHandleOutput", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	adapterMock.On("GetConvertedInput", mock.Anything).Return(make([]interface{}, 0), erro)

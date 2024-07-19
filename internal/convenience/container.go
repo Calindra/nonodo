@@ -6,6 +6,7 @@ import (
 	"github.com/calindra/nonodo/internal/convenience/services"
 	"github.com/calindra/nonodo/internal/convenience/synchronizer"
 	"github.com/calindra/nonodo/internal/graphile"
+	"github.com/calindra/nonodo/internal/reader"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -25,6 +26,7 @@ type Container struct {
 	graphileClient       graphile.GraphileClient
 	inputRepository      *repository.InputRepository
 	reportRepository     *repository.ReportRepository
+	adapterV2            *reader.Adapter
 }
 
 func NewContainer(db sqlx.DB) *Container {
@@ -39,6 +41,17 @@ func (c *Container) GetOutputDecoder() *decoder.OutputDecoder {
 	}
 	c.outputDecoder = decoder.NewOutputDecoder(*c.GetConvenienceService())
 	return c.outputDecoder
+}
+
+func (c *Container) GetAdapterV2(graphileClient graphile.GraphileClient) reader.Adapter {
+	if c.adapterV2 != nil {
+		return *c.adapterV2
+	}
+	convenience := c.GetConvenienceService()
+	inputBlobAdapter := reader.InputBlobAdapter{}
+	adapter := reader.NewAdapterV2(convenience, graphileClient, inputBlobAdapter)
+	c.adapterV2 = &adapter
+	return adapter
 }
 
 func (c *Container) GetRepository() *repository.VoucherRepository {
@@ -154,6 +167,7 @@ func (c *Container) GetGraphileSynchronizer(graphileAddress string, graphilePort
 		c.GetOutputDecoder(),
 		c.GetSyncRepository(),
 		c.GetGraphileFetcher(graphileClient),
+		c.GetAdapterV2(graphileClient),
 	)
 	return c.graphileSynchronizer
 }

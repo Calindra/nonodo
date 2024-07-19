@@ -111,3 +111,20 @@ type ConvertedInput struct {
 	PrevRandao     string         `json:"prevRandao"`
 	Payload        string         `json:"payload"`
 }
+
+type InputEdge struct {
+	Cursor string `json:"cursor"`
+	Node   struct {
+		Index int    `json:"index"`
+		Blob  string `json:"blob"`
+	} `json:"node"`
+}
+
+type OutputEdge struct {
+	Cursor string `json:"cursor"`
+	Node   struct {
+		Index      int    `json:"index"`
+		Blob       string `json:"blob"`
+		InputIndex int    `json:"inputIndex"`
+	} `json:"node"`
+}

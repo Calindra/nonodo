@@ -5,7 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"math/big"
 
+	"github.com/calindra/nonodo/internal/contracts"
+	"github.com/calindra/nonodo/internal/convenience/model"
 	convenience "github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/convenience/services"
 	"github.com/calindra/nonodo/internal/graphile"
@@ -370,4 +373,52 @@ func (a AdapterV2) convertCompletionStatus(input convenience.AdvanceInput) graph
 	default:
 		return graphql.CompletionStatusUnprocessed
 	}
+}
+
+func (a AdapterV2) GetConvertedInput(input model.InputEdge) (model.ConvertedInput, error) {
+	payload := input.Node.Blob
+	var emptyConvertedInput model.ConvertedInput
+	abiParsed, err := contracts.InputsMetaData.GetAbi()
+
+	if err != nil {
+		slog.Error("Error parsing abi", "err", err)
+		return emptyConvertedInput, err
+	}
+
+	values, err := abiParsed.Methods["EvmAdvance"].Inputs.Unpack(common.Hex2Bytes(payload[10:]))
+
+	if err != nil {
+		slog.Error("Error unpacking abi", "err", err)
+		return emptyConvertedInput, err
+	}
+	convertedInput := model.ConvertedInput{
+		MsgSender:      values[2].(common.Address),
+		Payload:        string(values[7].([]uint8)),
+		BlockNumber:    values[3].(*big.Int),
+		BlockTimestamp: values[4].(*big.Int).Int64(),
+		PrevRandao:     values[5].(*big.Int).String(),
+	}
+
+	return convertedInput, nil
+}
+
+func (a AdapterV2) RetrieveDestination(output model.OutputEdge) (common.Address, error) {
+	payload := output.Node.Blob
+	abiParsed, err := contracts.OutputsMetaData.GetAbi()
+
+	if err != nil {
+		slog.Error("Error parsing abi", "err", err)
+		return common.Address{}, err
+	}
+
+	slog.Info("payload", "payload", payload)
+
+	values, err := abiParsed.Methods["Voucher"].Inputs.Unpack(common.Hex2Bytes(payload[10:]))
+
+	if err != nil {
+		slog.Error("Error unpacking abi", "err", err)
+		return common.Address{}, err
+	}
+
+	return values[0].(common.Address), nil
 }

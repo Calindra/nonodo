@@ -3,7 +3,9 @@ package reader
 import (
 	"context"
 
+	"github.com/calindra/nonodo/internal/convenience/model"
 	graphql "github.com/calindra/nonodo/internal/reader/model"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 type Adapter interface {
@@ -34,4 +36,8 @@ type Adapter interface {
 	) (*graphql.VoucherConnection, error)
 
 	GetProof(ctx context.Context, inputIndex, outputIndex int) (*graphql.Proof, error)
+
+	GetConvertedInput(input model.InputEdge) (model.ConvertedInput, error)
+
+	RetrieveDestination(output model.OutputEdge) (common.Address, error)
 }

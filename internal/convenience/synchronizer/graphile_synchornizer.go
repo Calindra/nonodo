@@ -26,9 +26,8 @@ type Service struct {
 	decoderService *decoder.OutputDecoder
 }
 type AdapterConnector interface {
-	ConvertVoucher(output Edge) string
-	RetrieveDestination(output Edge) (common.Address, error)
-	GetConvertedInput(output InputEdge) (model.ConvertedInput, error)
+	RetrieveDestination(output model.OutputEdge) (common.Address, error)
+	GetConvertedInput(output model.InputEdge) (model.ConvertedInput, error)
 }
 
 type DecoderConnector interface {
@@ -59,33 +58,16 @@ type DecoderConnector interface {
 	) error
 }
 
-type Edge struct {
-	Cursor string `json:"cursor"`
-	Node   struct {
-		Index      int    `json:"index"`
-		Blob       string `json:"blob"`
-		InputIndex int    `json:"inputIndex"`
-	} `json:"node"`
-}
+// func (m *Service) ConvertVoucher(output Edge) string {
+// 	adapted := m.adapter.ConvertVoucherPayloadToV3(output.Node.Blob[2:])
+// 	return adapted
+// }
 
-type InputEdge struct {
-	Cursor string `json:"cursor"`
-	Node   struct {
-		Index int    `json:"index"`
-		Blob  string `json:"blob"`
-	} `json:"node"`
-}
-
-func (m *Service) ConvertVoucher(output Edge) string {
-	adapted := m.adapter.ConvertVoucherPayloadToV3(output.Node.Blob[2:])
-	return adapted
-}
-
-func (m *Service) RetrieveDestination(output Edge) (common.Address, error) {
+func (m *Service) RetrieveDestination(output model.OutputEdge) (common.Address, error) {
 	return m.adapter.GetDestinationV2(output.Node.Blob)
 }
 
-func (m *Service) RetrieveConvertedInput(input InputEdge) (model.ConvertedInput, error) {
+func (m *Service) GetConvertedInput(input model.InputEdge) (model.ConvertedInput, error) {
 	return m.adapter.GetConvertedInputV2(input.Node.Blob)
 }
 
@@ -167,7 +149,8 @@ func (x GraphileSynchronizer) handleGraphileResponse(outputResp OutputResponse, 
 			voucherIds,
 			fmt.Sprintf("%d:%d", inputIndex, outputIndex),
 		)
-		adapted := x.Adapter.ConvertVoucher(output)
+		// adapted := x.Adapter.ConvertVoucher(output)
+		blob := output.Node.Blob[2:] //O voucher já vem do PostGraphile no modo que o v2 precisa.
 		destination, err := x.Adapter.RetrieveDestination(output)
 
 		if err != nil {
@@ -177,7 +160,7 @@ func (x GraphileSynchronizer) handleGraphileResponse(outputResp OutputResponse, 
 
 		err = x.Decoder.GetHandleOutput(ctx,
 			destination,
-			adapted,
+			blob,
 			uint64(inputIndex),
 			uint64(outputIndex),
 		)
@@ -287,5 +270,6 @@ func NewGraphileSynchronizer(
 		Decoder:                decoder,
 		SynchronizerRepository: synchronizerRepository,
 		GraphileFetcher:        graphileFetcher,
-		Adapter:                adapter}
+		Adapter:                adapter,
+	}
 }
