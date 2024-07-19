@@ -3,6 +3,7 @@ package adapter
 import (
 	"fmt"
 	"log/slog"
+	"math/big"
 
 	"github.com/calindra/nonodo/internal/contracts"
 	"github.com/calindra/nonodo/internal/convenience/model"
@@ -88,21 +89,29 @@ func GetConvertedInput(payload string) ([]interface{}, error) {
 
 }
 
-func (a *Adapter) GetConvertedInputV2(payload string) ([]interface{}, error) {
+func (a *Adapter) GetConvertedInputV2(payload string) (model.ConvertedInput, error) {
+	var emptyConvertedInput model.ConvertedInput
 	abiParsed, err := contracts.InputsMetaData.GetAbi()
 
 	if err != nil {
 		slog.Error("Error parsing abi", "err", err)
-		return make([]interface{}, 0), err
+		return emptyConvertedInput, err
 	}
 
 	values, err := abiParsed.Methods["EvmAdvance"].Inputs.Unpack(common.Hex2Bytes(payload[10:]))
 
 	if err != nil {
 		slog.Error("Error unpacking abi", "err", err)
-		return make([]interface{}, 0), err
+		return emptyConvertedInput, err
+	}
+	convertedInput := model.ConvertedInput{
+		MsgSender:      values[2].(common.Address),
+		Payload:        string(values[7].([]uint8)),
+		BlockNumber:    values[3].(*big.Int),
+		BlockTimestamp: values[4].(*big.Int).Int64(),
+		PrevRandao:     values[5].(*big.Int).String(),
 	}
 
-	return values, nil
+	return convertedInput, nil
 
 }

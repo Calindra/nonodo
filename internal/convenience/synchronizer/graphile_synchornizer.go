@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"math/big"
 	"strings"
 	"time"
 
@@ -29,7 +28,7 @@ type Service struct {
 type AdapterConnector interface {
 	ConvertVoucher(output Edge) string
 	RetrieveDestination(output Edge) (common.Address, error)
-	GetConvertedInput(output InputEdge) ([]interface{}, error)
+	GetConvertedInput(output InputEdge) (model.ConvertedInput, error)
 }
 
 type DecoderConnector interface {
@@ -86,7 +85,7 @@ func (m *Service) RetrieveDestination(output Edge) (common.Address, error) {
 	return m.adapter.GetDestinationV2(output.Node.Blob)
 }
 
-func (m *Service) RetrieveConvertedInput(input InputEdge) ([]interface{}, error) {
+func (m *Service) RetrieveConvertedInput(input InputEdge) (model.ConvertedInput, error) {
 	return m.adapter.GetConvertedInputV2(input.Node.Blob)
 }
 
@@ -201,7 +200,7 @@ func (x GraphileSynchronizer) handleGraphileResponse(outputResp OutputResponse, 
 			"Index", input.Node.Index,
 		)
 
-		adapted, err := x.Adapter.GetConvertedInput(input)
+		convertedInput, err := x.Adapter.GetConvertedInput(input)
 
 		if err != nil {
 			slog.Error("Failed to get converted:", err)
@@ -209,11 +208,11 @@ func (x GraphileSynchronizer) handleGraphileResponse(outputResp OutputResponse, 
 		}
 
 		inputIndex := input.Node.Index
-		msgSender := adapted[2].(common.Address)
-		payload := string(adapted[7].([]uint8))
-		blockNumber := adapted[3].(*big.Int)
-		blockTimestamp := adapted[4].(*big.Int).Int64()
-		prevRandao := adapted[5].(*big.Int).String()
+		msgSender := convertedInput.MsgSender
+		payload := convertedInput.Payload
+		blockNumber := convertedInput.BlockNumber
+		blockTimestamp := convertedInput.BlockTimestamp
+		prevRandao := convertedInput.PrevRandao
 
 		err = x.Decoder.GetHandleInput(ctx,
 			inputIndex,

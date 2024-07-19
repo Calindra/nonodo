@@ -1,6 +1,7 @@
 package model
 
 import (
+	"math/big"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -101,4 +102,12 @@ type AdvanceInput struct {
 	Notices        []ConvenienceNotice
 	Reports        []Report
 	Exception      []byte
+}
+
+type ConvertedInput struct {
+	MsgSender      common.Address `json:"msgSender"`
+	BlockNumber    *big.Int       `json:"blockNumber"`
+	BlockTimestamp int64          `json:"blockTimestamp"`
+	PrevRandao     string         `json:"prevRandao"`
+	Payload        string         `json:"payload"`
 }
