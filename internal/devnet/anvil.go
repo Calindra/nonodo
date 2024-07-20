@@ -80,11 +80,11 @@ func CheckAnvilAndInstall(ctx context.Context) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("anvil: failed to install anvil %s", err.Error())
 		}
-		slog.Info("anvil: installed anvil", "location", location)
+		slog.Debug("anvil: installed anvil", "location", location)
 		return location, nil
 	}
 
-	slog.Info("anvil: anvil is installed")
+	slog.Debug("anvil: anvil is installed")
 	return anvilCommand, nil
 }
 

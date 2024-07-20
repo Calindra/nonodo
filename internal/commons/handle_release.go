@@ -99,13 +99,13 @@ func (a *AnvilRelease) DownloadAsset(ctx context.Context, release *ReleaseAsset)
 	}
 
 	anvilExec := filepath.Join(root, "anvil")
-	slog.Info("Anvil executable", "path", anvilExec)
+	slog.Debug("Anvil executable", "path", anvilExec)
 	if _, err := os.Stat(anvilExec); err == nil {
-		slog.Info("Anvil already downloaded", "path", anvilExec)
-		return root, nil
+		slog.Debug("Anvil already downloaded", "path", anvilExec)
+		return anvilExec, nil
 	}
 
-	slog.Info("Downloading anvil", "id", release.AssetId, "to", root)
+	slog.Debug("Downloading anvil", "id", release.AssetId, "to", root)
 
 	rc, redirect, err := a.Client.Repositories.DownloadReleaseAsset(ctx, a.Namespace, a.Repository, release.AssetId)
 
