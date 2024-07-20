@@ -50,7 +50,7 @@ func (x GraphileSynchronizer) Start(ctx context.Context, ready chan<- struct{}) 
 				"error", err.Error(),
 			)
 		} else {
-			x.handleGraphileResponse(*voucherResp, ctx)
+			x.handleWithDBTransaction(*voucherResp)
 		}
 		select {
 		// Wait a little before doing another request
@@ -62,6 +62,26 @@ func (x GraphileSynchronizer) Start(ctx context.Context, ready chan<- struct{}) 
 
 	}
 
+}
+
+func (x GraphileSynchronizer) handleWithDBTransaction(outputResp OutputResponse) {
+	// Create a context with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	// Start transaction
+	tx, err := x.SynchronizerRepository.GetDB().BeginTxx(ctx, nil)
+	if err != nil {
+		slog.Error("start db transaction fail", "err", err)
+		return
+	}
+	x.handleGraphileResponse(outputResp, ctx)
+
+	// Commit the transaction
+	if err := tx.Commit(); err != nil {
+		slog.Error("commit fail", "err", err)
+	}
+
+	// tx.Rollback()
 }
 
 func (x GraphileSynchronizer) handleGraphileResponse(outputResp OutputResponse, ctx context.Context) {

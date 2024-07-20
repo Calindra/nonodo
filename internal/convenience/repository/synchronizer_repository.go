@@ -14,6 +14,10 @@ type SynchronizerRepository struct {
 	Db sqlx.DB
 }
 
+func (c *SynchronizerRepository) GetDB() *sqlx.DB {
+	return &c.Db
+}
+
 func (c *SynchronizerRepository) CreateTables() error {
 	idType := "INTEGER"
 
