@@ -66,7 +66,8 @@ func (x GraphileSynchronizer) Start(ctx context.Context, ready chan<- struct{}) 
 
 func (x GraphileSynchronizer) handleWithDBTransaction(outputResp OutputResponse) {
 	// Create a context with timeout
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	const dbTimeout = 5 * time.Second
+	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
 	defer cancel()
 	// Start transaction
 	tx, err := x.SynchronizerRepository.GetDB().BeginTxx(ctx, nil)
