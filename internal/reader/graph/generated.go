@@ -49,26 +49,6 @@ type DirectiveRoot struct {
 }
 
 type ComplexityRoot struct {
-	ConvenientVoucher struct {
-		Destination func(childComplexity int) int
-		Executed    func(childComplexity int) int
-		Index       func(childComplexity int) int
-		Input       func(childComplexity int) int
-		Payload     func(childComplexity int) int
-		Proof       func(childComplexity int) int
-	}
-
-	ConvenientVoucherConnection struct {
-		Edges      func(childComplexity int) int
-		PageInfo   func(childComplexity int) int
-		TotalCount func(childComplexity int) int
-	}
-
-	ConvenientVoucherEdge struct {
-		Cursor func(childComplexity int) int
-		Node   func(childComplexity int) int
-	}
-
 	Input struct {
 		BlockNumber func(childComplexity int) int
 		Index       func(childComplexity int) int
@@ -137,15 +117,14 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		ConvenientVouchers func(childComplexity int, first *int, last *int, after *string, before *string, filter []*model.ConvenientFilter) int
-		Input              func(childComplexity int, index int) int
-		Inputs             func(childComplexity int, first *int, last *int, after *string, before *string, where *model.InputFilter) int
-		Notice             func(childComplexity int, noticeIndex int, inputIndex int) int
-		Notices            func(childComplexity int, first *int, last *int, after *string, before *string) int
-		Report             func(childComplexity int, reportIndex int, inputIndex int) int
-		Reports            func(childComplexity int, first *int, last *int, after *string, before *string) int
-		Voucher            func(childComplexity int, voucherIndex int, inputIndex int) int
-		Vouchers           func(childComplexity int, first *int, last *int, after *string, before *string) int
+		Input    func(childComplexity int, index int) int
+		Inputs   func(childComplexity int, first *int, last *int, after *string, before *string, where *model.InputFilter) int
+		Notice   func(childComplexity int, noticeIndex int, inputIndex int) int
+		Notices  func(childComplexity int, first *int, last *int, after *string, before *string) int
+		Report   func(childComplexity int, reportIndex int, inputIndex int) int
+		Reports  func(childComplexity int, first *int, last *int, after *string, before *string) int
+		Voucher  func(childComplexity int, voucherIndex int, inputIndex int) int
+		Vouchers func(childComplexity int, first *int, last *int, after *string, before *string, filter []*model.ConvenientFilter) int
 	}
 
 	Report struct {
@@ -167,6 +146,7 @@ type ComplexityRoot struct {
 
 	Voucher struct {
 		Destination func(childComplexity int) int
+		Executed    func(childComplexity int) int
 		Index       func(childComplexity int) int
 		Input       func(childComplexity int) int
 		Payload     func(childComplexity int) int
@@ -204,10 +184,9 @@ type QueryResolver interface {
 	Notice(ctx context.Context, noticeIndex int, inputIndex int) (*model.Notice, error)
 	Report(ctx context.Context, reportIndex int, inputIndex int) (*model.Report, error)
 	Inputs(ctx context.Context, first *int, last *int, after *string, before *string, where *model.InputFilter) (*model.Connection[*model.Input], error)
-	Vouchers(ctx context.Context, first *int, last *int, after *string, before *string) (*model.Connection[*model.Voucher], error)
+	Vouchers(ctx context.Context, first *int, last *int, after *string, before *string, filter []*model.ConvenientFilter) (*model.Connection[*model.Voucher], error)
 	Notices(ctx context.Context, first *int, last *int, after *string, before *string) (*model.Connection[*model.Notice], error)
 	Reports(ctx context.Context, first *int, last *int, after *string, before *string) (*model.Connection[*model.Report], error)
-	ConvenientVouchers(ctx context.Context, first *int, last *int, after *string, before *string, filter []*model.ConvenientFilter) (*model.Connection[*model.ConvenientVoucher], error)
 }
 type ReportResolver interface {
 	Input(ctx context.Context, obj *model.Report) (*model.Input, error)
@@ -236,83 +215,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 	ec := executionContext{nil, e, 0, 0, nil}
 	_ = ec
 	switch typeName + "." + field {
-
-	case "ConvenientVoucher.destination":
-		if e.complexity.ConvenientVoucher.Destination == nil {
-			break
-		}
-
-		return e.complexity.ConvenientVoucher.Destination(childComplexity), true
-
-	case "ConvenientVoucher.executed":
-		if e.complexity.ConvenientVoucher.Executed == nil {
-			break
-		}
-
-		return e.complexity.ConvenientVoucher.Executed(childComplexity), true
-
-	case "ConvenientVoucher.index":
-		if e.complexity.ConvenientVoucher.Index == nil {
-			break
-		}
-
-		return e.complexity.ConvenientVoucher.Index(childComplexity), true
-
-	case "ConvenientVoucher.input":
-		if e.complexity.ConvenientVoucher.Input == nil {
-			break
-		}
-
-		return e.complexity.ConvenientVoucher.Input(childComplexity), true
-
-	case "ConvenientVoucher.payload":
-		if e.complexity.ConvenientVoucher.Payload == nil {
-			break
-		}
-
-		return e.complexity.ConvenientVoucher.Payload(childComplexity), true
-
-	case "ConvenientVoucher.proof":
-		if e.complexity.ConvenientVoucher.Proof == nil {
-			break
-		}
-
-		return e.complexity.ConvenientVoucher.Proof(childComplexity), true
-
-	case "ConvenientVoucherConnection.edges":
-		if e.complexity.ConvenientVoucherConnection.Edges == nil {
-			break
-		}
-
-		return e.complexity.ConvenientVoucherConnection.Edges(childComplexity), true
-
-	case "ConvenientVoucherConnection.pageInfo":
-		if e.complexity.ConvenientVoucherConnection.PageInfo == nil {
-			break
-		}
-
-		return e.complexity.ConvenientVoucherConnection.PageInfo(childComplexity), true
-
-	case "ConvenientVoucherConnection.totalCount":
-		if e.complexity.ConvenientVoucherConnection.TotalCount == nil {
-			break
-		}
-
-		return e.complexity.ConvenientVoucherConnection.TotalCount(childComplexity), true
-
-	case "ConvenientVoucherEdge.cursor":
-		if e.complexity.ConvenientVoucherEdge.Cursor == nil {
-			break
-		}
-
-		return e.complexity.ConvenientVoucherEdge.Cursor(childComplexity), true
-
-	case "ConvenientVoucherEdge.node":
-		if e.complexity.ConvenientVoucherEdge.Node == nil {
-			break
-		}
-
-		return e.complexity.ConvenientVoucherEdge.Node(childComplexity), true
 
 	case "Input.blockNumber":
 		if e.complexity.Input.BlockNumber == nil {
@@ -645,18 +547,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Proof.ValidityOutputIndexWithinInput(childComplexity), true
 
-	case "Query.convenientVouchers":
-		if e.complexity.Query.ConvenientVouchers == nil {
-			break
-		}
-
-		args, err := ec.field_Query_convenientVouchers_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Query.ConvenientVouchers(childComplexity, args["first"].(*int), args["last"].(*int), args["after"].(*string), args["before"].(*string), args["filter"].([]*model.ConvenientFilter)), true
-
 	case "Query.input":
 		if e.complexity.Query.Input == nil {
 			break
@@ -751,7 +641,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.Vouchers(childComplexity, args["first"].(*int), args["last"].(*int), args["after"].(*string), args["before"].(*string)), true
+		return e.complexity.Query.Vouchers(childComplexity, args["first"].(*int), args["last"].(*int), args["after"].(*string), args["before"].(*string), args["filter"].([]*model.ConvenientFilter)), true
 
 	case "Report.index":
 		if e.complexity.Report.Index == nil {
@@ -815,6 +705,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Voucher.Destination(childComplexity), true
+
+	case "Voucher.executed":
+		if e.complexity.Voucher.Executed == nil {
+			break
+		}
+
+		return e.complexity.Voucher.Executed(childComplexity), true
 
 	case "Voucher.index":
 		if e.complexity.Voucher.Index == nil {
@@ -1048,6 +945,9 @@ type Voucher {
   payload: String!
   "Proof object that allows this voucher to be validated and executed on the base layer blockchain"
   proof: Proof
+
+  "Indicates whether the voucher has been executed on the base layer blockchain"
+  executed: Boolean
 }
 
 "Top level queries"
@@ -1063,13 +963,11 @@ type Query {
   "Get inputs with support for pagination"
   inputs(first: Int, last: Int, after: String, before: String, where: InputFilter): InputConnection!
   "Get vouchers with support for pagination"
-  vouchers(first: Int, last: Int, after: String, before: String): VoucherConnection!
+  vouchers(first: Int, last: Int, after: String, before: String, filter: [ConvenientFilter]): VoucherConnection!
   "Get notices with support for pagination"
   notices(first: Int, last: Int, after: String, before: String): NoticeConnection!
   "Get reports with support for pagination"
   reports(first: Int, last: Int, after: String, before: String): ReportConnection!
-  "Get a convenient voucher based on its index or filter"
-  convenientVouchers(first: Int, last: Int, after: String, before: String, filter: [ConvenientFilter]): ConvenientVoucherConnection! @deprecated(reason: "This field is hidden from introspection.")
 }
 
 "Pagination entry"
@@ -1193,44 +1091,6 @@ type VoucherEdge {
 
 schema {
   query: Query
-}
-
-
-#----------------------#
-#  Convenient Voucher  #
-#----------------------#
-
-type ConvenientVoucher {
-  "Voucher index within the context of the input that produced it"
-  index: Int!
-  "Input whose processing produced the voucher"
-  input: Input!
-  "Transaction destination address in Ethereum hex binary format (20 bytes), starting with '0x'"
-  destination: String!
-  "Transaction payload in Ethereum hex binary format, starting with '0x'"
-  payload: String!
-  "Proof object that allows this voucher to be validated and executed on the base layer blockchain"
-  proof: Proof
-  "Executed"
-  executed: Boolean
-}
-
-"Pagination result"
-type ConvenientVoucherConnection {
-  "Total number of entries that match the query"
-  totalCount: Int!
-  "Pagination entries returned for the current page"
-  edges: [ConvenientVoucherEdge!]!
-  "Pagination metadata"
-  pageInfo: PageInfo!
-}
-
-"Pagination entry"
-type ConvenientVoucherEdge {
-  "Node instance"
-  node: ConvenientVoucher!
-  "Pagination cursor"
-  cursor: String!
 }
 
 input AddressFilterInput {
@@ -1474,57 +1334,6 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 		}
 	}
 	args["name"] = arg0
-	return args, nil
-}
-
-func (ec *executionContext) field_Query_convenientVouchers_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 *int
-	if tmp, ok := rawArgs["first"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("first"))
-		arg0, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["first"] = arg0
-	var arg1 *int
-	if tmp, ok := rawArgs["last"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("last"))
-		arg1, err = ec.unmarshalOInt2ᚖint(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["last"] = arg1
-	var arg2 *string
-	if tmp, ok := rawArgs["after"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("after"))
-		arg2, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["after"] = arg2
-	var arg3 *string
-	if tmp, ok := rawArgs["before"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("before"))
-		arg3, err = ec.unmarshalOString2ᚖstring(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["before"] = arg3
-	var arg4 []*model.ConvenientFilter
-	if tmp, ok := rawArgs["filter"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("filter"))
-		arg4, err = ec.unmarshalOConvenientFilter2ᚕᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐConvenientFilter(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["filter"] = arg4
 	return args, nil
 }
 
@@ -1789,6 +1598,15 @@ func (ec *executionContext) field_Query_vouchers_args(ctx context.Context, rawAr
 		}
 	}
 	args["before"] = arg3
+	var arg4 []*model.ConvenientFilter
+	if tmp, ok := rawArgs["filter"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("filter"))
+		arg4, err = ec.unmarshalOConvenientFilter2ᚕᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐConvenientFilter(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["filter"] = arg4
 	return args, nil
 }
 
@@ -1829,568 +1647,6 @@ func (ec *executionContext) field___Type_fields_args(ctx context.Context, rawArg
 // endregion ************************** directives.gotpl **************************
 
 // region    **************************** field.gotpl *****************************
-
-func (ec *executionContext) _ConvenientVoucher_index(ctx context.Context, field graphql.CollectedField, obj *model.ConvenientVoucher) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_ConvenientVoucher_index(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Index, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(int)
-	fc.Result = res
-	return ec.marshalNInt2int(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_ConvenientVoucher_index(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ConvenientVoucher",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _ConvenientVoucher_input(ctx context.Context, field graphql.CollectedField, obj *model.ConvenientVoucher) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_ConvenientVoucher_input(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Input, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.Input)
-	fc.Result = res
-	return ec.marshalNInput2ᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐInput(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_ConvenientVoucher_input(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ConvenientVoucher",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "index":
-				return ec.fieldContext_Input_index(ctx, field)
-			case "status":
-				return ec.fieldContext_Input_status(ctx, field)
-			case "msgSender":
-				return ec.fieldContext_Input_msgSender(ctx, field)
-			case "timestamp":
-				return ec.fieldContext_Input_timestamp(ctx, field)
-			case "blockNumber":
-				return ec.fieldContext_Input_blockNumber(ctx, field)
-			case "payload":
-				return ec.fieldContext_Input_payload(ctx, field)
-			case "voucher":
-				return ec.fieldContext_Input_voucher(ctx, field)
-			case "notice":
-				return ec.fieldContext_Input_notice(ctx, field)
-			case "report":
-				return ec.fieldContext_Input_report(ctx, field)
-			case "vouchers":
-				return ec.fieldContext_Input_vouchers(ctx, field)
-			case "notices":
-				return ec.fieldContext_Input_notices(ctx, field)
-			case "reports":
-				return ec.fieldContext_Input_reports(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Input", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _ConvenientVoucher_destination(ctx context.Context, field graphql.CollectedField, obj *model.ConvenientVoucher) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_ConvenientVoucher_destination(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Destination, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(string)
-	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_ConvenientVoucher_destination(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ConvenientVoucher",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _ConvenientVoucher_payload(ctx context.Context, field graphql.CollectedField, obj *model.ConvenientVoucher) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_ConvenientVoucher_payload(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Payload, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(string)
-	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_ConvenientVoucher_payload(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ConvenientVoucher",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _ConvenientVoucher_proof(ctx context.Context, field graphql.CollectedField, obj *model.ConvenientVoucher) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_ConvenientVoucher_proof(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Proof, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*model.Proof)
-	fc.Result = res
-	return ec.marshalOProof2ᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐProof(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_ConvenientVoucher_proof(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ConvenientVoucher",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "firstIndex":
-				return ec.fieldContext_Proof_firstIndex(ctx, field)
-			case "inputByInputIndex":
-				return ec.fieldContext_Proof_inputByInputIndex(ctx, field)
-			case "inputIndex":
-				return ec.fieldContext_Proof_inputIndex(ctx, field)
-			case "lastInput":
-				return ec.fieldContext_Proof_lastInput(ctx, field)
-			case "nodeId":
-				return ec.fieldContext_Proof_nodeId(ctx, field)
-			case "outputIndex":
-				return ec.fieldContext_Proof_outputIndex(ctx, field)
-			case "validityInputIndexWithinEpoch":
-				return ec.fieldContext_Proof_validityInputIndexWithinEpoch(ctx, field)
-			case "validityMachineStateHash":
-				return ec.fieldContext_Proof_validityMachineStateHash(ctx, field)
-			case "validityOutputEpochRootHash":
-				return ec.fieldContext_Proof_validityOutputEpochRootHash(ctx, field)
-			case "validityOutputHashInOutputHashesSiblings":
-				return ec.fieldContext_Proof_validityOutputHashInOutputHashesSiblings(ctx, field)
-			case "validityOutputHashesInEpochSiblings":
-				return ec.fieldContext_Proof_validityOutputHashesInEpochSiblings(ctx, field)
-			case "validityOutputHashesRootHash":
-				return ec.fieldContext_Proof_validityOutputHashesRootHash(ctx, field)
-			case "validityOutputIndexWithinInput":
-				return ec.fieldContext_Proof_validityOutputIndexWithinInput(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Proof", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _ConvenientVoucher_executed(ctx context.Context, field graphql.CollectedField, obj *model.ConvenientVoucher) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_ConvenientVoucher_executed(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Executed, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*bool)
-	fc.Result = res
-	return ec.marshalOBoolean2ᚖbool(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_ConvenientVoucher_executed(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ConvenientVoucher",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Boolean does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _ConvenientVoucherConnection_totalCount(ctx context.Context, field graphql.CollectedField, obj *model.Connection[*model.ConvenientVoucher]) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_ConvenientVoucherConnection_totalCount(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.TotalCount, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(int)
-	fc.Result = res
-	return ec.marshalNInt2int(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_ConvenientVoucherConnection_totalCount(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ConvenientVoucherConnection",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _ConvenientVoucherConnection_edges(ctx context.Context, field graphql.CollectedField, obj *model.Connection[*model.ConvenientVoucher]) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_ConvenientVoucherConnection_edges(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Edges, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.([]*model.Edge[*model.ConvenientVoucher])
-	fc.Result = res
-	return ec.marshalNConvenientVoucherEdge2ᚕᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐEdgeᚄ(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_ConvenientVoucherConnection_edges(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ConvenientVoucherConnection",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "node":
-				return ec.fieldContext_ConvenientVoucherEdge_node(ctx, field)
-			case "cursor":
-				return ec.fieldContext_ConvenientVoucherEdge_cursor(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type ConvenientVoucherEdge", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _ConvenientVoucherConnection_pageInfo(ctx context.Context, field graphql.CollectedField, obj *model.Connection[*model.ConvenientVoucher]) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_ConvenientVoucherConnection_pageInfo(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.PageInfo, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.PageInfo)
-	fc.Result = res
-	return ec.marshalNPageInfo2ᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐPageInfo(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_ConvenientVoucherConnection_pageInfo(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ConvenientVoucherConnection",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "startCursor":
-				return ec.fieldContext_PageInfo_startCursor(ctx, field)
-			case "endCursor":
-				return ec.fieldContext_PageInfo_endCursor(ctx, field)
-			case "hasNextPage":
-				return ec.fieldContext_PageInfo_hasNextPage(ctx, field)
-			case "hasPreviousPage":
-				return ec.fieldContext_PageInfo_hasPreviousPage(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type PageInfo", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _ConvenientVoucherEdge_node(ctx context.Context, field graphql.CollectedField, obj *model.Edge[*model.ConvenientVoucher]) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_ConvenientVoucherEdge_node(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Node, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.ConvenientVoucher)
-	fc.Result = res
-	return ec.marshalNConvenientVoucher2ᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐConvenientVoucher(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_ConvenientVoucherEdge_node(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ConvenientVoucherEdge",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "index":
-				return ec.fieldContext_ConvenientVoucher_index(ctx, field)
-			case "input":
-				return ec.fieldContext_ConvenientVoucher_input(ctx, field)
-			case "destination":
-				return ec.fieldContext_ConvenientVoucher_destination(ctx, field)
-			case "payload":
-				return ec.fieldContext_ConvenientVoucher_payload(ctx, field)
-			case "proof":
-				return ec.fieldContext_ConvenientVoucher_proof(ctx, field)
-			case "executed":
-				return ec.fieldContext_ConvenientVoucher_executed(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type ConvenientVoucher", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _ConvenientVoucherEdge_cursor(ctx context.Context, field graphql.CollectedField, obj *model.Edge[*model.ConvenientVoucher]) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_ConvenientVoucherEdge_cursor(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.Cursor(), nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(string)
-	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_ConvenientVoucherEdge_cursor(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "ConvenientVoucherEdge",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
 
 func (ec *executionContext) _Input_index(ctx context.Context, field graphql.CollectedField, obj *model.Input) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Input_index(ctx, field)
@@ -2705,6 +1961,8 @@ func (ec *executionContext) fieldContext_Input_voucher(ctx context.Context, fiel
 				return ec.fieldContext_Voucher_payload(ctx, field)
 			case "proof":
 				return ec.fieldContext_Voucher_proof(ctx, field)
+			case "executed":
+				return ec.fieldContext_Voucher_executed(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Voucher", field.Name)
 		},
@@ -4670,6 +3928,8 @@ func (ec *executionContext) fieldContext_Query_voucher(ctx context.Context, fiel
 				return ec.fieldContext_Voucher_payload(ctx, field)
 			case "proof":
 				return ec.fieldContext_Voucher_proof(ctx, field)
+			case "executed":
+				return ec.fieldContext_Voucher_executed(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Voucher", field.Name)
 		},
@@ -4893,7 +4153,7 @@ func (ec *executionContext) _Query_vouchers(ctx context.Context, field graphql.C
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Vouchers(rctx, fc.Args["first"].(*int), fc.Args["last"].(*int), fc.Args["after"].(*string), fc.Args["before"].(*string))
+		return ec.resolvers.Query().Vouchers(rctx, fc.Args["first"].(*int), fc.Args["last"].(*int), fc.Args["after"].(*string), fc.Args["before"].(*string), fc.Args["filter"].([]*model.ConvenientFilter))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -5062,69 +4322,6 @@ func (ec *executionContext) fieldContext_Query_reports(ctx context.Context, fiel
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_reports_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Query_convenientVouchers(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Query_convenientVouchers(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().ConvenientVouchers(rctx, fc.Args["first"].(*int), fc.Args["last"].(*int), fc.Args["after"].(*string), fc.Args["before"].(*string), fc.Args["filter"].([]*model.ConvenientFilter))
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.Connection[*model.ConvenientVoucher])
-	fc.Result = res
-	return ec.marshalNConvenientVoucherConnection2ᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐConnection(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Query_convenientVouchers(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Query",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "totalCount":
-				return ec.fieldContext_ConvenientVoucherConnection_totalCount(ctx, field)
-			case "edges":
-				return ec.fieldContext_ConvenientVoucherConnection_edges(ctx, field)
-			case "pageInfo":
-				return ec.fieldContext_ConvenientVoucherConnection_pageInfo(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type ConvenientVoucherConnection", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Query_convenientVouchers_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -5933,6 +5130,47 @@ func (ec *executionContext) fieldContext_Voucher_proof(ctx context.Context, fiel
 	return fc, nil
 }
 
+func (ec *executionContext) _Voucher_executed(ctx context.Context, field graphql.CollectedField, obj *model.Voucher) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Voucher_executed(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Executed, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalOBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Voucher_executed(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Voucher",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _VoucherConnection_totalCount(ctx context.Context, field graphql.CollectedField, obj *model.Connection[*model.Voucher]) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_VoucherConnection_totalCount(ctx, field)
 	if err != nil {
@@ -6130,6 +5368,8 @@ func (ec *executionContext) fieldContext_VoucherEdge_node(ctx context.Context, f
 				return ec.fieldContext_Voucher_payload(ctx, field)
 			case "proof":
 				return ec.fieldContext_Voucher_proof(ctx, field)
+			case "executed":
+				return ec.fieldContext_Voucher_executed(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Voucher", field.Name)
 		},
@@ -8161,157 +7401,6 @@ func (ec *executionContext) unmarshalInputInputFilter(ctx context.Context, obj i
 
 // region    **************************** object.gotpl ****************************
 
-var convenientVoucherImplementors = []string{"ConvenientVoucher"}
-
-func (ec *executionContext) _ConvenientVoucher(ctx context.Context, sel ast.SelectionSet, obj *model.ConvenientVoucher) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, convenientVoucherImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	deferred := make(map[string]*graphql.FieldSet)
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("ConvenientVoucher")
-		case "index":
-			out.Values[i] = ec._ConvenientVoucher_index(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "input":
-			out.Values[i] = ec._ConvenientVoucher_input(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "destination":
-			out.Values[i] = ec._ConvenientVoucher_destination(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "payload":
-			out.Values[i] = ec._ConvenientVoucher_payload(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "proof":
-			out.Values[i] = ec._ConvenientVoucher_proof(ctx, field, obj)
-		case "executed":
-			out.Values[i] = ec._ConvenientVoucher_executed(ctx, field, obj)
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch(ctx)
-	if out.Invalids > 0 {
-		return graphql.Null
-	}
-
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
-
-	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
-			Label:    label,
-			Path:     graphql.GetPath(ctx),
-			FieldSet: dfs,
-			Context:  ctx,
-		})
-	}
-
-	return out
-}
-
-var convenientVoucherConnectionImplementors = []string{"ConvenientVoucherConnection"}
-
-func (ec *executionContext) _ConvenientVoucherConnection(ctx context.Context, sel ast.SelectionSet, obj *model.Connection[*model.ConvenientVoucher]) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, convenientVoucherConnectionImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	deferred := make(map[string]*graphql.FieldSet)
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("ConvenientVoucherConnection")
-		case "totalCount":
-			out.Values[i] = ec._ConvenientVoucherConnection_totalCount(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "edges":
-			out.Values[i] = ec._ConvenientVoucherConnection_edges(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "pageInfo":
-			out.Values[i] = ec._ConvenientVoucherConnection_pageInfo(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch(ctx)
-	if out.Invalids > 0 {
-		return graphql.Null
-	}
-
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
-
-	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
-			Label:    label,
-			Path:     graphql.GetPath(ctx),
-			FieldSet: dfs,
-			Context:  ctx,
-		})
-	}
-
-	return out
-}
-
-var convenientVoucherEdgeImplementors = []string{"ConvenientVoucherEdge"}
-
-func (ec *executionContext) _ConvenientVoucherEdge(ctx context.Context, sel ast.SelectionSet, obj *model.Edge[*model.ConvenientVoucher]) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, convenientVoucherEdgeImplementors)
-
-	out := graphql.NewFieldSet(fields)
-	deferred := make(map[string]*graphql.FieldSet)
-	for i, field := range fields {
-		switch field.Name {
-		case "__typename":
-			out.Values[i] = graphql.MarshalString("ConvenientVoucherEdge")
-		case "node":
-			out.Values[i] = ec._ConvenientVoucherEdge_node(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "cursor":
-			out.Values[i] = ec._ConvenientVoucherEdge_cursor(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		default:
-			panic("unknown field " + strconv.Quote(field.Name))
-		}
-	}
-	out.Dispatch(ctx)
-	if out.Invalids > 0 {
-		return graphql.Null
-	}
-
-	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
-
-	for label, dfs := range deferred {
-		ec.processDeferredGroup(graphql.DeferredGroup{
-			Label:    label,
-			Path:     graphql.GetPath(ctx),
-			FieldSet: dfs,
-			Context:  ctx,
-		})
-	}
-
-	return out
-}
-
 var inputImplementors = []string{"Input"}
 
 func (ec *executionContext) _Input(ctx context.Context, sel ast.SelectionSet, obj *model.Input) graphql.Marshaler {
@@ -9230,28 +8319,6 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
-		case "convenientVouchers":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Query_convenientVouchers(ctx, field)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			rrm := func(ctx context.Context) graphql.Marshaler {
-				return ec.OperationContext.RootResolverMiddleware(ctx,
-					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "__type":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Query___type(ctx, field)
@@ -9551,6 +8618,8 @@ func (ec *executionContext) _Voucher(ctx context.Context, sel ast.SelectionSet, 
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "executed":
+			out.Values[i] = ec._Voucher_executed(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -10031,84 +9100,6 @@ func (ec *executionContext) unmarshalNCompletionStatus2githubᚗcomᚋcalindra�
 
 func (ec *executionContext) marshalNCompletionStatus2githubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐCompletionStatus(ctx context.Context, sel ast.SelectionSet, v model.CompletionStatus) graphql.Marshaler {
 	return v
-}
-
-func (ec *executionContext) marshalNConvenientVoucher2ᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐConvenientVoucher(ctx context.Context, sel ast.SelectionSet, v *model.ConvenientVoucher) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._ConvenientVoucher(ctx, sel, v)
-}
-
-func (ec *executionContext) marshalNConvenientVoucherConnection2githubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐConnection(ctx context.Context, sel ast.SelectionSet, v model.Connection[*model.ConvenientVoucher]) graphql.Marshaler {
-	return ec._ConvenientVoucherConnection(ctx, sel, &v)
-}
-
-func (ec *executionContext) marshalNConvenientVoucherConnection2ᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐConnection(ctx context.Context, sel ast.SelectionSet, v *model.Connection[*model.ConvenientVoucher]) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._ConvenientVoucherConnection(ctx, sel, v)
-}
-
-func (ec *executionContext) marshalNConvenientVoucherEdge2ᚕᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐEdgeᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.Edge[*model.ConvenientVoucher]) graphql.Marshaler {
-	ret := make(graphql.Array, len(v))
-	var wg sync.WaitGroup
-	isLen1 := len(v) == 1
-	if !isLen1 {
-		wg.Add(len(v))
-	}
-	for i := range v {
-		i := i
-		fc := &graphql.FieldContext{
-			Index:  &i,
-			Result: &v[i],
-		}
-		ctx := graphql.WithFieldContext(ctx, fc)
-		f := func(i int) {
-			defer func() {
-				if r := recover(); r != nil {
-					ec.Error(ctx, ec.Recover(ctx, r))
-					ret = nil
-				}
-			}()
-			if !isLen1 {
-				defer wg.Done()
-			}
-			ret[i] = ec.marshalNConvenientVoucherEdge2ᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐEdge(ctx, sel, v[i])
-		}
-		if isLen1 {
-			f(i)
-		} else {
-			go f(i)
-		}
-
-	}
-	wg.Wait()
-
-	for _, e := range ret {
-		if e == graphql.Null {
-			return graphql.Null
-		}
-	}
-
-	return ret
-}
-
-func (ec *executionContext) marshalNConvenientVoucherEdge2ᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐEdge(ctx context.Context, sel ast.SelectionSet, v *model.Edge[*model.ConvenientVoucher]) graphql.Marshaler {
-	if v == nil {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-		return graphql.Null
-	}
-	return ec._ConvenientVoucherEdge(ctx, sel, v)
 }
 
 func (ec *executionContext) unmarshalNID2string(ctx context.Context, v interface{}) (string, error) {
