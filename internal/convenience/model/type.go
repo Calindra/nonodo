@@ -130,7 +130,7 @@ type OutputEdge struct {
 	} `json:"node"`
 }
 
-type DecoderConnector interface {
+type DecoderInterface interface {
 	HandleOutputV2(
 		ctx context.Context,
 		processOutputData ProcessOutputData,

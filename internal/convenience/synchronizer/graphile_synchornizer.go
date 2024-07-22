@@ -11,7 +11,7 @@ import (
 )
 
 type GraphileSynchronizer struct {
-	Decoder                model.DecoderConnector
+	Decoder                model.DecoderInterface
 	SynchronizerRepository *repository.SynchronizerRepository
 	GraphileFetcher        *GraphileFetcher
 }
@@ -160,7 +160,7 @@ func (x GraphileSynchronizer) handleGraphileResponse(ctx context.Context, output
 }
 
 func NewGraphileSynchronizer(
-	decoder model.DecoderConnector,
+	decoder model.DecoderInterface,
 	synchronizerRepository *repository.SynchronizerRepository,
 	graphileFetcher *GraphileFetcher,
 ) *GraphileSynchronizer {
