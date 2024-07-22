@@ -28,7 +28,6 @@ type ProcessOutputData struct {
 
 type AdapterConnector interface {
 	RetrieveDestination(output model.OutputEdge) (common.Address, error)
-	GetConvertedInput(output model.InputEdge) (model.ConvertedInput, error)
 }
 
 type DecoderConnector interface {
@@ -42,13 +41,10 @@ type DecoderConnector interface {
 
 	HandleInput(
 		ctx context.Context,
-		index int,
+		input model.InputEdge,
+		// convertedInput model.ConvertedInput,
+		// index int,
 		status model.CompletionStatus,
-		msgSender common.Address,
-		payload string,
-		blockNumber uint64,
-		blockTimestamp time.Time,
-		prevRandao string,
 	) error
 
 	HandleReport(
@@ -57,6 +53,8 @@ type DecoderConnector interface {
 		outputIndex int,
 		payload string,
 	) error
+
+	GetConvertedInput(output model.InputEdge) (model.ConvertedInput, error)
 }
 
 func (x GraphileSynchronizer) String() string {
@@ -115,25 +113,6 @@ func (x GraphileSynchronizer) handleGraphileResponse(outputResp OutputResponse, 
 	var initReportCursorAfter string
 
 	for _, output := range outputResp.Data.Outputs.Edges {
-		// outputIndex := output.Node.Index
-		// inputIndex := output.Node.InputIndex
-		// slog.Debug("Add Voucher/Notices",
-		// 	"inputIndex", inputIndex,
-		// 	"outputIndex", outputIndex,
-		// )
-		// voucherIds = append(
-		// 	voucherIds,
-		// 	fmt.Sprintf("%d:%d", inputIndex, outputIndex),
-		// )
-		// // adapted := x.Adapter.ConvertVoucher(output)
-		// blob := output.Node.Blob[2:] //O voucher já vem do PostGraphile no modo que o v2 precisa.
-		// destination, err := x.Adapter.RetrieveDestination(output)
-
-		// if err != nil {
-		// 	slog.Error("Failed to retrieve destination for node blob '%s': %v", output.Node.Blob, err)
-		// 	return fmt.Errorf("error retrieving destination for node blob '%s': %w", output.Node.Blob, err)
-		// }
-
 		processOutPutData, err := x.processOutput(output, voucherIds)
 
 		if err != nil {
@@ -166,31 +145,14 @@ func (x GraphileSynchronizer) handleGraphileResponse(outputResp OutputResponse, 
 			"Index", input.Node.Index,
 		)
 
-		convertedInput, err := x.Adapter.GetConvertedInput(input)
-
-		if err != nil {
-			slog.Error("Failed to get converted:", err)
-			return fmt.Errorf("error getting converted input: %w", err)
-		}
-
-		inputIndex := input.Node.Index
-		msgSender := convertedInput.MsgSender
-		payload := convertedInput.Payload
-		blockNumber := convertedInput.BlockNumber
-		blockTimestamp := convertedInput.BlockTimestamp
-		prevRandao := convertedInput.PrevRandao
-
-		err = x.Decoder.HandleInput(ctx,
-			inputIndex,
+		err := x.Decoder.HandleInput(ctx,
+			input,
 			model.CompletionStatusUnprocessed,
-			msgSender,
-			payload,
-			blockNumber.Uint64(),
-			time.Unix(blockTimestamp, 0),
-			prevRandao)
+		)
 
 		if err != nil {
-			panic(err)
+			slog.Error("Failed to handle input:", err)
+			return fmt.Errorf("error handling input: %w", err)
 		}
 	}
 
@@ -236,7 +198,6 @@ func (x GraphileSynchronizer) handleGraphileResponse(outputResp OutputResponse, 
 				EndReportCursorAfter: x.GraphileFetcher.CursorReportAfter,
 			})
 		if err != nil {
-			slog.Error("Deu erro", "erro", err)
 			panic(err)
 		}
 	}

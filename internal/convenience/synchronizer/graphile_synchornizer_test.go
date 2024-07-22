@@ -28,7 +28,7 @@ func (m *AdapterInterfaceMock) RetrieveDestination(output model.OutputEdge) (com
 	return args.Get(0).(common.Address), args.Error(1)
 }
 
-func (m *AdapterInterfaceMock) GetConvertedInput(input model.InputEdge) (model.ConvertedInput, error) {
+func (m *DecoderInterfaceMock) GetConvertedInput(input model.InputEdge) (model.ConvertedInput, error) {
 	args := m.Called(input)
 	return args.Get(0).(model.ConvertedInput), args.Error(1)
 }
@@ -214,7 +214,7 @@ func TestGetConvertedInput_Failure(t *testing.T) {
 	// adapterMock.On("ConvertVoucher", mock.Anything).Return("1a2b3c")
 	adapterMock.On("RetrieveDestination", mock.Anything).Return(common.Address{}, nil)
 	decoderMock.On("HandleOutput", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	adapterMock.On("GetConvertedInput", mock.Anything).Return(convertedInput, erro)
+	decoderMock.On("GetConvertedInput", mock.Anything).Return(convertedInput, erro)
 
 	err := synchronizer.handleGraphileResponse(response, ctx)
 

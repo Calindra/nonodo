@@ -5,9 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
+	"math/big"
 	"net/http"
 	"time"
 
+	"github.com/calindra/nonodo/internal/contracts"
 	"github.com/calindra/nonodo/internal/convenience/adapter"
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/convenience/services"
@@ -59,22 +62,23 @@ func (o *OutputDecoder) HandleOutput(
 
 func (o *OutputDecoder) HandleInput(
 	ctx context.Context,
-	index int,
+	input model.InputEdge,
 	status model.CompletionStatus,
-	msgSender common.Address,
-	payload string,
-	blockNumber uint64,
-	blockTimestamp time.Time,
-	prevRandao string,
 ) error {
-	_, err := o.convenienceService.CreateInput(ctx, &model.AdvanceInput{
-		Index:          index,
+	convertedInput, err := o.GetConvertedInput(input)
+
+	if err != nil {
+		slog.Error("Failed to get converted:", err)
+		return fmt.Errorf("error getting converted input: %w", err)
+	}
+	_, err = o.convenienceService.CreateInput(ctx, &model.AdvanceInput{
+		Index:          input.Node.Index,
 		Status:         status,
-		MsgSender:      msgSender,
-		Payload:        []byte(payload),
-		BlockNumber:    blockNumber,
-		BlockTimestamp: blockTimestamp,
-		PrevRandao:     prevRandao,
+		MsgSender:      convertedInput.MsgSender,
+		Payload:        []byte(convertedInput.Payload),
+		BlockNumber:    convertedInput.BlockNumber.Uint64(),
+		BlockTimestamp: time.Unix(convertedInput.BlockTimestamp, 0),
+		PrevRandao:     convertedInput.PrevRandao,
 	})
 	return err
 }
@@ -134,4 +138,31 @@ func jsonToAbi(abiJSON string) (*abi.ABI, error) {
 		return nil, fmt.Errorf("unexpected error json %s", err2.Error())
 	}
 	return &abiData, nil
+}
+
+func (o *OutputDecoder) GetConvertedInput(input model.InputEdge) (model.ConvertedInput, error) {
+	payload := input.Node.Blob
+	var emptyConvertedInput model.ConvertedInput
+	abiParsed, err := contracts.InputsMetaData.GetAbi()
+
+	if err != nil {
+		slog.Error("Error parsing abi", "err", err)
+		return emptyConvertedInput, err
+	}
+
+	values, err := abiParsed.Methods["EvmAdvance"].Inputs.Unpack(common.Hex2Bytes(payload[10:]))
+
+	if err != nil {
+		slog.Error("Error unpacking abi", "err", err)
+		return emptyConvertedInput, err
+	}
+	convertedInput := model.ConvertedInput{
+		MsgSender:      values[2].(common.Address),
+		Payload:        string(values[7].([]uint8)),
+		BlockNumber:    values[3].(*big.Int),
+		BlockTimestamp: values[4].(*big.Int).Int64(),
+		PrevRandao:     values[5].(*big.Int).String(),
+	}
+
+	return convertedInput, nil
 }

@@ -37,7 +37,5 @@ type Adapter interface {
 
 	GetProof(ctx context.Context, inputIndex, outputIndex int) (*graphql.Proof, error)
 
-	GetConvertedInput(input model.InputEdge) (model.ConvertedInput, error)
-
 	RetrieveDestination(output model.OutputEdge) (common.Address, error)
 }

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"math/big"
 
 	"github.com/calindra/nonodo/internal/convenience/model"
 	cModel "github.com/calindra/nonodo/internal/convenience/model"
@@ -282,19 +281,6 @@ func (a AdapterV1) convertToInputConnection(
 		convNodes[i] = graphql.ConvertInput(inputs[i])
 	}
 	return graphql.NewConnection(offset, total, convNodes), nil
-}
-
-// This method is implemented to satisfy the AdapterConnector interface.
-func (a AdapterV1) GetConvertedInput(input model.InputEdge) (model.ConvertedInput, error) {
-	convertedInput := model.ConvertedInput{
-		MsgSender:      common.Address{},
-		BlockNumber:    big.NewInt(0),
-		BlockTimestamp: 0,
-		PrevRandao:     "",
-		Payload:        "",
-	}
-
-	return convertedInput, nil
 }
 
 // This method is implemented to satisfy the AdapterConnector interface.
