@@ -17,8 +17,8 @@ type DecoderInterfaceMock struct {
 	mock.Mock
 }
 
-func (m *DecoderInterfaceMock) RetrieveDestination(output model.OutputEdge) (common.Address, error) {
-	args := m.Called(output)
+func (m *DecoderInterfaceMock) RetrieveDestination(payload string) (common.Address, error) {
+	args := m.Called(payload)
 	return args.Get(0).(common.Address), args.Error(1)
 }
 
@@ -27,8 +27,8 @@ func (m *DecoderInterfaceMock) GetConvertedInput(input model.InputEdge) (model.C
 	return args.Get(0).(model.ConvertedInput), args.Error(1)
 }
 
-func (m *DecoderInterfaceMock) HandleOutput(ctx context.Context, destination common.Address, payload string, inputIndex uint64, outputIndex uint64) error {
-	args := m.Called(ctx, destination, payload, inputIndex, outputIndex)
+func (m *DecoderInterfaceMock) HandleOutputV2(ctx context.Context, processOutputData model.ProcessOutputData) error {
+	args := m.Called(ctx, processOutputData)
 	return args.Error(0)
 }
 
@@ -147,12 +147,12 @@ func TestHandleOutput_Failure(t *testing.T) {
 
 	erro := errors.New("Handle Output Failure")
 
-	decoderMock.On("RetrieveDestination", mock.Anything).Return(common.Address{}, erro)
+	decoderMock.On("HandleOutputV2", mock.Anything, mock.Anything).Return(erro)
 
 	err := synchronizer.handleGraphileResponse(ctx, response)
 
 	assert.Error(t, err)
-	assert.EqualError(t, err, "error processing output: error retrieving destination for node blob '0x1a2b3c': Handle Output Failure")
+	assert.EqualError(t, err, "error handling output: Handle Output Failure")
 }
 
 func TestDecoderHandleOutput_Failure(t *testing.T) {
@@ -169,7 +169,7 @@ func TestDecoderHandleOutput_Failure(t *testing.T) {
 	erro := errors.New("Decoder Handler Output Failure")
 
 	decoderMock.On("RetrieveDestination", mock.Anything).Return(common.Address{}, nil)
-	decoderMock.On("HandleOutput", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(erro)
+	decoderMock.On("HandleOutputV2", mock.Anything, mock.Anything).Return(erro)
 
 	err := synchronizer.handleGraphileResponse(ctx, response)
 
@@ -193,7 +193,7 @@ func TestHandleInput_Failure(t *testing.T) {
 	erro := errors.New("Handle Input Failure")
 
 	decoderMock.On("RetrieveDestination", mock.Anything).Return(common.Address{}, nil)
-	decoderMock.On("HandleOutput", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	decoderMock.On("HandleOutputV2", mock.Anything, mock.Anything).Return(nil)
 	decoderMock.On("HandleInput", mock.Anything, mock.Anything, mock.Anything).Return(erro)
 
 	err := synchronizer.handleGraphileResponse(ctx, response)

@@ -30,6 +30,7 @@ func NewOutputDecoder(convenienceService services.ConvenienceService) *OutputDec
 	}
 }
 
+// Deprecated: HandleOutput is deprecated.
 func (o *OutputDecoder) HandleOutput(
 	ctx context.Context,
 	destination common.Address,
@@ -55,6 +56,43 @@ func (o *OutputDecoder) HandleOutput(
 			Payload:     adapter.RemoveSelector(payload),
 			InputIndex:  inputIndex,
 			OutputIndex: outputIndex,
+		})
+		return err
+	}
+}
+
+func (o *OutputDecoder) HandleOutputV2(
+	ctx context.Context,
+	processOutputData model.ProcessOutputData,
+) error {
+	// https://github.com/cartesi/rollups-contracts/issues/42#issuecomment-1694932058
+	// detect the output type Voucher | Notice
+	// 0xc258d6e5 for Notice
+	// 0xef615e2f for Vouchers
+	slog.Debug("Add Voucher/Notices",
+		"inputIndex", processOutputData.InputIndex,
+		"outputIndex", processOutputData.OutputIndex,
+	)
+	if processOutputData.Payload[2:10] == model.VOUCHER_SELECTOR {
+		destination, err := o.RetrieveDestination(processOutputData.Payload)
+		if err != nil {
+			slog.Error("Failed to retrieve destination for node blob ", "err", err)
+			return fmt.Errorf("error retrieving destination for node blob '%s': %w", processOutputData.Payload, err)
+		}
+
+		_, err = o.convenienceService.CreateVoucher(ctx, &model.ConvenienceVoucher{
+			Destination: destination,
+			Payload:     adapter.RemoveSelector(processOutputData.Payload),
+			Executed:    false,
+			InputIndex:  processOutputData.InputIndex,
+			OutputIndex: processOutputData.OutputIndex,
+		})
+		return err
+	} else {
+		_, err := o.convenienceService.CreateNotice(ctx, &model.ConvenienceNotice{
+			Payload:     adapter.RemoveSelector(processOutputData.Payload),
+			InputIndex:  processOutputData.InputIndex,
+			OutputIndex: processOutputData.OutputIndex,
 		})
 		return err
 	}
@@ -167,8 +205,7 @@ func (o *OutputDecoder) GetConvertedInput(input model.InputEdge) (model.Converte
 	return convertedInput, nil
 }
 
-func (o *OutputDecoder) RetrieveDestination(output model.OutputEdge) (common.Address, error) {
-	payload := output.Node.Blob
+func (o *OutputDecoder) RetrieveDestination(payload string) (common.Address, error) {
 	abiParsed, err := contracts.OutputsMetaData.GetAbi()
 
 	if err != nil {

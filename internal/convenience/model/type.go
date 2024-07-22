@@ -131,12 +131,9 @@ type OutputEdge struct {
 }
 
 type DecoderConnector interface {
-	HandleOutput(
+	HandleOutputV2(
 		ctx context.Context,
-		destination common.Address,
-		payload string,
-		inputIndex uint64,
-		outputIndex uint64,
+		processOutputData ProcessOutputData,
 	) error
 
 	HandleInput(
@@ -154,5 +151,12 @@ type DecoderConnector interface {
 
 	GetConvertedInput(output InputEdge) (ConvertedInput, error)
 
-	RetrieveDestination(output OutputEdge) (common.Address, error)
+	RetrieveDestination(payload string) (common.Address, error)
+}
+
+type ProcessOutputData struct {
+	OutputIndex uint64 `json:"outputIndex"`
+	InputIndex  uint64 `json:"inputIndex"`
+	Payload     string `json:"payload"`
+	Destination string `json:"destination"`
 }

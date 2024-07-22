@@ -8,20 +8,12 @@ import (
 
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/convenience/repository"
-	"github.com/ethereum/go-ethereum/common"
 )
 
 type GraphileSynchronizer struct {
 	Decoder                model.DecoderConnector
 	SynchronizerRepository *repository.SynchronizerRepository
 	GraphileFetcher        *GraphileFetcher
-}
-
-type ProcessOutputData struct {
-	OutputIndex int
-	InputIndex  int
-	Blob        string
-	Destination common.Address
 }
 
 func (x GraphileSynchronizer) String() string {
@@ -78,19 +70,15 @@ func (x GraphileSynchronizer) handleGraphileResponse(ctx context.Context, output
 	var initReportCursorAfter string
 
 	for _, output := range outputResp.Data.Outputs.Edges {
-		processOutPutData, err := x.processOutput(output)
 
-		if err != nil {
-			slog.Error("Failed to process the output data.", "err", err)
-			return fmt.Errorf("error processing output: %w", err)
+		processOutputData := model.ProcessOutputData{
+			OutputIndex: uint64(output.Node.Index),
+			InputIndex:  uint64(output.Node.InputIndex),
+			Payload:     output.Node.Blob[2:],
+			Destination: output.Node.Blob,
 		}
 
-		err = x.Decoder.HandleOutput(ctx,
-			processOutPutData.Destination,
-			processOutPutData.Blob,
-			uint64(processOutPutData.InputIndex),
-			uint64(processOutPutData.OutputIndex),
-		)
+		err := x.Decoder.HandleOutputV2(ctx, processOutputData)
 		if err != nil {
 			slog.Error("Failed to handle output: ", "err", err)
 			return fmt.Errorf("error handling output: %w", err)
@@ -169,33 +157,6 @@ func (x GraphileSynchronizer) handleGraphileResponse(ctx context.Context, output
 		}
 	}
 	return nil
-}
-
-func (x GraphileSynchronizer) processOutput(output model.OutputEdge) (ProcessOutputData, error) {
-	outputIndex := output.Node.Index
-	inputIndex := output.Node.InputIndex
-	slog.Debug("Add Voucher/Notices",
-		"inputIndex", inputIndex,
-		"outputIndex", outputIndex,
-	)
-
-	blob := output.Node.Blob[2:]
-	destination, err := x.Decoder.RetrieveDestination(output)
-	var emptyprocessOutputData ProcessOutputData
-
-	if err != nil {
-		slog.Error("Failed to retrieve destination for node blob '%s': %v", output.Node.Blob, err)
-		return emptyprocessOutputData, fmt.Errorf("error retrieving destination for node blob '%s': %w", output.Node.Blob, err)
-	}
-
-	processOutputData := ProcessOutputData{
-		OutputIndex: outputIndex,
-		InputIndex:  inputIndex,
-		Blob:        blob,
-		Destination: destination,
-	}
-
-	return processOutputData, nil
 }
 
 func NewGraphileSynchronizer(
