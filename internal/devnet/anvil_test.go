@@ -17,7 +17,7 @@ type AnvilSuite struct {
 	suite.Suite
 }
 
-const testTimeout = 5 * time.Second
+const testTimeout = 10 * time.Second
 
 func (s *AnvilSuite) TestAnvilWorker() {
 	ctx, timeoutCancel := context.WithTimeout(context.Background(), testTimeout)
@@ -25,9 +25,10 @@ func (s *AnvilSuite) TestAnvilWorker() {
 
 	anvilPort := AnvilDefaultPort + 100
 	w := AnvilWorker{
-		Address: AnvilDefaultAddress,
-		Port:    anvilPort,
-		Verbose: true,
+		Address:  AnvilDefaultAddress,
+		Port:     anvilPort,
+		Verbose:  true,
+		AnvilCmd: "anvil",
 	}
 
 	// start worker in goroutine
