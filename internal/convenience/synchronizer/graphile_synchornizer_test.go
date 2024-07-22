@@ -4,9 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"math/big"
 	"testing"
-	"time"
 
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/convenience/repository"
@@ -38,8 +36,8 @@ func (m *DecoderInterfaceMock) HandleOutput(ctx context.Context, destination com
 	return args.Error(0)
 }
 
-func (m *DecoderInterfaceMock) HandleInput(ctx context.Context, index int, status model.CompletionStatus, msgSender common.Address, payload string, blockNumber uint64, blockTimestamp time.Time, prevRandao string) error {
-	args := m.Called(ctx, index, status, msgSender, payload, blockNumber, blockTimestamp, prevRandao)
+func (m *DecoderInterfaceMock) HandleInput(ctx context.Context, input model.InputEdge, status model.CompletionStatus) error {
+	args := m.Called(ctx, input, status)
 	return args.Error(0)
 }
 
@@ -138,7 +136,7 @@ func getTestOutputResponse() OutputResponse {
 	return response
 }
 
-func TestGetDestination_Failure(t *testing.T) {
+func TestHandleOutput_Failure(t *testing.T) {
 	response := getTestOutputResponse()
 
 	ctx := context.Background()
@@ -153,14 +151,14 @@ func TestGetDestination_Failure(t *testing.T) {
 		Adapter:                adapterMock,
 	}
 
-	erro := errors.New("error")
-	// adapterMock.On("ConvertVoucher", mock.Anything).Return("1a2b3c")
+	erro := errors.New("Handle Output Failure")
+
 	adapterMock.On("RetrieveDestination", mock.Anything).Return(common.Address{}, erro)
 
 	err := synchronizer.handleGraphileResponse(response, ctx)
 
 	assert.Error(t, err)
-	assert.EqualError(t, err, "error retrieving destination for node blob '0x1a2b3c': error")
+	assert.EqualError(t, err, "error processing output: error retrieving destination for node blob '0x1a2b3c': Handle Output Failure")
 }
 
 func TestDecoderHandleOutput_Failure(t *testing.T) {
@@ -177,7 +175,7 @@ func TestDecoderHandleOutput_Failure(t *testing.T) {
 		Adapter:                adapterMock,
 	}
 	erro := errors.New("Decoder Handler Output Failure")
-	// adapterMock.On("ConvertVoucher", mock.Anything).Return("1a2b3c")
+
 	adapterMock.On("RetrieveDestination", mock.Anything).Return(common.Address{}, nil)
 	decoderMock.On("HandleOutput", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(erro)
 
@@ -188,7 +186,7 @@ func TestDecoderHandleOutput_Failure(t *testing.T) {
 
 }
 
-func TestGetConvertedInput_Failure(t *testing.T) {
+func TestHandleInput_Failure(t *testing.T) {
 	response := getTestOutputResponse()
 	ctx := context.Background()
 
@@ -202,23 +200,15 @@ func TestGetConvertedInput_Failure(t *testing.T) {
 		Adapter:                adapterMock,
 	}
 
-	convertedInput := model.ConvertedInput{
-		MsgSender:      common.Address{},
-		BlockNumber:    big.NewInt(0),
-		BlockTimestamp: 0,
-		PrevRandao:     "",
-		Payload:        "",
-	}
+	erro := errors.New("Handle Input Failure")
 
-	erro := errors.New("Get Converted Input Failure")
-	// adapterMock.On("ConvertVoucher", mock.Anything).Return("1a2b3c")
 	adapterMock.On("RetrieveDestination", mock.Anything).Return(common.Address{}, nil)
 	decoderMock.On("HandleOutput", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	decoderMock.On("GetConvertedInput", mock.Anything).Return(convertedInput, erro)
+	decoderMock.On("HandleInput", mock.Anything, mock.Anything, mock.Anything).Return(erro)
 
 	err := synchronizer.handleGraphileResponse(response, ctx)
 
 	assert.Error(t, err)
-	assert.EqualError(t, err, "error getting converted input: Get Converted Input Failure")
+	assert.EqualError(t, err, "error handling input: Handle Input Failure")
 
 }

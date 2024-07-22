@@ -42,8 +42,6 @@ type DecoderConnector interface {
 	HandleInput(
 		ctx context.Context,
 		input model.InputEdge,
-		// convertedInput model.ConvertedInput,
-		// index int,
 		status model.CompletionStatus,
 	) error
 
