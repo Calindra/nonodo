@@ -53,6 +53,8 @@ type NonodoOpts struct {
 	// If RpcUrl is set, connect to it instead of anvil.
 	RpcUrl string
 
+	EspressoUrl string
+
 	// If set, start echo dapp.
 	EnableEcho bool
 
@@ -97,6 +99,7 @@ func NewNonodoOpts() NonodoOpts {
 		InputBoxBlock:       0,
 		ApplicationAddress:  devnet.ApplicationAddress,
 		RpcUrl:              "",
+		EspressoUrl:         "https://query.cappuccino.testnet.espresso.network",
 		EnableEcho:          false,
 		DisableDevnet:       false,
 		DisableAdvance:      false,
@@ -282,6 +285,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		} else if opts.Sequencer == "espresso" {
 			sequencer = model.NewEspressoSequencer(modelInstance)
 			w.Workers = append(w.Workers, espresso.NewEspressoListener(
+				opts.EspressoUrl,
 				opts.Namespace,
 				modelInstance.GetInputRepository(),
 				opts.FromBlock,
