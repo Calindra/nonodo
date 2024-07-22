@@ -155,7 +155,7 @@ func TestHandleOutput_Failure(t *testing.T) {
 
 	adapterMock.On("RetrieveDestination", mock.Anything).Return(common.Address{}, erro)
 
-	err := synchronizer.handleGraphileResponse(response, ctx)
+	err := synchronizer.handleGraphileResponse(ctx, response)
 
 	assert.Error(t, err)
 	assert.EqualError(t, err, "error processing output: error retrieving destination for node blob '0x1a2b3c': Handle Output Failure")
@@ -179,7 +179,7 @@ func TestDecoderHandleOutput_Failure(t *testing.T) {
 	adapterMock.On("RetrieveDestination", mock.Anything).Return(common.Address{}, nil)
 	decoderMock.On("HandleOutput", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(erro)
 
-	err := synchronizer.handleGraphileResponse(response, ctx)
+	err := synchronizer.handleGraphileResponse(ctx, response)
 
 	assert.Error(t, err)
 	assert.EqualError(t, err, "error handling output: Decoder Handler Output Failure")
@@ -206,7 +206,7 @@ func TestHandleInput_Failure(t *testing.T) {
 	decoderMock.On("HandleOutput", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	decoderMock.On("HandleInput", mock.Anything, mock.Anything, mock.Anything).Return(erro)
 
-	err := synchronizer.handleGraphileResponse(response, ctx)
+	err := synchronizer.handleGraphileResponse(ctx, response)
 
 	assert.Error(t, err)
 	assert.EqualError(t, err, "error handling input: Handle Input Failure")

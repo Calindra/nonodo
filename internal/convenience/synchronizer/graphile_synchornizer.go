@@ -85,7 +85,7 @@ func (x GraphileSynchronizer) Start(ctx context.Context, ready chan<- struct{}) 
 				"error", err.Error(),
 			)
 		} else {
-			err := x.handleGraphileResponse(*voucherResp, ctx)
+			err := x.handleGraphileResponse(ctx, *voucherResp)
 			if err != nil {
 				//Sem panic
 				panic(err)
@@ -103,7 +103,7 @@ func (x GraphileSynchronizer) Start(ctx context.Context, ready chan<- struct{}) 
 
 }
 
-func (x GraphileSynchronizer) handleGraphileResponse(outputResp OutputResponse, ctx context.Context) error {
+func (x GraphileSynchronizer) handleGraphileResponse(ctx context.Context, outputResp OutputResponse) error {
 	// Handle response data
 	voucherIds := []string{}
 	var initCursorAfter string
