@@ -138,6 +138,8 @@ func (x *VoucherExecListener) WatchExecutions(ctx context.Context, client *ethcl
 		Topics:    [][]common.Hash{{contractABI.Events[x.EventName].ID}},
 	}
 
+	var reconnectDelay time.Duration = 5 * time.Second
+
 	for {
 		ctxPastInputs, cancel := context.WithCancel(ctx)
 		defer cancel()
