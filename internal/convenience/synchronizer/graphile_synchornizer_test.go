@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math/big"
 	"testing"
 	"time"
 
@@ -205,11 +206,20 @@ func TestGetConvertedInput_Failure(t *testing.T) {
 		GraphileFetcher:        &GraphileFetcher{},
 		Adapter:                adapterMock,
 	}
+
+	convertedInput := model.ConvertedInput{
+		MsgSender:      common.Address{},
+		BlockNumber:    big.NewInt(0),
+		BlockTimestamp: 0,
+		PrevRandao:     "",
+		Payload:        "",
+	}
+
 	erro := errors.New("Get Converted Input Failure")
 	// adapterMock.On("ConvertVoucher", mock.Anything).Return("1a2b3c")
 	adapterMock.On("RetrieveDestination", mock.Anything).Return(common.Address{}, nil)
 	decoderMock.On("HandleOutput", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
-	adapterMock.On("GetConvertedInput", mock.Anything).Return(make([]interface{}, 0), erro)
+	adapterMock.On("GetConvertedInput", mock.Anything).Return(convertedInput, erro)
 
 	err := synchronizer.handleGraphileResponse(response, ctx)
 
