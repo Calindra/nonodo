@@ -12,7 +12,7 @@ import (
 )
 
 type GraphileSynchronizer struct {
-	Decoder                DecoderConnector
+	Decoder                model.DecoderConnector
 	SynchronizerRepository *repository.SynchronizerRepository
 	GraphileFetcher        *GraphileFetcher
 }
@@ -22,33 +22,6 @@ type ProcessOutputData struct {
 	InputIndex  int
 	Blob        string
 	Destination common.Address
-}
-
-type DecoderConnector interface {
-	HandleOutput(
-		ctx context.Context,
-		destination common.Address,
-		payload string,
-		inputIndex uint64,
-		outputIndex uint64,
-	) error
-
-	HandleInput(
-		ctx context.Context,
-		input model.InputEdge,
-		status model.CompletionStatus,
-	) error
-
-	HandleReport(
-		ctx context.Context,
-		index int,
-		outputIndex int,
-		payload string,
-	) error
-
-	GetConvertedInput(output model.InputEdge) (model.ConvertedInput, error)
-
-	RetrieveDestination(output model.OutputEdge) (common.Address, error)
 }
 
 func (x GraphileSynchronizer) String() string {
@@ -63,7 +36,6 @@ func (x GraphileSynchronizer) Start(ctx context.Context, ready chan<- struct{}) 
 	lastFetch, err := x.SynchronizerRepository.GetLastFetched(ctx)
 
 	if err != nil {
-		//Com panic
 		panic(err)
 	}
 
@@ -83,8 +55,8 @@ func (x GraphileSynchronizer) Start(ctx context.Context, ready chan<- struct{}) 
 		} else {
 			err := x.handleGraphileResponse(ctx, *voucherResp)
 			if err != nil {
-				//Sem panic
-				panic(err)
+				slog.Error("Failed to handle graphile response.", "err", err)
+				return fmt.Errorf("error handling graphile response: %w", err)
 			}
 		}
 		select {
@@ -207,7 +179,7 @@ func (x GraphileSynchronizer) processOutput(output model.OutputEdge) (ProcessOut
 		"outputIndex", outputIndex,
 	)
 
-	blob := output.Node.Blob[2:] //O voucher já vem do PostGraphile no modo que o v2 precisa.
+	blob := output.Node.Blob[2:]
 	destination, err := x.Decoder.RetrieveDestination(output)
 	var emptyprocessOutputData ProcessOutputData
 
@@ -227,7 +199,7 @@ func (x GraphileSynchronizer) processOutput(output model.OutputEdge) (ProcessOut
 }
 
 func NewGraphileSynchronizer(
-	decoder DecoderConnector,
+	decoder model.DecoderConnector,
 	synchronizerRepository *repository.SynchronizerRepository,
 	graphileFetcher *GraphileFetcher,
 ) *GraphileSynchronizer {

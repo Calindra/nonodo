@@ -9,8 +9,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-type Adapter struct{}
-
 func ConvertVoucherPayloadToV2(payloadV1 string) string {
 	return fmt.Sprintf("0x%s%s", model.VOUCHER_SELECTOR, payloadV1)
 }

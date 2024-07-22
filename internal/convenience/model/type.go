@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"math/big"
 	"time"
 
@@ -127,4 +128,31 @@ type OutputEdge struct {
 		Blob       string `json:"blob"`
 		InputIndex int    `json:"inputIndex"`
 	} `json:"node"`
+}
+
+type DecoderConnector interface {
+	HandleOutput(
+		ctx context.Context,
+		destination common.Address,
+		payload string,
+		inputIndex uint64,
+		outputIndex uint64,
+	) error
+
+	HandleInput(
+		ctx context.Context,
+		input InputEdge,
+		status CompletionStatus,
+	) error
+
+	HandleReport(
+		ctx context.Context,
+		index int,
+		outputIndex int,
+		payload string,
+	) error
+
+	GetConvertedInput(output InputEdge) (ConvertedInput, error)
+
+	RetrieveDestination(output OutputEdge) (common.Address, error)
 }
