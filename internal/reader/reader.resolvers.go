@@ -81,8 +81,16 @@ func (r *queryResolver) Inputs(ctx context.Context, first *int, last *int, after
 }
 
 // Vouchers is the resolver for the vouchers field.
-func (r *queryResolver) Vouchers(ctx context.Context, first *int, last *int, after *string, before *string) (*model.Connection[*model.Voucher], error) {
-	return r.adapter.GetVouchers(first, last, after, before, nil)
+func (r *queryResolver) Vouchers(ctx context.Context, first *int, last *int, after *string, before *string, filter []*model.ConvenientFilter) (*model.Connection[*model.Voucher], error) {
+	convenienceFilter, err := model.ConvertToConvenienceFilter(filter)
+	if err != nil {
+		return nil, err
+	}
+	vouchers, err := r.convenienceService.FindAllVouchers(ctx, first, last, after, before, convenienceFilter)
+	if err != nil {
+		return nil, err
+	}
+	return model.ConvertToVoucherConnectionV1(vouchers.Rows, int(vouchers.Offset), int(vouchers.Total))
 }
 
 // Notices is the resolver for the notices field.
@@ -93,19 +101,6 @@ func (r *queryResolver) Notices(ctx context.Context, first *int, last *int, afte
 // Reports is the resolver for the reports field.
 func (r *queryResolver) Reports(ctx context.Context, first *int, last *int, after *string, before *string) (*model.Connection[*model.Report], error) {
 	return r.adapter.GetReports(ctx, first, last, after, before, nil)
-}
-
-// ConvenientVouchers is the resolver for the convenientVouchers field.
-func (r *queryResolver) ConvenientVouchers(ctx context.Context, first *int, last *int, after *string, before *string, filter []*model.ConvenientFilter) (*model.Connection[*model.ConvenientVoucher], error) {
-	convenienceFilter, err := model.ConvertToConvenienceFilter(filter)
-	if err != nil {
-		return nil, err
-	}
-	vouchers, err := r.convenienceService.FindAllVouchers(ctx, first, last, after, before, convenienceFilter)
-	if err != nil {
-		return nil, err
-	}
-	return model.ConvertToVoucherConnection(vouchers.Rows, int(vouchers.Offset), int(vouchers.Total))
 }
 
 // Input is the resolver for the input field.

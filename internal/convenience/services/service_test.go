@@ -19,6 +19,7 @@ type ConvenienceServiceSuite struct {
 	suite.Suite
 	repository       *repository.VoucherRepository
 	noticeRepository *repository.NoticeRepository
+	reportRepository *repository.ReportRepository
 	service          *ConvenienceService
 }
 
@@ -36,9 +37,17 @@ func (s *ConvenienceServiceSuite) SetupTest() {
 	}
 	err = s.noticeRepository.CreateTables()
 	s.NoError(err)
+
+	s.reportRepository = &repository.ReportRepository{
+		Db: db,
+	}
+	err = s.reportRepository.CreateTables()
+	s.NoError(err)
+
 	s.service = &ConvenienceService{
 		voucherRepository: s.repository,
 		noticeRepository:  s.noticeRepository,
+		reportRepository:  s.reportRepository,
 	}
 }
 
@@ -219,4 +228,30 @@ func (s *ConvenienceServiceSuite) TestCreateNoticeIdempotency() {
 	s.NoError(err)
 	s.NotNil(notice)
 	s.Equal("1122", notice.Payload)
+}
+
+func (s *ConvenienceServiceSuite) TestCreateReportIdempotency() {
+	ctx := context.Background()
+	_, err := s.service.CreateReport(ctx, &model.Report{
+		InputIndex: 1,
+		Index:      2,
+	})
+	s.NoError(err)
+	count, err := s.reportRepository.Count(ctx, nil)
+	s.NoError(err)
+	s.Equal(1, int(count))
+
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = s.service.CreateReport(ctx, &model.Report{
+		InputIndex: 1,
+		Index:      2,
+		Payload:    common.Hex2Bytes("1122"),
+	})
+	s.NoError(err)
+	count, err = s.reportRepository.Count(ctx, nil)
+	s.NoError(err)
+	s.Equal(1, int(count))
 }

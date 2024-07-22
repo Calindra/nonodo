@@ -42,16 +42,6 @@ func ConvertInput(input cModel.AdvanceInput) *Input {
 	}
 }
 
-func convertConvenientVoucher(cVoucher convenience.ConvenienceVoucher) *ConvenientVoucher {
-	return &ConvenientVoucher{
-		Index:       int(cVoucher.OutputIndex),
-		Input:       &Input{Index: int(cVoucher.InputIndex)},
-		Destination: cVoucher.Destination.String(),
-		Payload:     cVoucher.Payload,
-		Executed:    &cVoucher.Executed,
-	}
-}
-
 func convertConvenientVoucherV1(cVoucher convenience.ConvenienceVoucher) *Voucher {
 	return &Voucher{
 		Index:       int(cVoucher.OutputIndex),
@@ -160,17 +150,6 @@ func ConvertToConvenienceFilter(
 		// })
 	}
 	return filters, nil
-}
-
-func ConvertToVoucherConnection(
-	vouchers []convenience.ConvenienceVoucher,
-	offset int, total int,
-) (*ConvenientVoucherConnection, error) {
-	convNodes := make([]*ConvenientVoucher, len(vouchers))
-	for i := range vouchers {
-		convNodes[i] = convertConvenientVoucher(vouchers[i])
-	}
-	return NewConnection(offset, total, convNodes), nil
 }
 
 func ConvertToVoucherConnectionV1(

@@ -2,6 +2,7 @@ package services
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/convenience/model"
@@ -52,6 +53,7 @@ func (s *ConvenienceService) CreateNotice(
 	}
 	return s.noticeRepository.Create(ctx, notice)
 }
+
 func (s *ConvenienceService) CreateVoucher(
 	ctx context.Context,
 	voucher *model.ConvenienceVoucher,
@@ -93,8 +95,26 @@ func (s *ConvenienceService) CreateReport(
 	ctx context.Context,
 	report *model.Report,
 ) (*model.Report, error) {
-	reportDb, err := s.reportRepository.Create(ctx, *report)
-	return &reportDb, err
+	reportInDb, err := s.reportRepository.FindByInputAndOutputIndex(ctx,
+		uint64(report.InputIndex),
+		uint64(report.Index),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	if reportInDb != nil {
+		slog.Debug("Report exist",
+			"inputIndex", report.InputIndex,
+			"outputIndex", report.Index,
+		)
+		return s.reportRepository.Update(ctx, *reportInDb)
+	}
+	reportCreated, err := s.reportRepository.Create(ctx, *report)
+	if err != nil {
+		return nil, err
+	}
+	return &reportCreated, err
 }
 
 func (c *ConvenienceService) UpdateExecuted(

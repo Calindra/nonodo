@@ -4,7 +4,6 @@ FROM golang:1.22
 # Instale Clang
 RUN apt-get update && apt-get install -y clang
 
-
 # Instale Foundry
 RUN curl -L https://foundry.paradigm.xyz | bash
 
@@ -38,4 +37,4 @@ RUN go build -o nonodo
 EXPOSE 8080
 
 # Comando para rodar a aplicação
-CMD ["./nonodo", "--http-address=0.0.0.0", "--high-level-graphql", "--enable-debug", "--node-version", "v2", "--load-test-mode", "--db-implementation", "postgres"]
+CMD ["./nonodo", "--http-address=0.0.0.0", "--high-level-graphql", "--enable-debug", "--node-version", "v2", "--db-implementation", "postgres", "--graphile-address", "postgraphile-custom"]

@@ -10,10 +10,12 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"os/exec"
 	"path"
 	"sort"
 	"strings"
 
+	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/supervisor"
 )
 
@@ -36,9 +38,10 @@ const anvilCommand = "anvil"
 
 // Start the anvil process in the host machine.
 type AnvilWorker struct {
-	Address string
-	Port    int
-	Verbose bool
+	Address  string
+	Port     int
+	Verbose  bool
+	AnvilCmd string
 }
 
 // Define a struct to represent the structure of your JSON data
@@ -50,6 +53,40 @@ type ContractInfo struct {
 
 func (w AnvilWorker) String() string {
 	return anvilCommand
+}
+
+func IsAnvilInstalled() bool {
+	_, err := exec.LookPath(anvilCommand)
+	return err == nil
+}
+
+func InstallAnvil(ctx context.Context) (string, error) {
+	// Try to install anvil
+	anvilClient := commons.NewAnvilRelease()
+	latest, err := anvilClient.GetLatestReleaseCompatible(ctx)
+	if err != nil {
+		return "", fmt.Errorf("anvil: failed to get latest release: %w", err)
+	}
+	location, err := anvilClient.DownloadAsset(ctx, latest)
+	if err != nil {
+		return "", fmt.Errorf("anvil: failed to download asset: %w", err)
+	}
+	return location, nil
+}
+
+func CheckAnvilAndInstall(ctx context.Context) (string, error) {
+	if !IsAnvilInstalled() {
+		location, err := InstallAnvil(ctx)
+		if err != nil {
+			return "", fmt.Errorf("anvil: failed to install anvil %s", err.Error())
+		}
+		// location = filepath.Join(location, "anvil")
+		slog.Debug("anvil: installed anvil", "location", location)
+		return location, nil
+	}
+
+	slog.Debug("anvil: anvil is installed")
+	return anvilCommand, nil
 }
 
 func ShowAddresses() {
@@ -88,9 +125,13 @@ func (w AnvilWorker) Start(ctx context.Context, ready chan<- struct{}) error {
 	defer removeTemp(dir)
 	slog.Debug("anvil: created temp dir with state file", "dir", dir)
 
+	if w.AnvilCmd == "" {
+		w.AnvilCmd = anvilCommand
+	}
+
 	var server supervisor.ServerWorker
 	server.Name = anvilCommand
-	server.Command = anvilCommand
+	server.Command = w.AnvilCmd
 	server.Port = w.Port
 	server.Args = append(server.Args, "--host", fmt.Sprint(w.Address))
 	server.Args = append(server.Args, "--port", fmt.Sprint(w.Port))

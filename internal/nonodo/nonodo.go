@@ -6,6 +6,7 @@
 package nonodo
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"math/big"
@@ -77,40 +78,42 @@ type NonodoOpts struct {
 	TimeoutInspect time.Duration
 	TimeoutAdvance time.Duration
 
-	GraphileAddress string
-	GraphilePort    string
+	GraphileAddress     string
+	GraphilePort        string
+	GraphileDisableSync bool
 }
 
 // Create the options struct with default values.
 func NewNonodoOpts() NonodoOpts {
 	var defaultTimeout time.Duration = 10 * time.Second
 	return NonodoOpts{
-		AnvilAddress:       devnet.AnvilDefaultAddress,
-		AnvilPort:          devnet.AnvilDefaultPort,
-		AnvilVerbose:       false,
-		HttpAddress:        "127.0.0.1",
-		HttpPort:           DefaultHttpPort,
-		HttpRollupsPort:    DefaultRollupsPort,
-		InputBoxAddress:    devnet.InputBoxAddress,
-		InputBoxBlock:      0,
-		ApplicationAddress: devnet.ApplicationAddress,
-		RpcUrl:             "",
-		EnableEcho:         false,
-		DisableDevnet:      false,
-		DisableAdvance:     false,
-		ApplicationArgs:    nil,
-		HLGraphQL:          false,
-		SqliteFile:         "file:memory1?mode=memory&cache=shared",
-		FromBlock:          0,
-		DbImplementation:   "sqlite",
-		NodeVersion:        "v1",
-		Sequencer:          "inputbox",
-		LoadTestMode:       false,
-		Namespace:          DefaultNamespace,
-		TimeoutInspect:     defaultTimeout,
-		TimeoutAdvance:     defaultTimeout,
-		GraphileAddress:    "localhost",
-		GraphilePort:       "5000",
+		AnvilAddress:        devnet.AnvilDefaultAddress,
+		AnvilPort:           devnet.AnvilDefaultPort,
+		AnvilVerbose:        false,
+		HttpAddress:         "127.0.0.1",
+		HttpPort:            DefaultHttpPort,
+		HttpRollupsPort:     DefaultRollupsPort,
+		InputBoxAddress:     devnet.InputBoxAddress,
+		InputBoxBlock:       0,
+		ApplicationAddress:  devnet.ApplicationAddress,
+		RpcUrl:              "",
+		EnableEcho:          false,
+		DisableDevnet:       false,
+		DisableAdvance:      false,
+		ApplicationArgs:     nil,
+		HLGraphQL:           false,
+		SqliteFile:          "file:memory1?mode=memory&cache=shared",
+		FromBlock:           0,
+		DbImplementation:    "sqlite",
+		NodeVersion:         "v1",
+		Sequencer:           "inputbox",
+		LoadTestMode:        false,
+		Namespace:           DefaultNamespace,
+		TimeoutInspect:      defaultTimeout,
+		TimeoutAdvance:      defaultTimeout,
+		GraphileAddress:     "localhost",
+		GraphilePort:        "5000",
+		GraphileDisableSync: false,
 	}
 }
 
@@ -152,7 +155,17 @@ func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 		adapter = reader.NewAdapterV2(convenienceService, httpClient, inputBlobAdapter)
 	}
 
-	if !opts.LoadTestMode {
+	if opts.RpcUrl == "" && !opts.DisableDevnet {
+		w.Workers = append(w.Workers, devnet.AnvilWorker{
+			Address: opts.AnvilAddress,
+			Port:    opts.AnvilPort,
+			Verbose: opts.AnvilVerbose,
+		})
+		opts.RpcUrl = fmt.Sprintf("ws://%s:%v", opts.AnvilAddress, opts.AnvilPort)
+	}
+
+	if !opts.LoadTestMode && !opts.GraphileDisableSync {
+		slog.Debug("Sync initialization")
 		var synchronizer supervisor.Worker
 
 		if opts.NodeVersion == "v2" {
@@ -230,10 +243,28 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	}))
 
 	if opts.RpcUrl == "" && !opts.DisableDevnet {
+		var timeoutAnvil time.Duration = 10 * time.Minute
+		ctx, cancel := context.WithTimeout(context.Background(), timeoutAnvil)
+		defer cancel()
+
+		go func() {
+			<-ctx.Done()
+			if ctx.Err() == context.DeadlineExceeded {
+				slog.Error("Timeout waiting for anvil")
+			}
+		}()
+
+		anvilLocation, err := devnet.CheckAnvilAndInstall(ctx)
+
+		if err != nil {
+			panic(err)
+		}
+
 		w.Workers = append(w.Workers, devnet.AnvilWorker{
-			Address: opts.AnvilAddress,
-			Port:    opts.AnvilPort,
-			Verbose: opts.AnvilVerbose,
+			Address:  opts.AnvilAddress,
+			Port:     opts.AnvilPort,
+			Verbose:  opts.AnvilVerbose,
+			AnvilCmd: anvilLocation,
 		})
 		opts.RpcUrl = fmt.Sprintf("ws://%s:%v", opts.AnvilAddress, opts.AnvilPort)
 	}

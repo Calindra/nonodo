@@ -138,7 +138,7 @@ func GenerateOutputBlob() string {
 	value := big.NewInt(1000000000000000000)
 	payload := common.Hex2Bytes("11223344556677889900")
 	destination := common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
-	inputData, _ := abiParsed.Pack("Vouchers",
+	inputData, _ := abiParsed.Pack("Voucher",
 		destination,
 		value,
 		payload,
