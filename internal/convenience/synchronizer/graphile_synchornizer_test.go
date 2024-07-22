@@ -28,11 +28,6 @@ func (m *AdapterInterfaceMock) RetrieveDestination(output model.OutputEdge) (com
 	return args.Get(0).(common.Address), args.Error(1)
 }
 
-// func (m *AdapterInterfaceMock) ConvertVoucher(output Edge) string {
-// 	args := m.Called(output)
-// 	return args.String(0)
-// }
-
 func (m *AdapterInterfaceMock) GetConvertedInput(input model.InputEdge) (model.ConvertedInput, error) {
 	args := m.Called(input)
 	return args.Get(0).(model.ConvertedInput), args.Error(1)

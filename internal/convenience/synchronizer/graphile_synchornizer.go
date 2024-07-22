@@ -19,6 +19,13 @@ type GraphileSynchronizer struct {
 	Adapter                AdapterConnector
 }
 
+type ProcessOutputData struct {
+	OutputIndex int
+	InputIndex  int
+	Blob        string
+	Destination common.Address
+}
+
 type AdapterConnector interface {
 	RetrieveDestination(output model.OutputEdge) (common.Address, error)
 	GetConvertedInput(output model.InputEdge) (model.ConvertedInput, error)
@@ -108,30 +115,37 @@ func (x GraphileSynchronizer) handleGraphileResponse(outputResp OutputResponse, 
 	var initReportCursorAfter string
 
 	for _, output := range outputResp.Data.Outputs.Edges {
-		outputIndex := output.Node.Index
-		inputIndex := output.Node.InputIndex
-		slog.Debug("Add Voucher/Notices",
-			"inputIndex", inputIndex,
-			"outputIndex", outputIndex,
-		)
-		voucherIds = append(
-			voucherIds,
-			fmt.Sprintf("%d:%d", inputIndex, outputIndex),
-		)
-		// adapted := x.Adapter.ConvertVoucher(output)
-		blob := output.Node.Blob[2:] //O voucher já vem do PostGraphile no modo que o v2 precisa.
-		destination, err := x.Adapter.RetrieveDestination(output)
+		// outputIndex := output.Node.Index
+		// inputIndex := output.Node.InputIndex
+		// slog.Debug("Add Voucher/Notices",
+		// 	"inputIndex", inputIndex,
+		// 	"outputIndex", outputIndex,
+		// )
+		// voucherIds = append(
+		// 	voucherIds,
+		// 	fmt.Sprintf("%d:%d", inputIndex, outputIndex),
+		// )
+		// // adapted := x.Adapter.ConvertVoucher(output)
+		// blob := output.Node.Blob[2:] //O voucher já vem do PostGraphile no modo que o v2 precisa.
+		// destination, err := x.Adapter.RetrieveDestination(output)
+
+		// if err != nil {
+		// 	slog.Error("Failed to retrieve destination for node blob '%s': %v", output.Node.Blob, err)
+		// 	return fmt.Errorf("error retrieving destination for node blob '%s': %w", output.Node.Blob, err)
+		// }
+
+		processOutPutData, err := x.processOutput(output, voucherIds)
 
 		if err != nil {
-			slog.Error("Failed to retrieve destination for node blob '%s': %v", output.Node.Blob, err)
-			return fmt.Errorf("error retrieving destination for node blob '%s': %w", output.Node.Blob, err)
+			slog.Error("Failed to process the output data.': %v", err)
+			return fmt.Errorf("error processing output: %w", err)
 		}
 
 		err = x.Decoder.HandleOutput(ctx,
-			destination,
-			blob,
-			uint64(inputIndex),
-			uint64(outputIndex),
+			processOutPutData.Destination,
+			processOutPutData.Blob,
+			uint64(processOutPutData.InputIndex),
+			uint64(processOutPutData.OutputIndex),
 		)
 		if err != nil {
 			slog.Error("Failed to handle output: %v", err)
@@ -227,6 +241,37 @@ func (x GraphileSynchronizer) handleGraphileResponse(outputResp OutputResponse, 
 		}
 	}
 	return nil
+}
+
+func (x GraphileSynchronizer) processOutput(output model.OutputEdge, voucherIds []string) (ProcessOutputData, error) {
+	outputIndex := output.Node.Index
+	inputIndex := output.Node.InputIndex
+	slog.Debug("Add Voucher/Notices",
+		"inputIndex", inputIndex,
+		"outputIndex", outputIndex,
+	)
+	voucherIds = append(
+		voucherIds,
+		fmt.Sprintf("%d:%d", inputIndex, outputIndex),
+	)
+
+	blob := output.Node.Blob[2:] //O voucher já vem do PostGraphile no modo que o v2 precisa.
+	destination, err := x.Adapter.RetrieveDestination(output)
+	var emptyprocessOutputData ProcessOutputData
+
+	if err != nil {
+		slog.Error("Failed to retrieve destination for node blob '%s': %v", output.Node.Blob, err)
+		return emptyprocessOutputData, fmt.Errorf("error retrieving destination for node blob '%s': %w", output.Node.Blob, err)
+	}
+
+	processOutputData := ProcessOutputData{
+		OutputIndex: outputIndex,
+		InputIndex:  inputIndex,
+		Blob:        blob,
+		Destination: destination,
+	}
+
+	return processOutputData, nil
 }
 
 func NewGraphileSynchronizer(
