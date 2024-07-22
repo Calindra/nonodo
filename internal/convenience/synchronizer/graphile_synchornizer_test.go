@@ -13,15 +13,11 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-type AdapterInterfaceMock struct {
-	mock.Mock
-}
-
 type DecoderInterfaceMock struct {
 	mock.Mock
 }
 
-func (m *AdapterInterfaceMock) RetrieveDestination(output model.OutputEdge) (common.Address, error) {
+func (m *DecoderInterfaceMock) RetrieveDestination(output model.OutputEdge) (common.Address, error) {
 	args := m.Called(output)
 	return args.Get(0).(common.Address), args.Error(1)
 }
@@ -141,19 +137,17 @@ func TestHandleOutput_Failure(t *testing.T) {
 
 	ctx := context.Background()
 
-	adapterMock := &AdapterInterfaceMock{}
 	decoderMock := &DecoderInterfaceMock{}
 
 	synchronizer := GraphileSynchronizer{
 		Decoder:                decoderMock,
 		SynchronizerRepository: &repository.SynchronizerRepository{},
 		GraphileFetcher:        &GraphileFetcher{},
-		Adapter:                adapterMock,
 	}
 
 	erro := errors.New("Handle Output Failure")
 
-	adapterMock.On("RetrieveDestination", mock.Anything).Return(common.Address{}, erro)
+	decoderMock.On("RetrieveDestination", mock.Anything).Return(common.Address{}, erro)
 
 	err := synchronizer.handleGraphileResponse(ctx, response)
 
@@ -165,18 +159,16 @@ func TestDecoderHandleOutput_Failure(t *testing.T) {
 	response := getTestOutputResponse()
 	ctx := context.Background()
 
-	adapterMock := &AdapterInterfaceMock{}
 	decoderMock := &DecoderInterfaceMock{}
 
 	synchronizer := GraphileSynchronizer{
 		Decoder:                decoderMock,
 		SynchronizerRepository: &repository.SynchronizerRepository{},
 		GraphileFetcher:        &GraphileFetcher{},
-		Adapter:                adapterMock,
 	}
 	erro := errors.New("Decoder Handler Output Failure")
 
-	adapterMock.On("RetrieveDestination", mock.Anything).Return(common.Address{}, nil)
+	decoderMock.On("RetrieveDestination", mock.Anything).Return(common.Address{}, nil)
 	decoderMock.On("HandleOutput", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(erro)
 
 	err := synchronizer.handleGraphileResponse(ctx, response)
@@ -190,19 +182,17 @@ func TestHandleInput_Failure(t *testing.T) {
 	response := getTestOutputResponse()
 	ctx := context.Background()
 
-	adapterMock := &AdapterInterfaceMock{}
 	decoderMock := &DecoderInterfaceMock{}
 
 	synchronizer := GraphileSynchronizer{
 		Decoder:                decoderMock,
 		SynchronizerRepository: &repository.SynchronizerRepository{},
 		GraphileFetcher:        &GraphileFetcher{},
-		Adapter:                adapterMock,
 	}
 
 	erro := errors.New("Handle Input Failure")
 
-	adapterMock.On("RetrieveDestination", mock.Anything).Return(common.Address{}, nil)
+	decoderMock.On("RetrieveDestination", mock.Anything).Return(common.Address{}, nil)
 	decoderMock.On("HandleOutput", mock.Anything, mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
 	decoderMock.On("HandleInput", mock.Anything, mock.Anything, mock.Anything).Return(erro)
 

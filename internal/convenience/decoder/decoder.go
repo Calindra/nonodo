@@ -68,7 +68,7 @@ func (o *OutputDecoder) HandleInput(
 	convertedInput, err := o.GetConvertedInput(input)
 
 	if err != nil {
-		slog.Error("Failed to get converted:", err)
+		slog.Error("Failed to get converted:", "err", err)
 		return fmt.Errorf("error getting converted input: %w", err)
 	}
 	_, err = o.convenienceService.CreateInput(ctx, &model.AdvanceInput{
@@ -165,4 +165,25 @@ func (o *OutputDecoder) GetConvertedInput(input model.InputEdge) (model.Converte
 	}
 
 	return convertedInput, nil
+}
+
+func (o *OutputDecoder) RetrieveDestination(output model.OutputEdge) (common.Address, error) {
+	payload := output.Node.Blob
+	abiParsed, err := contracts.OutputsMetaData.GetAbi()
+
+	if err != nil {
+		slog.Error("Error parsing abi", "err", err)
+		return common.Address{}, err
+	}
+
+	slog.Info("payload", "payload", payload)
+
+	values, err := abiParsed.Methods["Voucher"].Inputs.Unpack(common.Hex2Bytes(payload[10:]))
+
+	if err != nil {
+		slog.Error("Error unpacking abi", "err", err)
+		return common.Address{}, err
+	}
+
+	return values[0].(common.Address), nil
 }

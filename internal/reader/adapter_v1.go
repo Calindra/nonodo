@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/calindra/nonodo/internal/convenience/model"
 	cModel "github.com/calindra/nonodo/internal/convenience/model"
 	cRepos "github.com/calindra/nonodo/internal/convenience/repository"
 	services "github.com/calindra/nonodo/internal/convenience/services"
@@ -281,9 +280,4 @@ func (a AdapterV1) convertToInputConnection(
 		convNodes[i] = graphql.ConvertInput(inputs[i])
 	}
 	return graphql.NewConnection(offset, total, convNodes), nil
-}
-
-// This method is implemented to satisfy the AdapterConnector interface.
-func (a AdapterV1) RetrieveDestination(output model.OutputEdge) (common.Address, error) {
-	return common.Address{}, nil
 }

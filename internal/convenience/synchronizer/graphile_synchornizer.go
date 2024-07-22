@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"strings"
 	"time"
 
 	"github.com/calindra/nonodo/internal/convenience/model"
@@ -16,7 +15,6 @@ type GraphileSynchronizer struct {
 	Decoder                DecoderConnector
 	SynchronizerRepository *repository.SynchronizerRepository
 	GraphileFetcher        *GraphileFetcher
-	Adapter                AdapterConnector
 }
 
 type ProcessOutputData struct {
@@ -24,10 +22,6 @@ type ProcessOutputData struct {
 	InputIndex  int
 	Blob        string
 	Destination common.Address
-}
-
-type AdapterConnector interface {
-	RetrieveDestination(output model.OutputEdge) (common.Address, error)
 }
 
 type DecoderConnector interface {
@@ -53,6 +47,8 @@ type DecoderConnector interface {
 	) error
 
 	GetConvertedInput(output model.InputEdge) (model.ConvertedInput, error)
+
+	RetrieveDestination(output model.OutputEdge) (common.Address, error)
 }
 
 func (x GraphileSynchronizer) String() string {
@@ -105,16 +101,15 @@ func (x GraphileSynchronizer) Start(ctx context.Context, ready chan<- struct{}) 
 
 func (x GraphileSynchronizer) handleGraphileResponse(ctx context.Context, outputResp OutputResponse) error {
 	// Handle response data
-	voucherIds := []string{}
 	var initCursorAfter string
 	var initInputCursorAfter string
 	var initReportCursorAfter string
 
 	for _, output := range outputResp.Data.Outputs.Edges {
-		processOutPutData, err := x.processOutput(output, voucherIds)
+		processOutPutData, err := x.processOutput(output)
 
 		if err != nil {
-			slog.Error("Failed to process the output data.': %v", err)
+			slog.Error("Failed to process the output data.", "err", err)
 			return fmt.Errorf("error processing output: %w", err)
 		}
 
@@ -125,7 +120,7 @@ func (x GraphileSynchronizer) handleGraphileResponse(ctx context.Context, output
 			uint64(processOutPutData.OutputIndex),
 		)
 		if err != nil {
-			slog.Error("Failed to handle output: %v", err)
+			slog.Error("Failed to handle output: ", "err", err)
 			return fmt.Errorf("error handling output: %w", err)
 		}
 	}
@@ -149,7 +144,7 @@ func (x GraphileSynchronizer) handleGraphileResponse(ctx context.Context, output
 		)
 
 		if err != nil {
-			slog.Error("Failed to handle input:", err)
+			slog.Error("Failed to handle input:", "err", err)
 			return fmt.Errorf("error handling input: %w", err)
 		}
 	}
@@ -166,7 +161,8 @@ func (x GraphileSynchronizer) handleGraphileResponse(ctx context.Context, output
 			report.Node.Blob,
 		)
 		if err != nil {
-			panic(err)
+			slog.Error("Failed to handle report:", "err", err)
+			return fmt.Errorf("error handling report: %w", err)
 		}
 	}
 
@@ -189,33 +185,30 @@ func (x GraphileSynchronizer) handleGraphileResponse(ctx context.Context, output
 				TimestampAfter:       uint64(time.Now().UnixMilli()),
 				IniCursorAfter:       initCursorAfter,
 				EndCursorAfter:       x.GraphileFetcher.CursorAfter,
-				LogVouchersIds:       strings.Join(voucherIds, ";"),
+				LogVouchersIds:       "",
 				IniInputCursorAfter:  initInputCursorAfter,
 				EndInputCursorAfter:  x.GraphileFetcher.CursorInputAfter,
 				IniReportCursorAfter: initReportCursorAfter,
 				EndReportCursorAfter: x.GraphileFetcher.CursorReportAfter,
 			})
 		if err != nil {
-			panic(err)
+			slog.Error("Failed to create synchronize repository:", "err", err)
+			return fmt.Errorf("error creating synchronize repository: %w", err)
 		}
 	}
 	return nil
 }
 
-func (x GraphileSynchronizer) processOutput(output model.OutputEdge, voucherIds []string) (ProcessOutputData, error) {
+func (x GraphileSynchronizer) processOutput(output model.OutputEdge) (ProcessOutputData, error) {
 	outputIndex := output.Node.Index
 	inputIndex := output.Node.InputIndex
 	slog.Debug("Add Voucher/Notices",
 		"inputIndex", inputIndex,
 		"outputIndex", outputIndex,
 	)
-	voucherIds = append(
-		voucherIds,
-		fmt.Sprintf("%d:%d", inputIndex, outputIndex),
-	)
 
 	blob := output.Node.Blob[2:] //O voucher já vem do PostGraphile no modo que o v2 precisa.
-	destination, err := x.Adapter.RetrieveDestination(output)
+	destination, err := x.Decoder.RetrieveDestination(output)
 	var emptyprocessOutputData ProcessOutputData
 
 	if err != nil {
@@ -237,12 +230,10 @@ func NewGraphileSynchronizer(
 	decoder DecoderConnector,
 	synchronizerRepository *repository.SynchronizerRepository,
 	graphileFetcher *GraphileFetcher,
-	adapter AdapterConnector,
 ) *GraphileSynchronizer {
 	return &GraphileSynchronizer{
 		Decoder:                decoder,
 		SynchronizerRepository: synchronizerRepository,
 		GraphileFetcher:        graphileFetcher,
-		Adapter:                adapter,
 	}
 }
