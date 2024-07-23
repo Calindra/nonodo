@@ -72,7 +72,7 @@ func (a AnvilRelease) PlatformCompatible() (string, error) {
 		return a.FormatNameRelease("", goos, goarch, ""), nil
 	}
 
-	return "", fmt.Errorf("anvil: platform not supported")
+	return "", fmt.Errorf("anvil: platform not supported: os = %s; arch = %s", goarch, goos)
 }
 
 func (a *AnvilRelease) ExtractAsset(archive []byte, filename string, destDir string) error {
