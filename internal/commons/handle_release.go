@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -50,27 +49,6 @@ type AnvilRelease struct {
 }
 
 const WINDOWS = "windows"
-
-// Prerequisites implements HandleRelease.
-func (a *AnvilRelease) Prerequisites(ctx context.Context) error {
-	if runtime.GOOS != WINDOWS {
-		return nil
-	}
-
-	runtimeCtx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	fp, err := DownloadRuntime(runtimeCtx)
-	if err != nil {
-		return err
-	}
-	err = InstallRuntime(runtimeCtx, fp)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
 
 func NewAnvilRelease() HandleRelease {
 	return &AnvilRelease{
@@ -117,64 +95,11 @@ func (a *AnvilRelease) ExtractAsset(archive []byte, filename string, destDir str
 	}
 }
 
-func InstallRuntime(ctx context.Context, path string) error {
-	slog.Debug("Installing runtime", "path", path)
-
-	cmd := exec.CommandContext(ctx, path, "/install", "/passive", "/norestart")
-	err := cmd.Run()
-	if err != nil {
-		return fmt.Errorf("anvil: failed to install runtime %s", err.Error())
-	}
-
-	return nil
-}
-
-// Download the runtime and install it.
-// Get it from https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170#latest-microsoft-visual-c-redistributable-version
-func DownloadRuntime(ctx context.Context) (string, error) {
-	url := "https://aka.ms/vs/17/release/vc_redist.x64.exe"
-	slog.Debug("Downloading runtime", "url", url)
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-	if err != nil {
-		return "", fmt.Errorf("anvil: failed to download runtime %s", err.Error())
-	}
-	client := http.DefaultClient
-	res, err := client.Do(req)
-
-	if err != nil {
-		return "", fmt.Errorf("anvil: failed to download runtime %s", err.Error())
-	}
-
-	data, err := io.ReadAll(res.Body)
-	if err != nil {
-		return "", fmt.Errorf("anvil: failed to read runtime %s", err.Error())
-	}
-
-	root := filepath.Join(os.TempDir(), "foundry-runtime")
-	var perm os.FileMode = 0755
-	err = os.MkdirAll(root, perm|os.ModeDir)
-
-	if err != nil {
-		return "", fmt.Errorf("anvil: failed to create temp dir %s", err.Error())
-	}
-
-	fp := filepath.Join(root, "vc_redist.x64.exe")
-	err = os.WriteFile(fp, data, perm)
-
-	if err != nil {
-		return "", fmt.Errorf("anvil: failed to write runtime %s", err.Error())
-	}
-
-	return fp, nil
-}
-
 // DownloadAsset implements HandleRelease.
 func (a *AnvilRelease) DownloadAsset(ctx context.Context, release *ReleaseAsset) (string, error) {
 	root := filepath.Join(os.TempDir(), release.Tag)
 	var perm os.FileMode = 0755 | os.ModeDir
 	err := os.MkdirAll(root, perm)
-
 	if err != nil {
 		return "", fmt.Errorf("anvil: failed to create temp dir %s", err.Error())
 	}
@@ -189,7 +114,6 @@ func (a *AnvilRelease) DownloadAsset(ctx context.Context, release *ReleaseAsset)
 	slog.Debug("Downloading anvil", "id", release.AssetId, "to", root)
 
 	rc, redirect, err := a.Client.Repositories.DownloadReleaseAsset(ctx, a.Namespace, a.Repository, release.AssetId)
-
 	if err != nil {
 		return "", fmt.Errorf("anvil: failed to download asset %s", err.Error())
 	}
@@ -214,7 +138,6 @@ func (a *AnvilRelease) DownloadAsset(ctx context.Context, release *ReleaseAsset)
 	slog.Debug("Downloaded compacted file anvil")
 
 	err = a.ExtractAsset(data, release.Filename, root)
-
 	if err != nil {
 		return "", fmt.Errorf("anvil: failed to extract asset %s", err.Error())
 	}
