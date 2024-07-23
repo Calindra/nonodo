@@ -67,11 +67,8 @@ func (a AnvilRelease) PlatformCompatible() (string, error) {
 	goarch := runtime.GOARCH
 	goos := runtime.GOOS
 
-	if goarch == "amd64" && goos == "windows" {
-		return a.FormatNameRelease("", goarch, goarch, ""), nil
-	}
-
-	if (goarch == "amd64" || goarch == "arm64") && (goos == "linux" || goos == "darwin") {
+	if (goarch == "amd64" && goos == "windows") ||
+		((goarch == "amd64" || goarch == "arm64") && (goos == "linux" || goos == "darwin")) {
 		return a.FormatNameRelease("", goos, goarch, ""), nil
 	}
 
