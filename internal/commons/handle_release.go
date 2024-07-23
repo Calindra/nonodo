@@ -26,11 +26,19 @@ type ReleaseAsset struct {
 
 // Interface for handle libraries on GitHub
 type HandleRelease interface {
+	// Name basead on version, arch, os with prefix
 	FormatNameRelease(prefix, goos, goarch, version string) string
+	// Check if the platform is compatible with the library and return the name of the release
 	PlatformCompatible() (string, error)
+	// List all releases from the repository
 	ListRelease(ctx context.Context) ([]ReleaseAsset, error)
+	// Get the latest release compatible with the platform
 	GetLatestReleaseCompatible(ctx context.Context) (*ReleaseAsset, error)
+	// Check prerequisites for the library
+	Prerequisites(ctx context.Context) error
+	// Download the asset from the release
 	DownloadAsset(ctx context.Context, release *ReleaseAsset) (string, error)
+	// Extract the asset from the archive
 	ExtractAsset(archive []byte, filename string, destDir string) error
 }
 
@@ -39,6 +47,29 @@ type AnvilRelease struct {
 	Namespace  string
 	Repository string
 	Client     *github.Client
+}
+
+const WINDOWS = "windows"
+
+// Prerequisites implements HandleRelease.
+func (a *AnvilRelease) Prerequisites(ctx context.Context) error {
+	if runtime.GOOS != WINDOWS {
+		return nil
+	}
+
+	runtimeCtx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	fp, err := DownloadRuntime(runtimeCtx)
+	if err != nil {
+		return err
+	}
+	err = InstallRuntime(runtimeCtx, fp)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func NewAnvilRelease() HandleRelease {
@@ -54,7 +85,7 @@ func (a AnvilRelease) FormatNameRelease(_, goos, goarch, _ string) string {
 	ext := ".tar.gz"
 	myos := goos
 
-	if goos == "windows" {
+	if goos == WINDOWS {
 		ext = ".zip"
 		myos = "win32"
 	}
@@ -68,7 +99,7 @@ func (a AnvilRelease) PlatformCompatible() (string, error) {
 	goarch := runtime.GOARCH
 	goos := runtime.GOOS
 
-	if (goarch == "amd64" && goos == "windows") ||
+	if (goarch == "amd64" && goos == WINDOWS) ||
 		((goarch == "amd64" || goarch == "arm64") && (goos == "linux" || goos == "darwin")) {
 		return a.FormatNameRelease("", goos, goarch, ""), nil
 	}

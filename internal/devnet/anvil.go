@@ -67,20 +67,24 @@ func InstallAnvil(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("anvil: failed to get latest release: %w", err)
 	}
-	location, err := anvilClient.DownloadAsset(ctx, latest)
+	err = anvilClient.Prerequisites(ctx)
+	if err != nil {
+		return "", fmt.Errorf("anvil: failed to install prerequisites: %w", err)
+	}
+	anvilExec, err := anvilClient.DownloadAsset(ctx, latest)
 	if err != nil {
 		return "", fmt.Errorf("anvil: failed to download asset: %w", err)
 	}
-	return location, nil
+	return anvilExec, nil
 }
 
 func CheckAnvilAndInstall(ctx context.Context) (string, error) {
 	if !IsAnvilInstalled() {
+		slog.Debug("anvil: anvil is not installed")
 		location, err := InstallAnvil(ctx)
 		if err != nil {
 			return "", fmt.Errorf("anvil: failed to install %w", err)
 		}
-		// location = filepath.Join(location, "anvil")
 		slog.Debug("anvil: installed anvil", "location", location)
 		return location, nil
 	}
