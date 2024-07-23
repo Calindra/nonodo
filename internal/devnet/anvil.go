@@ -78,7 +78,7 @@ func CheckAnvilAndInstall(ctx context.Context) (string, error) {
 	if !IsAnvilInstalled() {
 		location, err := InstallAnvil(ctx)
 		if err != nil {
-			return "", fmt.Errorf("anvil: failed to install anvil %s", err.Error())
+			return "", fmt.Errorf("anvil: failed to install %w", err)
 		}
 		// location = filepath.Join(location, "anvil")
 		slog.Debug("anvil: installed anvil", "location", location)
