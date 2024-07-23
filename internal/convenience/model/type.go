@@ -1,6 +1,8 @@
 package model
 
 import (
+	"context"
+	"math/big"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -101,4 +103,60 @@ type AdvanceInput struct {
 	Notices        []ConvenienceNotice
 	Reports        []Report
 	Exception      []byte
+}
+
+type ConvertedInput struct {
+	MsgSender      common.Address `json:"msgSender"`
+	BlockNumber    *big.Int       `json:"blockNumber"`
+	BlockTimestamp int64          `json:"blockTimestamp"`
+	PrevRandao     string         `json:"prevRandao"`
+	Payload        string         `json:"payload"`
+}
+
+type InputEdge struct {
+	Cursor string `json:"cursor"`
+	Node   struct {
+		Index int    `json:"index"`
+		Blob  string `json:"blob"`
+	} `json:"node"`
+}
+
+type OutputEdge struct {
+	Cursor string `json:"cursor"`
+	Node   struct {
+		Index      int    `json:"index"`
+		Blob       string `json:"blob"`
+		InputIndex int    `json:"inputIndex"`
+	} `json:"node"`
+}
+
+type DecoderInterface interface {
+	HandleOutputV2(
+		ctx context.Context,
+		processOutputData ProcessOutputData,
+	) error
+
+	HandleInput(
+		ctx context.Context,
+		input InputEdge,
+		status CompletionStatus,
+	) error
+
+	HandleReport(
+		ctx context.Context,
+		index int,
+		outputIndex int,
+		payload string,
+	) error
+
+	GetConvertedInput(output InputEdge) (ConvertedInput, error)
+
+	RetrieveDestination(payload string) (common.Address, error)
+}
+
+type ProcessOutputData struct {
+	OutputIndex uint64 `json:"outputIndex"`
+	InputIndex  uint64 `json:"inputIndex"`
+	Payload     string `json:"payload"`
+	Destination string `json:"destination"`
 }

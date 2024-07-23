@@ -4,19 +4,14 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"math/big"
-	"strings"
 	"time"
 
-	"github.com/calindra/nonodo/internal/convenience/adapter"
-	"github.com/calindra/nonodo/internal/convenience/decoder"
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/convenience/repository"
-	"github.com/ethereum/go-ethereum/common"
 )
 
 type GraphileSynchronizer struct {
-	Decoder                *decoder.OutputDecoder
+	Decoder                model.DecoderInterface
 	SynchronizerRepository *repository.SynchronizerRepository
 	GraphileFetcher        *GraphileFetcher
 }
@@ -50,7 +45,11 @@ func (x GraphileSynchronizer) Start(ctx context.Context, ready chan<- struct{}) 
 				"error", err.Error(),
 			)
 		} else {
-			x.handleGraphileResponse(*voucherResp, ctx)
+			err := x.handleGraphileResponse(ctx, *voucherResp)
+			if err != nil {
+				slog.Error("Failed to handle graphile response.", "err", err)
+				return fmt.Errorf("error handling graphile response: %w", err)
+			}
 		}
 		select {
 		// Wait a little before doing another request
@@ -64,41 +63,25 @@ func (x GraphileSynchronizer) Start(ctx context.Context, ready chan<- struct{}) 
 
 }
 
-func (x GraphileSynchronizer) handleGraphileResponse(outputResp OutputResponse, ctx context.Context) {
+func (x GraphileSynchronizer) handleGraphileResponse(ctx context.Context, outputResp OutputResponse) error {
 	// Handle response data
-	voucherIds := []string{}
 	var initCursorAfter string
 	var initInputCursorAfter string
 	var initReportCursorAfter string
 
 	for _, output := range outputResp.Data.Outputs.Edges {
-		outputIndex := output.Node.Index
-		inputIndex := output.Node.InputIndex
-		slog.Debug("Add Voucher/Notices",
-			"inputIndex", inputIndex,
-			"outputIndex", outputIndex,
-		)
-		voucherIds = append(
-			voucherIds,
-			fmt.Sprintf("%d:%d", inputIndex, outputIndex),
-		)
-		adapted := adapter.ConvertVoucherPayloadToV2(
-			output.Node.Blob[2:],
-		)
-		destination, _ := adapter.GetDestination(output.Node.Blob)
 
-		if len(destination) == 0 {
-			panic(fmt.Errorf("graphile sync error: len(destination) is 0"))
+		processOutputData := model.ProcessOutputData{
+			OutputIndex: uint64(output.Node.Index),
+			InputIndex:  uint64(output.Node.InputIndex),
+			Payload:     output.Node.Blob[2:],
+			Destination: output.Node.Blob,
 		}
 
-		err := x.Decoder.HandleOutput(ctx,
-			destination,
-			adapted,
-			uint64(inputIndex),
-			uint64(outputIndex),
-		)
+		err := x.Decoder.HandleOutputV2(ctx, processOutputData)
 		if err != nil {
-			panic(err)
+			slog.Error("Failed to handle output: ", "err", err)
+			return fmt.Errorf("error handling output: %w", err)
 		}
 	}
 
@@ -115,26 +98,14 @@ func (x GraphileSynchronizer) handleGraphileResponse(outputResp OutputResponse, 
 			"Index", input.Node.Index,
 		)
 
-		adapted, _ := adapter.GetConvertedInput(input.Node.Blob)
-
-		inputIndex := input.Node.Index
-		msgSender := adapted[2].(common.Address)
-		payload := string(adapted[7].([]uint8))
-		blockNumber := adapted[3].(*big.Int)
-		blockTimestamp := adapted[4].(*big.Int).Int64()
-		prevRandao := adapted[5].(*big.Int).String()
-
 		err := x.Decoder.HandleInput(ctx,
-			inputIndex,
+			input,
 			model.CompletionStatusUnprocessed,
-			msgSender,
-			payload,
-			blockNumber.Uint64(),
-			time.Unix(blockTimestamp, 0),
-			prevRandao)
+		)
 
 		if err != nil {
-			panic(err)
+			slog.Error("Failed to handle input:", "err", err)
+			return fmt.Errorf("error handling input: %w", err)
 		}
 	}
 
@@ -150,7 +121,8 @@ func (x GraphileSynchronizer) handleGraphileResponse(outputResp OutputResponse, 
 			report.Node.Blob,
 		)
 		if err != nil {
-			panic(err)
+			slog.Error("Failed to handle report:", "err", err)
+			return fmt.Errorf("error handling report: %w", err)
 		}
 	}
 
@@ -173,27 +145,28 @@ func (x GraphileSynchronizer) handleGraphileResponse(outputResp OutputResponse, 
 				TimestampAfter:       uint64(time.Now().UnixMilli()),
 				IniCursorAfter:       initCursorAfter,
 				EndCursorAfter:       x.GraphileFetcher.CursorAfter,
-				LogVouchersIds:       strings.Join(voucherIds, ";"),
+				LogVouchersIds:       "",
 				IniInputCursorAfter:  initInputCursorAfter,
 				EndInputCursorAfter:  x.GraphileFetcher.CursorInputAfter,
 				IniReportCursorAfter: initReportCursorAfter,
 				EndReportCursorAfter: x.GraphileFetcher.CursorReportAfter,
 			})
 		if err != nil {
-			slog.Error("Deu erro", "erro", err)
-			panic(err)
+			slog.Error("Failed to create synchronize repository:", "err", err)
+			return fmt.Errorf("error creating synchronize repository: %w", err)
 		}
 	}
-
+	return nil
 }
 
 func NewGraphileSynchronizer(
-	decoder *decoder.OutputDecoder,
+	decoder model.DecoderInterface,
 	synchronizerRepository *repository.SynchronizerRepository,
 	graphileFetcher *GraphileFetcher,
 ) *GraphileSynchronizer {
 	return &GraphileSynchronizer{
 		Decoder:                decoder,
 		SynchronizerRepository: synchronizerRepository,
-		GraphileFetcher:        graphileFetcher}
+		GraphileFetcher:        graphileFetcher,
+	}
 }
