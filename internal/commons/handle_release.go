@@ -104,7 +104,12 @@ func (a *AnvilRelease) DownloadAsset(ctx context.Context, release *ReleaseAsset)
 		return "", fmt.Errorf("anvil: failed to create temp dir %s", err.Error())
 	}
 
-	anvilExec := filepath.Join(root, "anvil")
+	filename := "anvil"
+	if runtime.GOOS == WINDOWS {
+		filename = "anvil.exe"
+	}
+
+	anvilExec := filepath.Join(root, filename)
 	slog.Debug("Anvil executable", "path", anvilExec)
 	if _, err := os.Stat(anvilExec); err == nil {
 		slog.Debug("Anvil already downloaded", "path", anvilExec)
