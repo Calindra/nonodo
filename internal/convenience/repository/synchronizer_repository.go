@@ -18,6 +18,14 @@ func (c *SynchronizerRepository) GetDB() *sqlx.DB {
 	return &c.Db
 }
 
+func (c *SynchronizerRepository) BeginTxx(ctx context.Context) (*sqlx.Tx, error) {
+	tx, err := c.GetDB().BeginTxx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	return tx, nil
+}
+
 func (c *SynchronizerRepository) CreateTables() error {
 	idType := "INTEGER"
 

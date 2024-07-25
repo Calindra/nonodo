@@ -36,6 +36,7 @@ replace (
 
 require (
 	cosmossdk.io/math v1.1.2 // indirect
+	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/Microsoft/go-winio v0.6.1 // indirect
 	github.com/StackExchange/wmi v1.2.1 // indirect
 	github.com/agnivade/levenshtein v1.1.1 // indirect

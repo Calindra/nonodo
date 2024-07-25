@@ -7,12 +7,12 @@ import (
 	"time"
 
 	"github.com/calindra/nonodo/internal/convenience/model"
-	"github.com/calindra/nonodo/internal/convenience/repository"
 )
 
 type GraphileSynchronizer struct {
-	Decoder                model.DecoderInterface
-	SynchronizerRepository *repository.SynchronizerRepository
+	Decoder model.DecoderInterface
+	// SynchronizerRepository *repository.SynchronizerRepository
+	SynchronizerRepository model.RepoSynchronizer
 	GraphileFetcher        *GraphileFetcher
 }
 
@@ -61,6 +61,36 @@ func (x GraphileSynchronizer) Start(ctx context.Context, ready chan<- struct{}) 
 
 	}
 
+}
+
+func (x GraphileSynchronizer) handleWithDBTransaction(outputResp OutputResponse) {
+	const timeoutDuration = 5 * time.Second
+	ctx, cancel := context.WithTimeout(context.Background(), timeoutDuration)
+	defer cancel()
+	fmt.Println("ANTES DO BEGINTXX")
+	// tx, err := x.SynchronizerRepository.GetDB().BeginTxx(ctx, nil)
+	tx, err := x.SynchronizerRepository.BeginTxx(ctx)
+	if err != nil {
+		slog.Error("start db transaction fail", "err", err)
+		return
+	}
+	defer tx.Rollback()
+	fmt.Println("PASSOU DO BEGINTXX")
+
+	err = x.handleGraphileResponse(ctx, outputResp)
+
+	if err != nil {
+		slog.Error("Failed to handle graphile response.", "err", err)
+		fmt.Println("CAIU NO ERRO")
+		// Aqui provavelmente irá acontecer um rollback
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		slog.Error("commit fail", "err", err)
+	}
+
+	// tx.Rollback()
 }
 
 func (x GraphileSynchronizer) handleGraphileResponse(ctx context.Context, outputResp OutputResponse) error {
@@ -161,7 +191,7 @@ func (x GraphileSynchronizer) handleGraphileResponse(ctx context.Context, output
 
 func NewGraphileSynchronizer(
 	decoder model.DecoderInterface,
-	synchronizerRepository *repository.SynchronizerRepository,
+	synchronizerRepository model.RepoSynchronizer,
 	graphileFetcher *GraphileFetcher,
 ) *GraphileSynchronizer {
 	return &GraphileSynchronizer{

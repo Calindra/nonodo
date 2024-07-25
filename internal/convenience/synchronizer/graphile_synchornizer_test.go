@@ -2,13 +2,17 @@ package synchronizer
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -40,6 +44,40 @@ func (m *DecoderInterfaceMock) HandleInput(ctx context.Context, input model.Inpu
 func (m *DecoderInterfaceMock) HandleReport(ctx context.Context, index int, outputIndex int, payload string) error {
 	args := m.Called(ctx, index, outputIndex, payload)
 	return args.Error(0)
+}
+
+type MockSynchronizerRepository struct {
+	mock.Mock
+}
+
+func (m *MockSynchronizerRepository) GetDB() *sql.DB {
+	args := m.Called()
+	return args.Get(0).(*sql.DB)
+}
+
+func (m *MockSynchronizerRepository) BeginTxx(ctx context.Context) (*sqlx.Tx, error) {
+	args := m.Called(ctx)
+	return args.Get(0).(*sqlx.Tx), args.Error(1)
+}
+
+func (m *MockSynchronizerRepository) CreateTables() error {
+	args := m.Called()
+	return args.Error(0)
+}
+
+func (m *MockSynchronizerRepository) Create(ctx context.Context, data *model.SynchronizerFetch) (*model.SynchronizerFetch, error) {
+	args := m.Called(ctx, data)
+	return args.Get(0).(*model.SynchronizerFetch), args.Error(1)
+}
+
+func (m *MockSynchronizerRepository) Count(ctx context.Context) (uint64, error) {
+	args := m.Called(ctx)
+	return args.Get(0).(uint64), args.Error(1)
+}
+
+func (m *MockSynchronizerRepository) GetLastFetched(ctx context.Context) (*model.SynchronizerFetch, error) {
+	args := m.Called(ctx)
+	return args.Get(0).(*model.SynchronizerFetch), args.Error(1)
 }
 
 func getTestOutputResponse() OutputResponse {
@@ -202,3 +240,85 @@ func TestHandleInput_Failure(t *testing.T) {
 	assert.EqualError(t, err, "error handling input: Handle Input Failure")
 
 }
+
+func TestContextWithTimeout_Failure(t *testing.T) {
+	db := sqlx.MustConnect("sqlite3", ":memory:")
+	defer db.Close()
+
+	decoderMock := &DecoderInterfaceMock{}
+	synchronizer := GraphileSynchronizer{
+		Decoder: decoderMock,
+		SynchronizerRepository: &repository.SynchronizerRepository{
+			Db: *db,
+		},
+		GraphileFetcher: &GraphileFetcher{},
+	}
+
+	err := synchronizer.SynchronizerRepository.CreateTables()
+	if err != nil {
+		panic(err)
+	}
+
+	//creating SynchronizerFetch model
+	synchronizerFetch := &model.SynchronizerFetch{
+		TimestampAfter:       uint64(time.Now().UnixMilli()),
+		IniCursorAfter:       "1f2d3e4b5c6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2",
+		EndCursorAfter:       "baadf00db16b00b5facefeeda1b2c3d4e5f67890a1b2c3d4e5f67890abcdef1234",
+		LogVouchersIds:       "",
+		IniInputCursorAfter:  "a1b2c3d4e5f67890abcdeffedcba09876543210fedcba9876543210fedcba1234",
+		EndInputCursorAfter:  "fedcba9876543210fedcba9876543210abcdef1234567890abcdef1234567890",
+		IniReportCursorAfter: "9b8a7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b",
+		EndReportCursorAfter: "0a1b2c3d4e5f67890a1b2c3d4e5f67890abcdefabcdefabcdefabcdefabcdefabc",
+	}
+
+	_, err = synchronizer.SynchronizerRepository.Create(context.Background(), synchronizerFetch)
+	if err != nil {
+		panic(err)
+	}
+
+	var synchronizerFetches []model.SynchronizerFetch
+	err = db.Select(&synchronizerFetches, "SELECT * FROM synchronizer_fetch")
+	if err != nil {
+		panic(err)
+	}
+
+	for _, fetch := range synchronizerFetches {
+		fmt.Printf("LIDO DO BANCO DE DADOS: %+v\n", fetch)
+	}
+
+	// fmt.Printf("DADO PERSISTIDO %v", data)
+
+}
+
+// func TestContextWithTimeout_Failure(t *testing.T) {
+// 	db, sqlmock, err := sqlmock.New()
+// 	assert.NoError(t, err)
+// 	defer db.Close()
+
+// 	sqlmock.ExpectBegin()
+
+// 	sqlxDB := sqlx.NewDb(db, "sqlmock")
+// 	tx, err := sqlxDB.BeginTxx(context.Background(), nil)
+// 	assert.NoError(t, err)
+
+// 	syncRepoMock := &MockSynchronizerRepository{}
+
+// 	response := getTestOutputResponse()
+
+// 	decoderMock := &DecoderInterfaceMock{}
+
+// 	synchronizer := GraphileSynchronizer{
+// 		Decoder:                decoderMock,
+// 		SynchronizerRepository: syncRepoMock,
+// 		GraphileFetcher:        &GraphileFetcher{},
+// 	}
+
+// 	erro := errors.New("Handle Output Value")
+
+// 	syncRepoMock.On("BeginTxx", mock.Anything).Return(tx, nil)
+// 	decoderMock.On("RetrieveDestination", mock.Anything).Return(common.Address{}, nil)
+// 	decoderMock.On("HandleOutputV2", mock.Anything, mock.Anything).Return(erro)
+
+// 	synchronizer.handleWithDBTransaction(response)
+
+// }
