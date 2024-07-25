@@ -2,14 +2,17 @@ package commons
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"log/slog"
 	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 
 	"github.com/google/go-github/github"
 )
@@ -43,19 +46,82 @@ type HandleRelease interface {
 
 // Anvil implementation from HandleRelease
 type AnvilRelease struct {
-	Namespace  string
-	Repository string
-	Client     *github.Client
+	Namespace      string
+	Repository     string
+	ConfigFilename string
+	Client         *github.Client
+}
+
+type AnvilConfig struct {
+	AnvilVersion string `json:"anvil_version"`
+	AnvilUrl     string `json:"anvil_url"`
+	LatestCheck  string `json:"latest_check"`
 }
 
 const WINDOWS = "windows"
 
 func NewAnvilRelease() HandleRelease {
 	return &AnvilRelease{
-		Namespace:  "foundry-rs",
-		Repository: "foundry",
-		Client:     github.NewClient(nil),
+		Namespace:      "foundry-rs",
+		Repository:     "foundry",
+		ConfigFilename: "anvil.nonodo.json",
+		Client:         github.NewClient(nil),
 	}
+}
+
+func (a *AnvilConfig) NewAnvilConfig(version, url string) *AnvilConfig {
+	return &AnvilConfig{
+		AnvilVersion: version,
+		AnvilUrl:     url,
+		LatestCheck:  time.Now().Format(time.RFC3339),
+	}
+}
+
+func (a *AnvilConfig) LoadAnvilConfig(path string) (*AnvilConfig, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("anvil: failed to read config %s", err.Error())
+	}
+
+	var config AnvilConfig
+	err = json.Unmarshal(data, &config)
+	if err != nil {
+		return nil, fmt.Errorf("anvil: failed to unmarshal config %s", err.Error())
+	}
+
+	return &config, nil
+}
+
+func (a *AnvilConfig) SaveAnvilConfig(path string, config *AnvilConfig) error {
+	data, err := json.Marshal(config)
+	if err != nil {
+		return fmt.Errorf("anvil: failed to marshal config %s", err.Error())
+	}
+
+	var permission fs.FileMode = 0644
+	err = os.WriteFile(path, data, permission)
+	if err != nil {
+		return fmt.Errorf("anvil: failed to write config %s", err.Error())
+	}
+
+	return nil
+}
+
+func (a AnvilRelease) CreateConfig(ra ReleaseAsset) (*AnvilConfig, error) {
+	root := filepath.Join(os.TempDir())
+	file := filepath.Join(root, a.ConfigFilename)
+
+	var config *AnvilConfig
+
+	if _, err := os.Stat(file); err == nil {
+		slog.Debug("Anvil config already exists", "path", file)
+		return config.LoadAnvilConfig(file)
+	}
+
+	c := config.NewAnvilConfig(ra.Tag, ra.Url)
+	err := config.SaveAnvilConfig(file, c)
+
+	return c, err
 }
 
 // FormatNameRelease implements HandleRelease.
