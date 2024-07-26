@@ -4,9 +4,6 @@
 package model
 
 import (
-	"encoding/json"
-	"fmt"
-
 	cModel "github.com/calindra/nonodo/internal/convenience/model"
 )
 
@@ -59,12 +56,4 @@ type MetadataFilter struct {
 	// Logical operators
 	And []*MetadataFilter
 	Or  []*MetadataFilter
-}
-
-func CreateFilterList(content string) []*MetadataFilter {
-	filterList := []*MetadataFilter{}
-	if err := json.Unmarshal([]byte(content), &filterList); err != nil {
-		panic(fmt.Errorf("create filter list error parsing json: %v", err))
-	}
-	return filterList
 }

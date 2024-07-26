@@ -5,7 +5,9 @@
 package inspect
 
 import (
+	"errors"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"time"
@@ -24,7 +26,7 @@ const PayloadSizeLimit = 1_048_576
 // Model is the inspect interface for the nonodo model.
 type Model interface {
 	AddInspectInput(payload []byte) int
-	GetInspectInput(index int) model.InspectInput
+	GetInspectInput(index int) (model.InspectInput, error)
 }
 
 // Register the rollup API to echo
@@ -72,9 +74,19 @@ func (a *inspectAPI) inspect(c echo.Context, payload []byte) error {
 	ticker := time.NewTicker(pollFrequency)
 	defer ticker.Stop()
 	for {
-		input := a.model.GetInspectInput(index)
+		input, err := a.model.GetInspectInput(index)
+
+		if err != nil {
+			return err
+		}
+
 		if input.Status != cModel.CompletionStatusUnprocessed {
-			resp := convertInput(input)
+			resp, err := convertInput(input)
+
+			if err != nil {
+				slog.Error("Error converting input", "Error", err)
+				return err
+			}
 			return c.JSON(http.StatusOK, &resp)
 		}
 		select {
@@ -86,11 +98,11 @@ func (a *inspectAPI) inspect(c echo.Context, payload []byte) error {
 }
 
 // Convert model input to API type.
-func convertInput(input model.InspectInput) InspectResult {
+func convertInput(input model.InspectInput) (InspectResult, error) {
 	var status CompletionStatus
 	switch input.Status {
 	case cModel.CompletionStatusUnprocessed:
-		panic("impossible")
+		return InspectResult{}, errors.New("impossible")
 	case cModel.CompletionStatusAccepted:
 		status = Accepted
 	case cModel.CompletionStatusRejected:
@@ -98,7 +110,7 @@ func convertInput(input model.InspectInput) InspectResult {
 	case cModel.CompletionStatusException:
 		status = Exception
 	default:
-		panic("invalid completion status")
+		return InspectResult{}, errors.New("invalid completion status")
 	}
 
 	var reports []Report
@@ -113,5 +125,5 @@ func convertInput(input model.InspectInput) InspectResult {
 		Reports:             reports,
 		ExceptionPayload:    hexutil.Encode(input.Exception),
 		ProcessedInputCount: input.ProcessedInputCount,
-	}
+	}, nil
 }

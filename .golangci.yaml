@@ -5,7 +5,7 @@ linters:
     - goconst
     - godox
     - gofmt
-    - mnd
+
     - gosimple
     - govet
     - ineffassign

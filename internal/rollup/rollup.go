@@ -7,6 +7,7 @@ package rollup
 //go:generate go run github.com/deepmap/oapi-codegen/v2/cmd/oapi-codegen -config=oapi.yaml ../../api/rollup.yaml
 
 import (
+	"errors"
 	"log/slog"
 	"net/http"
 
@@ -36,7 +37,7 @@ type RollupAPI struct {
 }
 
 type Sequencer interface {
-	FinishAndGetNext(accept bool) cModel.Input
+	FinishAndGetNext(accept bool) (cModel.Input, error)
 }
 
 // Gio implements ServerInterface.
@@ -94,9 +95,19 @@ func (r *RollupAPI) Finish(c echo.Context) error {
 		return c.String(http.StatusInternalServerError, "sequencer not available")
 	}
 	for i := 0; i < FinishRetries; i++ {
-		input := r.sequencer.FinishAndGetNext(accepted)
+		input, err := r.sequencer.FinishAndGetNext(accepted)
+
+		if err != nil {
+			return err
+		}
+
 		if input != nil {
-			resp := convertInput(input)
+			resp, err := convertInput(input)
+
+			if err != nil {
+				return err
+			}
+
 			return c.JSON(http.StatusOK, &resp)
 		}
 		ctx := c.Request().Context()
@@ -233,7 +244,7 @@ func checkContentType(c echo.Context) bool {
 }
 
 // Convert model input to API type.
-func convertInput(input cModel.Input) RollupRequest {
+func convertInput(input cModel.Input) (RollupRequest, error) {
 	var resp RollupRequest
 	switch input := input.(type) {
 	case cModel.AdvanceInput:
@@ -248,7 +259,7 @@ func convertInput(input cModel.Input) RollupRequest {
 		}
 		err := resp.Data.FromAdvance(advance)
 		if err != nil {
-			panic("failed to convert advance")
+			return RollupRequest{}, errors.New("failed to convert advance")
 		}
 		resp.RequestType = AdvanceState
 	case mdl.InspectInput:
@@ -257,11 +268,11 @@ func convertInput(input cModel.Input) RollupRequest {
 		}
 		err := resp.Data.FromInspect(inspect)
 		if err != nil {
-			panic("failed to convert inspect")
+			return RollupRequest{}, errors.New("failed to convert inspect")
 		}
 		resp.RequestType = InspectState
 	default:
-		panic("invalid input from model")
+		return RollupRequest{}, errors.New("invalid input from model")
 	}
-	return resp
+	return resp, nil
 }

@@ -39,9 +39,9 @@ func (m *ModelMock) AddInspectInput(payload []byte) int {
 	return args.Int(0)
 }
 
-func (m *ModelMock) GetInspectInput(index int) model.InspectInput {
+func (m *ModelMock) GetInspectInput(index int) (model.InspectInput, error) {
 	args := m.Called(index)
-	return args.Get(0).(model.InspectInput)
+	return args.Get(0).(model.InspectInput), nil
 }
 
 // setInspectInput sets the model to wait for the given inspect input payload, and returns the

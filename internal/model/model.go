@@ -58,7 +58,7 @@ func (m *NonodoModel) AddAdvanceInput(
 	blockNumber uint64,
 	timestamp time.Time,
 	index int,
-) {
+) error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	input := cModel.AdvanceInput{
@@ -72,10 +72,11 @@ func (m *NonodoModel) AddAdvanceInput(
 	ctx := context.Background()
 	_, err := m.inputRepository.Create(ctx, input)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	slog.Info("nonodo: added advance input", "index", input.Index, "sender", input.MsgSender,
 		"payload", hexutil.Encode(input.Payload))
+	return nil
 }
 
 //
@@ -102,14 +103,15 @@ func (m *NonodoModel) AddInspectInput(payload []byte) int {
 }
 
 // Get the inspect input from the model.
-func (m *NonodoModel) GetInspectInput(index int) InspectInput {
+func (m *NonodoModel) GetInspectInput(index int) (InspectInput, error) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
 	if index >= len(m.inspects) {
-		panic(fmt.Sprintf("invalid inspect input index: %v", index))
+		slog.Error(fmt.Sprintf("invalid inspect input index: %v", index))
+		return InspectInput{}, fmt.Errorf("invalid inspect input index: %v", index)
 	}
-	return *m.inspects[index]
+	return *m.inspects[index], nil
 }
 
 //
@@ -120,7 +122,7 @@ func (m *NonodoModel) GetInspectInput(index int) InspectInput {
 // If there is no input to be processed return nil.
 //
 // Note: use in v2 the sequencer instead.
-func (m *NonodoModel) FinishAndGetNext(accepted bool) cModel.Input {
+func (m *NonodoModel) FinishAndGetNext(accepted bool) (cModel.Input, error) {
 	ctx := context.Background()
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
@@ -132,20 +134,25 @@ func (m *NonodoModel) FinishAndGetNext(accepted bool) cModel.Input {
 	} else {
 		status = cModel.CompletionStatusRejected
 	}
-	m.state.finish(status)
+	err := m.state.finish(status)
+
+	if err != nil {
+		return nil, err
+	}
 
 	// try to get first unprocessed inspect
 	for _, input := range m.inspects {
 		if input.Status == cModel.CompletionStatusUnprocessed {
 			m.state = newRollupsStateInspect(input, m.getProcessedInputCount)
-			return *input
+			return *input, nil
 		}
 	}
 
 	// try to get first unprocessed advance
 	input, err := m.inputRepository.FindByStatus(ctx, cModel.CompletionStatusUnprocessed)
+
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	if input != nil {
 		m.state = newRollupsStateAdvance(
@@ -154,12 +161,12 @@ func (m *NonodoModel) FinishAndGetNext(accepted bool) cModel.Input {
 			m.reportRepository,
 			m.inputRepository,
 		)
-		return *input
+		return *input, nil
 	}
 
 	// if no input was found, set state to idle
 	m.state = newRollupsStateIdle()
-	return nil
+	return nil, nil
 }
 
 // Add a voucher to the model.
@@ -211,7 +218,7 @@ func (m *NonodoModel) RegisterException(payload []byte) error {
 // Auxiliary Methods
 //
 
-func (m *NonodoModel) getProcessedInputCount() int {
+func (m *NonodoModel) getProcessedInputCount() (int, error) {
 	ctx := context.Background()
 	filter := []*model.ConvenienceFilter{}
 	field := "Status"
@@ -222,7 +229,7 @@ func (m *NonodoModel) getProcessedInputCount() int {
 	})
 	total, err := m.inputRepository.Count(ctx, filter)
 	if err != nil {
-		panic(err)
+		return 0, err
 	}
-	return int(total)
+	return int(total), nil
 }

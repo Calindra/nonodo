@@ -44,7 +44,7 @@ type SequencerMock struct {
 }
 
 // FinishAndGetNext implements Sequencer.
-func (s *SequencerMock) FinishAndGetNext(accept bool) cModel.Input {
+func (s *SequencerMock) FinishAndGetNext(accept bool) (cModel.Input, error) {
 	panic("unimplemented")
 }
 
