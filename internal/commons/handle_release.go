@@ -53,9 +53,8 @@ type AnvilRelease struct {
 }
 
 type AnvilConfig struct {
-	AnvilVersion string `json:"anvil_version"`
-	AnvilUrl     string `json:"anvil_url"`
-	LatestCheck  string `json:"latest_check"`
+	AssetAnvil  ReleaseAsset `json:"asset_anvil"`
+	LatestCheck string       `json:"latest_check"`
 }
 
 const WINDOWS = "windows"
@@ -69,15 +68,14 @@ func NewAnvilRelease() HandleRelease {
 	}
 }
 
-func (a *AnvilConfig) NewAnvilConfig(version, url string) *AnvilConfig {
+func NewAnvilConfig(ra ReleaseAsset) *AnvilConfig {
 	return &AnvilConfig{
-		AnvilVersion: version,
-		AnvilUrl:     url,
-		LatestCheck:  time.Now().Format(time.RFC3339),
+		AssetAnvil:  ra,
+		LatestCheck: time.Now().Format(time.RFC3339),
 	}
 }
 
-func (a *AnvilConfig) LoadAnvilConfig(path string) (*AnvilConfig, error) {
+func LoadAnvilConfig(path string) (*AnvilConfig, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("anvil: failed to read config %s", err.Error())
@@ -92,8 +90,8 @@ func (a *AnvilConfig) LoadAnvilConfig(path string) (*AnvilConfig, error) {
 	return &config, nil
 }
 
-func (a *AnvilConfig) SaveAnvilConfig(path string, config *AnvilConfig) error {
-	data, err := json.Marshal(config)
+func (a *AnvilConfig) SaveAnvilConfig(path string) error {
+	data, err := json.Marshal(a)
 	if err != nil {
 		return fmt.Errorf("anvil: failed to marshal config %s", err.Error())
 	}
@@ -107,21 +105,24 @@ func (a *AnvilConfig) SaveAnvilConfig(path string, config *AnvilConfig) error {
 	return nil
 }
 
-func (a AnvilRelease) CreateConfig(ra ReleaseAsset) (*AnvilConfig, error) {
+func (a AnvilRelease) SaveConfigOnDefaultLocation(config *AnvilConfig) error {
 	root := filepath.Join(os.TempDir())
 	file := filepath.Join(root, a.ConfigFilename)
+	c := NewAnvilConfig(config.AssetAnvil)
+	err := c.SaveAnvilConfig(file)
+	return err
+}
 
-	var config *AnvilConfig
-
+func (a AnvilRelease) TryLoadConfig() (*AnvilConfig, error) {
+	root := filepath.Join(os.TempDir())
+	file := filepath.Join(root, a.ConfigFilename)
 	if _, err := os.Stat(file); err == nil {
 		slog.Debug("Anvil config already exists", "path", file)
-		return config.LoadAnvilConfig(file)
+		return LoadAnvilConfig(file)
 	}
+	slog.Debug("Anvil config not found", "path", file)
 
-	c := config.NewAnvilConfig(ra.Tag, ra.Url)
-	err := config.SaveAnvilConfig(file, c)
-
-	return c, err
+	return nil, nil
 }
 
 // FormatNameRelease implements HandleRelease.
@@ -230,6 +231,19 @@ func (a *AnvilRelease) GetLatestReleaseCompatible(ctx context.Context) (*Release
 		return nil, err
 	}
 
+	config, err := a.TryLoadConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	var target *ReleaseAsset = nil
+
+	// Get release asset from config
+	if config != nil {
+		target = &config.AssetAnvil
+		return target, nil
+	}
+
 	assets, err := GetAssetsFromLastReleaseGitHub(ctx, a.Client, a.Namespace, a.Repository)
 	if err != nil {
 		return nil, err
@@ -237,8 +251,18 @@ func (a *AnvilRelease) GetLatestReleaseCompatible(ctx context.Context) (*Release
 
 	for _, a := range assets {
 		if a.Filename == p {
-			return &a, nil
+			target = &a
 		}
+	}
+
+	if target != nil {
+		c := NewAnvilConfig(*target)
+		err := a.SaveConfigOnDefaultLocation(c)
+		if err != nil {
+			return nil, err
+		}
+
+		return target, nil
 	}
 
 	return nil, fmt.Errorf("anvil: no compatible release found")
