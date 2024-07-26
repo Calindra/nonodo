@@ -20,8 +20,10 @@ import (
 )
 
 // Default port for the Ethereum node.
-const AnvilDefaultAddress = "127.0.0.1"
-const AnvilDefaultPort = 8545
+const (
+	AnvilDefaultAddress = "127.0.0.1"
+	AnvilDefaultPort    = 8545
+)
 
 // Generate the devnet state and embed it in the Go binary.
 //
