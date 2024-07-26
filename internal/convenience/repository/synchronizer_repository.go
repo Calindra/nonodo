@@ -79,7 +79,7 @@ func (c *SynchronizerRepository) Count(
 func (c *SynchronizerRepository) GetLastFetched(
 	ctx context.Context,
 ) (*model.SynchronizerFetch, error) {
-	query := `SELECT * FROM synchronizer_fetch ORDER BY id111 DESC LIMIT 1`
+	query := `SELECT * FROM synchronizer_fetch ORDER BY id DESC LIMIT 1`
 	stmt, err := c.Db.Preparex(query)
 	if err != nil {
 		slog.Error("Error searching for last fetched", "Error", err)
