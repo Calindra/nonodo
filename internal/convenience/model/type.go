@@ -163,7 +163,7 @@ type ProcessOutputData struct {
 }
 
 type RepoSynchronizer interface {
-	// GetDB() *sqlx.DB
+	GetDB() *sqlx.DB
 	BeginTxx(ctx context.Context) (*sqlx.Tx, error)
 	CreateTables() error
 	Create(ctx context.Context, data *SynchronizerFetch) (*SynchronizerFetch, error)

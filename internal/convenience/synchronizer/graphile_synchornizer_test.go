@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"testing"
-	"time"
 
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/convenience/repository"
@@ -254,39 +253,34 @@ func TestContextWithTimeout_Failure(t *testing.T) {
 		GraphileFetcher: &GraphileFetcher{},
 	}
 
+	response := getTestOutputResponse()
+
 	err := synchronizer.SynchronizerRepository.CreateTables()
 	if err != nil {
 		panic(err)
 	}
-
-	//creating SynchronizerFetch model
-	synchronizerFetch := &model.SynchronizerFetch{
-		TimestampAfter:       uint64(time.Now().UnixMilli()),
-		IniCursorAfter:       "1f2d3e4b5c6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2",
-		EndCursorAfter:       "baadf00db16b00b5facefeeda1b2c3d4e5f67890a1b2c3d4e5f67890abcdef1234",
-		LogVouchersIds:       "",
-		IniInputCursorAfter:  "a1b2c3d4e5f67890abcdeffedcba09876543210fedcba9876543210fedcba1234",
-		EndInputCursorAfter:  "fedcba9876543210fedcba9876543210abcdef1234567890abcdef1234567890",
-		IniReportCursorAfter: "9b8a7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b",
-		EndReportCursorAfter: "0a1b2c3d4e5f67890a1b2c3d4e5f67890abcdefabcdefabcdefabcdefabcdefabc",
-	}
-
-	_, err = synchronizer.SynchronizerRepository.Create(context.Background(), synchronizerFetch)
+	// Verificar se a tabela foi criada
+	var count int
+	err = db.Get(&count, "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='synchronizer_fetch';")
 	if err != nil {
-		panic(err)
+		t.Fatalf("Erro ao verificar se a tabela foi criada: %v", err)
 	}
 
-	var synchronizerFetches []model.SynchronizerFetch
-	err = db.Select(&synchronizerFetches, "SELECT * FROM synchronizer_fetch")
+	if count == 0 {
+		t.Fatalf("A tabela synchronizer_fetch não foi criada.")
+	}
+
+	fmt.Println("A tabela synchronizer_fetch foi criada com sucesso.")
+
+	decoderMock.On("RetrieveDestination", mock.Anything).Return(common.Address{}, nil)
+	decoderMock.On("HandleOutputV2", mock.Anything, mock.Anything).Return(nil)
+	decoderMock.On("HandleInput", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	decoderMock.On("HandleReport", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+
+	err = synchronizer.handleWithDBTransaction(response)
 	if err != nil {
-		panic(err)
+		fmt.Println("ERRO handleWithDBTransaction ")
 	}
-
-	for _, fetch := range synchronizerFetches {
-		fmt.Printf("LIDO DO BANCO DE DADOS: %+v\n", fetch)
-	}
-
-	// fmt.Printf("DADO PERSISTIDO %v", data)
 
 }
 

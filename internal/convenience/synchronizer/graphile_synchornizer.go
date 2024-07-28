@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/calindra/nonodo/internal/convenience/model"
+	"github.com/calindra/nonodo/internal/convenience/repository"
 )
 
 type GraphileSynchronizer struct {
@@ -63,33 +64,38 @@ func (x GraphileSynchronizer) Start(ctx context.Context, ready chan<- struct{}) 
 
 }
 
-func (x GraphileSynchronizer) handleWithDBTransaction(outputResp OutputResponse) {
+func (x GraphileSynchronizer) handleWithDBTransaction(outputResp OutputResponse) error {
 	const timeoutDuration = 5 * time.Second
 	ctx, cancel := context.WithTimeout(context.Background(), timeoutDuration)
 	defer cancel()
-	fmt.Println("ANTES DO BEGINTXX")
-	// tx, err := x.SynchronizerRepository.GetDB().BeginTxx(ctx, nil)
-	tx, err := x.SynchronizerRepository.BeginTxx(ctx)
+	db := x.SynchronizerRepository.GetDB()
+	ctxWithTx, err := repository.StartTransaction(ctx, db)
+	// tx, err := x.SynchronizerRepository.BeginTxx(ctx)
 	if err != nil {
 		slog.Error("start db transaction fail", "err", err)
-		return
+		return err
+	}
+
+	tx, err := repository.GetTransaction(ctxWithTx)
+
+	if err != nil {
+		slog.Error("recovery transaction fail", "err", err)
+		return err
 	}
 	defer tx.Rollback()
-	fmt.Println("PASSOU DO BEGINTXX")
-
-	err = x.handleGraphileResponse(ctx, outputResp)
+	err = x.handleGraphileResponse(ctxWithTx, outputResp)
 
 	if err != nil {
 		slog.Error("Failed to handle graphile response.", "err", err)
-		fmt.Println("CAIU NO ERRO")
-		// Aqui provavelmente irá acontecer um rollback
+		return err
 	}
 
 	err = tx.Commit()
 	if err != nil {
 		slog.Error("commit fail", "err", err)
+		return err
 	}
-
+	return nil
 	// tx.Rollback()
 }
 
@@ -168,19 +174,21 @@ func (x GraphileSynchronizer) handleGraphileResponse(ctx context.Context, output
 		initInputCursorAfter = x.GraphileFetcher.CursorInputAfter
 		x.GraphileFetcher.CursorInputAfter = outputResp.Data.Inputs.PageInfo.EndCursor
 	}
+	synchronizeFetch := &model.SynchronizerFetch{
+		TimestampAfter:       uint64(time.Now().UnixMilli()),
+		IniCursorAfter:       initCursorAfter,
+		EndCursorAfter:       x.GraphileFetcher.CursorAfter,
+		LogVouchersIds:       "",
+		IniInputCursorAfter:  initInputCursorAfter,
+		EndInputCursorAfter:  x.GraphileFetcher.CursorInputAfter,
+		IniReportCursorAfter: initReportCursorAfter,
+		EndReportCursorAfter: x.GraphileFetcher.CursorReportAfter,
+	}
 
 	if hasMoreInputs || hasMoreOutputs || hasMoreReports {
+		fmt.Printf("Criando sync fetch: %+v\n", synchronizeFetch)
 		_, err := x.SynchronizerRepository.Create(
-			ctx, &model.SynchronizerFetch{
-				TimestampAfter:       uint64(time.Now().UnixMilli()),
-				IniCursorAfter:       initCursorAfter,
-				EndCursorAfter:       x.GraphileFetcher.CursorAfter,
-				LogVouchersIds:       "",
-				IniInputCursorAfter:  initInputCursorAfter,
-				EndInputCursorAfter:  x.GraphileFetcher.CursorInputAfter,
-				IniReportCursorAfter: initReportCursorAfter,
-				EndReportCursorAfter: x.GraphileFetcher.CursorReportAfter,
-			})
+			ctx, synchronizeFetch)
 		if err != nil {
 			slog.Error("Failed to create synchronize repository:", "err", err)
 			return fmt.Errorf("error creating synchronize repository: %w", err)

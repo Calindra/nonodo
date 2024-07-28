@@ -47,6 +47,7 @@ func (c *SynchronizerRepository) CreateTables() error {
 
 	// execute a query on the server
 	_, err := c.Db.Exec(schema)
+
 	return err
 }
 func (c *SynchronizerRepository) Create(
@@ -62,7 +63,26 @@ func (c *SynchronizerRepository) Create(
 		ini_report_cursor_after,
 		end_report_cursor_after
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
-	c.Db.MustExec(
+	tx, err := GetTransaction(ctx)
+
+	if err != nil {
+		c.Db.MustExec(
+			insertSql,
+			data.TimestampAfter,
+			data.IniCursorAfter,
+			data.LogVouchersIds,
+			data.EndCursorAfter,
+			data.IniInputCursorAfter,
+			data.EndInputCursorAfter,
+			data.IniReportCursorAfter,
+			data.EndReportCursorAfter,
+		)
+		return data, nil
+	}
+
+	fmt.Printf("Vou executar com o TX: %v \n", c.Db)
+	tx.MustExecContext(
+		ctx,
 		insertSql,
 		data.TimestampAfter,
 		data.IniCursorAfter,
