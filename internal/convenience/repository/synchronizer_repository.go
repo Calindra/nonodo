@@ -15,6 +15,14 @@ type SynchronizerRepository struct {
 	Db sqlx.DB
 }
 
+type DBExecutor struct {
+	db *sqlx.DB
+}
+
+type TxExecutor struct {
+	tx *sqlx.Tx
+}
+
 func (c *SynchronizerRepository) GetDB() *sqlx.DB {
 	return &c.Db
 }
@@ -64,35 +72,19 @@ func (c *SynchronizerRepository) Create(
 		ini_report_cursor_after,
 		end_report_cursor_after
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
+
+	var executor model.SQLExecutor
 	tx, err := GetTransaction(ctx)
 
 	if err != nil {
-		c.Db.MustExec(
-			insertSql,
-			data.TimestampAfter,
-			data.IniCursorAfter,
-			data.LogVouchersIds,
-			data.EndCursorAfter,
-			data.IniInputCursorAfter,
-			data.EndInputCursorAfter,
-			data.IniReportCursorAfter,
-			data.EndReportCursorAfter,
-		)
-		return data, nil
+		executor = &DBExecutor{db: &c.Db}
+	} else {
+		executor = &TxExecutor{tx: tx}
 	}
 
-	tx.MustExecContext(
-		ctx,
-		insertSql,
-		data.TimestampAfter,
-		data.IniCursorAfter,
-		data.LogVouchersIds,
-		data.EndCursorAfter,
-		data.IniInputCursorAfter,
-		data.EndInputCursorAfter,
-		data.IniReportCursorAfter,
-		data.EndReportCursorAfter,
-	)
+	if err := executor.Execute(ctx, insertSql, data); err != nil {
+		return nil, err
+	}
 	return data, nil
 }
 
@@ -127,4 +119,35 @@ func (c *SynchronizerRepository) GetLastFetched(
 		return nil, err
 	}
 	return &p, nil
+}
+
+func (e *DBExecutor) Execute(ctx context.Context, sql string, data *model.SynchronizerFetch) error {
+	_, err := e.db.Exec(
+		sql,
+		data.TimestampAfter,
+		data.IniCursorAfter,
+		data.LogVouchersIds,
+		data.EndCursorAfter,
+		data.IniInputCursorAfter,
+		data.EndInputCursorAfter,
+		data.IniReportCursorAfter,
+		data.EndReportCursorAfter,
+	)
+	return err
+}
+
+func (e *TxExecutor) Execute(ctx context.Context, sql string, data *model.SynchronizerFetch) error {
+	_, err := e.tx.ExecContext(
+		ctx,
+		sql,
+		data.TimestampAfter,
+		data.IniCursorAfter,
+		data.LogVouchersIds,
+		data.EndCursorAfter,
+		data.IniInputCursorAfter,
+		data.EndInputCursorAfter,
+		data.IniReportCursorAfter,
+		data.EndReportCursorAfter,
+	)
+	return err
 }

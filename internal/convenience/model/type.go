@@ -170,3 +170,7 @@ type RepoSynchronizer interface {
 	Count(ctx context.Context) (uint64, error)
 	GetLastFetched(ctx context.Context) (*SynchronizerFetch, error)
 }
+
+type SQLExecutor interface {
+	Execute(ctx context.Context, sql string, data *SynchronizerFetch) error
+}
