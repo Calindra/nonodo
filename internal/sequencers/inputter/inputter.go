@@ -184,14 +184,12 @@ func (w InputterWorker) addInput(
 	// use abi to decode the input
 	eventInput := event.Input[4:]
 	abi, err := contracts.InputsMetaData.GetAbi()
-
 	if err != nil {
 		slog.Error("Error parsing abi", "err", err)
 		return err
 	}
 
 	values, err := abi.Methods["EvmAdvance"].Inputs.UnpackValues(eventInput)
-
 	if err != nil {
 		slog.Error("Error parsing abi", "err", err)
 		return err
