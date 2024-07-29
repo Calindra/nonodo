@@ -1,0 +1,8 @@
+# syntax=docker/dockerfile:1
+FROM node:20.16.0-bookworm
+
+RUN npm install -g postgraphile @graphile-contrib/pg-simplify-inflector postgraphile-plugin-connection-filter
+
+EXPOSE 5000
+
+CMD ["postgraphile", "-c", "postgres://myuser:mypassword@db/mydatabase", "--watch", "--enhance-graphiql", "--dynamic-json", "--append-plugins", "@graphile-contrib/pg-simplify-inflector,postgraphile-plugin-connection-filter", "-n", "0.0.0.0"]

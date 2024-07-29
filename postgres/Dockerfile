@@ -1,4 +1,5 @@
-FROM postgres
+# syntax=docker/dockerfile:1
+FROM postgres:16.3-bookworm
 
 ENV POSTGRES_DB=mydatabase
 ENV POSTGRES_USER=myuser
