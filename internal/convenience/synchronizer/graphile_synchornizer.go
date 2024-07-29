@@ -70,7 +70,7 @@ func (x GraphileSynchronizer) handleWithDBTransaction(outputResp OutputResponse)
 	defer cancel()
 	db := x.SynchronizerRepository.GetDB()
 	ctxWithTx, err := repository.StartTransaction(ctx, db)
-	// tx, err := x.SynchronizerRepository.BeginTxx(ctx)
+
 	if err != nil {
 		slog.Error("start db transaction fail", "err", err)
 		return err
@@ -96,7 +96,6 @@ func (x GraphileSynchronizer) handleWithDBTransaction(outputResp OutputResponse)
 		return err
 	}
 	return nil
-	// tx.Rollback()
 }
 
 func (x GraphileSynchronizer) handleGraphileResponse(ctx context.Context, outputResp OutputResponse) error {
