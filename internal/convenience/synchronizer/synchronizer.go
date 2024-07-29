@@ -46,7 +46,7 @@ func (x *Synchronizer) VoucherPolling(ctx context.Context) error {
 	sleepInSeconds := 3
 	lastFetch, err := x.SynchronizerRepository.GetLastFetched(ctx)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	if lastFetch != nil {
 		x.VoucherFetcher.CursorAfter = lastFetch.EndCursorAfter
@@ -82,7 +82,7 @@ func (x *Synchronizer) VoucherPolling(ctx context.Context) error {
 					uint64(outputIndex),
 				)
 				if err != nil {
-					panic(err)
+					return err
 				}
 			}
 			if len(voucherResp.Data.Vouchers.PageInfo.EndCursor) > 0 {
@@ -97,7 +97,7 @@ func (x *Synchronizer) VoucherPolling(ctx context.Context) error {
 						LogVouchersIds: strings.Join(voucherIds, ";"),
 					})
 				if err != nil {
-					panic(err)
+					return err
 				}
 			}
 		}

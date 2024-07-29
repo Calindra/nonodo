@@ -112,6 +112,7 @@ func (r *InputRepository) Update(ctx context.Context, input model.AdvanceInput) 
 		input.Index,
 	)
 	if err != nil {
+		slog.Error("Error updating voucher", "Error", err)
 		return nil, err
 	}
 	return &input, nil

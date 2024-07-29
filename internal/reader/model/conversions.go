@@ -4,7 +4,9 @@
 package model
 
 import (
+	"errors"
 	"fmt"
+	"log/slog"
 	"strconv"
 
 	cModel "github.com/calindra/nonodo/internal/convenience/model"
@@ -16,30 +18,37 @@ import (
 // Nonodo -> GraphQL conversions
 //
 
-func convertCompletionStatus(status cModel.CompletionStatus) CompletionStatus {
+func convertCompletionStatus(status cModel.CompletionStatus) (CompletionStatus, error) {
 	switch status {
 	case cModel.CompletionStatusUnprocessed:
-		return CompletionStatusUnprocessed
+		return CompletionStatusUnprocessed, nil
 	case cModel.CompletionStatusAccepted:
-		return CompletionStatusAccepted
+		return CompletionStatusAccepted, nil
 	case cModel.CompletionStatusRejected:
-		return CompletionStatusRejected
+		return CompletionStatusRejected, nil
 	case cModel.CompletionStatusException:
-		return CompletionStatusException
+		return CompletionStatusException, nil
 	default:
-		panic("invalid completion status")
+		return "", errors.New("invalid completion status")
 	}
 }
 
-func ConvertInput(input cModel.AdvanceInput) *Input {
+func ConvertInput(input cModel.AdvanceInput) (*Input, error) {
+	convertedStatus, err := convertCompletionStatus(input.Status)
+
+	if err != nil {
+		slog.Error("Error converting CompletionStatus", "Error", err)
+		return nil, err
+	}
+
 	return &Input{
 		Index:       input.Index,
-		Status:      convertCompletionStatus(input.Status),
+		Status:      convertedStatus,
 		MsgSender:   input.MsgSender.String(),
 		Timestamp:   fmt.Sprint(input.BlockTimestamp.Unix()),
 		BlockNumber: fmt.Sprint(input.BlockNumber),
 		Payload:     hexutil.Encode(input.Payload),
-	}
+	}, nil
 }
 
 func convertConvenientVoucherV1(cVoucher convenience.ConvenienceVoucher) *Voucher {
@@ -188,7 +197,13 @@ func ConvertToInputConnectionV1(
 ) (*InputConnection, error) {
 	convNodes := make([]*Input, len(inputs))
 	for i := range inputs {
-		convNodes[i] = ConvertInput(inputs[i])
+		convertedInput, err := ConvertInput(inputs[i])
+
+		if err != nil {
+			return nil, err
+		}
+
+		convNodes[i] = convertedInput
 	}
 	return NewConnection(offset, total, convNodes), nil
 }

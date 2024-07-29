@@ -23,7 +23,7 @@ type Model interface {
 		blockNumber uint64,
 		timestamp time.Time,
 		index int,
-	)
+	) error
 }
 
 // This worker reads inputs from Ethereum and puts them in the model.
@@ -213,12 +213,17 @@ func (w InputterWorker) addInput(
 		),
 	)
 
-	w.Model.AddAdvanceInput(
+	err = w.Model.AddAdvanceInput(
 		msgSender,
 		payload,
 		event.Raw.BlockNumber,
 		timestamp,
 		inputIndex,
 	)
+
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

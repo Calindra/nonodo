@@ -60,7 +60,8 @@ func (s *StateSuite) TestSendAllVouchersToDecoder() {
 	vouchers = append(vouchers, cModel.ConvenienceVoucher{
 		Payload: "123456",
 	})
-	sendAllInputVouchersToDecoder(&decoder, 1, vouchers)
+	err := sendAllInputVouchersToDecoder(&decoder, 1, vouchers)
+	s.NoError(err)
 	s.Equal(1, len(decoder.outputs))
 	s.Equal(
 		"ef615e2f123456",
@@ -74,7 +75,8 @@ func (s *StateSuite) TestSendAllNoticesToDecoder() {
 	notices = append(notices, cModel.ConvenienceNotice{
 		Payload: "123456",
 	})
-	sendAllInputNoticesToDecoder(&decoder, 1, notices)
+	err := sendAllInputNoticesToDecoder(&decoder, 1, notices)
+	s.NoError(err)
 	s.Equal(1, len(decoder.outputs))
 	s.Equal(
 		"c258d6e5123456",

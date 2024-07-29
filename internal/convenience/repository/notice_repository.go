@@ -43,6 +43,7 @@ func (c *NoticeRepository) Create(
 		data.OutputIndex,
 	)
 	if err != nil {
+		slog.Error("Error creating notice", "Error", err)
 		return nil, err
 	}
 	return data, nil
@@ -62,6 +63,7 @@ func (c *NoticeRepository) Update(
 		data.OutputIndex,
 	)
 	if err != nil {
+		slog.Error("Error updating notice", "Error", err)
 		return nil, err
 	}
 	return data, nil
