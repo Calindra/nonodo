@@ -175,5 +175,5 @@ type SQLExecutorData interface {
 	*SynchronizerFetch
 }
 type SQLExecutor[T SQLExecutorData] interface {
-	Execute(ctx context.Context, sql string, data T) error
+	Execute(ctx context.Context, sql string, data T, getParams func(data interface{}) ([]interface{}, bool)) error
 }

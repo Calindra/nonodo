@@ -15,18 +15,6 @@ type SynchronizerRepository struct {
 	Db sqlx.DB
 }
 
-// type SQLExecutor[T model.SQLExecutorData] interface {
-// 	Execute(ctx context.Context, sql string, data T) error
-// }
-
-type DBExecutor[T model.SQLExecutorData] struct {
-	db *sqlx.DB
-}
-
-type TxExecutor[T model.SQLExecutorData] struct {
-	tx *sqlx.Tx
-}
-
 func (c *SynchronizerRepository) GetDB() *sqlx.DB {
 	return &c.Db
 }
@@ -122,7 +110,6 @@ func create[T model.SQLExecutorData](
 ) error {
 	var executor model.SQLExecutor[T]
 
-	// Tenta obter uma transação do contexto
 	tx, err := GetTransaction(ctx)
 	if err != nil {
 		executor = &DBExecutor[T]{db: db}
@@ -130,32 +117,9 @@ func create[T model.SQLExecutorData](
 		executor = &TxExecutor[T]{tx: tx}
 	}
 
-	// Executa a SQL usando o executor apropriado
-	return executor.Execute(ctx, insertSql, data)
+	return executor.Execute(ctx, insertSql, data, getParams)
 }
 
-func (e *DBExecutor[T]) Execute(ctx context.Context, sql string, data T) error {
-	params, ok := getParams(data)
-	if !ok {
-		return fmt.Errorf("invalid data type")
-	}
-
-	_, err := e.db.ExecContext(ctx, sql, params...)
-	return err
-}
-
-// Execute para TxExecutor
-func (e *TxExecutor[T]) Execute(ctx context.Context, sql string, data T) error {
-	params, ok := getParams(data)
-	if !ok {
-		return fmt.Errorf("invalid data type")
-	}
-
-	_, err := e.tx.ExecContext(ctx, sql, params...)
-	return err
-}
-
-// Função para extrair parâmetros do tipo de dado
 func getParams(data interface{}) ([]interface{}, bool) {
 	switch v := data.(type) {
 	case *model.SynchronizerFetch:
