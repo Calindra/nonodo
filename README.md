@@ -212,3 +212,11 @@ NoNodo is compatible with the following version of the Cartesi Rollups.
 - NoNodo only works for applications that use the Cartesi Rollups HTTP API and doesn't work with applications using the low-level API;
 - Performance inside a Cartesi machine will be much lower than running on the host;
 - Inputs take much longer to arrive when running in testnet and mainnet than the local NoNodo devnet.
+
+## Contributors
+
+<a href="https://github.com/Calindra/nonodo/graphs/contributors">
+  <img src="https://contributors-img.firebaseapp.com/image?repo=calindra/nonodo" />
+</a>
+
+Made with [contributors-img](https://contributors-img.firebaseapp.com).
