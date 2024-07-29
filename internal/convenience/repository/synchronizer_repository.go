@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/jmoiron/sqlx"
@@ -81,6 +82,7 @@ func (c *SynchronizerRepository) GetLastFetched(
 	query := `SELECT * FROM synchronizer_fetch ORDER BY id DESC LIMIT 1`
 	stmt, err := c.Db.Preparex(query)
 	if err != nil {
+		slog.Error("Error searching for last fetched", "Error", err)
 		return nil, err
 	}
 	defer stmt.Close()
@@ -90,6 +92,7 @@ func (c *SynchronizerRepository) GetLastFetched(
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
+		slog.Error("Error searching for last fetched", "Error", err)
 		return nil, err
 	}
 	return &p, nil

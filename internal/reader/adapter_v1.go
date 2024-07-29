@@ -226,7 +226,14 @@ func (a AdapterV1) GetInput(index int) (*graphql.Input, error) {
 	if input == nil {
 		return nil, fmt.Errorf("input not found")
 	}
-	return graphql.ConvertInput(*input), nil
+
+	convertedInput, err := graphql.ConvertInput(*input)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return convertedInput, nil
 }
 
 func (a AdapterV1) GetInputs(
@@ -277,7 +284,13 @@ func (a AdapterV1) convertToInputConnection(
 ) (*graphql.InputConnection, error) {
 	convNodes := make([]*graphql.Input, len(inputs))
 	for i := range inputs {
-		convNodes[i] = graphql.ConvertInput(inputs[i])
+		convertedInput, err := graphql.ConvertInput(inputs[i])
+
+		if err != nil {
+			return nil, err
+		}
+
+		convNodes[i] = convertedInput
 	}
 	return graphql.NewConnection(offset, total, convNodes), nil
 }

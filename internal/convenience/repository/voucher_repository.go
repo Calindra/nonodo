@@ -62,6 +62,7 @@ func (c *VoucherRepository) CreateVoucher(
 		voucher.OutputIndex,
 	)
 	if err != nil {
+		slog.Error("Error creating vouchers", "Error", err)
 		return nil, err
 	}
 	return voucher, nil

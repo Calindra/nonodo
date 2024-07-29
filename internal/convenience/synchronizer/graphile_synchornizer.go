@@ -28,7 +28,7 @@ func (x GraphileSynchronizer) Start(ctx context.Context, ready chan<- struct{}) 
 	lastFetch, err := x.SynchronizerRepository.GetLastFetched(ctx)
 
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	if lastFetch != nil {

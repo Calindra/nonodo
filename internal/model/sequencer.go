@@ -6,6 +6,10 @@ import (
 	cModel "github.com/calindra/nonodo/internal/convenience/model"
 )
 
+type Sequencer interface {
+	FinishAndGetNext(accept bool) (cModel.Input, error)
+}
+
 type InputBoxSequencer struct {
 	model *NonodoModel
 }
@@ -18,15 +22,19 @@ func NewEspressoSequencer(model *NonodoModel) *EspressoSequencer {
 	return &EspressoSequencer{model: model}
 }
 
+func (ibs *InputBoxSequencer) FinishAndGetNext(accept bool) (cModel.Input, error) {
+	return FinishAndGetNext(ibs.model, accept)
+}
+
+func (es *EspressoSequencer) FinishAndGetNext(accept bool) (cModel.Input, error) {
+	return FinishAndGetNext(es.model, accept)
+}
+
 type EspressoSequencer struct {
 	model *NonodoModel
 }
 
-func (es *EspressoSequencer) FinishAndGetNext(accept bool) cModel.Input {
-	return FinishAndGetNext(es.model, accept)
-}
-
-func FinishAndGetNext(m *NonodoModel, accept bool) cModel.Input {
+func FinishAndGetNext(m *NonodoModel, accept bool) (cModel.Input, error) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
@@ -37,13 +45,17 @@ func FinishAndGetNext(m *NonodoModel, accept bool) cModel.Input {
 	} else {
 		status = cModel.CompletionStatusRejected
 	}
-	m.state.finish(status)
+	err := m.state.finish(status)
+
+	if err != nil {
+		return nil, err
+	}
 
 	// try to get first unprocessed inspect
 	for _, input := range m.inspects {
 		if input.Status == cModel.CompletionStatusUnprocessed {
 			m.state = newRollupsStateInspect(input, m.getProcessedInputCount)
-			return *input
+			return *input, nil
 		}
 	}
 
@@ -51,8 +63,9 @@ func FinishAndGetNext(m *NonodoModel, accept bool) cModel.Input {
 
 	// try to get first unprocessed advance
 	input, err := m.inputRepository.FindByStatus(ctx, cModel.CompletionStatusUnprocessed)
+
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	if input != nil {
 		m.state = newRollupsStateAdvance(
@@ -61,18 +74,10 @@ func FinishAndGetNext(m *NonodoModel, accept bool) cModel.Input {
 			m.reportRepository,
 			m.inputRepository,
 		)
-		return *input
+		return *input, nil
 	}
 
 	// if no input was found, set state to idle
 	m.state = newRollupsStateIdle()
-	return nil
-}
-
-func (ibs *InputBoxSequencer) FinishAndGetNext(accept bool) cModel.Input {
-	return FinishAndGetNext(ibs.model, accept)
-}
-
-type Sequencer interface {
-	FinishAndGetNext(accept bool) cModel.Input
+	return nil, nil
 }

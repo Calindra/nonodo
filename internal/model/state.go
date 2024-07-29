@@ -19,7 +19,7 @@ import (
 type rollupsState interface {
 
 	// Finish the current state, saving the result to the model.
-	finish(status cModel.CompletionStatus)
+	finish(status cModel.CompletionStatus) error
 
 	// Add voucher to current state.
 	addVoucher(destination common.Address, payload []byte) (int, error)
@@ -56,8 +56,8 @@ func newRollupsStateIdle() *rollupsStateIdle {
 	return &rollupsStateIdle{}
 }
 
-func (s *rollupsStateIdle) finish(status cModel.CompletionStatus) {
-	// Do nothing
+func (s *rollupsStateIdle) finish(status cModel.CompletionStatus) error {
+	return nil
 }
 
 func (s *rollupsStateIdle) addVoucher(destination common.Address, payload []byte) (int, error) {
@@ -106,10 +106,10 @@ func newRollupsStateAdvance(
 	}
 }
 
-func sendAllInputVouchersToDecoder(decoder Decoder, inputIndex uint64, vouchers []cModel.ConvenienceVoucher) {
+func sendAllInputVouchersToDecoder(decoder Decoder, inputIndex uint64, vouchers []cModel.ConvenienceVoucher) error {
 	if decoder == nil {
 		slog.Warn("Missing OutputDecoder to send vouchers")
-		return
+		return nil
 	}
 	ctx := context.Background()
 	for _, v := range vouchers {
@@ -124,15 +124,16 @@ func sendAllInputVouchersToDecoder(decoder Decoder, inputIndex uint64, vouchers 
 			v.OutputIndex,
 		)
 		if err != nil {
-			panic(err)
+			return err
 		}
 	}
+	return nil
 }
 
-func sendAllInputNoticesToDecoder(decoder Decoder, inputIndex uint64, notices []cModel.ConvenienceNotice) {
+func sendAllInputNoticesToDecoder(decoder Decoder, inputIndex uint64, notices []cModel.ConvenienceNotice) error {
 	if decoder == nil {
 		slog.Warn("Missing OutputDecoder to send notices")
-		return
+		return nil
 	}
 	ctx := context.Background()
 	for _, v := range notices {
@@ -147,48 +148,68 @@ func sendAllInputNoticesToDecoder(decoder Decoder, inputIndex uint64, notices []
 			v.OutputIndex,
 		)
 		if err != nil {
-			panic(err)
+			return err
 		}
 	}
+	return nil
 }
 
-func saveAllReports(reportRepository *cRepos.ReportRepository, reports []cModel.Report) {
+func saveAllReports(reportRepository *cRepos.ReportRepository, reports []cModel.Report) error {
 	if reportRepository == nil {
 		slog.Warn("Missing reportRepository to save reports")
-		return
+		return nil
 	}
 	if reportRepository.Db == nil {
 		slog.Warn("Missing reportRepository.Db to save reports")
-		return
+		return nil
 	}
 	ctx := context.Background()
 	for _, r := range reports {
 		_, err := reportRepository.Create(ctx, r)
 		if err != nil {
-			panic(err)
+			return err
 		}
 	}
+	return nil
 }
 
-func (s *rollupsStateAdvance) finish(status cModel.CompletionStatus) {
+func (s *rollupsStateAdvance) finish(status cModel.CompletionStatus) error {
 	s.input.Status = status
 	if status == cModel.CompletionStatusAccepted {
 		s.input.Vouchers = s.vouchers
 		s.input.Notices = s.notices
 		if s.decoder != nil {
-			sendAllInputVouchersToDecoder(s.decoder, uint64(s.input.Index), s.vouchers)
-			sendAllInputNoticesToDecoder(s.decoder, uint64(s.input.Index), s.notices)
+			err := sendAllInputVouchersToDecoder(s.decoder, uint64(s.input.Index), s.vouchers)
+
+			if err != nil {
+				slog.Error("Error sending all input vouchers to decoder", "Error", err)
+				return err
+			}
+
+			err = sendAllInputNoticesToDecoder(s.decoder, uint64(s.input.Index), s.notices)
+
+			if err != nil {
+				slog.Error("Error sending all input notices to decoder", "Error", err)
+				return err
+			}
 		}
 	}
 	// s.input.Reports = s.reports
 	ctx := context.Background()
 
-	saveAllReports(s.reportRepository, s.reports)
-	_, err := s.inputRepository.Update(ctx, *s.input)
+	err := saveAllReports(s.reportRepository, s.reports)
+
 	if err != nil {
-		panic(err)
+		slog.Error("Error saving reports", "Error", err)
+		return err
+	}
+	_, erro := s.inputRepository.Update(ctx, *s.input)
+
+	if erro != nil {
+		return erro
 	}
 	slog.Info("nonodo: finished advance")
+	return nil
 }
 
 func (s *rollupsStateAdvance) addVoucher(destination common.Address, payload []byte) (int, error) {
@@ -236,9 +257,14 @@ func (s *rollupsStateAdvance) registerException(payload []byte) error {
 	ctx := context.Background()
 	_, err := s.inputRepository.Update(ctx, *s.input)
 	if err != nil {
-		panic(err)
+		return err
 	}
-	saveAllReports(s.reportRepository, s.reports)
+	err = saveAllReports(s.reportRepository, s.reports)
+
+	if err != nil {
+		return err
+	}
+
 	slog.Info("nonodo: finished advance with exception")
 	return nil
 }
@@ -251,12 +277,12 @@ func (s *rollupsStateAdvance) registerException(payload []byte) error {
 type rollupsStateInspect struct {
 	input                  *InspectInput
 	reports                []Report
-	getProcessedInputCount func() int
+	getProcessedInputCount func() (int, error)
 }
 
 func newRollupsStateInspect(
 	input *InspectInput,
-	getProcessedInputCount func() int,
+	getProcessedInputCount func() (int, error),
 ) *rollupsStateInspect {
 	slog.Info("nonodo: processing inspect", "index", input.Index)
 	return &rollupsStateInspect{
@@ -265,11 +291,19 @@ func newRollupsStateInspect(
 	}
 }
 
-func (s *rollupsStateInspect) finish(status cModel.CompletionStatus) {
+func (s *rollupsStateInspect) finish(status cModel.CompletionStatus) error {
 	s.input.Status = status
-	s.input.ProcessedInputCount = s.getProcessedInputCount()
+	inputCount, err := s.getProcessedInputCount()
+
+	if err != nil {
+		slog.Error("Error getting processed input count", "Error", err)
+		return err
+	}
+
+	s.input.ProcessedInputCount = inputCount
 	s.input.Reports = s.reports
 	slog.Info("nonodo: finished inspect")
+	return nil
 }
 
 func (s *rollupsStateInspect) addVoucher(destination common.Address, payload []byte) (int, error) {
@@ -294,7 +328,8 @@ func (s *rollupsStateInspect) addReport(payload []byte) error {
 
 func (s *rollupsStateInspect) registerException(payload []byte) error {
 	s.input.Status = cModel.CompletionStatusException
-	s.input.ProcessedInputCount = s.getProcessedInputCount()
+	inputCount, _ := s.getProcessedInputCount()
+	s.input.ProcessedInputCount = inputCount
 	s.input.Reports = s.reports
 	s.input.Exception = payload
 	slog.Info("nonodo: finished inspect with exception")

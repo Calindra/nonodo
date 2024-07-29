@@ -1,6 +1,7 @@
 package reader
 
 import (
+	"fmt"
 	"log/slog"
 	"math/big"
 
@@ -30,9 +31,16 @@ func (i *InputBlobAdapter) Adapt(node struct {
 		return nil, err
 	}
 
+	convertedStatus, err := convertCompletionStatus(node.Status)
+
+	if err != nil {
+		slog.Error("Error converting CompletionStatus.", "err", err)
+		return nil, err
+	}
+
 	return &graphql.Input{
 		Index:       node.Index,
-		Status:      convertCompletionStatus(node.Status),
+		Status:      convertedStatus,
 		MsgSender:   values[2].(common.Address).Hex(),
 		Timestamp:   values[4].(*big.Int).String(),
 		BlockNumber: values[3].(*big.Int).String(),
@@ -40,17 +48,17 @@ func (i *InputBlobAdapter) Adapt(node struct {
 	}, nil
 }
 
-func convertCompletionStatus(status string) graphql.CompletionStatus {
+func convertCompletionStatus(status string) (graphql.CompletionStatus, error) {
 	switch status {
 	case graphql.CompletionStatusUnprocessed.String():
-		return graphql.CompletionStatusUnprocessed
+		return graphql.CompletionStatusUnprocessed, nil
 	case graphql.CompletionStatusAccepted.String():
-		return graphql.CompletionStatusAccepted
+		return graphql.CompletionStatusAccepted, nil
 	case graphql.CompletionStatusRejected.String():
-		return graphql.CompletionStatusRejected
+		return graphql.CompletionStatusRejected, nil
 	case graphql.CompletionStatusException.String():
-		return graphql.CompletionStatusException
+		return graphql.CompletionStatusException, nil
 	default:
-		panic("invalid completion status")
+		return "", fmt.Errorf(`Error converting CompletionStatus to valid value. Status to be converted %s`, status)
 	}
 }

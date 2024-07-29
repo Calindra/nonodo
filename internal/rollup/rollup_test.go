@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -44,8 +45,8 @@ type SequencerMock struct {
 }
 
 // FinishAndGetNext implements Sequencer.
-func (s *SequencerMock) FinishAndGetNext(accept bool) cModel.Input {
-	panic("unimplemented")
+func (s *SequencerMock) FinishAndGetNext(accept bool) (cModel.Input, error) {
+	return nil, errors.New("unimplemented")
 }
 
 func (s *RollupSuite) SetupTest() {
