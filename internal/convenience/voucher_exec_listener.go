@@ -147,6 +147,7 @@ func (x *VoucherExecListener) WatchExecutions(ctx context.Context, client *ethcl
 		err = x.ReadPastExecutions(ctxPastInputs, client, contractABI, query)
 		if err != nil {
 			slog.Error("unexpected readPastExecutions error", "error", err)
+			time.Sleep(reconnectDelay)
 			continue
 		}
 
@@ -158,6 +159,7 @@ func (x *VoucherExecListener) WatchExecutions(ctx context.Context, client *ethcl
 		sub, err := client.SubscribeFilterLogs(ctxEth, query, logs)
 		if err != nil {
 			slog.Error("unexpected subscribe error", "error", err)
+			time.Sleep(reconnectDelay)
 			continue
 		}
 
