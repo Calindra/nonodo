@@ -264,6 +264,7 @@ func (s *rollupsStateAdvance) registerException(payload []byte) error {
 	if err != nil {
 		return err
 	}
+
 	slog.Info("nonodo: finished advance with exception")
 	return nil
 }
@@ -292,7 +293,13 @@ func newRollupsStateInspect(
 
 func (s *rollupsStateInspect) finish(status cModel.CompletionStatus) error {
 	s.input.Status = status
-	inputCount, _ := s.getProcessedInputCount()
+	inputCount, err := s.getProcessedInputCount()
+
+	if err != nil {
+		slog.Error("Error getting processed input count", "Error", err)
+		return err
+	}
+
 	s.input.ProcessedInputCount = inputCount
 	s.input.Reports = s.reports
 	slog.Info("nonodo: finished inspect")

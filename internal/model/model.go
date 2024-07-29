@@ -228,8 +228,10 @@ func (m *NonodoModel) getProcessedInputCount() (int, error) {
 		Ne:    &value,
 	})
 	total, err := m.inputRepository.Count(ctx, filter)
+
 	if err != nil {
-		return 0, err
+		return -1, err
 	}
+
 	return int(total), nil
 }
