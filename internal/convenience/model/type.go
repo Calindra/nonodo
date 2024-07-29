@@ -171,6 +171,9 @@ type RepoSynchronizer interface {
 	GetLastFetched(ctx context.Context) (*SynchronizerFetch, error)
 }
 
-type SQLExecutor interface {
-	Execute(ctx context.Context, sql string, data *SynchronizerFetch) error
+type SQLExecutorData interface {
+	*SynchronizerFetch
+}
+type SQLExecutor[T SQLExecutorData] interface {
+	Execute(ctx context.Context, sql string, data T) error
 }

@@ -15,11 +15,15 @@ type SynchronizerRepository struct {
 	Db sqlx.DB
 }
 
-type DBExecutor struct {
+// type SQLExecutor[T model.SQLExecutorData] interface {
+// 	Execute(ctx context.Context, sql string, data T) error
+// }
+
+type DBExecutor[T model.SQLExecutorData] struct {
 	db *sqlx.DB
 }
 
-type TxExecutor struct {
+type TxExecutor[T model.SQLExecutorData] struct {
 	tx *sqlx.Tx
 }
 
@@ -73,18 +77,10 @@ func (c *SynchronizerRepository) Create(
 		end_report_cursor_after
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
 
-	var executor model.SQLExecutor
-	tx, err := GetTransaction(ctx)
-
-	if err != nil {
-		executor = &DBExecutor{db: &c.Db}
-	} else {
-		executor = &TxExecutor{tx: tx}
-	}
-
-	if err := executor.Execute(ctx, insertSql, data); err != nil {
+	if err := create(ctx, &c.Db, data, insertSql); err != nil {
 		return nil, err
 	}
+
 	return data, nil
 }
 
@@ -121,33 +117,59 @@ func (c *SynchronizerRepository) GetLastFetched(
 	return &p, nil
 }
 
-func (e *DBExecutor) Execute(ctx context.Context, sql string, data *model.SynchronizerFetch) error {
-	_, err := e.db.Exec(
-		sql,
-		data.TimestampAfter,
-		data.IniCursorAfter,
-		data.LogVouchersIds,
-		data.EndCursorAfter,
-		data.IniInputCursorAfter,
-		data.EndInputCursorAfter,
-		data.IniReportCursorAfter,
-		data.EndReportCursorAfter,
-	)
+func create[T model.SQLExecutorData](
+	ctx context.Context, db *sqlx.DB, data T, insertSql string,
+) error {
+	var executor model.SQLExecutor[T]
+
+	// Tenta obter uma transação do contexto
+	tx, err := GetTransaction(ctx)
+	if err != nil {
+		executor = &DBExecutor[T]{db: db}
+	} else {
+		executor = &TxExecutor[T]{tx: tx}
+	}
+
+	// Executa a SQL usando o executor apropriado
+	return executor.Execute(ctx, insertSql, data)
+}
+
+func (e *DBExecutor[T]) Execute(ctx context.Context, sql string, data T) error {
+	params, ok := getParams(data)
+	if !ok {
+		return fmt.Errorf("invalid data type")
+	}
+
+	_, err := e.db.ExecContext(ctx, sql, params...)
 	return err
 }
 
-func (e *TxExecutor) Execute(ctx context.Context, sql string, data *model.SynchronizerFetch) error {
-	_, err := e.tx.ExecContext(
-		ctx,
-		sql,
-		data.TimestampAfter,
-		data.IniCursorAfter,
-		data.LogVouchersIds,
-		data.EndCursorAfter,
-		data.IniInputCursorAfter,
-		data.EndInputCursorAfter,
-		data.IniReportCursorAfter,
-		data.EndReportCursorAfter,
-	)
+// Execute para TxExecutor
+func (e *TxExecutor[T]) Execute(ctx context.Context, sql string, data T) error {
+	params, ok := getParams(data)
+	if !ok {
+		return fmt.Errorf("invalid data type")
+	}
+
+	_, err := e.tx.ExecContext(ctx, sql, params...)
 	return err
+}
+
+// Função para extrair parâmetros do tipo de dado
+func getParams(data interface{}) ([]interface{}, bool) {
+	switch v := data.(type) {
+	case *model.SynchronizerFetch:
+		return []interface{}{
+			v.TimestampAfter,
+			v.IniCursorAfter,
+			v.LogVouchersIds,
+			v.EndCursorAfter,
+			v.IniInputCursorAfter,
+			v.EndInputCursorAfter,
+			v.IniReportCursorAfter,
+			v.EndReportCursorAfter,
+		}, true
+	default:
+		return nil, false
+	}
 }
