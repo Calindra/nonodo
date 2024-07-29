@@ -185,7 +185,6 @@ func (x GraphileSynchronizer) handleGraphileResponse(ctx context.Context, output
 	}
 
 	if hasMoreInputs || hasMoreOutputs || hasMoreReports {
-		fmt.Printf("Criando sync fetch: %+v\n", synchronizeFetch)
 		_, err := x.SynchronizerRepository.Create(
 			ctx, synchronizeFetch)
 		if err != nil {

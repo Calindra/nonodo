@@ -80,7 +80,6 @@ func (c *SynchronizerRepository) Create(
 		return data, nil
 	}
 
-	fmt.Printf("Vou executar com o TX: %v \n", c.Db)
 	tx.MustExecContext(
 		ctx,
 		insertSql,
