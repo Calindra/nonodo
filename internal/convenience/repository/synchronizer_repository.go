@@ -64,26 +64,9 @@ func (c *SynchronizerRepository) Create(
 		ini_report_cursor_after,
 		end_report_cursor_after
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
-	tx, err := GetTransaction(ctx)
 
-	if err != nil {
-		c.Db.MustExec(
-			insertSql,
-			data.TimestampAfter,
-			data.IniCursorAfter,
-			data.LogVouchersIds,
-			data.EndCursorAfter,
-			data.IniInputCursorAfter,
-			data.EndInputCursorAfter,
-			data.IniReportCursorAfter,
-			data.EndReportCursorAfter,
-		)
-		return data, nil
-	}
-
-	tx.MustExecContext(
-		ctx,
-		insertSql,
+	exec := DBExecutor{&c.Db}
+	_, err := exec.ExecContext(ctx, insertSql,
 		data.TimestampAfter,
 		data.IniCursorAfter,
 		data.LogVouchersIds,
@@ -91,8 +74,12 @@ func (c *SynchronizerRepository) Create(
 		data.IniInputCursorAfter,
 		data.EndInputCursorAfter,
 		data.IniReportCursorAfter,
-		data.EndReportCursorAfter,
-	)
+		data.EndReportCursorAfter)
+
+	if err != nil {
+		return nil, err
+	}
+
 	return data, nil
 }
 
