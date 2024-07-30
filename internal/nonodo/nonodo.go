@@ -159,10 +159,16 @@ func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 	}
 
 	if opts.RpcUrl == "" && !opts.DisableDevnet {
+		anvilLocation, err := handleAnvilInstallation()
+		if err != nil {
+			panic(err)
+		}
+
 		w.Workers = append(w.Workers, devnet.AnvilWorker{
-			Address: opts.AnvilAddress,
-			Port:    opts.AnvilPort,
-			Verbose: opts.AnvilVerbose,
+			Address:  opts.AnvilAddress,
+			Port:     opts.AnvilPort,
+			Verbose:  opts.AnvilVerbose,
+			AnvilCmd: anvilLocation,
 		})
 		opts.RpcUrl = fmt.Sprintf("ws://%s:%v", opts.AnvilAddress, opts.AnvilPort)
 	}
@@ -214,6 +220,23 @@ func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 	return w
 }
 
+func handleAnvilInstallation() (string, error) {
+	// Create Anvil Worker
+	var timeoutAnvil time.Duration = 10 * time.Minute
+	ctx, cancel := context.WithTimeout(context.Background(), timeoutAnvil)
+	defer cancel()
+
+	go func() {
+		<-ctx.Done()
+		if ctx.Err() == context.DeadlineExceeded {
+			slog.Error("Timeout waiting for anvil")
+		}
+	}()
+
+	anvilLocation, err := devnet.CheckAnvilAndInstall(ctx)
+	return anvilLocation, err
+}
+
 // Create the nonodo supervisor.
 func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	var w supervisor.SupervisorWorker
@@ -246,19 +269,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	}))
 
 	if opts.RpcUrl == "" && !opts.DisableDevnet {
-		// Create Anvil Worker
-		var timeoutAnvil time.Duration = 10 * time.Minute
-		ctx, cancel := context.WithTimeout(context.Background(), timeoutAnvil)
-		defer cancel()
-
-		go func() {
-			<-ctx.Done()
-			if ctx.Err() == context.DeadlineExceeded {
-				slog.Error("Timeout waiting for anvil")
-			}
-		}()
-
-		anvilLocation, err := devnet.CheckAnvilAndInstall(ctx)
+		anvilLocation, err := handleAnvilInstallation()
 		if err != nil {
 			panic(err)
 		}
