@@ -36,7 +36,9 @@ func (c *NoticeRepository) Create(
 		payload,
 		input_index,
 		output_index) VALUES ($1, $2, $3)`
-	_, err := c.Db.ExecContext(ctx,
+
+	exec := DBExecutor{&c.Db}
+	_, err := exec.ExecContext(ctx,
 		insertSql,
 		data.Payload,
 		data.InputIndex,
@@ -55,7 +57,8 @@ func (c *NoticeRepository) Update(
 	sqlUpdate := `UPDATE notices SET 
 		payload = $1
 		WHERE input_index = $2 and output_index = $3`
-	_, err := c.Db.ExecContext(
+	exec := DBExecutor{&c.Db}
+	_, err := exec.ExecContext(
 		ctx,
 		sqlUpdate,
 		data.Payload,

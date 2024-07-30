@@ -38,7 +38,8 @@ func (r *ReportRepository) Create(ctx context.Context, report cModel.Report) (cM
 		payload,
 		input_index) VALUES ($1, $2, $3)`
 
-	_, err := r.Db.ExecContext(
+	exec := DBExecutor{r.Db}
+	_, err := exec.ExecContext(
 		ctx,
 		insertSql,
 		report.Index,
@@ -61,7 +62,9 @@ func (r *ReportRepository) Update(ctx context.Context, report cModel.Report) (*c
 	sql := `UPDATE convenience_reports
 		SET payload = $1
 		WHERE input_index = $2 and output_index = $3 `
-	_, err := r.Db.ExecContext(
+
+	exec := DBExecutor{r.Db}
+	_, err := exec.ExecContext(
 		ctx,
 		sql,
 		common.Bytes2Hex(report.Payload),
