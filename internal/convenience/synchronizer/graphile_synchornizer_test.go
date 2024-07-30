@@ -55,11 +55,6 @@ func (m *MockSynchronizerRepository) GetDB() *sql.DB {
 	return args.Get(0).(*sql.DB)
 }
 
-func (m *MockSynchronizerRepository) BeginTxx(ctx context.Context) (*sqlx.Tx, error) {
-	args := m.Called(ctx)
-	return args.Get(0).(*sqlx.Tx), args.Error(1)
-}
-
 func (m *MockSynchronizerRepository) CreateTables() error {
 	args := m.Called()
 	return args.Error(0)
