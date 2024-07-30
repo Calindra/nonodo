@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"log/slog"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -12,11 +13,13 @@ type DBExecutor struct {
 }
 
 func (c *DBExecutor) ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error) {
-	tx, err := GetTransaction(ctx)
+	tx, isTxEnable := GetTransaction(ctx)
 
-	if err != nil {
+	if !isTxEnable {
+		slog.Debug("Using ExecContext without transaction.")
 		return c.db.ExecContext(ctx, query, args...)
 	} else {
+		slog.Debug("Using ExecContext with transaction.")
 		return tx.ExecContext(ctx, query, args...)
 	}
 }

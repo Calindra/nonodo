@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -21,10 +22,11 @@ func StartTransaction(ctx context.Context, db *sqlx.DB) (context.Context, error)
 	return ctx, nil
 }
 
-func GetTransaction(ctx context.Context) (*sqlx.Tx, error) {
+func GetTransaction(ctx context.Context) (*sqlx.Tx, bool) {
 	tx, ok := ctx.Value(transactionKey).(*sqlx.Tx)
 	if !ok {
-		return nil, fmt.Errorf("no transaction found in context")
+		slog.Error("no transaction found in context")
+		return nil, false
 	}
-	return tx, nil
+	return tx, true
 }

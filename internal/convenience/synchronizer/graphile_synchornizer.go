@@ -75,9 +75,9 @@ func (x GraphileSynchronizer) handleWithDBTransaction(outputResp OutputResponse)
 		return err
 	}
 
-	tx, err := repository.GetTransaction(ctxWithTx)
+	tx, isTxEnable := repository.GetTransaction(ctxWithTx)
 
-	if err != nil {
+	if !isTxEnable {
 		slog.Error("recovery transaction fail", "err", err)
 		return err
 	}
