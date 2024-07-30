@@ -11,8 +11,7 @@ import (
 )
 
 type GraphileSynchronizer struct {
-	Decoder model.DecoderInterface
-	// SynchronizerRepository *repository.SynchronizerRepository
+	Decoder                model.DecoderInterface
 	SynchronizerRepository model.RepoSynchronizer
 	GraphileFetcher        *GraphileFetcher
 }

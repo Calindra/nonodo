@@ -7,19 +7,16 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-// Defina um tipo de chave para o contexto
 type contextKey string
 
-// Crie uma constante para a chave da transação
 const transactionKey contextKey = "transaction"
 
 func StartTransaction(ctx context.Context, db *sqlx.DB) (context.Context, error) {
-	tx, err := db.Beginx() // Inicia uma nova transação
+	tx, err := db.Beginx()
 	if err != nil {
 		return ctx, fmt.Errorf("failed to begin transaction: %w", err)
 	}
 
-	// Adiciona a transação ao contexto
 	ctx = context.WithValue(ctx, transactionKey, tx)
 	return ctx, nil
 }
