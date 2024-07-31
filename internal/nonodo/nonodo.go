@@ -194,6 +194,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	}
 
 	if opts.RpcUrl == "" && !opts.DisableDevnet {
+		// Create Anvil Worker
 		var timeoutAnvil time.Duration = 10 * time.Minute
 		ctx, cancel := context.WithTimeout(context.Background(), timeoutAnvil)
 		defer cancel()
@@ -206,7 +207,6 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		}()
 
 		anvilLocation, err := devnet.CheckAnvilAndInstall(ctx)
-
 		if err != nil {
 			panic(err)
 		}

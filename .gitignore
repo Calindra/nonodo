@@ -2,5 +2,6 @@ TODO
 
 .DS_Store
 /nonodo
+/nonodo.exe
 *.sqlite3
 .idea/
