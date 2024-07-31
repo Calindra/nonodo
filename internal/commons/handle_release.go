@@ -230,6 +230,7 @@ func (a *AnvilRelease) GetLatestReleaseCompatible(ctx context.Context) (*Release
 	if err != nil {
 		return nil, err
 	}
+	slog.Debug("PlatformCompatible", "p", p)
 
 	config, err := a.TryLoadConfig()
 	if err != nil {
@@ -252,9 +253,11 @@ func (a *AnvilRelease) GetLatestReleaseCompatible(ctx context.Context) (*Release
 	for _, a := range assets {
 		if a.Filename == p {
 			target = &a
+			break
 		}
 	}
 
+	slog.Debug("PlatformCompatible", "target", target)
 	if target != nil {
 		c := NewAnvilConfig(*target)
 		err := a.SaveConfigOnDefaultLocation(c)
