@@ -72,14 +72,14 @@ func (x GraphileSynchronizer) handleWithDBTransaction(outputResp OutputResponse)
 	ctxWithTx, err := repository.StartTransaction(ctx, db)
 
 	if err != nil {
-		slog.Error("start db transaction fail", "err", err)
+		slog.Error("Start db transaction fail.", "err", err)
 		return err
 	}
 
 	tx, isTxEnable := repository.GetTransaction(ctxWithTx)
 
 	if !isTxEnable {
-		slog.Error("recovery transaction fail", "err", err)
+		slog.Error("Recovery transaction fail.", "err", err)
 		return err
 	}
 
@@ -89,7 +89,7 @@ func (x GraphileSynchronizer) handleWithDBTransaction(outputResp OutputResponse)
 			if rollbackErr != sql.ErrTxDone {
 				slog.Error("Transaction already completed, rollback not necessary.", "err", err)
 			} else {
-				slog.Error("Error attempting rollback.", "err", err)
+				slog.Error("Error attempting transaction rollback.", "err", err)
 			}
 		}
 	}()
@@ -103,7 +103,7 @@ func (x GraphileSynchronizer) handleWithDBTransaction(outputResp OutputResponse)
 
 	err = tx.Commit()
 	if err != nil {
-		slog.Error("commit fail", "err", err)
+		slog.Error("Error attempting transaction commit.", "err", err)
 		return err
 	}
 
