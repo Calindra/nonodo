@@ -38,6 +38,7 @@ GraphQL running at http://localhost:HTTP_PORT/graphql
 Inspect running at http://localhost:HTTP_PORT/inspect/
 Press Ctrl+C to stop the node
 `
+
 var cmd = &cobra.Command{
 	Use:     "nonodo [flags] [-- application [args]...]",
 	Short:   "nonodo is a development node for Cartesi Rollups",
@@ -124,7 +125,7 @@ func CheckIfValidSize(size uint64) error {
 }
 
 func addCelestiaSubcommands(celestiaCmd *cobra.Command) {
-	var celestia = &CelestiaOpts{}
+	celestia := &CelestiaOpts{}
 
 	// Send file
 	celestiaSendFileUrlCmd := &cobra.Command{
@@ -138,7 +139,6 @@ func addCelestiaSubcommands(celestiaCmd *cobra.Command) {
 
 			// Download file
 			content, err := downloadFile(ctx, celestia.PayloadUrl)
-
 			if err != nil {
 				return err
 			}
@@ -158,7 +158,6 @@ func addCelestiaSubcommands(celestiaCmd *cobra.Command) {
 			}
 
 			height, start, end, err := dataavailability.SubmitBlob(ctx, url, token, celestia.Namespace, []byte(celestia.Payload))
-
 			if err != nil {
 				slog.Error("Submit", "error", err)
 				return err
@@ -200,7 +199,6 @@ func addCelestiaSubcommands(celestiaCmd *cobra.Command) {
 			}
 
 			height, start, end, err := dataavailability.SubmitBlob(ctx, url, token, celestia.Namespace, []byte(celestia.Payload))
-
 			if err != nil {
 				slog.Error("Submit", "error", err)
 				return err
@@ -231,7 +229,6 @@ func addCelestiaSubcommands(celestiaCmd *cobra.Command) {
 			}
 
 			height, start, end, err := dataavailability.SubmitBlob(ctx, url, token, celestia.Namespace, []byte(celestia.Payload))
-
 			if err != nil {
 				slog.Error("Submit", "error", err)
 				return err
@@ -258,7 +255,6 @@ func addCelestiaSubcommands(celestiaCmd *cobra.Command) {
 			shareProof, dataBlock, err := dataavailability.GetShareProof(
 				ctx, celestia.Height, celestia.Start, celestia.End,
 			)
-
 			if err != nil {
 				return err
 			}
@@ -274,7 +270,7 @@ func addCelestiaSubcommands(celestiaCmd *cobra.Command) {
 	markFlagRequired(celestiaCheckProofCmd, "height", "start", "end")
 
 	// Send to relay
-	var celestiaRelaySend = &cobra.Command{
+	celestiaRelaySend := &cobra.Command{
 		Use:   "relay-send",
 		Short: "Send a payload to Celestia Relay",
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -282,7 +278,6 @@ func addCelestiaSubcommands(celestiaCmd *cobra.Command) {
 
 			ctx := cmd.Context()
 			err := dataavailability.CallCelestiaRelay(ctx, celestia.Height, celestia.Start, celestia.End, APP_ADDRESS, []byte{}, celestia.RpcUrl, celestia.chainId)
-
 			if err != nil {
 				return err
 			}
@@ -290,7 +285,8 @@ func addCelestiaSubcommands(celestiaCmd *cobra.Command) {
 			slog.Info("Payload sent to Celestia Relay")
 
 			return nil
-		}}
+		},
+	}
 	const goTestnetChainId = 31337
 	celestiaRelaySend.Flags().Uint64Var(&celestia.Height, "height", 0, "Height of the block")
 	celestiaRelaySend.Flags().Uint64Var(&celestia.Start, "start", 0, "Start of the proof")
@@ -306,7 +302,6 @@ func addCelestiaSubcommands(celestiaCmd *cobra.Command) {
 func downloadFile(ctx context.Context, url string) ([]byte, error) {
 	slog.Info("Download file", "url", url)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
-
 	if err != nil {
 		slog.Error("Create request", "error", err)
 		return nil, err
@@ -314,7 +309,6 @@ func downloadFile(ctx context.Context, url string) ([]byte, error) {
 
 	client := http.DefaultClient
 	resp, err := client.Do(req)
-
 	if err != nil {
 		slog.Error("Get file", "error", err)
 		return nil, err
@@ -344,7 +338,6 @@ func readFile(_ context.Context, path string) ([]byte, error) {
 	size := stat.Size()
 	content := make([]byte, size)
 	_, err = file.Read(content)
-
 	if err != nil {
 		slog.Error("Read file", "error", err)
 		return nil, err
@@ -500,7 +493,6 @@ func run(cmd *cobra.Command, args []string) {
 		err := nonodo.NewSupervisor(opts).Start(ctx, ready)
 		cobra.CheckErr(err)
 	}
-
 }
 
 func main() {

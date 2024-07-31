@@ -31,7 +31,7 @@ docker build -t postgraphile-custom ./postgraphile/
 docker run -d --network mynetwork -p 5000:5000 --name postgraphile-custom postgraphile-custom
 ```
 
-http://localhost:5000/graphiql
+[http://localhost:5000/graphiql](http://localhost:5000/graphiql)
 
 ## Build 
 
@@ -42,11 +42,11 @@ go build
 
 Run the nonodo with HL GraphQL flag enabled
 
-```
+```shell
 ./nonodo --high-level-graphql --enable-debug --node-version v2
 ```
 
-```
+```shell
 export POSTGRES_HOST=127.0.0.1
 export POSTGRES_PORT=5432
 export POSTGRES_DB=mydatabase
@@ -57,11 +57,17 @@ export POSTGRES_PASSWORD=mypassword
 
 Disable sync
 
-```
+```shell
 export POSTGRES_HOST=127.0.0.1
 export POSTGRES_PORT=5432
 export POSTGRES_DB=mydatabase
 export POSTGRES_USER=myuser
 export POSTGRES_PASSWORD=mypassword
 ./nonodo --http-address=0.0.0.0 --high-level-graphql --enable-debug --node-version v2 --db-implementation postgres --graphile-disable-sync
+```
+
+For test:
+
+```shell
+docker compose -f docker-compose.dev.yml up
 ```
