@@ -2,6 +2,7 @@ package synchronizer
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log/slog"
 	"time"
@@ -81,7 +82,18 @@ func (x GraphileSynchronizer) handleWithDBTransaction(outputResp OutputResponse)
 		slog.Error("recovery transaction fail", "err", err)
 		return err
 	}
-	defer tx.Rollback()
+
+	defer func() {
+		rollbackErr := tx.Rollback()
+		if rollbackErr != nil {
+			if rollbackErr != sql.ErrTxDone {
+				slog.Error("Transaction already completed, rollback not necessary.", "err", err)
+			} else {
+				slog.Error("Error attempting rollback.", "err", err)
+			}
+		}
+	}()
+
 	err = x.handleGraphileResponse(ctxWithTx, outputResp)
 
 	if err != nil {
@@ -94,6 +106,7 @@ func (x GraphileSynchronizer) handleWithDBTransaction(outputResp OutputResponse)
 		slog.Error("commit fail", "err", err)
 		return err
 	}
+
 	return nil
 }
 
