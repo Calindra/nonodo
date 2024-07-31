@@ -22,7 +22,8 @@ func (r *ReportRepository) CreateTables() error {
 	schema := `CREATE TABLE IF NOT EXISTS convenience_reports (
 		output_index	integer,
 		payload 		text,
-		input_index 	integer);`
+		input_index 	integer,
+		PRIMARY KEY (input_index, output_index));`
 	_, err := r.Db.Exec(schema)
 	if err == nil {
 		slog.Debug("Reports table created")
