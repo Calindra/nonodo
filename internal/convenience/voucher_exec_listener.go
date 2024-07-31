@@ -3,9 +3,9 @@ package convenience
 import (
 	"context"
 	"fmt"
-	"log"
 	"log/slog"
 	"math/big"
+	"time"
 
 	"github.com/calindra/nonodo/internal/contracts"
 	"github.com/calindra/nonodo/internal/convenience/services"
@@ -80,22 +80,35 @@ func (x VoucherExecListener) String() string {
 }
 
 func (x VoucherExecListener) Start(ctx context.Context, ready chan<- struct{}) error {
+	var delay time.Duration = 5 * time.Second
 	slog.Info("Connecting to", "provider", x.Provider)
-	client, err := ethclient.DialContext(ctx, x.Provider)
-	if err != nil {
-		return fmt.Errorf("execlistener: dial: %w", err)
+
+	var client *ethclient.Client
+	var err error
+
+	for {
+		ctxDial, cancel := context.WithCancel(ctx)
+		defer cancel()
+
+		client, err = ethclient.DialContext(ctxDial, x.Provider)
+		if err == nil {
+			break
+		}
+
+		slog.Error("execlistener: dial: ", "error", err)
+		time.Sleep(delay)
 	}
 	ready <- struct{}{}
 	return x.WatchExecutions(ctx, client)
 }
 
-func (x *VoucherExecListener) ReadPastExecutions(client *ethclient.Client, contractABI abi.ABI, query ethereum.FilterQuery) error {
+func (x *VoucherExecListener) ReadPastExecutions(ctx context.Context, client *ethclient.Client, contractABI abi.ABI, query ethereum.FilterQuery) error {
 	slog.Debug("ReadPastExecutions", "FromBlock", x.FromBlock)
 
 	// Retrieve logs for the specified block range
-	oldLogs, err := client.FilterLogs(context.Background(), query)
+	oldLogs, err := client.FilterLogs(ctx, query)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	// Process old logs
 	for _, vLog := range oldLogs {
@@ -110,15 +123,11 @@ func (x *VoucherExecListener) ReadPastExecutions(client *ethclient.Client, contr
 }
 
 func (x *VoucherExecListener) WatchExecutions(ctx context.Context, client *ethclient.Client) error {
-
 	// ABI of your contract
 	abi, err := contracts.ApplicationMetaData.GetAbi()
-
-	if abi == nil {
-		return fmt.Errorf("error parsing abi")
-	}
 	if err != nil {
 		slog.Error(err.Error())
+		return err
 	}
 	contractABI := *abi
 
@@ -129,35 +138,68 @@ func (x *VoucherExecListener) WatchExecutions(ctx context.Context, client *ethcl
 		Topics:    [][]common.Hash{{contractABI.Events[x.EventName].ID}},
 	}
 
-	err = x.ReadPastExecutions(client, contractABI, query)
-	if err != nil {
-		return err
-	}
+	var reconnectDelay time.Duration = 5 * time.Second
 
-	// subscribe to new logs
-	logs := make(chan types.Log)
-	sub, err := client.SubscribeFilterLogs(context.Background(), query, logs)
-	if err != nil {
-		log.Fatal(err)
-		panic("unexpected subscribe error")
-	}
-
-	slog.Info("Listening for execution events...")
-
-	// Process events
 	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case err := <-sub.Err():
-			log.Fatal(err)
-			return err
-		case vLog := <-logs:
-			err := x.HandleLog(vLog, client, contractABI)
-			if err != nil {
-				slog.Error(err.Error())
-				continue
+		ctxPastInputs, cancel := context.WithCancel(ctx)
+		defer cancel()
+
+		err = x.ReadPastExecutions(ctxPastInputs, client, contractABI, query)
+		if err != nil {
+			slog.Error("unexpected readPastExecutions error", "error", err)
+			time.Sleep(reconnectDelay)
+			continue
+		}
+
+		ctxEth, cancel := context.WithCancel(ctx)
+		defer cancel()
+
+		// subscribe to new logs
+		logs := make(chan types.Log)
+		sub, err := client.SubscribeFilterLogs(ctxEth, query, logs)
+		if err != nil {
+			slog.Error("unexpected subscribe error", "error", err)
+			time.Sleep(reconnectDelay)
+			continue
+		}
+
+		slog.Info("Listening for execution events...")
+
+		errChannel := make(chan error, 1)
+
+		go func() {
+			// Process events
+			for {
+				select {
+				case <-ctxEth.Done():
+					errChannel <- ctxEth.Err()
+					return
+				case err := <-sub.Err():
+					errChannel <- err
+					return
+				case vLog := <-logs:
+					if err := x.HandleLog(vLog, client, contractABI); err != nil {
+						slog.Error(err.Error())
+						// errChannel <- err
+						continue
+					}
+				}
 			}
+		}()
+
+		err = <-errChannel
+		sub.Unsubscribe()
+
+		if ctxEth.Err() != nil {
+			return ctxEth.Err()
+		}
+
+		if err != nil {
+			slog.Error("VoucherExecListener", "error", err)
+			slog.Info("VoucherExecListener reconnecting", "reconnectDelay", reconnectDelay)
+			time.Sleep(reconnectDelay)
+		} else {
+			return nil
 		}
 	}
 }
