@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/calindra/nonodo/internal/convenience/model"
@@ -112,19 +113,25 @@ func (x GraphileSynchronizer) handleWithDBTransaction(outputResp OutputResponse)
 
 func (x GraphileSynchronizer) handleGraphileResponse(ctx context.Context, outputResp OutputResponse) error {
 	// Handle response data
+	voucherIds := []string{}
 	var initCursorAfter string
 	var initInputCursorAfter string
 	var initReportCursorAfter string
 
 	for _, output := range outputResp.Data.Outputs.Edges {
+		outputIndex := output.Node.Index
+		inputIndex := output.Node.InputIndex
 
 		processOutputData := model.ProcessOutputData{
-			OutputIndex: uint64(output.Node.Index),
-			InputIndex:  uint64(output.Node.InputIndex),
+			OutputIndex: uint64(outputIndex),
+			InputIndex:  uint64(inputIndex),
 			Payload:     output.Node.Blob[2:],
 			Destination: output.Node.Blob,
 		}
-
+		voucherIds = append(
+			voucherIds,
+			fmt.Sprintf("%d:%d", inputIndex, outputIndex),
+		)
 		err := x.Decoder.HandleOutputV2(ctx, processOutputData)
 		if err != nil {
 			slog.Error("Failed to handle output: ", "err", err)
@@ -189,7 +196,7 @@ func (x GraphileSynchronizer) handleGraphileResponse(ctx context.Context, output
 		TimestampAfter:       uint64(time.Now().UnixMilli()),
 		IniCursorAfter:       initCursorAfter,
 		EndCursorAfter:       x.GraphileFetcher.CursorAfter,
-		LogVouchersIds:       "",
+		LogVouchersIds:       strings.Join(voucherIds, ";"),
 		IniInputCursorAfter:  initInputCursorAfter,
 		EndInputCursorAfter:  x.GraphileFetcher.CursorInputAfter,
 		IniReportCursorAfter: initReportCursorAfter,
