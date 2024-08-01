@@ -145,7 +145,6 @@ func (x GraphileSynchronizer) handleGraphileResponse(ctx context.Context, output
 
 	if hasMoreOutputs {
 		initCursorAfter = x.GraphileFetcher.CursorAfter
-		x.GraphileFetcher.CursorAfter = outputResp.Data.Outputs.PageInfo.EndCursor
 	}
 
 	for _, input := range outputResp.Data.Inputs.Edges {
@@ -185,14 +184,12 @@ func (x GraphileSynchronizer) handleGraphileResponse(ctx context.Context, output
 	hasMoreReports := len(outputResp.Data.Reports.PageInfo.EndCursor) > 0
 	if hasMoreReports {
 		initReportCursorAfter = x.GraphileFetcher.CursorReportAfter
-		x.GraphileFetcher.CursorReportAfter = outputResp.Data.Reports.PageInfo.EndCursor
 	}
 
 	hasMoreInputs := len(outputResp.Data.Inputs.PageInfo.EndCursor) > 0
 
 	if hasMoreInputs {
 		initInputCursorAfter = x.GraphileFetcher.CursorInputAfter
-		x.GraphileFetcher.CursorInputAfter = outputResp.Data.Inputs.PageInfo.EndCursor
 	}
 	synchronizeFetch := &model.SynchronizerFetch{
 		TimestampAfter:       uint64(time.Now().UnixMilli()),
@@ -213,6 +210,10 @@ func (x GraphileSynchronizer) handleGraphileResponse(ctx context.Context, output
 			return fmt.Errorf("error creating synchronize repository: %w", err)
 		}
 	}
+
+	x.GraphileFetcher.CursorAfter = outputResp.Data.Outputs.PageInfo.EndCursor
+	x.GraphileFetcher.CursorReportAfter = outputResp.Data.Reports.PageInfo.EndCursor
+	x.GraphileFetcher.CursorInputAfter = outputResp.Data.Inputs.PageInfo.EndCursor
 	return nil
 }
 
