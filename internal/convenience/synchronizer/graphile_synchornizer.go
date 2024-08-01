@@ -87,9 +87,9 @@ func (x GraphileSynchronizer) handleWithDBTransaction(outputResp OutputResponse)
 		rollbackErr := tx.Rollback()
 		if rollbackErr != nil {
 			if rollbackErr != sql.ErrTxDone {
-				slog.Error("Transaction already completed, rollback not necessary.", "err", err)
+				slog.Error("Error attempting transaction rollback.", "err", rollbackErr)
 			} else {
-				slog.Error("Error attempting transaction rollback.", "err", err)
+				slog.Warn("Transaction already completed, rollback not necessary.", "err", rollbackErr)
 			}
 		}
 	}()
