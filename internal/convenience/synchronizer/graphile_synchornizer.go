@@ -129,16 +129,16 @@ func (x GraphileSynchronizer) handleGraphileResponse(ctx context.Context, output
 			Destination: output.Node.Blob,
 		}
 
-		//O append talvez deva acontecer apenas se não houver erro
-		voucherIds = append(
-			voucherIds,
-			fmt.Sprintf("%d:%d", inputIndex, outputIndex),
-		)
 		err := x.Decoder.HandleOutputV2(ctx, processOutputData)
 		if err != nil {
 			slog.Error("Failed to handle output: ", "err", err)
 			return fmt.Errorf("error handling output: %w", err)
 		}
+
+		voucherIds = append(
+			voucherIds,
+			fmt.Sprintf("%d:%d", inputIndex, outputIndex),
+		)
 	}
 
 	hasMoreOutputs := len(outputResp.Data.Outputs.PageInfo.EndCursor) > 0
