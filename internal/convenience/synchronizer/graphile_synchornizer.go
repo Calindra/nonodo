@@ -128,6 +128,8 @@ func (x GraphileSynchronizer) handleGraphileResponse(ctx context.Context, output
 			Payload:     output.Node.Blob[2:],
 			Destination: output.Node.Blob,
 		}
+
+		//O append talvez deva acontecer apenas se não houver erro
 		voucherIds = append(
 			voucherIds,
 			fmt.Sprintf("%d:%d", inputIndex, outputIndex),

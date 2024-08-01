@@ -325,3 +325,40 @@ func TestRollback_handleWithDBTransaction(t *testing.T) {
 
 	require.Equal(t, expectedRows, count, "The table should be empty.")
 }
+
+func TestRollback_VariableShouldBeConsistentWithDB(t *testing.T) {
+	db := sqlx.MustConnect("sqlite3", ":memory:")
+	defer db.Close()
+
+	decoderMock := &DecoderInterfaceMock{}
+	synchronizer := GraphileSynchronizer{
+		Decoder: decoderMock,
+		SynchronizerRepository: &repository.SynchronizerRepository{
+			Db: *db,
+		},
+		GraphileFetcher: &GraphileFetcher{},
+	}
+
+	err := synchronizer.SynchronizerRepository.CreateTables()
+	if err != nil {
+		panic(err)
+	}
+
+	cursorAfterValueBeforeRB := synchronizer.GraphileFetcher.CursorAfter
+
+	err = errors.New("Handle Output Value")
+
+	decoderMock.On("RetrieveDestination", mock.Anything).Return(common.Address{}, nil)
+	decoderMock.On("HandleOutputV2", mock.Anything, mock.Anything).Return(nil)
+	decoderMock.On("HandleInput", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	decoderMock.On("HandleReport", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(err)
+	outputResponse := getTestOutputResponse()
+
+	err = synchronizer.handleWithDBTransaction(outputResponse)
+	if err != nil {
+		fmt.Println("ERRO handleWithDBTransaction ")
+	}
+	cursorAfterValueAfterRB := synchronizer.GraphileFetcher.CursorAfter
+
+	require.Equal(t, cursorAfterValueBeforeRB, cursorAfterValueAfterRB, "The variable data dont rolled back.")
+}
