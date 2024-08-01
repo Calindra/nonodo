@@ -360,5 +360,5 @@ func TestRollback_VariableShouldBeConsistentWithDB(t *testing.T) {
 	}
 	cursorAfterValueAfterRB := synchronizer.GraphileFetcher.CursorAfter
 
-	require.Equal(t, cursorAfterValueBeforeRB, cursorAfterValueAfterRB, "The variable data dont rolled back.")
+	require.Equal(t, cursorAfterValueBeforeRB, cursorAfterValueAfterRB, "The variable should not change if a rollback occurs.")
 }
