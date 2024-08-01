@@ -2,15 +2,19 @@ package synchronizer
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 )
 
 type DecoderInterfaceMock struct {
@@ -40,6 +44,35 @@ func (m *DecoderInterfaceMock) HandleInput(ctx context.Context, input model.Inpu
 func (m *DecoderInterfaceMock) HandleReport(ctx context.Context, index int, outputIndex int, payload string) error {
 	args := m.Called(ctx, index, outputIndex, payload)
 	return args.Error(0)
+}
+
+type MockSynchronizerRepository struct {
+	mock.Mock
+}
+
+func (m *MockSynchronizerRepository) GetDB() *sql.DB {
+	args := m.Called()
+	return args.Get(0).(*sql.DB)
+}
+
+func (m *MockSynchronizerRepository) CreateTables() error {
+	args := m.Called()
+	return args.Error(0)
+}
+
+func (m *MockSynchronizerRepository) Create(ctx context.Context, data *model.SynchronizerFetch) (*model.SynchronizerFetch, error) {
+	args := m.Called(ctx, data)
+	return args.Get(0).(*model.SynchronizerFetch), args.Error(1)
+}
+
+func (m *MockSynchronizerRepository) Count(ctx context.Context) (uint64, error) {
+	args := m.Called(ctx)
+	return args.Get(0).(uint64), args.Error(1)
+}
+
+func (m *MockSynchronizerRepository) GetLastFetched(ctx context.Context) (*model.SynchronizerFetch, error) {
+	args := m.Called(ctx)
+	return args.Get(0).(*model.SynchronizerFetch), args.Error(1)
 }
 
 func getTestOutputResponse() OutputResponse {
@@ -201,4 +234,94 @@ func TestHandleInput_Failure(t *testing.T) {
 	assert.Error(t, err)
 	assert.EqualError(t, err, "error handling input: Handle Input Failure")
 
+}
+
+func TestCommit_handleWithDBTransaction(t *testing.T) {
+	db := sqlx.MustConnect("sqlite3", ":memory:")
+	defer db.Close()
+
+	decoderMock := &DecoderInterfaceMock{}
+	synchronizer := GraphileSynchronizer{
+		Decoder: decoderMock,
+		SynchronizerRepository: &repository.SynchronizerRepository{
+			Db: *db,
+		},
+		GraphileFetcher: &GraphileFetcher{},
+	}
+
+	err := synchronizer.SynchronizerRepository.CreateTables()
+	if err != nil {
+		panic(err)
+	}
+
+	var count int
+	expectedRows := 0
+	err = synchronizer.SynchronizerRepository.GetDB().Get(&count, "SELECT COUNT(*) FROM synchronizer_fetch")
+	if err != nil {
+		t.Fatalf("Error checking the number of rows in the 'synchronizer_fetch' table: %v", err)
+	}
+
+	require.Equal(t, 0, count, "The table should be empty.")
+
+	decoderMock.On("RetrieveDestination", mock.Anything).Return(common.Address{}, nil)
+	decoderMock.On("HandleOutputV2", mock.Anything, mock.Anything).Return(nil)
+	decoderMock.On("HandleInput", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	decoderMock.On("HandleReport", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	outputResponse := getTestOutputResponse()
+
+	err = synchronizer.handleWithDBTransaction(outputResponse)
+	if err != nil {
+		fmt.Println("ERRO handleWithDBTransaction ")
+	}
+
+	var otherCount int
+	expectedRows = 1
+	err = synchronizer.SynchronizerRepository.GetDB().Get(&otherCount, "SELECT COUNT(*) FROM synchronizer_fetch")
+	if err != nil {
+		t.Fatalf("Error checking the number of rows in the 'synchronizer_fetch' table: %v", err)
+	}
+
+	require.Equal(t, expectedRows, otherCount, "The table should have one row.")
+
+}
+
+func TestRollback_handleWithDBTransaction(t *testing.T) {
+	db := sqlx.MustConnect("sqlite3", ":memory:")
+	defer db.Close()
+
+	decoderMock := &DecoderInterfaceMock{}
+	synchronizer := GraphileSynchronizer{
+		Decoder: decoderMock,
+		SynchronizerRepository: &repository.SynchronizerRepository{
+			Db: *db,
+		},
+		GraphileFetcher: &GraphileFetcher{},
+	}
+
+	err := synchronizer.SynchronizerRepository.CreateTables()
+	if err != nil {
+		panic(err)
+	}
+
+	err = errors.New("Handle Output Value")
+
+	decoderMock.On("RetrieveDestination", mock.Anything).Return(common.Address{}, nil)
+	decoderMock.On("HandleOutputV2", mock.Anything, mock.Anything).Return(nil)
+	decoderMock.On("HandleInput", mock.Anything, mock.Anything, mock.Anything).Return(nil)
+	decoderMock.On("HandleReport", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(err)
+	outputResponse := getTestOutputResponse()
+
+	err = synchronizer.handleWithDBTransaction(outputResponse)
+	if err != nil {
+		fmt.Println("ERRO handleWithDBTransaction ")
+	}
+
+	var count int
+	expectedRows := 0
+	err = synchronizer.SynchronizerRepository.GetDB().Get(&count, "SELECT COUNT(*) FROM synchronizer_fetch")
+	if err != nil {
+		t.Fatalf("Error checking the number of rows in the 'synchronizer_fetch' table: %v", err)
+	}
+
+	require.Equal(t, expectedRows, count, "The table should be empty.")
 }

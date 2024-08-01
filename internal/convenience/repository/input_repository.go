@@ -83,7 +83,9 @@ func (r *InputRepository) rawCreate(ctx context.Context, input model.AdvanceInpu
 		$7,
 		$8
 	);`
-	_, err := r.Db.ExecContext(
+
+	exec := DBExecutor{&r.Db}
+	_, err := exec.ExecContext(
 		ctx,
 		insertSql,
 		input.Index,
@@ -106,7 +108,9 @@ func (r *InputRepository) Update(ctx context.Context, input model.AdvanceInput) 
 	sql := `UPDATE convenience_inputs
 		SET status = $1, exception = $2
 		WHERE input_index = $3`
-	_, err := r.Db.ExecContext(
+
+	exec := DBExecutor{&r.Db}
+	_, err := exec.ExecContext(
 		ctx,
 		sql,
 		input.Status,

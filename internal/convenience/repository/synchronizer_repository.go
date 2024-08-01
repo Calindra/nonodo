@@ -15,6 +15,10 @@ type SynchronizerRepository struct {
 	Db sqlx.DB
 }
 
+func (c *SynchronizerRepository) GetDB() *sqlx.DB {
+	return &c.Db
+}
+
 func (c *SynchronizerRepository) CreateTables() error {
 	idType := "INTEGER"
 
@@ -36,6 +40,7 @@ func (c *SynchronizerRepository) CreateTables() error {
 
 	// execute a query on the server
 	_, err := c.Db.Exec(schema)
+
 	return err
 }
 func (c *SynchronizerRepository) Create(
@@ -51,8 +56,9 @@ func (c *SynchronizerRepository) Create(
 		ini_report_cursor_after,
 		end_report_cursor_after
 		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
-	c.Db.MustExec(
-		insertSql,
+
+	exec := DBExecutor{&c.Db}
+	_, err := exec.ExecContext(ctx, insertSql,
 		data.TimestampAfter,
 		data.IniCursorAfter,
 		data.LogVouchersIds,
@@ -60,8 +66,12 @@ func (c *SynchronizerRepository) Create(
 		data.IniInputCursorAfter,
 		data.EndInputCursorAfter,
 		data.IniReportCursorAfter,
-		data.EndReportCursorAfter,
-	)
+		data.EndReportCursorAfter)
+
+	if err != nil {
+		return nil, err
+	}
+
 	return data, nil
 }
 

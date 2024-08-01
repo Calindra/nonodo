@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/jmoiron/sqlx"
 )
 
 const EXECUTED = "Executed"
@@ -159,4 +160,12 @@ type ProcessOutputData struct {
 	InputIndex  uint64 `json:"inputIndex"`
 	Payload     string `json:"payload"`
 	Destination string `json:"destination"`
+}
+
+type RepoSynchronizer interface {
+	GetDB() *sqlx.DB
+	CreateTables() error
+	Create(ctx context.Context, data *SynchronizerFetch) (*SynchronizerFetch, error)
+	Count(ctx context.Context) (uint64, error)
+	GetLastFetched(ctx context.Context) (*SynchronizerFetch, error)
 }

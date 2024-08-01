@@ -2,8 +2,10 @@ package synchronizer
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/calindra/nonodo/internal/convenience/model"
@@ -12,7 +14,7 @@ import (
 
 type GraphileSynchronizer struct {
 	Decoder                model.DecoderInterface
-	SynchronizerRepository *repository.SynchronizerRepository
+	SynchronizerRepository model.RepoSynchronizer
 	GraphileFetcher        *GraphileFetcher
 }
 
@@ -45,7 +47,7 @@ func (x GraphileSynchronizer) Start(ctx context.Context, ready chan<- struct{}) 
 				"error", err.Error(),
 			)
 		} else {
-			err := x.handleGraphileResponse(ctx, *voucherResp)
+			err := x.handleWithDBTransaction(*voucherResp)
 			if err != nil {
 				slog.Error("Failed to handle graphile response.", "err", err)
 				return fmt.Errorf("error handling graphile response: %w", err)
@@ -63,21 +65,73 @@ func (x GraphileSynchronizer) Start(ctx context.Context, ready chan<- struct{}) 
 
 }
 
+func (x GraphileSynchronizer) handleWithDBTransaction(outputResp OutputResponse) error {
+	const timeoutDuration = 5 * time.Second
+	ctx, cancel := context.WithTimeout(context.Background(), timeoutDuration)
+	defer cancel()
+	db := x.SynchronizerRepository.GetDB()
+	ctxWithTx, err := repository.StartTransaction(ctx, db)
+
+	if err != nil {
+		slog.Error("Start db transaction fail.", "err", err)
+		return err
+	}
+
+	tx, isTxEnable := repository.GetTransaction(ctxWithTx)
+
+	if !isTxEnable {
+		slog.Error("Recovery transaction fail.", "err", err)
+		return err
+	}
+
+	defer func() {
+		rollbackErr := tx.Rollback()
+		if rollbackErr != nil {
+			if rollbackErr != sql.ErrTxDone {
+				slog.Error("Error attempting transaction rollback.", "err", rollbackErr)
+			} else {
+				slog.Warn("Transaction already completed, rollback not necessary.", "err", rollbackErr)
+			}
+		}
+	}()
+
+	err = x.handleGraphileResponse(ctxWithTx, outputResp)
+
+	if err != nil {
+		slog.Error("Failed to handle graphile response.", "err", err)
+		return err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		slog.Error("Error attempting transaction commit.", "err", err)
+		return err
+	}
+
+	return nil
+}
+
 func (x GraphileSynchronizer) handleGraphileResponse(ctx context.Context, outputResp OutputResponse) error {
 	// Handle response data
+	voucherIds := []string{}
 	var initCursorAfter string
 	var initInputCursorAfter string
 	var initReportCursorAfter string
 
 	for _, output := range outputResp.Data.Outputs.Edges {
+		outputIndex := output.Node.Index
+		inputIndex := output.Node.InputIndex
 
 		processOutputData := model.ProcessOutputData{
-			OutputIndex: uint64(output.Node.Index),
-			InputIndex:  uint64(output.Node.InputIndex),
+			OutputIndex: uint64(outputIndex),
+			InputIndex:  uint64(inputIndex),
 			Payload:     output.Node.Blob[2:],
 			Destination: output.Node.Blob,
 		}
-
+		voucherIds = append(
+			voucherIds,
+			fmt.Sprintf("%d:%d", inputIndex, outputIndex),
+		)
 		err := x.Decoder.HandleOutputV2(ctx, processOutputData)
 		if err != nil {
 			slog.Error("Failed to handle output: ", "err", err)
@@ -138,19 +192,20 @@ func (x GraphileSynchronizer) handleGraphileResponse(ctx context.Context, output
 		initInputCursorAfter = x.GraphileFetcher.CursorInputAfter
 		x.GraphileFetcher.CursorInputAfter = outputResp.Data.Inputs.PageInfo.EndCursor
 	}
+	synchronizeFetch := &model.SynchronizerFetch{
+		TimestampAfter:       uint64(time.Now().UnixMilli()),
+		IniCursorAfter:       initCursorAfter,
+		EndCursorAfter:       x.GraphileFetcher.CursorAfter,
+		LogVouchersIds:       strings.Join(voucherIds, ";"),
+		IniInputCursorAfter:  initInputCursorAfter,
+		EndInputCursorAfter:  x.GraphileFetcher.CursorInputAfter,
+		IniReportCursorAfter: initReportCursorAfter,
+		EndReportCursorAfter: x.GraphileFetcher.CursorReportAfter,
+	}
 
 	if hasMoreInputs || hasMoreOutputs || hasMoreReports {
 		_, err := x.SynchronizerRepository.Create(
-			ctx, &model.SynchronizerFetch{
-				TimestampAfter:       uint64(time.Now().UnixMilli()),
-				IniCursorAfter:       initCursorAfter,
-				EndCursorAfter:       x.GraphileFetcher.CursorAfter,
-				LogVouchersIds:       "",
-				IniInputCursorAfter:  initInputCursorAfter,
-				EndInputCursorAfter:  x.GraphileFetcher.CursorInputAfter,
-				IniReportCursorAfter: initReportCursorAfter,
-				EndReportCursorAfter: x.GraphileFetcher.CursorReportAfter,
-			})
+			ctx, synchronizeFetch)
 		if err != nil {
 			slog.Error("Failed to create synchronize repository:", "err", err)
 			return fmt.Errorf("error creating synchronize repository: %w", err)
@@ -161,7 +216,7 @@ func (x GraphileSynchronizer) handleGraphileResponse(ctx context.Context, output
 
 func NewGraphileSynchronizer(
 	decoder model.DecoderInterface,
-	synchronizerRepository *repository.SynchronizerRepository,
+	synchronizerRepository model.RepoSynchronizer,
 	graphileFetcher *GraphileFetcher,
 ) *GraphileSynchronizer {
 	return &GraphileSynchronizer{
