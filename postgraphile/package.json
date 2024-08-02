@@ -4,13 +4,14 @@
   "description": "This is a package to run environment of postgraphile",
   "main": "Dockerfile",
   "scripts": {
-    "start": "postgraphile -c postgres://myuser:mypassword@db/mydatabase --watch --enhance-graphiql --dynamic-json --append-plugins @graphile-contrib/pg-simplify-inflector,postgraphile-plugin-connection-filter -n \"0.0.0.0\"",
+    "start": "postgraphile -c postgres://myuser:mypassword@db/mydatabase --watch --enhance-graphiql --dynamic-json --append-plugins @graphile-contrib/pg-simplify-inflector,postgraphile-plugin-connection-filter -p \"5001\" -n \"0.0.0.0\"",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Calindra",
   "license": "UNLICENSED",
   "dependencies": {
     "@graphile-contrib/pg-simplify-inflector": "^6.1.0",
+    "@graphile/pg-pubsub": "^4.13.0",
     "postgraphile": "^4.13.0",
     "postgraphile-plugin-connection-filter": "^2.3.0"
   },

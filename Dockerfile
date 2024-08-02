@@ -10,7 +10,7 @@ RUN curl -L https://foundry.paradigm.xyz | bash
 
 # Configure o PATH para incluir o binário do Foundry
 ENV PATH="/root/.foundry/bin:${PATH}"
-ENV POSTGRES_HOST=postgres
+ENV POSTGRES_HOST=db
 ENV POSTGRES_PORT=5432
 ENV POSTGRES_DB=mydatabase
 ENV POSTGRES_USER=myuser
@@ -38,4 +38,4 @@ RUN go build -o nonodo
 EXPOSE 8080
 
 # Comando para rodar a aplicação
-CMD ["./nonodo", "--http-address=0.0.0.0", "--high-level-graphql", "--enable-debug", "--node-version", "v2", "--db-implementation", "postgres", "--graphile-address", "postgraphile-custom"]
+CMD ["./nonodo", "--http-address=0.0.0.0", "--high-level-graphql", "--enable-debug", "--node-version", "v2", "--db-implementation", "postgres", "--graphile-address", "postgraphile"]

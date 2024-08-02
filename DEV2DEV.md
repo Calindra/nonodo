@@ -28,7 +28,7 @@ docker build -t postgresteste:latest ./postgres
 docker run -d --network mynetwork -p 5432:5432 --name postgres postgresteste:latest
 
 docker build -t postgraphile-custom ./postgraphile/
-docker run -d --network mynetwork -p 5001:5000 --name postgraphile-custom postgraphile-custom
+docker run -d --network mynetwork -p 5001:5001 --name postgraphile-custom postgraphile-custom
 ```
 
 [http://localhost:5001/graphiql](http://localhost:5001/graphiql)

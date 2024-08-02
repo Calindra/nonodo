@@ -17,23 +17,21 @@ services:
     build:
       context: postgraphile
       dockerfile: Dockerfile
-    # healthcheck:
-    #   test: ["curl", "-f", "http://localhost:5001", "||", "exit 1"]
     restart: on-failure:3
     depends_on:
       db:
         condition: service_healthy
         restart: true
     ports:
-      - "5001:5000"
+      - "5001:5001"
     networks:
       - mynetwork
   app:
     build: .
-    healthcheck:
-      test: ["CMD-SHELL", "curl", "-sSf", "http:/localhost:8080", "||", "exit", "1"]
     ports:
       - "8080:8080"
+    depends_on:
+      - postgraphile
     networks:
       - mynetwork
   # k6:
@@ -51,7 +49,7 @@ services:
   adminer:
     image: adminer
     ports:
-      - "8080:8080"
+      - "5101:8080"
     networks:
       - mynetwork
 
