@@ -16,6 +16,7 @@ import (
 	"github.com/calindra/nonodo/internal/convenience"
 	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/calindra/nonodo/internal/echoapp"
+	"github.com/calindra/nonodo/internal/health"
 	"github.com/calindra/nonodo/internal/inspect"
 	"github.com/calindra/nonodo/internal/model"
 	"github.com/calindra/nonodo/internal/reader"
@@ -211,6 +212,7 @@ func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 		Timeout:      opts.TimeoutInspect,
 	}))
 	inspect.Register(e, model)
+	health.Register(e)
 	reader.Register(e, model, convenienceService, adapter)
 	w.Workers = append(w.Workers, supervisor.HttpWorker{
 		Address: fmt.Sprintf("%v:%v", opts.HttpAddress, opts.HttpPort),
@@ -258,6 +260,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	}))
 	inspect.Register(e, modelInstance)
 	reader.Register(e, modelInstance, convenienceService, adapter)
+	health.Register(e)
 
 	// Start the "internal" http rollup server
 	re := echo.New()
