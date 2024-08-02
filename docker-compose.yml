@@ -1,58 +1,49 @@
-version: '3.8'
-
 services:
   db:
-    image: postgres
-    restart: always
-    environment:
-      POSTGRES_DB: mydatabase
-      POSTGRES_USER: myuser
-      POSTGRES_PASSWORD: mypassword
+    build:
+      context: postgres
+      dockerfile: Dockerfile
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready", "-d", "mydatabase"]
+      interval: 5s
+      timeout: 20s
+      retries: 5
+      start_period: 5s
     ports:
       - "5432:5432"
-    volumes:
-      - ./db/restore.sql:/docker-entrypoint-initdb.d/restore.sql
-      - ./db/data_files/:/docker-entrypoint-initdb.d/data_files
     networks:
       - mynetwork
   postgraphile:
     build:
-      context: .
-      dockerfile: ./db/Dockerfile
-    restart: always
+      context: postgraphile
+      dockerfile: Dockerfile
+    # healthcheck:
+    #   test: ["curl", "-f", "http://localhost:5001", "||", "exit 1"]
+    restart: on-failure:3
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+        restart: true
     ports:
-      - "5000:5000"
+      - "5001:5000"
     networks:
       - mynetwork
-
-  app:
-    build:
-      context: .
-      dockerfile: ./app/Dockerfile 
-    environment:
-      POSTGRES_DB: mydatabase
-      POSTGRES_USER: myuser
-      POSTGRES_PASSWORD: mypassword
-    restart: always
-    depends_on:
-      - postgraphile
+  # k6:
+  #   image: loadimpact/k6
+  #   depends_on:
+  #     - app
+  #   volumes:
+  #     - ./test.js:/test/test.js
+  #   command: run /test/test.js
+  #   deploy:
+  #     replicas: 0 # Don't auto start service on docker up command
+  #   networks:
+  #     - mynetwork
+  #
+  adminer:
+    image: adminer
     ports:
       - "8080:8080"
-    command: ./nonodo
-    networks:
-      - mynetwork
-
-  k6:
-    image: loadimpact/k6
-    depends_on: 
-      - app
-    volumes:
-      - ./test.js:/test/test.js
-    command: run /test/test.js
-    deploy:
-      replicas: 0 # Don't auto start service on docker up command
     networks:
       - mynetwork
 
