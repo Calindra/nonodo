@@ -115,7 +115,7 @@ func NewNonodoOpts() NonodoOpts {
 		TimeoutInspect:      defaultTimeout,
 		TimeoutAdvance:      defaultTimeout,
 		GraphileAddress:     "localhost",
-		GraphilePort:        "5000",
+		GraphilePort:        "5001",
 		GraphileDisableSync: false,
 	}
 }

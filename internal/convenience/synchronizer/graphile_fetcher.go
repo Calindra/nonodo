@@ -131,6 +131,7 @@ const reportQuery = `
 		}
 	}
 `
+
 const reportQueryWithCursor = `
 	reports(first: %d, after: "%s") {
 		edges {
@@ -171,7 +172,7 @@ type GraphileFetcher struct {
 
 func NewGraphileFetcher(graphileClient graphile.GraphileClient) *GraphileFetcher {
 	return &GraphileFetcher{
-		Url:             "http://localhost:5000/graphql",
+		Url:             "http://localhost:5001/graphql",
 		CursorAfter:     "",
 		BatchSize:       DefaultQueryBatchSize,
 		Query:           outputQuery,
@@ -226,7 +227,6 @@ func (v *GraphileFetcher) Fetch() (*OutputResponse, error) {
 	// Make a POST request to the GraphQL endpoint
 
 	body, err := v.GraphileClient.Post(payload)
-
 	if err != nil {
 		slog.Error("Error reading response:", "error", err)
 		return nil, err

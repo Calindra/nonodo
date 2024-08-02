@@ -187,9 +187,9 @@ export POSTGRES_PASSWORD=mypassword
 
 When running nonodo, set flag db-implementation with the value postgres
 
-Graphile can be called using `http://localhost:5000/graphql` and you can test queries using  `http://localhost:5000/graphiql`
+Graphile can be called using `http://localhost:5001/graphql` and you can test queries using `http://localhost:5001/graphiql`
 
-You can change Graphile address and port using the flags graphile-address and graphile-port. 
+You can change Graphile address and port using the flags graphile-address and graphile-port.
 
 ```sh
 /nonodo --graphile-address mygraphileaddress --graphile-port 5034
@@ -199,10 +199,10 @@ You can change Graphile address and port using the flags graphile-address and gr
 
 NoNodo is compatible with the following version of the Cartesi Rollups.
 
-| Component | Version |
-|---|---|
+| Component                 | Version                                                                    |
+| ------------------------- | -------------------------------------------------------------------------- |
 | Cartesi Rollups Contracts | [v1.1.0](https://github.com/cartesi/rollups-contracts/releases/tag/v1.1.0) |
-| Cartesi Rollups Node | [v1.2.0](https://github.com/cartesi/rollups-node/releases/tag/v1.2.0) |
+| Cartesi Rollups Node      | [v1.2.0](https://github.com/cartesi/rollups-node/releases/tag/v1.2.0)      |
 
 ## Caveats
 
