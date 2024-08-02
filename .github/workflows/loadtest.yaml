@@ -3,7 +3,7 @@ name: K6 Load Test
 on:
   push:
     branches:
-      - '**'
+      - "**"
   pull_request:
     branches:
       - main
@@ -21,16 +21,19 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
-      
-      - name: Create Docker network
-        run: docker network create mynetwork
-      
+        uses: docker/setup-buildx-action@v3
+
+      # Trying use bake-action to build the images
+      # - name: Build me
+      #   uses: docker/bake-action@v5
+      #   with:
+      #     load: true
+      #     targets: nonodo
+
       - name: Build and run PostgreSQL container
         run: |
-          docker build -t postgresteste:latest ./postgres
-          docker run -d --network mynetwork -p 5432:5432 --name postgres postgresteste:latest
-      
+          docker compose up --wait -d db
+
       - name: Install PostgreSQL Client
         run: sudo apt-get install -y postgresql-client
 
@@ -46,33 +49,33 @@ jobs:
               sleep 1
             fi
           done
-      
+
       - name: Build PostGraphile Docker image
-        run: docker build -t postgraphile-custom ./postgraphile/
-      
+        run: docker compose build db
+
       - name: Run PostGraphile service
-        run: docker run -d --network mynetwork -p 5000:5000 --name postgraphile-custom postgraphile-custom
-      
+        run: docker compose up --wait -d postgraphile
+
       - name: Wait for PostGraphile to be ready
         run: |
           for i in {1.60}; do
             curl -sSf http://localhost:5000 && break
             sleep 1
           done
-      
+
       - name: Build nonodo Docker image
-        run: docker build -t nonodo-app .
+        run: docker compose build app
 
       - name: Run nonodo application
-        run: docker run -d --network mynetwork -p 8080:8080 --name nonodo nonodo-app
-      
+        run: docker compose up --wait -d app
+
       - name: Wait for Nonodo to be ready
         run: |
           for i in {1..60}; do
             curl -sSf http://localhost:8080 && break
             sleep 1
           done
-      
+
       - name: Get logs if nonodo is not running
         run: |
           nonodo_running=$(docker inspect -f '{{.State.Running}}' nonodo)
@@ -117,4 +120,6 @@ jobs:
         id: nonodologs
         run: |
           docker logs nonodo
-         
+
+      - name: Teardown Docker containers
+        run: docker compose down --rmi all --volumes --remove-orphans
