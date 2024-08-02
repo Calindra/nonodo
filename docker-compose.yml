@@ -28,6 +28,14 @@ services:
       - "5001:5000"
     networks:
       - mynetwork
+  app:
+    build: .
+    healthcheck:
+      test: ["CMD-SHELL", "curl", "-sSf", "http:/localhost:8080", "||", "exit", "1"]
+    ports:
+      - "8080:8080"
+    networks:
+      - mynetwork
   # k6:
   #   image: loadimpact/k6
   #   depends_on:
