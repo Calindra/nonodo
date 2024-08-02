@@ -5,11 +5,8 @@ WORKDIR /usr/share/app
 COPY package.json package-lock.json ./
 RUN npm ci
 
-# RUN npm install -g postgraphile @graphile-contrib/pg-simplify-inflector postgraphile-plugin-connection-filter
-
 EXPOSE 5001
 # @graphile/pg-pubsub,
 
-# CMD ["npx", "postgraphile", "-c", "postgres://myuser:mypassword@postgres/mydatabase", "--watch", "--enhance-graphiql", "--dynamic-json", "--append-plugins", "@graphile-contrib/pg-simplify-inflector,postgraphile-plugin-connection-filter", "-n", "0.0.0.0", "-p", "5001"]
 CMD ["npm", "start"]
 

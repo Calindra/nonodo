@@ -74,7 +74,7 @@ jobs:
       - name: Wait for Nonodo to be ready
         run: |
           for i in {1..60}; do
-            curl -sSf http://localhost:8080 && break
+            curl -sSf http://localhost:8080/health && break
             sleep 1
           done
 
