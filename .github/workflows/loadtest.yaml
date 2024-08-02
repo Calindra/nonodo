@@ -80,20 +80,20 @@ jobs:
 
       - name: Get logs if nonodo is not running
         run: |
-          nonodo_running=$(docker inspect -f '{{.State.Running}}' nonodo-app)
-          if [ "$nonodo_running" != "true" ]; then
+          nonodo_state=$(docker compose ps --format '{{.State}}' app)
+          if [ "$nonodo_state" != "running" ]; then
             echo "nonodo container logs:"
-            docker logs nonodo
+            docker compose logs app
           else
             echo "nonodo container is running"
           fi
 
-          postgres_running=$(docker inspect -f '{{.State.Running}}' nonodo-postgres)
-          if [ "$postgres_running" != "true" ]; then
+          postgres_state=$(docker compose ps --format '{{.State}}' db)
+          if [ "$postgres_state" != "running" ]; then
             echo "postgres container logs (last 100 lines):"
-            docker logs --tail 100 postgres
+            docker compose logs --tail 100 db
             echo "postgres container inspect:"
-            docker inspect postgres
+            docker inspect $(docker compose ps --format "{{.Name}}" db)
           else
             echo "postgres container is running"
           fi
