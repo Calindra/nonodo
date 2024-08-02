@@ -128,22 +128,23 @@ func (x GraphileSynchronizer) handleGraphileResponse(ctx context.Context, output
 			Payload:     output.Node.Blob[2:],
 			Destination: output.Node.Blob,
 		}
-		voucherIds = append(
-			voucherIds,
-			fmt.Sprintf("%d:%d", inputIndex, outputIndex),
-		)
+
 		err := x.Decoder.HandleOutputV2(ctx, processOutputData)
 		if err != nil {
 			slog.Error("Failed to handle output: ", "err", err)
 			return fmt.Errorf("error handling output: %w", err)
 		}
+
+		voucherIds = append(
+			voucherIds,
+			fmt.Sprintf("%d:%d", inputIndex, outputIndex),
+		)
 	}
 
 	hasMoreOutputs := len(outputResp.Data.Outputs.PageInfo.EndCursor) > 0
 
 	if hasMoreOutputs {
 		initCursorAfter = x.GraphileFetcher.CursorAfter
-		x.GraphileFetcher.CursorAfter = outputResp.Data.Outputs.PageInfo.EndCursor
 	}
 
 	for _, input := range outputResp.Data.Inputs.Edges {
@@ -183,14 +184,12 @@ func (x GraphileSynchronizer) handleGraphileResponse(ctx context.Context, output
 	hasMoreReports := len(outputResp.Data.Reports.PageInfo.EndCursor) > 0
 	if hasMoreReports {
 		initReportCursorAfter = x.GraphileFetcher.CursorReportAfter
-		x.GraphileFetcher.CursorReportAfter = outputResp.Data.Reports.PageInfo.EndCursor
 	}
 
 	hasMoreInputs := len(outputResp.Data.Inputs.PageInfo.EndCursor) > 0
 
 	if hasMoreInputs {
 		initInputCursorAfter = x.GraphileFetcher.CursorInputAfter
-		x.GraphileFetcher.CursorInputAfter = outputResp.Data.Inputs.PageInfo.EndCursor
 	}
 	synchronizeFetch := &model.SynchronizerFetch{
 		TimestampAfter:       uint64(time.Now().UnixMilli()),
@@ -211,6 +210,10 @@ func (x GraphileSynchronizer) handleGraphileResponse(ctx context.Context, output
 			return fmt.Errorf("error creating synchronize repository: %w", err)
 		}
 	}
+
+	x.GraphileFetcher.CursorAfter = outputResp.Data.Outputs.PageInfo.EndCursor
+	x.GraphileFetcher.CursorReportAfter = outputResp.Data.Reports.PageInfo.EndCursor
+	x.GraphileFetcher.CursorInputAfter = outputResp.Data.Inputs.PageInfo.EndCursor
 	return nil
 }
 
