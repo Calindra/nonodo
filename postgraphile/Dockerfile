@@ -6,7 +6,6 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 EXPOSE 5001
-# @graphile/pg-pubsub,
 
 CMD ["npm", "start"]
 

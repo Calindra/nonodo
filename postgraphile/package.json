@@ -4,7 +4,7 @@
   "description": "This is a package to run environment of postgraphile",
   "main": "Dockerfile",
   "scripts": {
-    "start": "postgraphile -c postgres://myuser:mypassword@db/mydatabase --watch --enhance-graphiql --dynamic-json --append-plugins @graphile-contrib/pg-simplify-inflector,postgraphile-plugin-connection-filter -p \"5001\" -n \"0.0.0.0\"",
+    "start": "postgraphile --plugins @graphile/pg-pubsub -c postgres://myuser:mypassword@db/mydatabase --watch --enhance-graphiql --dynamic-json --append-plugins @graphile-contrib/pg-simplify-inflector,postgraphile-plugin-connection-filter --subscriptions --simple-subscriptions -p \"5001\" -n \"0.0.0.0\"",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "author": "Calindra",
