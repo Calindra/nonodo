@@ -1,10 +1,10 @@
-CREATE OR REPLACE FUNCTION notify_trigger() RETURNS trigger AS $$
+CREATE OR REPLACE FUNCTION notify_postgraphile_trigger() RETURNS trigger AS $$
 BEGIN
-  PERFORM pg_notify('postgraphile:inputs', '{}');
+  PERFORM pg_notify('postgraphile:' || TG_ARGV[0], '{}');
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER notify_trigger
+CREATE TRIGGER notify_postgraphile_trigger
 AFTER INSERT OR UPDATE OR DELETE ON public.inputs
-FOR EACH ROW EXECUTE FUNCTION notify_trigger();
+FOR EACH STATEMENT EXECUTE FUNCTION notify_postgraphile_trigger("inputs");
