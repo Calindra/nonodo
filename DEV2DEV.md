@@ -70,3 +70,11 @@ For test:
 ```shell
 docker compose -f docker-compose.dev.yml up
 ```
+
+## Environment Variables
+
+To configure the endpoint of the node v2 Graphile, you can set the GRAPHILE_URL environment variable. Here's how you can do it:
+
+```bash
+export GRAPHILE_URL=http://localhost:5001/graphql
+```

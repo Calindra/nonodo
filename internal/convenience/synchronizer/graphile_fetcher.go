@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"os"
 
 	"github.com/calindra/nonodo/internal/graphile"
 )
@@ -171,8 +172,12 @@ type GraphileFetcher struct {
 }
 
 func NewGraphileFetcher(graphileClient graphile.GraphileClient) *GraphileFetcher {
+	url := os.Getenv("GRAPHILE_URL")
+	if url == "" {
+		url = "http://localhost:5001/graphql"
+	}
 	return &GraphileFetcher{
-		Url:             "http://localhost:5001/graphql",
+		Url:             url,
 		CursorAfter:     "",
 		BatchSize:       DefaultQueryBatchSize,
 		Query:           outputQuery,
