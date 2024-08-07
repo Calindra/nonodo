@@ -229,12 +229,14 @@ func (a AdapterV2) GetInput(index int) (*graphql.Input, error) {
 		return nil, fmt.Errorf("input not found")
 	}
 	return &graphql.Input{
-		Index:       int(input.Index),
-		MsgSender:   input.MsgSender.String(),
-		Payload:     string(input.Payload),
-		Status:      a.convertCompletionStatus(*input),
-		Timestamp:   fmt.Sprintf("%d", input.BlockTimestamp.Unix()),
-		BlockNumber: fmt.Sprintf("%d", input.BlockNumber),
+		Index:               int(input.Index),
+		MsgSender:           input.MsgSender.String(),
+		Payload:             string(input.Payload),
+		Status:              a.convertCompletionStatus(*input),
+		Timestamp:           fmt.Sprintf("%d", input.BlockTimestamp.Unix()),
+		BlockNumber:         fmt.Sprintf("%d", input.BlockNumber),
+		EspressoTimestamp:   fmt.Sprintf("%d", input.EspressoBlockTimestamp.Unix()),
+		EspressoBlockNumber: fmt.Sprintf("%d", input.EspressoBlockNumber),
 	}, nil
 }
 

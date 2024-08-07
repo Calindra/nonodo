@@ -138,11 +138,14 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 				}
 
 				_, err = e.InputRepository.Create(ctx, cModel.AdvanceInput{
-					Index:          int(index),
-					MsgSender:      msgSender,
-					Payload:        []byte(payload),
-					BlockNumber:    e.getL1FinalizedHeight(currentBlockHeight),
-					BlockTimestamp: e.getL1FinalizedTimestamp(currentBlockHeight),
+					Index:                  int(index),
+					MsgSender:              msgSender,
+					Payload:                []byte(payload),
+					BlockNumber:            e.getL1FinalizedHeight(currentBlockHeight),
+					BlockTimestamp:         e.getL1FinalizedTimestamp(currentBlockHeight),
+					AppContract:            e.InputterWorker.ApplicationAddress,
+					EspressoBlockNumber:    currentBlockHeight,
+					EspressoBlockTimestamp: e.getEspressoTimestamp(currentBlockHeight),
 				})
 				if err != nil {
 					return err
@@ -184,6 +187,12 @@ func (e EspressoListener) getL1FinalizedHeight(espressoBlockHeight uint64) uint6
 	espressoHeader := e.readEspressoHeader(espressoBlockHeight)
 	value := gjson.Get(espressoHeader, "l1_finalized.number")
 	return value.Uint()
+}
+
+func (e EspressoListener) getEspressoTimestamp(espressoBlockHeight uint64) time.Time {
+	espressoHeader := e.readEspressoHeader(espressoBlockHeight)
+	value := gjson.Get(espressoHeader, "timestamp")
+	return time.Unix(value.Int(), 0)
 }
 
 func readInputBox(ctx context.Context, l1FinalizedPrevHeight uint64, l1FinalizedCurrentHeight uint64, w *inputter.InputterWorker) error {

@@ -59,6 +59,10 @@ type Input {
   notices(first: Int, last: Int, after: String, before: String): NoticeConnection!
   "Get reports from this particular input with support for pagination"
   reports(first: Int, last: Int, after: String, before: String): ReportConnection!
+  "Timestamp associated with the Espresso input submission"
+  espressoTimestamp: BigInt!
+  "Number of the Espresso block in which the input was recorded"
+  espressoBlockNumber: BigInt!
 }
 
 "Representation of a transaction that can be carried out on the base layer blockchain, such as a transfer of assets"
