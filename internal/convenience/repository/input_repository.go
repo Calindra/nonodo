@@ -41,7 +41,8 @@ func (r *InputRepository) CreateTables() error {
 		block_number	integer,
 		block_timestamp	integer,
 		prev_randao		text,
-		exception		text);
+		exception		text,
+		UNIQUE(input_index, dapp_address));
 	CREATE INDEX IF NOT EXISTS idx_input_index ON convenience_inputs(input_index);
 	CREATE INDEX IF NOT EXISTS idx_status ON convenience_inputs(status);`
 	_, err := r.Db.Exec(schema)
