@@ -128,7 +128,10 @@ func (s *InputRepositorySuite) TestCreateInputAndUpdateStatus() {
 		Payload:        common.Hex2Bytes("0x1122"),
 		BlockNumber:    1,
 		BlockTimestamp: time.Now(),
+		AppContract:    common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
 	})
+
+	slog.Debug("InputTeste", "input", input)
 	s.NoError(err)
 	s.Equal(2222, input.Index)
 
@@ -139,6 +142,7 @@ func (s *InputRepositorySuite) TestCreateInputAndUpdateStatus() {
 	input2, err := s.inputRepository.FindByIndex(ctx, 2222)
 	s.NoError(err)
 	s.Equal(convenience.CompletionStatusAccepted, input2.Status)
+	// s.Equal("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", input2.AppContract.Hex())
 }
 
 func (s *InputRepositorySuite) TestCreateInputFindByStatus() {
@@ -152,6 +156,7 @@ func (s *InputRepositorySuite) TestCreateInputFindByStatus() {
 		BlockNumber:    1,
 		PrevRandao:     "0xdeadbeef",
 		BlockTimestamp: time.Now(),
+		AppContract:    common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
 	})
 	s.NoError(err)
 	s.Equal(2222, input.Index)
@@ -295,6 +300,28 @@ func (s *InputRepositorySuite) TestCompositeKeyExists() {
 
 	_, err = s.inputRepository.Db.Exec(query, 2, "0xFFFF", "pending", "0x02AA", "payload3", 102, 1609459400, "randao3", "none")
 	s.NoError(err)
+}
+
+func (s *InputRepositorySuite) TestCreateInputAndCheckAppContract() {
+	defer s.teardown()
+	ctx := context.Background()
+	input, err := s.inputRepository.Create(ctx, convenience.AdvanceInput{
+		Index:          2222,
+		Status:         convenience.CompletionStatusUnprocessed,
+		MsgSender:      common.Address{},
+		Payload:        common.Hex2Bytes("0x1122"),
+		BlockNumber:    1,
+		BlockTimestamp: time.Now(),
+		AppContract:    common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
+	})
+
+	slog.Debug("AA", "input", input)
+	s.NoError(err)
+
+	input2, err := s.inputRepository.FindByIndex(ctx, 2222)
+	s.NoError(err)
+	slog.Debug("Input2", "input", input2)
+	s.Equal("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", input2.AppContract.Hex())
 }
 
 func (s *InputRepositorySuite) teardown() {
