@@ -34,6 +34,7 @@ func (r *InputRepository) CreateTables() error {
 	schema := `CREATE TABLE IF NOT EXISTS convenience_inputs (
 		id 				INTEGER NOT NULL PRIMARY KEY,
 		input_index		integer,
+		dapp_address    text,
 		status	 		text,
 		msg_sender	 	text,
 		payload			text,
