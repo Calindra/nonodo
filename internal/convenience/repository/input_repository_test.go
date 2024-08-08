@@ -284,17 +284,17 @@ func (s *InputRepositorySuite) TestColumnDappAddressExists() {
 }
 
 func (s *InputRepositorySuite) TestCompositeKeyExists() {
-	query := `
-	SELECT name 
-	FROM sqlite_master 
-	WHERE type='table' AND name='convenience_inputs'
-	AND sql LIKE '%UNIQUE(input_index, dapp_address)%';`
+	query := `INSERT INTO convenience_inputs (input_index, dapp_address, status, msg_sender, payload, block_number, block_timestamp, prev_randao, exception)
+			  VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
 
-	var tableName string
-	err := s.inputRepository.Db.Get(&tableName, query)
+	_, err := s.inputRepository.Db.Exec(query, 1, "0x916B", "pending", "0x11FF", "payload1", 100, 1609459200, "randao1", "none")
 	s.NoError(err)
 
-	s.Equal("convenience_inputs", tableName, "Composite key on (input_index, dapp_address) does not exist")
+	_, err = s.inputRepository.Db.Exec(query, 1, "0x916B", "confirmed", "0x0123", "payload2", 101, 1609459300, "randao2", "none")
+	s.Error(err, "Expected an error due to duplicate composite key (input_index, dapp_address)")
+
+	_, err = s.inputRepository.Db.Exec(query, 2, "0xFFFF", "pending", "0x02AA", "payload3", 102, 1609459400, "randao3", "none")
+	s.NoError(err)
 }
 
 func (s *InputRepositorySuite) teardown() {
