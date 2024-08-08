@@ -284,7 +284,6 @@ func (s *InputRepositorySuite) TestColumnDappAddressExists() {
 }
 
 func (s *InputRepositorySuite) TestCompositeKeyExists() {
-	// Consulta para verificar se a chave composta existe
 	query := `
 	SELECT name 
 	FROM sqlite_master 
