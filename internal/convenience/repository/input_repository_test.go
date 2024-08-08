@@ -283,6 +283,21 @@ func (s *InputRepositorySuite) TestColumnDappAddressExists() {
 
 }
 
+func (s *InputRepositorySuite) TestCompositeKeyExists() {
+	// Consulta para verificar se a chave composta existe
+	query := `
+	SELECT name 
+	FROM sqlite_master 
+	WHERE type='table' AND name='convenience_inputs'
+	AND sql LIKE '%UNIQUE(input_index, dapp_address)%';`
+
+	var tableName string
+	err := s.inputRepository.Db.Get(&tableName, query)
+	s.NoError(err)
+
+	s.Equal("convenience_inputs", tableName, "Composite key on (input_index, dapp_address) does not exist")
+}
+
 func (s *InputRepositorySuite) teardown() {
 	defer os.RemoveAll(s.tempDir)
 }
