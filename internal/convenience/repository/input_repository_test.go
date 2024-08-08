@@ -255,6 +255,34 @@ func (s *InputRepositorySuite) TestFindByMsgSender() {
 	s.Equal(common.HexToAddress(value), resp.Rows[0].MsgSender)
 }
 
+func (s *InputRepositorySuite) TestColumnDappAddressExists() {
+	query := `PRAGMA table_info(convenience_inputs);`
+
+	rows, err := s.inputRepository.Db.Queryx(query)
+	s.NoError(err)
+
+	defer rows.Close()
+
+	var columnExists bool
+	for rows.Next() {
+		var cid int
+		var name, fieldType string
+		var notNull, pk int
+		var dfltValue interface{}
+
+		err = rows.Scan(&cid, &name, &fieldType, &notNull, &dfltValue, &pk)
+		s.NoError(err)
+
+		if name == "dapp_address" {
+			columnExists = true
+			break
+		}
+	}
+
+	s.True(columnExists, "Column 'dapp_address' does not exist in the table 'convenience_inputs'")
+
+}
+
 func (s *InputRepositorySuite) teardown() {
 	defer os.RemoveAll(s.tempDir)
 }
