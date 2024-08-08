@@ -34,6 +34,7 @@ func (r *InputRepository) CreateTables() error {
 	schema := `CREATE TABLE IF NOT EXISTS convenience_inputs (
 		id 				INTEGER NOT NULL PRIMARY KEY,
 		input_index		integer,
+		dapp_address    text,
 		status	 		text,
 		msg_sender	 	text,
 		payload			text,
@@ -41,7 +42,7 @@ func (r *InputRepository) CreateTables() error {
 		block_timestamp	integer,
 		prev_randao		text,
 		exception		text,
-		dapp_address	text);
+		UNIQUE(input_index, dapp_address));
 	CREATE INDEX IF NOT EXISTS idx_input_index ON convenience_inputs(input_index);
 	CREATE INDEX IF NOT EXISTS idx_status ON convenience_inputs(status);`
 	_, err := r.Db.Exec(schema)
@@ -53,7 +54,7 @@ func (r *InputRepository) CreateTables() error {
 	return err
 }
 
-func (r *InputRepository) Create(ctx context.Context, input model.AdvanceInput) (*model.AdvanceInput, error) {
+func (r *InputRepository) Create(ctx context.Context, input model.AdvanceInput, args ...common.Address) (*model.AdvanceInput, error) {
 	exist, err := r.FindByIndex(ctx, input.Index)
 	if err != nil {
 		return nil, err
