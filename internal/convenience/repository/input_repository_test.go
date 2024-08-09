@@ -281,20 +281,20 @@ func (s *InputRepositorySuite) TestColumnDappAddressExists() {
 		err = rows.Scan(&cid, &name, &fieldType, &notNull, &dfltValue, &pk)
 		s.NoError(err)
 
-		if name == "dapp_address" {
+		if name == "app_contract" {
 			columnExists = true
 			break
 		}
 	}
 
-	s.True(columnExists, "Column 'dapp_address' does not exist in the table 'convenience_inputs'")
+	s.True(columnExists, "Column 'app_contract' does not exist in the table 'convenience_inputs'")
 
 }
 
 func (s *InputRepositorySuite) TestCreateInputAndCheckAppContract() {
 	defer s.teardown()
 	ctx := context.Background()
-	input, err := s.inputRepository.Create(ctx, convenience.AdvanceInput{
+	_, err := s.inputRepository.Create(ctx, convenience.AdvanceInput{
 		Index:          2222,
 		Status:         convenience.CompletionStatusUnprocessed,
 		MsgSender:      common.Address{},
@@ -304,12 +304,10 @@ func (s *InputRepositorySuite) TestCreateInputAndCheckAppContract() {
 		AppContract:    common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
 	})
 
-	slog.Debug("AA", "input", input)
 	s.NoError(err)
 
 	input2, err := s.inputRepository.FindByIndex(ctx, 2222)
 	s.NoError(err)
-	slog.Debug("Input2", "input", input2)
 	s.Equal("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", input2.AppContract.Hex())
 }
 

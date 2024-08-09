@@ -28,14 +28,14 @@ type inputRow struct {
 	BlockTimestamp int    `db:"block_timestamp"`
 	PrevRandao     string `db:"prev_randao"`
 	Exception      string `db:"exception"`
-	AppContract    string `db:"dapp_address"`
+	AppContract    string `db:"app_contract"`
 }
 
 func (r *InputRepository) CreateTables() error {
 	schema := `CREATE TABLE IF NOT EXISTS convenience_inputs (
 		id 				INTEGER NOT NULL PRIMARY KEY,
 		input_index		integer,
-		dapp_address    text,
+		app_contract    text,
 		status	 		text,
 		msg_sender	 	text,
 		payload			text,
@@ -75,7 +75,7 @@ func (r *InputRepository) rawCreate(ctx context.Context, input model.AdvanceInpu
 		block_timestamp,
 		prev_randao,
 		exception,
-		dapp_address
+		app_contract
 	) VALUES (
 		$1,
 		$2,
@@ -138,7 +138,7 @@ func (r *InputRepository) FindByStatusNeDesc(ctx context.Context, status model.C
 		block_number,
 		timestamp,
 		exception,
-		dapp_address FROM convenience_inputs WHERE status <> $1
+		app_contract FROM convenience_inputs WHERE status <> $1
 		ORDER BY input_index DESC`
 	res, err := r.Db.QueryxContext(
 		ctx,
@@ -169,7 +169,7 @@ func (r *InputRepository) FindByStatus(ctx context.Context, status model.Complet
 		block_timestamp,
 		prev_randao,
 		exception,
-		dapp_address FROM convenience_inputs WHERE status = $1
+		app_contract FROM convenience_inputs WHERE status = $1
 		ORDER BY input_index ASC`
 	res, err := r.Db.QueryxContext(
 		ctx,
@@ -200,7 +200,7 @@ func (r *InputRepository) FindByIndex(ctx context.Context, index int) (*model.Ad
 		block_timestamp,
 		prev_randao,
 		exception,
-		dapp_address FROM convenience_inputs WHERE input_index = $1`
+		app_contract FROM convenience_inputs WHERE input_index = $1`
 	res, err := r.Db.QueryxContext(
 		ctx,
 		sql,
@@ -269,7 +269,7 @@ func (c *InputRepository) FindAll(
 		block_timestamp,
 		prev_randao,
 		exception,
-		dapp_address FROM convenience_inputs `
+		app_contract FROM convenience_inputs `
 	where, args, argsCount, err := transformToInputQuery(filter)
 	if err != nil {
 		slog.Error("database error", "err", err)
