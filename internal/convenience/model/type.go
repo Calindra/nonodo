@@ -109,7 +109,7 @@ type AdvanceInput struct {
 
 type ConvertedInput struct {
 	MsgSender      common.Address `json:"msgSender"`
-	DAppAddress    common.Address `json:"dAppAddress"`
+	AppContract    common.Address `json:"app_contract"`
 	BlockNumber    *big.Int       `json:"blockNumber"`
 	BlockTimestamp int64          `json:"blockTimestamp"`
 	PrevRandao     string         `json:"prevRandao"`

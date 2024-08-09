@@ -117,6 +117,7 @@ func (o *OutputDecoder) HandleInput(
 		BlockNumber:    convertedInput.BlockNumber.Uint64(),
 		BlockTimestamp: time.Unix(convertedInput.BlockTimestamp, 0),
 		PrevRandao:     convertedInput.PrevRandao,
+		AppContract:    convertedInput.AppContract,
 	})
 	return err
 }
@@ -200,6 +201,7 @@ func (o *OutputDecoder) GetConvertedInput(input model.InputEdge) (model.Converte
 		BlockNumber:    values[3].(*big.Int),
 		BlockTimestamp: values[4].(*big.Int).Int64(),
 		PrevRandao:     values[5].(*big.Int).String(),
+		AppContract:    values[1].(common.Address),
 	}
 
 	return convertedInput, nil

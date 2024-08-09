@@ -54,7 +54,7 @@ func (r *InputRepository) CreateTables() error {
 	return err
 }
 
-func (r *InputRepository) Create(ctx context.Context, input model.AdvanceInput, args ...common.Address) (*model.AdvanceInput, error) {
+func (r *InputRepository) Create(ctx context.Context, input model.AdvanceInput) (*model.AdvanceInput, error) {
 	exist, err := r.FindByIndex(ctx, input.Index)
 	if err != nil {
 		return nil, err
