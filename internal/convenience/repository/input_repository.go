@@ -66,6 +66,10 @@ func (r *InputRepository) CreateTables() error {
 }
 
 func (r *InputRepository) Create(ctx context.Context, input model.AdvanceInput) (*model.AdvanceInput, error) {
+	// may twist the input index
+	count, _ := r.Count(ctx, nil)
+	input.Index = int(count)
+
 	exist, err := r.FindByIndex(ctx, input.Index)
 	if err != nil {
 		return nil, err
