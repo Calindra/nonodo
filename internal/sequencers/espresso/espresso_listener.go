@@ -2,12 +2,14 @@ package espresso
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/calindra/nonodo/internal/contracts"
@@ -137,10 +139,19 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 					continue
 				}
 
+				payloadBytes := []byte(payload)
+				if strings.HasPrefix(payload, "0x") {
+					payload = payload[2:] // remove 0x
+					payloadBytes, err = hex.DecodeString(payload)
+					if err != nil {
+						return err
+					}
+				}
+
 				_, err = e.InputRepository.Create(ctx, cModel.AdvanceInput{
 					Index:                  int(index),
 					MsgSender:              msgSender,
-					Payload:                []byte(payload),
+					Payload:                payloadBytes,
 					BlockNumber:            e.getL1FinalizedHeight(currentBlockHeight),
 					BlockTimestamp:         e.getL1FinalizedTimestamp(currentBlockHeight),
 					AppContract:            e.InputterWorker.ApplicationAddress,
