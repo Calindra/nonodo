@@ -28,6 +28,7 @@ type inputRow struct {
 	BlockTimestamp int    `db:"block_timestamp"`
 	PrevRandao     string `db:"prev_randao"`
 	Exception      string `db:"exception"`
+	AppContract    string `db:"app_contract"`
 }
 
 func (r *InputRepository) CreateTables() error {
@@ -40,6 +41,7 @@ func (r *InputRepository) CreateTables() error {
 	schema := `CREATE TABLE IF NOT EXISTS convenience_inputs (
 		id 				%s NOT NULL PRIMARY KEY,
 		input_index		integer,
+		app_contract    text,
 		status	 		text,
 		msg_sender	 	text,
 		payload			text,
@@ -79,7 +81,8 @@ func (r *InputRepository) rawCreate(ctx context.Context, input model.AdvanceInpu
 		block_number,
 		block_timestamp,
 		prev_randao,
-		exception
+		exception,
+		app_contract
 	) VALUES (
 		$1,
 		$2,
@@ -88,9 +91,12 @@ func (r *InputRepository) rawCreate(ctx context.Context, input model.AdvanceInpu
 		$5,
 		$6,
 		$7,
-		$8
+		$8,
+		$9
 	);`
-	_, err := r.Db.ExecContext(
+
+	exec := DBExecutor{&r.Db}
+	_, err := exec.ExecContext(
 		ctx,
 		insertSql,
 		input.Index,
@@ -101,6 +107,7 @@ func (r *InputRepository) rawCreate(ctx context.Context, input model.AdvanceInpu
 		input.BlockTimestamp.UnixMilli(),
 		input.PrevRandao,
 		common.Bytes2Hex(input.Exception),
+		input.AppContract.Hex(),
 	)
 
 	if err != nil {
@@ -113,7 +120,9 @@ func (r *InputRepository) Update(ctx context.Context, input model.AdvanceInput) 
 	sql := `UPDATE convenience_inputs
 		SET status = $1, exception = $2
 		WHERE input_index = $3`
-	_, err := r.Db.ExecContext(
+
+	exec := DBExecutor{&r.Db}
+	_, err := exec.ExecContext(
 		ctx,
 		sql,
 		input.Status,
@@ -135,7 +144,8 @@ func (r *InputRepository) FindByStatusNeDesc(ctx context.Context, status model.C
 		payload,
 		block_number,
 		timestamp,
-		exception FROM convenience_inputs WHERE status <> $1
+		exception,
+		app_contract FROM convenience_inputs WHERE status <> $1
 		ORDER BY input_index DESC`
 	res, err := r.Db.QueryxContext(
 		ctx,
@@ -165,7 +175,8 @@ func (r *InputRepository) FindByStatus(ctx context.Context, status model.Complet
 		block_number,
 		block_timestamp,
 		prev_randao,
-		exception FROM convenience_inputs WHERE status = $1
+		exception,
+		app_contract FROM convenience_inputs WHERE status = $1
 		ORDER BY input_index ASC`
 	res, err := r.Db.QueryxContext(
 		ctx,
@@ -195,7 +206,8 @@ func (r *InputRepository) FindByIndex(ctx context.Context, index int) (*model.Ad
 		block_number,
 		block_timestamp,
 		prev_randao,
-		exception FROM convenience_inputs WHERE input_index = $1`
+		exception,
+		app_contract FROM convenience_inputs WHERE input_index = $1`
 	res, err := r.Db.QueryxContext(
 		ctx,
 		sql,
@@ -263,7 +275,8 @@ func (c *InputRepository) FindAll(
 		block_number,
 		block_timestamp,
 		prev_randao,
-		exception FROM convenience_inputs `
+		exception,
+		app_contract FROM convenience_inputs `
 	where, args, argsCount, err := transformToInputQuery(filter)
 	if err != nil {
 		slog.Error("database error", "err", err)
@@ -372,6 +385,7 @@ func parseRowInput(row inputRow) model.AdvanceInput {
 		BlockTimestamp: time.UnixMilli(int64(row.BlockTimestamp)),
 		PrevRandao:     row.PrevRandao,
 		Exception:      common.Hex2Bytes(row.Exception),
+		AppContract:    common.HexToAddress(row.AppContract),
 	}
 }
 
@@ -383,6 +397,7 @@ func parseInput(res *sqlx.Rows) (*model.AdvanceInput, error) {
 		blockTimestamp int64
 		prevRandao     string
 		exception      string
+		appContract    string
 	)
 	err := res.Scan(
 		&input.Index,
@@ -393,6 +408,7 @@ func parseInput(res *sqlx.Rows) (*model.AdvanceInput, error) {
 		&blockTimestamp,
 		&prevRandao,
 		&exception,
+		&appContract,
 	)
 	if err != nil {
 		return nil, err
@@ -402,5 +418,6 @@ func parseInput(res *sqlx.Rows) (*model.AdvanceInput, error) {
 	input.BlockTimestamp = time.UnixMilli(blockTimestamp)
 	input.PrevRandao = prevRandao
 	input.Exception = common.Hex2Bytes(exception)
+	input.AppContract = common.HexToAddress(appContract)
 	return &input, nil
 }

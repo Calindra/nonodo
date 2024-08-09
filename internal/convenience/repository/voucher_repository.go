@@ -52,7 +52,10 @@ func (c *VoucherRepository) CreateVoucher(
 		executed,
 		input_index,
 		output_index) VALUES ($1, $2, $3, $4, $5)`
-	_, err := c.Db.ExecContext(
+
+	exec := DBExecutor{&c.Db}
+
+	_, err := exec.ExecContext(
 		ctx,
 		insertVoucher,
 		voucher.Destination.Hex(),
@@ -77,7 +80,9 @@ func (c *VoucherRepository) UpdateVoucher(
 		executed = $3
 		WHERE input_index = $4 and output_index = $5`
 
-	_, err := c.Db.ExecContext(
+	exec := DBExecutor{&c.Db}
+
+	_, err := exec.ExecContext(
 		ctx,
 		updateVoucher,
 		voucher.Destination.Hex(),

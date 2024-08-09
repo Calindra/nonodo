@@ -128,6 +128,7 @@ func (s *InputRepositorySuite) TestCreateInputAndUpdateStatus() {
 		Payload:        common.Hex2Bytes("0x1122"),
 		BlockNumber:    1,
 		BlockTimestamp: time.Now(),
+		AppContract:    common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
 	})
 	s.NoError(err)
 	s.Equal(2222, input.Index)
@@ -152,6 +153,7 @@ func (s *InputRepositorySuite) TestCreateInputFindByStatus() {
 		BlockNumber:    1,
 		PrevRandao:     "0xdeadbeef",
 		BlockTimestamp: time.Now(),
+		AppContract:    common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
 	})
 	s.NoError(err)
 	s.Equal(2222, input.Index)
@@ -184,6 +186,7 @@ func (s *InputRepositorySuite) TestFindByIndexGt() {
 			Payload:        common.Hex2Bytes("0x1122"),
 			BlockNumber:    1,
 			BlockTimestamp: time.Now(),
+			AppContract:    common.Address{},
 		})
 		s.NoError(err)
 		s.Equal(i, input.Index)
@@ -211,6 +214,7 @@ func (s *InputRepositorySuite) TestFindByIndexLt() {
 			Payload:        common.Hex2Bytes("0x1122"),
 			BlockNumber:    1,
 			BlockTimestamp: time.Now(),
+			AppContract:    common.Address{},
 		})
 		s.NoError(err)
 		s.Equal(i, input.Index)
@@ -238,6 +242,7 @@ func (s *InputRepositorySuite) TestFindByMsgSender() {
 			Payload:        common.Hex2Bytes("0x1122"),
 			BlockNumber:    1,
 			BlockTimestamp: time.Now(),
+			AppContract:    common.Address{},
 		})
 		s.NoError(err)
 		s.Equal(i, input.Index)
@@ -253,6 +258,54 @@ func (s *InputRepositorySuite) TestFindByMsgSender() {
 	s.NoError(err)
 	s.Equal(1, int(resp.Total))
 	s.Equal(common.HexToAddress(value), resp.Rows[0].MsgSender)
+}
+
+func (s *InputRepositorySuite) TestColumnDappAddressExists() {
+	query := `PRAGMA table_info(convenience_inputs);`
+
+	rows, err := s.inputRepository.Db.Queryx(query)
+	s.NoError(err)
+
+	defer rows.Close()
+
+	var columnExists bool
+	for rows.Next() {
+		var cid int
+		var name, fieldType string
+		var notNull, pk int
+		var dfltValue interface{}
+
+		err = rows.Scan(&cid, &name, &fieldType, &notNull, &dfltValue, &pk)
+		s.NoError(err)
+
+		if name == "app_contract" {
+			columnExists = true
+			break
+		}
+	}
+
+	s.True(columnExists, "Column 'app_contract' does not exist in the table 'convenience_inputs'")
+
+}
+
+func (s *InputRepositorySuite) TestCreateInputAndCheckAppContract() {
+	defer s.teardown()
+	ctx := context.Background()
+	_, err := s.inputRepository.Create(ctx, convenience.AdvanceInput{
+		Index:          2222,
+		Status:         convenience.CompletionStatusUnprocessed,
+		MsgSender:      common.Address{},
+		Payload:        common.Hex2Bytes("0x1122"),
+		BlockNumber:    1,
+		BlockTimestamp: time.Now(),
+		AppContract:    common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
+	})
+
+	s.NoError(err)
+
+	input2, err := s.inputRepository.FindByIndex(ctx, 2222)
+	s.NoError(err)
+	s.Equal("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", input2.AppContract.Hex())
 }
 
 func (s *InputRepositorySuite) teardown() {
