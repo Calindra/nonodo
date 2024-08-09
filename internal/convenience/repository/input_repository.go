@@ -137,7 +137,8 @@ func (r *InputRepository) FindByStatusNeDesc(ctx context.Context, status model.C
 		payload,
 		block_number,
 		timestamp,
-		exception FROM convenience_inputs WHERE status <> $1
+		exception,
+		dapp_address FROM convenience_inputs WHERE status <> $1
 		ORDER BY input_index DESC`
 	res, err := r.Db.QueryxContext(
 		ctx,
