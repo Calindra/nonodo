@@ -189,6 +189,7 @@ func (s *InputRepositorySuite) TestFindByIndexGt() {
 			Payload:        common.Hex2Bytes("0x1122"),
 			BlockNumber:    1,
 			BlockTimestamp: time.Now(),
+			AppContract:    common.Address{},
 		})
 		s.NoError(err)
 		s.Equal(i, input.Index)
@@ -216,6 +217,7 @@ func (s *InputRepositorySuite) TestFindByIndexLt() {
 			Payload:        common.Hex2Bytes("0x1122"),
 			BlockNumber:    1,
 			BlockTimestamp: time.Now(),
+			AppContract:    common.Address{},
 		})
 		s.NoError(err)
 		s.Equal(i, input.Index)
@@ -243,6 +245,7 @@ func (s *InputRepositorySuite) TestFindByMsgSender() {
 			Payload:        common.Hex2Bytes("0x1122"),
 			BlockNumber:    1,
 			BlockTimestamp: time.Now(),
+			AppContract:    common.Address{},
 		})
 		s.NoError(err)
 		s.Equal(i, input.Index)

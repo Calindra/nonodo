@@ -28,6 +28,7 @@ type inputRow struct {
 	BlockTimestamp int    `db:"block_timestamp"`
 	PrevRandao     string `db:"prev_randao"`
 	Exception      string `db:"exception"`
+	AppContract    string `db:"dapp_address"`
 }
 
 func (r *InputRepository) CreateTables() error {
@@ -87,8 +88,6 @@ func (r *InputRepository) rawCreate(ctx context.Context, input model.AdvanceInpu
 		$8,
 		$9
 	);`
-
-	slog.Debug("Input", "input", input.AppContract, "insert", insertSql)
 
 	exec := DBExecutor{&r.Db}
 	_, err := exec.ExecContext(
@@ -269,7 +268,8 @@ func (c *InputRepository) FindAll(
 		block_number,
 		block_timestamp,
 		prev_randao,
-		exception FROM convenience_inputs `
+		exception,
+		dapp_address FROM convenience_inputs `
 	where, args, argsCount, err := transformToInputQuery(filter)
 	if err != nil {
 		slog.Error("database error", "err", err)
@@ -378,6 +378,7 @@ func parseRowInput(row inputRow) model.AdvanceInput {
 		BlockTimestamp: time.UnixMilli(int64(row.BlockTimestamp)),
 		PrevRandao:     row.PrevRandao,
 		Exception:      common.Hex2Bytes(row.Exception),
+		AppContract:    common.HexToAddress(row.AppContract),
 	}
 }
 
