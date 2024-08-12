@@ -16,6 +16,7 @@ import (
 	"github.com/calindra/nonodo/internal/convenience"
 	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/calindra/nonodo/internal/echoapp"
+	"github.com/calindra/nonodo/internal/health"
 	"github.com/calindra/nonodo/internal/inspect"
 	"github.com/calindra/nonodo/internal/model"
 	"github.com/calindra/nonodo/internal/reader"
@@ -88,6 +89,10 @@ type NonodoOpts struct {
 // Create the options struct with default values.
 func NewNonodoOpts() NonodoOpts {
 	var defaultTimeout time.Duration = 10 * time.Second
+	var graphilePort string = os.Getenv("GRAPHILE_PORT")
+	if graphilePort == "" {
+		graphilePort = "5001"
+	}
 	return NonodoOpts{
 		AnvilAddress:        devnet.AnvilDefaultAddress,
 		AnvilPort:           devnet.AnvilDefaultPort,
@@ -115,7 +120,7 @@ func NewNonodoOpts() NonodoOpts {
 		TimeoutInspect:      defaultTimeout,
 		TimeoutAdvance:      defaultTimeout,
 		GraphileAddress:     "localhost",
-		GraphilePort:        "5000",
+		GraphilePort:        graphilePort,
 		GraphileDisableSync: false,
 	}
 }
@@ -159,10 +164,16 @@ func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 	}
 
 	if opts.RpcUrl == "" && !opts.DisableDevnet {
+		anvilLocation, err := handleAnvilInstallation()
+		if err != nil {
+			panic(err)
+		}
+
 		w.Workers = append(w.Workers, devnet.AnvilWorker{
-			Address: opts.AnvilAddress,
-			Port:    opts.AnvilPort,
-			Verbose: opts.AnvilVerbose,
+			Address:  opts.AnvilAddress,
+			Port:     opts.AnvilPort,
+			Verbose:  opts.AnvilVerbose,
+			AnvilCmd: anvilLocation,
 		})
 		opts.RpcUrl = fmt.Sprintf("ws://%s:%v", opts.AnvilAddress, opts.AnvilPort)
 	}
@@ -205,6 +216,7 @@ func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 		Timeout:      opts.TimeoutInspect,
 	}))
 	inspect.Register(e, model)
+	health.Register(e)
 	reader.Register(e, model, convenienceService, adapter)
 	w.Workers = append(w.Workers, supervisor.HttpWorker{
 		Address: fmt.Sprintf("%v:%v", opts.HttpAddress, opts.HttpPort),
@@ -212,6 +224,23 @@ func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 	})
 	slog.Info("Listening", "port", opts.HttpPort)
 	return w
+}
+
+func handleAnvilInstallation() (string, error) {
+	// Create Anvil Worker
+	var timeoutAnvil time.Duration = 10 * time.Minute
+	ctx, cancel := context.WithTimeout(context.Background(), timeoutAnvil)
+	defer cancel()
+
+	go func() {
+		<-ctx.Done()
+		if ctx.Err() == context.DeadlineExceeded {
+			slog.Error("Timeout waiting for anvil")
+		}
+	}()
+
+	anvilLocation, err := devnet.CheckAnvilAndInstall(ctx)
+	return anvilLocation, err
 }
 
 // Create the nonodo supervisor.
@@ -235,6 +264,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	}))
 	inspect.Register(e, modelInstance)
 	reader.Register(e, modelInstance, convenienceService, adapter)
+	health.Register(e)
 
 	// Start the "internal" http rollup server
 	re := echo.New()
@@ -246,19 +276,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	}))
 
 	if opts.RpcUrl == "" && !opts.DisableDevnet {
-		// Create Anvil Worker
-		var timeoutAnvil time.Duration = 10 * time.Minute
-		ctx, cancel := context.WithTimeout(context.Background(), timeoutAnvil)
-		defer cancel()
-
-		go func() {
-			<-ctx.Done()
-			if ctx.Err() == context.DeadlineExceeded {
-				slog.Error("Timeout waiting for anvil")
-			}
-		}()
-
-		anvilLocation, err := devnet.CheckAnvilAndInstall(ctx)
+		anvilLocation, err := handleAnvilInstallation()
 		if err != nil {
 			panic(err)
 		}

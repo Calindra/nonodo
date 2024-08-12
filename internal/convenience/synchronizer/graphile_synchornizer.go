@@ -10,6 +10,7 @@ import (
 
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/convenience/repository"
+	"github.com/jmoiron/sqlx"
 )
 
 type GraphileSynchronizer struct {
@@ -50,7 +51,6 @@ func (x GraphileSynchronizer) Start(ctx context.Context, ready chan<- struct{}) 
 			err := x.handleWithDBTransaction(*voucherResp)
 			if err != nil {
 				slog.Error("Failed to handle graphile response.", "err", err)
-				return fmt.Errorf("error handling graphile response: %w", err)
 			}
 		}
 		select {
@@ -84,31 +84,33 @@ func (x GraphileSynchronizer) handleWithDBTransaction(outputResp OutputResponse)
 		return err
 	}
 
-	defer func() {
-		rollbackErr := tx.Rollback()
-		if rollbackErr != nil {
-			if rollbackErr != sql.ErrTxDone {
-				slog.Error("Error attempting transaction rollback.", "err", rollbackErr)
-			} else {
-				slog.Warn("Transaction already completed, rollback not necessary.", "err", rollbackErr)
-			}
-		}
-	}()
-
 	err = x.handleGraphileResponse(ctxWithTx, outputResp)
 
 	if err != nil {
 		slog.Error("Failed to handle graphile response.", "err", err)
+		x.callRollback(tx)
 		return err
 	}
 
 	err = tx.Commit()
 	if err != nil {
 		slog.Error("Error attempting transaction commit.", "err", err)
+		x.callRollback(tx)
 		return err
 	}
 
 	return nil
+}
+
+func (x *GraphileSynchronizer) callRollback(tx *sqlx.Tx) {
+	rollbackErr := tx.Rollback()
+	if rollbackErr != nil {
+		if rollbackErr != sql.ErrTxDone {
+			slog.Error("Error attempting transaction rollback.", "err", rollbackErr)
+		} else {
+			slog.Warn("Transaction already completed, rollback not necessary.", "err", rollbackErr)
+		}
+	}
 }
 
 func (x GraphileSynchronizer) handleGraphileResponse(ctx context.Context, outputResp OutputResponse) error {

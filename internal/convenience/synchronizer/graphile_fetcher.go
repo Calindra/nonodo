@@ -9,11 +9,11 @@ import (
 )
 
 const outputQuery = `
-	query { 
+	query {
 		outputs(first: %d) {
-			edges { 
+			edges {
 				cursor
-				node { 
+				node {
 					blob
 					index
 					inputIndex
@@ -36,7 +36,7 @@ const outputQuery = `
 				startCursor
 			}
 		}
-		%s	
+		%s
 
 		#report
 		%s
@@ -81,8 +81,8 @@ const inputQueryWithCursor = `
 `
 
 const outputQueryWithCursor = `
-	query { 
-		outputs(first: %d, after: "%s") { 
+	query {
+		outputs(first: %d, after: "%s") {
 			edges {
 				cursor
 				node {
@@ -108,7 +108,7 @@ const outputQueryWithCursor = `
 				startCursor
 			}
 		}
-		%s	
+		%s
 
 		#report
 		%s
@@ -131,6 +131,7 @@ const reportQuery = `
 		}
 	}
 `
+
 const reportQueryWithCursor = `
 	reports(first: %d, after: "%s") {
 		edges {
@@ -159,7 +160,6 @@ GRAPH_QL_URL
 `
 
 type GraphileFetcher struct {
-	Url               string
 	CursorAfter       string
 	CursorInputAfter  string
 	CursorReportAfter string
@@ -171,7 +171,6 @@ type GraphileFetcher struct {
 
 func NewGraphileFetcher(graphileClient graphile.GraphileClient) *GraphileFetcher {
 	return &GraphileFetcher{
-		Url:             "http://localhost:5000/graphql",
 		CursorAfter:     "",
 		BatchSize:       DefaultQueryBatchSize,
 		Query:           outputQuery,
@@ -226,7 +225,6 @@ func (v *GraphileFetcher) Fetch() (*OutputResponse, error) {
 	// Make a POST request to the GraphQL endpoint
 
 	body, err := v.GraphileClient.Post(payload)
-
 	if err != nil {
 		slog.Error("Error reading response:", "error", err)
 		return nil, err

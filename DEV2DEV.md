@@ -28,22 +28,21 @@ docker build -t postgresteste:latest ./postgres
 docker run -d --network mynetwork -p 5432:5432 --name postgres postgresteste:latest
 
 docker build -t postgraphile-custom ./postgraphile/
-docker run -d --network mynetwork -p 5000:5000 --name postgraphile-custom postgraphile-custom
+docker run -d --network mynetwork -p 5001:5001 --name postgraphile-custom postgraphile-custom
 ```
 
-[http://localhost:5000/graphiql](http://localhost:5000/graphiql)
+[http://localhost:5001/graphiql](http://localhost:5001/graphiql)
 
-## Build 
+### Build
 
-```
+```shell
 go build
 ```
-
 
 Run the nonodo with HL GraphQL flag enabled
 
 ```shell
-./nonodo --high-level-graphql --enable-debug --node-version v2
+go run . --high-level-graphql --enable-debug --node-version v2
 ```
 
 ```shell
@@ -52,7 +51,7 @@ export POSTGRES_PORT=5432
 export POSTGRES_DB=mydatabase
 export POSTGRES_USER=myuser
 export POSTGRES_PASSWORD=mypassword
-./nonodo --http-address=0.0.0.0 --high-level-graphql --enable-debug --node-version v2 --db-implementation postgres
+go run . --http-address=0.0.0.0 --high-level-graphql --enable-debug --node-version v2 --db-implementation postgres
 ```
 
 Disable sync
@@ -63,11 +62,19 @@ export POSTGRES_PORT=5432
 export POSTGRES_DB=mydatabase
 export POSTGRES_USER=myuser
 export POSTGRES_PASSWORD=mypassword
-./nonodo --http-address=0.0.0.0 --high-level-graphql --enable-debug --node-version v2 --db-implementation postgres --graphile-disable-sync
+go run . --http-address=0.0.0.0 --high-level-graphql --enable-debug --node-version v2 --db-implementation postgres --graphile-disable-sync
 ```
 
 For test:
 
 ```shell
 docker compose -f docker-compose.dev.yml up
+```
+
+## Environment Variables
+
+To configure the endpoint of the node v2 Graphile, you can set the GRAPHILE_URL environment variable. Here's how you can do it:
+
+```bash
+export GRAPHILE_URL=http://localhost:5001/graphql
 ```

@@ -121,7 +121,7 @@ func (s *InputRepositorySuite) TestCreateInputAndUpdateStatus() {
 		Payload:        common.Hex2Bytes("0x1122"),
 		BlockNumber:    1,
 		BlockTimestamp: time.Now(),
-		AppContract:    common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
+		AppContract:    common.HexToAddress("0x70997970C51812dc3A010C7d01b50e0d17dc79C8"),
 	})
 	s.NoError(err)
 	s.Equal(2222, input.Index)
@@ -133,6 +133,7 @@ func (s *InputRepositorySuite) TestCreateInputAndUpdateStatus() {
 	input2, err := s.inputRepository.FindByIndex(ctx, 2222)
 	s.NoError(err)
 	s.Equal(convenience.CompletionStatusAccepted, input2.Status)
+	s.Equal("0x70997970C51812dc3A010C7d01b50e0d17dc79C8", input2.AppContract.Hex())
 }
 
 func (s *InputRepositorySuite) TestCreateInputFindByStatus() {
