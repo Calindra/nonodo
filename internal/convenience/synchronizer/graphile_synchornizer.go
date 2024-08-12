@@ -37,6 +37,7 @@ func (x GraphileSynchronizer) Start(ctx context.Context, ready chan<- struct{}) 
 	if lastFetch != nil {
 		x.GraphileFetcher.CursorAfter = lastFetch.EndCursorAfter
 		x.GraphileFetcher.CursorInputAfter = lastFetch.EndInputCursorAfter
+		x.GraphileFetcher.CursorReportAfter = lastFetch.EndReportCursorAfter
 	}
 
 	for {
