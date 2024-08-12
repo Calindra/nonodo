@@ -213,9 +213,17 @@ func (x GraphileSynchronizer) handleGraphileResponse(ctx context.Context, output
 		}
 	}
 
-	x.GraphileFetcher.CursorAfter = outputResp.Data.Outputs.PageInfo.EndCursor
-	x.GraphileFetcher.CursorReportAfter = outputResp.Data.Reports.PageInfo.EndCursor
-	x.GraphileFetcher.CursorInputAfter = outputResp.Data.Inputs.PageInfo.EndCursor
+	if len(outputResp.Data.Outputs.PageInfo.EndCursor) != 0 {
+		x.GraphileFetcher.CursorAfter = outputResp.Data.Outputs.PageInfo.EndCursor
+	}
+
+	if len(outputResp.Data.Reports.PageInfo.EndCursor) != 0 {
+		x.GraphileFetcher.CursorReportAfter = outputResp.Data.Reports.PageInfo.EndCursor
+	}
+
+	if len(outputResp.Data.Inputs.PageInfo.EndCursor) != 0 {
+		x.GraphileFetcher.CursorInputAfter = outputResp.Data.Inputs.PageInfo.EndCursor
+	}
 	return nil
 }
 
