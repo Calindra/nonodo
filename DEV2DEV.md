@@ -33,12 +33,11 @@ docker run -d --network mynetwork -p 5000:5000 --name postgraphile-custom postgr
 
 [http://localhost:5000/graphiql](http://localhost:5000/graphiql)
 
-## Build 
+### Build
 
-```
+```bash
 go build
 ```
-
 
 Run the nonodo with HL GraphQL flag enabled
 
