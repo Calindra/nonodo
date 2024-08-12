@@ -32,8 +32,14 @@ type inputRow struct {
 }
 
 func (r *InputRepository) CreateTables() error {
+	autoIncrement := "INTEGER"
+
+	if r.Db.DriverName() == "postgres" {
+		autoIncrement = "SERIAL"
+	}
+
 	schema := `CREATE TABLE IF NOT EXISTS convenience_inputs (
-		id 				INTEGER NOT NULL PRIMARY KEY,
+		id 				%s NOT NULL PRIMARY KEY,
 		input_index		integer,
 		app_contract    text,
 		status	 		text,
@@ -45,6 +51,7 @@ func (r *InputRepository) CreateTables() error {
 		exception		text);
 	CREATE INDEX IF NOT EXISTS idx_input_index ON convenience_inputs(input_index);
 	CREATE INDEX IF NOT EXISTS idx_status ON convenience_inputs(status);`
+	schema = fmt.Sprintf(schema, autoIncrement)
 	_, err := r.Db.Exec(schema)
 	if err == nil {
 		slog.Debug("Inputs table created")

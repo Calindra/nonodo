@@ -51,7 +51,6 @@ func (x GraphileSynchronizer) Start(ctx context.Context, ready chan<- struct{}) 
 			err := x.handleWithDBTransaction(*voucherResp)
 			if err != nil {
 				slog.Error("Failed to handle graphile response.", "err", err)
-				return fmt.Errorf("error handling graphile response: %w", err)
 			}
 		}
 		select {

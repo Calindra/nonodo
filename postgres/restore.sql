@@ -297,27 +297,27 @@ ALTER TABLE ONLY public.notices
 INSERT INTO public.notices VALUES ('OX1223', 1, 1);
 INSERT INTO public.notices VALUES ('OX1223', 2, 2);
 
-CREATE TABLE IF NOT EXISTS public.convenience_inputs (
-		id 				integer,
-		input_index		integer,
-		status	 		text,
-		msg_sender	 	text,
-		payload			text,
-		block_number	integer,
-		block_timestamp	integer,
-		prev_randao		text,
-		exception		text);
+-- CREATE TABLE IF NOT EXISTS public.convenience_inputs (
+-- 		id 				integer,
+-- 		input_index		integer,
+-- 		status	 		text,
+-- 		msg_sender	 	text,
+-- 		payload			text,
+-- 		block_number	integer,
+-- 		block_timestamp	integer,
+-- 		prev_randao		text,
+-- 		exception		text);
 
-ALTER TABLE public.convenience_inputs OWNER TO myuser;
+-- ALTER TABLE public.convenience_inputs OWNER TO myuser;
 
-ALTER TABLE ONLY public.convenience_inputs
-    ADD CONSTRAINT cinputs_pkey PRIMARY KEY (id);
+-- ALTER TABLE ONLY public.convenience_inputs
+--     ADD CONSTRAINT cinputs_pkey PRIMARY KEY (id);
 
-ALTER TABLE public.convenience_inputs
-ADD COLUMN app_contract text;
+-- ALTER TABLE public.convenience_inputs
+-- ADD COLUMN app_contract text;
 
-INSERT INTO public.convenience_inputs (id, input_index, status, msg_sender, payload, block_number, block_timestamp, prev_randao, exception, app_contract) VALUES (1, 1, '0', '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266', '\x237a816f000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb922660000000000000000000000000000000000000000000000000de0b6b3a76400000000000000000000000000000000000000000000000000000000000000000060000000000000000000000000000000000000000000000000000000000000000a1122334455667788990000000000000000000000000000000000000000000000', 1, 1, '12345', '', '0xB17e9C1C8D91aA5E4DfCc2f3Ee8167Bf75F54D09');
-INSERT INTO public.convenience_inputs (id, input_index, status, msg_sender, payload, block_number, block_timestamp, prev_randao, exception, app_contract) VALUES (2, 2, '0', '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266', '\x237a816f000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb922660000000000000000000000000000000000000000000000000de0b6b3a76400000000000000000000000000000000000000000000000000000000000000000060000000000000000000000000000000000000000000000000000000000000000a1122334455667788990000000000000000000000000000000000000000000000', 1, 1, '12345', '', '0xB17e9C1C8D91aA5E4DfCc2f3Ee8167Bf75F54D09');
+-- INSERT INTO public.convenience_inputs (id, input_index, status, msg_sender, payload, block_number, block_timestamp, prev_randao, exception, app_contract) VALUES (1, 1, '0', '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266', '\x237a816f000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb922660000000000000000000000000000000000000000000000000de0b6b3a76400000000000000000000000000000000000000000000000000000000000000000060000000000000000000000000000000000000000000000000000000000000000a1122334455667788990000000000000000000000000000000000000000000000', 1, 1, '12345', '', '0xB17e9C1C8D91aA5E4DfCc2f3Ee8167Bf75F54D09');
+-- INSERT INTO public.convenience_inputs (id, input_index, status, msg_sender, payload, block_number, block_timestamp, prev_randao, exception, app_contract) VALUES (2, 2, '0', '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266', '\x237a816f000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb922660000000000000000000000000000000000000000000000000de0b6b3a76400000000000000000000000000000000000000000000000000000000000000000060000000000000000000000000000000000000000000000000000000000000000a1122334455667788990000000000000000000000000000000000000000000000', 1, 1, '12345', '', '0xB17e9C1C8D91aA5E4DfCc2f3Ee8167Bf75F54D09');
 
 --
 -- PostgreSQL database dump complete
