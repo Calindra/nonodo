@@ -4,9 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"math/rand"
-	"os"
-	"path"
 	"testing"
 	"time"
 
@@ -14,25 +11,26 @@ import (
 
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/suite"
 )
 
 type InputRepositorySuite struct {
 	suite.Suite
 	inputRepository *InputRepository
-	tempDir         string
+	dbFactory       *commons.DbFactory
+}
+
+func (s *InputRepositorySuite) SetupSuite() {
+	db := commons.NewDbFactory()
+	s.dbFactory = db
+	err := db.CreateRootTmpDir()
+	s.NoError(err)
 }
 
 func (s *InputRepositorySuite) SetupTest() {
 	commons.ConfigureLog(slog.LevelDebug)
-	tempDir, err := os.MkdirTemp("", "")
-	s.tempDir = tempDir
+	db, err := s.dbFactory.CreateDb("input-*.sqlite3")
 	s.NoError(err)
-	sqliteFileName := fmt.Sprintf("input%d.sqlite3", rand.Intn(1000))
-	sqliteFileName = path.Join(tempDir, sqliteFileName)
-	// db := sqlx.MustConnect("sqlite3", ":memory:")
-	db := sqlx.MustConnect("sqlite3", sqliteFileName)
 	s.inputRepository = &InputRepository{
 		Db: *db,
 	}
@@ -46,13 +44,11 @@ func TestInputRepositorySuite(t *testing.T) {
 }
 
 func (s *InputRepositorySuite) TestCreateTables() {
-	defer s.teardown()
 	err := s.inputRepository.CreateTables()
 	s.NoError(err)
 }
 
 func (s *InputRepositorySuite) TestCreateInput() {
-	defer s.teardown()
 	ctx := context.Background()
 	input, err := s.inputRepository.Create(ctx, convenience.AdvanceInput{
 		Index:          0,
@@ -67,7 +63,6 @@ func (s *InputRepositorySuite) TestCreateInput() {
 }
 
 func (s *InputRepositorySuite) TestFixCreateInputDuplicated() {
-	defer s.teardown()
 	ctx := context.Background()
 	input, err := s.inputRepository.Create(ctx, convenience.AdvanceInput{
 		Index:          0,
@@ -95,7 +90,6 @@ func (s *InputRepositorySuite) TestFixCreateInputDuplicated() {
 }
 
 func (s *InputRepositorySuite) TestCreateAndFindInputByIndex() {
-	defer s.teardown()
 	ctx := context.Background()
 	input, err := s.inputRepository.Create(ctx, convenience.AdvanceInput{
 		Index:          123,
@@ -119,7 +113,6 @@ func (s *InputRepositorySuite) TestCreateAndFindInputByIndex() {
 }
 
 func (s *InputRepositorySuite) TestCreateInputAndUpdateStatus() {
-	defer s.teardown()
 	ctx := context.Background()
 	input, err := s.inputRepository.Create(ctx, convenience.AdvanceInput{
 		Index:          2222,
@@ -143,7 +136,6 @@ func (s *InputRepositorySuite) TestCreateInputAndUpdateStatus() {
 }
 
 func (s *InputRepositorySuite) TestCreateInputFindByStatus() {
-	defer s.teardown()
 	ctx := context.Background()
 	input, err := s.inputRepository.Create(ctx, convenience.AdvanceInput{
 		Index:          2222,
@@ -176,7 +168,6 @@ func (s *InputRepositorySuite) TestCreateInputFindByStatus() {
 }
 
 func (s *InputRepositorySuite) TestFindByIndexGt() {
-	defer s.teardown()
 	ctx := context.Background()
 	for i := 0; i < 5; i++ {
 		input, err := s.inputRepository.Create(ctx, convenience.AdvanceInput{
@@ -204,7 +195,6 @@ func (s *InputRepositorySuite) TestFindByIndexGt() {
 }
 
 func (s *InputRepositorySuite) TestFindByIndexLt() {
-	defer s.teardown()
 	ctx := context.Background()
 	for i := 0; i < 5; i++ {
 		input, err := s.inputRepository.Create(ctx, convenience.AdvanceInput{
@@ -232,7 +222,6 @@ func (s *InputRepositorySuite) TestFindByIndexLt() {
 }
 
 func (s *InputRepositorySuite) TestFindByMsgSender() {
-	defer s.teardown()
 	ctx := context.Background()
 	for i := 0; i < 5; i++ {
 		input, err := s.inputRepository.Create(ctx, convenience.AdvanceInput{
@@ -289,7 +278,6 @@ func (s *InputRepositorySuite) TestColumnDappAddressExists() {
 }
 
 func (s *InputRepositorySuite) TestCreateInputAndCheckAppContract() {
-	defer s.teardown()
 	ctx := context.Background()
 	_, err := s.inputRepository.Create(ctx, convenience.AdvanceInput{
 		Index:          2222,
@@ -308,6 +296,11 @@ func (s *InputRepositorySuite) TestCreateInputAndCheckAppContract() {
 	s.Equal("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", input2.AppContract.Hex())
 }
 
-func (s *InputRepositorySuite) teardown() {
-	defer os.RemoveAll(s.tempDir)
+func (s *InputRepositorySuite) TearDownSuite() {
+	defer func() {
+		if s.dbFactory.TempDir != "" {
+			err := s.dbFactory.Cleanup()
+			s.NoError(err)
+		}
+	}()
 }
