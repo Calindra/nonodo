@@ -33,7 +33,7 @@ docker run -d --network mynetwork -p 5001:5001 --name postgraphile-custom postgr
 
 [http://localhost:5001/graphiql](http://localhost:5001/graphiql)
 
-## Build
+### Build
 
 ```shell
 go build
