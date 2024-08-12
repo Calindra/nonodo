@@ -23,12 +23,7 @@ Input encoded by rollups-contract V2
 Run the postgraphile
 
 ```bash
-docker network create mynetwork
-docker build -t postgresteste:latest ./postgres
-docker run -d --network mynetwork -p 5432:5432 --name postgres postgresteste:latest
-
-docker build -t postgraphile-custom ./postgraphile/
-docker run -d --network mynetwork -p 5001:5001 --name postgraphile-custom postgraphile-custom
+docker compose up --wait up postgraphile
 ```
 
 [http://localhost:5001/graphiql](http://localhost:5001/graphiql)
