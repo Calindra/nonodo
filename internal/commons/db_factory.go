@@ -13,10 +13,12 @@ type DbFactory struct {
 	Timeout time.Duration
 }
 
+const TimeoutInSeconds = 5
+
 func NewDbFactory() *DbFactory {
 	return &DbFactory{
 		TempDir: "",
-		Timeout: 5 * time.Second,
+		Timeout: TimeoutInSeconds * time.Second,
 	}
 }
 
