@@ -175,7 +175,7 @@ func (c *Container) GetGraphileClient(graphileAddress string, graphilePort strin
 	}
 
 	if loadTestMode {
-		graphileAddress = "postgraphile-custom"
+		graphileAddress = "postgraphile"
 	}
 	slog.Debug("GraphileClient",
 		"graphileAddress", graphileAddress,
