@@ -196,12 +196,12 @@ func (x GraphileSynchronizer) handleGraphileResponse(ctx context.Context, output
 	synchronizeFetch := &model.SynchronizerFetch{
 		TimestampAfter:       uint64(time.Now().UnixMilli()),
 		IniCursorAfter:       initCursorAfter,
-		EndCursorAfter:       x.GraphileFetcher.CursorAfter,
+		EndCursorAfter:       outputResp.Data.Outputs.PageInfo.EndCursor,
 		LogVouchersIds:       strings.Join(voucherIds, ";"),
 		IniInputCursorAfter:  initInputCursorAfter,
-		EndInputCursorAfter:  x.GraphileFetcher.CursorInputAfter,
+		EndInputCursorAfter:  outputResp.Data.Inputs.PageInfo.EndCursor,
 		IniReportCursorAfter: initReportCursorAfter,
-		EndReportCursorAfter: x.GraphileFetcher.CursorReportAfter,
+		EndReportCursorAfter: outputResp.Data.Reports.PageInfo.EndCursor,
 	}
 
 	if hasMoreInputs || hasMoreOutputs || hasMoreReports {
