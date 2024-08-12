@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log/slog"
+	"math/rand"
 	"strings"
 	"time"
 
@@ -17,13 +18,14 @@ type GraphileSynchronizer struct {
 	Decoder                model.DecoderInterface
 	SynchronizerRepository model.RepoSynchronizer
 	GraphileFetcher        *GraphileFetcher
+	Name                   string
 }
 
-func (x GraphileSynchronizer) String() string {
+func (x *GraphileSynchronizer) String() string {
 	return "GraphileSynchronizer"
 }
 
-func (x GraphileSynchronizer) Start(ctx context.Context, ready chan<- struct{}) error {
+func (x *GraphileSynchronizer) Start(ctx context.Context, ready chan<- struct{}) error {
 	ready <- struct{}{}
 
 	sleepInSeconds := 3
@@ -39,7 +41,11 @@ func (x GraphileSynchronizer) Start(ctx context.Context, ready chan<- struct{}) 
 		x.GraphileFetcher.CursorInputAfter = lastFetch.EndInputCursorAfter
 	}
 
+	slog.Debug("Starting the sync loop")
 	for {
+		slog.Debug("Call fetch", "name", x.Name,
+			"CursorReportAfter", x.GraphileFetcher.CursorReportAfter,
+		)
 		voucherResp, err := x.GraphileFetcher.Fetch()
 
 		if err != nil {
@@ -48,7 +54,8 @@ func (x GraphileSynchronizer) Start(ctx context.Context, ready chan<- struct{}) 
 				"error", err.Error(),
 			)
 		} else {
-			err := x.handleWithDBTransaction(*voucherResp)
+			slog.Debug("voucherResp", "reports", len(voucherResp.Data.Reports.Edges))
+			err := x.handleWithDBTransaction(ctx, *voucherResp)
 			if err != nil {
 				slog.Error("Failed to handle graphile response.", "err", err)
 				return fmt.Errorf("error handling graphile response: %w", err)
@@ -66,9 +73,9 @@ func (x GraphileSynchronizer) Start(ctx context.Context, ready chan<- struct{}) 
 
 }
 
-func (x GraphileSynchronizer) handleWithDBTransaction(outputResp OutputResponse) error {
+func (x *GraphileSynchronizer) handleWithDBTransaction(ctx context.Context, outputResp OutputResponse) error {
 	const timeoutDuration = 5 * time.Second
-	ctx, cancel := context.WithTimeout(context.Background(), timeoutDuration)
+	ctx, cancel := context.WithTimeout(ctx, timeoutDuration)
 	defer cancel()
 	db := x.SynchronizerRepository.GetDB()
 	ctxWithTx, err := repository.StartTransaction(ctx, db)
@@ -114,7 +121,7 @@ func (x *GraphileSynchronizer) callRollback(tx *sqlx.Tx) {
 	}
 }
 
-func (x GraphileSynchronizer) handleGraphileResponse(ctx context.Context, outputResp OutputResponse) error {
+func (x *GraphileSynchronizer) handleGraphileResponse(ctx context.Context, outputResp OutputResponse) error {
 	// Handle response data
 	voucherIds := []string{}
 	var initCursorAfter string
@@ -229,5 +236,6 @@ func NewGraphileSynchronizer(
 		Decoder:                decoder,
 		SynchronizerRepository: synchronizerRepository,
 		GraphileFetcher:        graphileFetcher,
+		Name:                   fmt.Sprintf("Graph Sync %d", rand.Intn(1000)),
 	}
 }

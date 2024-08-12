@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"math/rand"
 
 	"github.com/calindra/nonodo/internal/graphile"
 )
@@ -167,6 +168,7 @@ type GraphileFetcher struct {
 	Query             string
 	QueryWithCursor   string
 	GraphileClient    graphile.GraphileClient
+	Name              string
 }
 
 func NewGraphileFetcher(graphileClient graphile.GraphileClient) *GraphileFetcher {
@@ -177,6 +179,7 @@ func NewGraphileFetcher(graphileClient graphile.GraphileClient) *GraphileFetcher
 		Query:           outputQuery,
 		QueryWithCursor: outputQueryWithCursor,
 		GraphileClient:  graphileClient,
+		Name:            fmt.Sprintf("instance %d", rand.Intn(1000)),
 	}
 }
 
@@ -208,6 +211,7 @@ func (v *GraphileFetcher) GetFullQuery() string {
 
 func (v *GraphileFetcher) Fetch() (*OutputResponse, error) {
 	slog.Debug("Graphile querying",
+		"name", v.Name,
 		"afterOutput", v.CursorAfter,
 		"afterInput", v.CursorInputAfter,
 		"afterReport", v.CursorReportAfter,
