@@ -60,12 +60,6 @@ export POSTGRES_PASSWORD=mypassword
 go run . --http-address=0.0.0.0 --high-level-graphql --enable-debug --node-version v2 --db-implementation postgres --graphile-disable-sync
 ```
 
-For test:
-
-```shell
-docker compose -f docker-compose.dev.yml up
-```
-
 ## Environment Variables
 
 To configure the endpoint of the node v2 Graphile, you can set the GRAPHILE_URL environment variable. Here's how you can do it:
