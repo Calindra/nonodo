@@ -4,17 +4,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
-	"os"
 
 	"github.com/calindra/nonodo/internal/graphile"
 )
 
 const outputQuery = `
-	query { 
+	query {
 		outputs(first: %d) {
-			edges { 
+			edges {
 				cursor
-				node { 
+				node {
 					blob
 					index
 					inputIndex
@@ -37,7 +36,7 @@ const outputQuery = `
 				startCursor
 			}
 		}
-		%s	
+		%s
 
 		#report
 		%s
@@ -82,8 +81,8 @@ const inputQueryWithCursor = `
 `
 
 const outputQueryWithCursor = `
-	query { 
-		outputs(first: %d, after: "%s") { 
+	query {
+		outputs(first: %d, after: "%s") {
 			edges {
 				cursor
 				node {
@@ -109,7 +108,7 @@ const outputQueryWithCursor = `
 				startCursor
 			}
 		}
-		%s	
+		%s
 
 		#report
 		%s
@@ -161,7 +160,6 @@ GRAPH_QL_URL
 `
 
 type GraphileFetcher struct {
-	Url               string
 	CursorAfter       string
 	CursorInputAfter  string
 	CursorReportAfter string
@@ -172,12 +170,7 @@ type GraphileFetcher struct {
 }
 
 func NewGraphileFetcher(graphileClient graphile.GraphileClient) *GraphileFetcher {
-	url := os.Getenv("GRAPHILE_URL")
-	if url == "" {
-		url = "http://localhost:5001/graphql"
-	}
 	return &GraphileFetcher{
-		Url:             url,
 		CursorAfter:     "",
 		BatchSize:       DefaultQueryBatchSize,
 		Query:           outputQuery,

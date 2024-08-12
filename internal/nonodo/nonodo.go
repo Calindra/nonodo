@@ -89,6 +89,10 @@ type NonodoOpts struct {
 // Create the options struct with default values.
 func NewNonodoOpts() NonodoOpts {
 	var defaultTimeout time.Duration = 10 * time.Second
+	var graphilePort string = os.Getenv("GRAPHILE_PORT")
+	if graphilePort == "" {
+		graphilePort = "5001"
+	}
 	return NonodoOpts{
 		AnvilAddress:        devnet.AnvilDefaultAddress,
 		AnvilPort:           devnet.AnvilDefaultPort,
@@ -116,7 +120,7 @@ func NewNonodoOpts() NonodoOpts {
 		TimeoutInspect:      defaultTimeout,
 		TimeoutAdvance:      defaultTimeout,
 		GraphileAddress:     "localhost",
-		GraphilePort:        "5001",
+		GraphilePort:        graphilePort,
 		GraphileDisableSync: false,
 	}
 }
