@@ -22,8 +22,14 @@ Input encoded by rollups-contract V2
 
 Run the postgraphile
 
-```bash
+```shell
 docker compose up --wait up postgraphile
+```
+
+Stop with clean:
+
+```shell
+docker compose down --rmi local --remove-orphans --volumes
 ```
 
 [http://localhost:5001/graphiql](http://localhost:5001/graphiql)

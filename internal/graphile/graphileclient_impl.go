@@ -2,19 +2,18 @@ package graphile
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 )
 
 type GraphileClientImpl struct {
-	GraphileAddress string
-	GraphilePort    string
+	GraphileUrl url.URL
 }
 
 func (c *GraphileClientImpl) Post(requestBody []byte) ([]byte, error) {
-	req, err := http.NewRequest("POST", fmt.Sprintf("http://%s:%s/graphql", c.GraphileAddress, c.GraphilePort), bytes.NewBuffer(requestBody))
+	req, err := http.NewRequest("POST", c.GraphileUrl.String(), bytes.NewBuffer(requestBody))
 	if err != nil {
 		slog.Error("Error creating request", "error", err)
 		return nil, err

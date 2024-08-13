@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math/big"
+	"net/url"
 	"os"
 	"time"
 
@@ -81,24 +82,27 @@ type NonodoOpts struct {
 	TimeoutInspect time.Duration
 	TimeoutAdvance time.Duration
 
-	GraphileAddress     string
-	GraphilePort        string
+	GraphileUrl         string
 	GraphileDisableSync bool
 }
 
 // Create the options struct with default values.
 func NewNonodoOpts() NonodoOpts {
 	var (
-		defaultTimeout  time.Duration = 10 * time.Second
-		graphilePort    string        = os.Getenv("GRAPHILE_PORT")
-		graphileAddress string        = os.Getenv("GRAPHILE_ADDRESS")
+		defaultTimeout time.Duration = 10 * time.Second
+		graphileUrl                  = os.Getenv("GRAPHILE_URL")
 	)
-	if graphilePort == "" {
-		graphilePort = "5001"
+	const defaultGraphileUrl = "http://localhost:5001"
+
+	if graphileUrl == "" {
+		graphileUrl = defaultGraphileUrl
 	}
-	if graphileAddress == "" {
-		graphileAddress = "localhost"
+
+	// Check if the URL is valid
+	if _, err := url.Parse(graphileUrl); err != nil {
+		graphileUrl = defaultGraphileUrl
 	}
+
 	return NonodoOpts{
 		AnvilAddress:        devnet.AnvilDefaultAddress,
 		AnvilPort:           devnet.AnvilDefaultPort,
@@ -125,8 +129,7 @@ func NewNonodoOpts() NonodoOpts {
 		Namespace:           DefaultNamespace,
 		TimeoutInspect:      defaultTimeout,
 		TimeoutAdvance:      defaultTimeout,
-		GraphileAddress:     graphileAddress,
-		GraphilePort:        graphilePort,
+		GraphileUrl:         graphileUrl,
 		GraphileDisableSync: false,
 	}
 }
@@ -164,7 +167,13 @@ func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 	if opts.NodeVersion == "v1" {
 		adapter = reader.NewAdapterV1(db, convenienceService)
 	} else {
-		httpClient := container.GetGraphileClient(opts.GraphileAddress, opts.GraphilePort, opts.LoadTestMode)
+		graphileUrl, err := url.Parse(opts.GraphileUrl)
+		if err != nil {
+			slog.Error("Error parsing Graphile URL", "error", err)
+			panic(err)
+		}
+
+		httpClient := container.GetGraphileClient(*graphileUrl, opts.LoadTestMode)
 		inputBlobAdapter := reader.InputBlobAdapter{}
 		adapter = reader.NewAdapterV2(convenienceService, httpClient, inputBlobAdapter)
 	}
@@ -189,7 +198,13 @@ func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 		var synchronizer supervisor.Worker
 
 		if opts.NodeVersion == "v2" {
-			synchronizer = container.GetGraphileSynchronizer(opts.GraphileAddress, opts.GraphilePort, opts.LoadTestMode)
+			graphileUrl, err := url.Parse(opts.GraphileUrl)
+			if err != nil {
+				slog.Error("Error parsing Graphile URL", "error", err)
+				panic(err)
+			}
+
+			synchronizer = container.GetGraphileSynchronizer(*graphileUrl, opts.LoadTestMode)
 		} else {
 			synchronizer = container.GetGraphQLSynchronizer()
 		}
