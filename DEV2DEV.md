@@ -23,12 +23,7 @@ Input encoded by rollups-contract V2
 Run the postgraphile
 
 ```bash
-docker network create mynetwork
-docker build -t postgresteste:latest ./postgres
-docker run -d --network mynetwork -p 5432:5432 --name postgres postgresteste:latest
-
-docker build -t postgraphile-custom ./postgraphile/
-docker run -d --network mynetwork -p 5001:5001 --name postgraphile-custom postgraphile-custom
+docker compose up --wait up postgraphile
 ```
 
 [http://localhost:5001/graphiql](http://localhost:5001/graphiql)
@@ -63,12 +58,6 @@ export POSTGRES_DB=mydatabase
 export POSTGRES_USER=myuser
 export POSTGRES_PASSWORD=mypassword
 go run . --http-address=0.0.0.0 --high-level-graphql --enable-debug --node-version v2 --db-implementation postgres --graphile-disable-sync
-```
-
-For test:
-
-```shell
-docker compose -f docker-compose.dev.yml up
 ```
 
 ## Environment Variables
