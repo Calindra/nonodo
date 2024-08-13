@@ -1,7 +1,9 @@
 package convenience
 
 import (
+	"fmt"
 	"log/slog"
+	"net/url"
 
 	"github.com/calindra/nonodo/internal/convenience/decoder"
 	"github.com/calindra/nonodo/internal/convenience/repository"
@@ -146,12 +148,12 @@ func (c *Container) GetVoucherFetcher() *synchronizer.VoucherFetcher {
 	return c.voucherFetcher
 }
 
-func (c *Container) GetGraphileSynchronizer(graphileAddress string, graphilePort string, loadTestMode bool) *synchronizer.GraphileSynchronizer {
+func (c *Container) GetGraphileSynchronizer(graphileUrl url.URL, loadTestMode bool) *synchronizer.GraphileSynchronizer {
 	if c.graphileSynchronizer != nil {
 		return c.graphileSynchronizer
 	}
 
-	graphileClient := c.GetGraphileClient(graphileAddress, graphilePort, loadTestMode)
+	graphileClient := c.GetGraphileClient(graphileUrl, loadTestMode)
 	c.graphileSynchronizer = synchronizer.NewGraphileSynchronizer(
 		c.GetOutputDecoder(),
 		c.GetSyncRepository(),
@@ -168,22 +170,25 @@ func (c *Container) GetGraphileFetcher(graphileClient graphile.GraphileClient) *
 	return c.graphileFetcher
 }
 
-func (c *Container) GetGraphileClient(graphileAddress string, graphilePort string, loadTestMode bool) graphile.GraphileClient {
+func (c *Container) GetGraphileClient(graphileUrl url.URL, loadTestMode bool) graphile.GraphileClient {
 
 	if c.graphileClient != nil {
 		return c.graphileClient
 	}
 
 	if loadTestMode {
-		graphileAddress = "postgraphile"
+		const serviceName = "http://postgraphile"
+		if graphileUrl.Port() != "" {
+			graphileUrl.Host = fmt.Sprintf("%s:%s", serviceName, graphileUrl.Port())
+		} else {
+			graphileUrl.Host = serviceName
+		}
 	}
 	slog.Debug("GraphileClient",
-		"graphileAddress", graphileAddress,
-		"graphilePort", graphilePort,
+		"graphileUrl", graphileUrl,
 	)
 	c.graphileClient = &graphile.GraphileClientImpl{
-		GraphileAddress: graphileAddress,
-		GraphilePort:    graphilePort,
+		GraphileUrl: graphileUrl,
 	}
 	return c.graphileClient
 }

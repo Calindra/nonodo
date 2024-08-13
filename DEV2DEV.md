@@ -22,8 +22,14 @@ Input encoded by rollups-contract V2
 
 Run the postgraphile
 
-```bash
+```shell
 docker compose up --wait up postgraphile
+```
+
+Stop with clean:
+
+```shell
+docker compose down --rmi local --remove-orphans --volumes
 ```
 
 [http://localhost:5001/graphiql](http://localhost:5001/graphiql)
@@ -62,8 +68,8 @@ go run . --http-address=0.0.0.0 --high-level-graphql --enable-debug --node-versi
 
 ## Environment Variables
 
-To configure the endpoint of the node v2 Graphile, you can set the GRAPHILE_URL environment variable. Here's how you can do it:
+To configure the endpoint of the node v2 Graphile, you can set the `GRAPHILE_URL` environment variable. Here's how you can do it:
 
 ```bash
-export GRAPHILE_URL=http://localhost:5001/graphql
+export GRAPHILE_URL=localhost:5001/graphql
 ```
