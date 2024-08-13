@@ -189,10 +189,10 @@ When running nonodo, set flag db-implementation with the value postgres
 
 Graphile can be called using `http://localhost:5001/graphql` and you can test queries using `http://localhost:5001/graphiql`
 
-You can change Graphile address and port using the flags graphile-address and graphile-port.
+You can change Graphile address and port using the flags graphile-url.
 
 ```sh
-/nonodo --graphile-address mygraphileaddress --graphile-port 5034
+/nonodo --graphile-url http://mygraphileaddress:5034
 ```
 
 ## Compatibility
