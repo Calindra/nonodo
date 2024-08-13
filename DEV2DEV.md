@@ -73,9 +73,8 @@ docker compose -f docker-compose.dev.yml up
 
 ## Environment Variables
 
-To configure the endpoint of the node v2 Graphile, you can set the `GRAPHILE_HOST` and `GRAPHILE_PORT` environment variable. Here's how you can do it:
+To configure the endpoint of the node v2 Graphile, you can set the `GRAPHILE_URL` environment variable. Here's how you can do it:
 
 ```bash
-export GRAPHILE_HOST=localhost
-export GRAPHILE_PORT=5001
+export GRAPHILE_URL=localhost:5001
 ```
