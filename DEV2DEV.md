@@ -71,5 +71,5 @@ go run . --http-address=0.0.0.0 --high-level-graphql --enable-debug --node-versi
 To configure the endpoint of the node v2 Graphile, you can set the `GRAPHILE_URL` environment variable. Here's how you can do it:
 
 ```bash
-export GRAPHILE_URL=localhost:5001
+export GRAPHILE_URL=localhost:5001/graphql
 ```

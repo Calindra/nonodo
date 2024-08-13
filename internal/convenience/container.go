@@ -177,7 +177,12 @@ func (c *Container) GetGraphileClient(graphileUrl url.URL, loadTestMode bool) gr
 	}
 
 	if loadTestMode {
-		graphileUrl.Host = fmt.Sprintf("%s:%s", graphileUrl.Host, graphileUrl.Port())
+		const serviceName = "http://postgraphile"
+		if graphileUrl.Port() != "" {
+			graphileUrl.Host = fmt.Sprintf("%s:%s", serviceName, graphileUrl.Port())
+		} else {
+			graphileUrl.Host = serviceName
+		}
 	}
 	slog.Debug("GraphileClient",
 		"graphileUrl", graphileUrl,
