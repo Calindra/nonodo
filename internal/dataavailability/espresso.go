@@ -106,7 +106,7 @@ func (e *EspressoFetcher) fetchContext(blockNumber *big.Int) (*FetchInputBoxCont
 			epoch.String(),
 		)
 		slog.Error(err)
-		return nil, fmt.Errorf(err)
+		return nil, fmt.Errorf("Error  %s", err)
 	}
 
 	var context FetchInputBoxContext = FetchInputBoxContext{
