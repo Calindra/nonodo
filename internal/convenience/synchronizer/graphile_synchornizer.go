@@ -37,6 +37,7 @@ func (x GraphileSynchronizer) Start(ctx context.Context, ready chan<- struct{}) 
 	if lastFetch != nil {
 		x.GraphileFetcher.CursorAfter = lastFetch.EndCursorAfter
 		x.GraphileFetcher.CursorInputAfter = lastFetch.EndInputCursorAfter
+		x.GraphileFetcher.CursorReportAfter = lastFetch.EndReportCursorAfter
 	}
 
 	for {
@@ -116,9 +117,12 @@ func (x *GraphileSynchronizer) callRollback(tx *sqlx.Tx) {
 func (x GraphileSynchronizer) handleGraphileResponse(ctx context.Context, outputResp OutputResponse) error {
 	// Handle response data
 	voucherIds := []string{}
-	var initCursorAfter string
-	var initInputCursorAfter string
-	var initReportCursorAfter string
+	initCursorAfter := x.GraphileFetcher.CursorAfter
+	initInputCursorAfter := x.GraphileFetcher.CursorInputAfter
+	initReportCursorAfter := x.GraphileFetcher.CursorReportAfter
+	var endReportCursorAfter string
+	var endInputCursorAfter string
+	var endCursorAfter string
 
 	for _, output := range outputResp.Data.Outputs.Edges {
 		outputIndex := output.Node.Index
@@ -147,6 +151,9 @@ func (x GraphileSynchronizer) handleGraphileResponse(ctx context.Context, output
 
 	if hasMoreOutputs {
 		initCursorAfter = x.GraphileFetcher.CursorAfter
+		endCursorAfter = outputResp.Data.Outputs.PageInfo.EndCursor
+	} else if len(initCursorAfter) > 0 {
+		endCursorAfter = x.GraphileFetcher.CursorAfter
 	}
 
 	for _, input := range outputResp.Data.Inputs.Edges {
@@ -186,22 +193,29 @@ func (x GraphileSynchronizer) handleGraphileResponse(ctx context.Context, output
 	hasMoreReports := len(outputResp.Data.Reports.PageInfo.EndCursor) > 0
 	if hasMoreReports {
 		initReportCursorAfter = x.GraphileFetcher.CursorReportAfter
+		endReportCursorAfter = outputResp.Data.Reports.PageInfo.EndCursor
+	} else if len(initReportCursorAfter) > 0 {
+		endReportCursorAfter = x.GraphileFetcher.CursorReportAfter
 	}
 
 	hasMoreInputs := len(outputResp.Data.Inputs.PageInfo.EndCursor) > 0
 
 	if hasMoreInputs {
 		initInputCursorAfter = x.GraphileFetcher.CursorInputAfter
+		endInputCursorAfter = outputResp.Data.Inputs.PageInfo.EndCursor
+	} else if len(initInputCursorAfter) > 0 {
+		endInputCursorAfter = x.GraphileFetcher.CursorInputAfter
 	}
+
 	synchronizeFetch := &model.SynchronizerFetch{
 		TimestampAfter:       uint64(time.Now().UnixMilli()),
 		IniCursorAfter:       initCursorAfter,
-		EndCursorAfter:       x.GraphileFetcher.CursorAfter,
+		EndCursorAfter:       endCursorAfter,
 		LogVouchersIds:       strings.Join(voucherIds, ";"),
 		IniInputCursorAfter:  initInputCursorAfter,
-		EndInputCursorAfter:  x.GraphileFetcher.CursorInputAfter,
+		EndInputCursorAfter:  endInputCursorAfter,
 		IniReportCursorAfter: initReportCursorAfter,
-		EndReportCursorAfter: x.GraphileFetcher.CursorReportAfter,
+		EndReportCursorAfter: endReportCursorAfter,
 	}
 
 	if hasMoreInputs || hasMoreOutputs || hasMoreReports {
@@ -213,9 +227,18 @@ func (x GraphileSynchronizer) handleGraphileResponse(ctx context.Context, output
 		}
 	}
 
-	x.GraphileFetcher.CursorAfter = outputResp.Data.Outputs.PageInfo.EndCursor
-	x.GraphileFetcher.CursorReportAfter = outputResp.Data.Reports.PageInfo.EndCursor
-	x.GraphileFetcher.CursorInputAfter = outputResp.Data.Inputs.PageInfo.EndCursor
+	cursors := map[*string]string{
+		&x.GraphileFetcher.CursorAfter:       endCursorAfter,
+		&x.GraphileFetcher.CursorReportAfter: endReportCursorAfter,
+		&x.GraphileFetcher.CursorInputAfter:  endInputCursorAfter,
+	}
+
+	for dest, cursor := range cursors {
+		if len(cursor) != 0 {
+			*dest = cursor
+		}
+	}
+
 	return nil
 }
 
