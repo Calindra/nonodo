@@ -22,13 +22,14 @@ Input encoded by rollups-contract V2
 
 Run the postgraphile
 
-```bash
-docker network create mynetwork
-docker build -t postgresteste:latest ./postgres
-docker run -d --network mynetwork -p 5432:5432 --name postgres postgresteste:latest
+```shell
+docker compose up --wait up postgraphile
+```
 
-docker build -t postgraphile-custom ./postgraphile/
-docker run -d --network mynetwork -p 5001:5001 --name postgraphile-custom postgraphile-custom
+Stop with clean:
+
+```shell
+docker compose down --rmi local --remove-orphans --volumes
 ```
 
 [http://localhost:5001/graphiql](http://localhost:5001/graphiql)
@@ -65,16 +66,10 @@ export POSTGRES_PASSWORD=mypassword
 go run . --http-address=0.0.0.0 --high-level-graphql --enable-debug --node-version v2 --db-implementation postgres --graphile-disable-sync
 ```
 
-For test:
-
-```shell
-docker compose -f docker-compose.dev.yml up
-```
-
 ## Environment Variables
 
-To configure the endpoint of the node v2 Graphile, you can set the GRAPHILE_URL environment variable. Here's how you can do it:
+To configure the endpoint of the node v2 Graphile, you can set the `GRAPHILE_URL` environment variable. Here's how you can do it:
 
 ```bash
-export GRAPHILE_URL=http://localhost:5001/graphql
+export GRAPHILE_URL=localhost:5001/graphql
 ```

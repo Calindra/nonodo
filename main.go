@@ -427,11 +427,7 @@ func init() {
 	cmd.Flags().BoolVar(&opts.GraphileDisableSync, "graphile-disable-sync", opts.GraphileDisableSync,
 		"If set, disable graphile synchronization")
 
-	cmd.Flags().StringVar(&opts.GraphileAddress, "graphile-address", opts.GraphileAddress,
-		"Address used to connect to Graphile")
-
-	cmd.Flags().StringVar(&opts.GraphilePort, "graphile-port", opts.GraphilePort,
-		"Port used to connect to Graphile")
+	cmd.Flags().StringVar(&opts.GraphileUrl, "graphile-url", opts.GraphileUrl, "URL used to connect to Graphile")
 }
 
 func run(cmd *cobra.Command, args []string) {

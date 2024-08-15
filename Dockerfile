@@ -40,4 +40,4 @@ EXPOSE 8080
 HEALTHCHECK CMD curl --fail http://localhost:8080/health || exit 1
 
 # Comando para rodar a aplicação
-CMD ["./nonodo", "--http-address=0.0.0.0", "--high-level-graphql", "--enable-debug", "--node-version", "v2", "--db-implementation", "postgres", "--graphile-address", "postgraphile", "--anvil-address", "0.0.0.0" ]
+CMD ["./nonodo", "--http-address=0.0.0.0", "--high-level-graphql", "--enable-debug", "--node-version", "v2", "--db-implementation", "postgres", "--graphile-url", "http://postgraphile:5001/graphql", "--anvil-address", "0.0.0.0" ]
