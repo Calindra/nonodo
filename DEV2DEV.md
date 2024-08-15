@@ -23,7 +23,7 @@ Input encoded by rollups-contract V2
 Run the postgraphile
 
 ```shell
-docker compose up --wait up postgraphile
+docker compose up --wait postgraphile
 ```
 
 Stop with clean:
