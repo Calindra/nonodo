@@ -1,7 +1,7 @@
 package commons
 
 import (
-	"context"
+	"log/slog"
 	"os"
 	"time"
 
@@ -13,41 +13,42 @@ type DbFactory struct {
 	Timeout time.Duration
 }
 
-const TimeoutInSeconds = 5
+const TimeoutInSeconds = 10
 
 func NewDbFactory() *DbFactory {
+	tempDir, err := os.MkdirTemp("", "nonodo-test-*")
+	if err != nil {
+		slog.Error("Error creating temp dir", "err", err)
+		panic(err)
+	}
+
 	return &DbFactory{
-		TempDir: "",
+		TempDir: tempDir,
 		Timeout: TimeoutInSeconds * time.Second,
 	}
 }
 
-func (d *DbFactory) CreateRootTmpDir() error {
-	tempDir, err := os.MkdirTemp("", "nonodo-test-*")
+func (d *DbFactory) CreateDb(pattern string) *sqlx.DB {
+	file, err := os.CreateTemp(d.TempDir, pattern)
 	if err != nil {
-		return err
+		slog.Error("Error creating temp file", "err", err)
+		panic(err)
 	}
-	d.TempDir = tempDir
-	return nil
-}
-
-func (d *DbFactory) CreateDb(pattern string) (*sqlx.DB, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), d.Timeout)
-	defer cancel()
-	tempDir := d.TempDir
-	sqlite, err := os.CreateTemp(tempDir, pattern)
+	_, err = file.Write([]byte{})
 	if err != nil {
-		return nil, err
+		slog.Error("Error writing to temp file", "err", err)
+		panic(err)
 	}
-	err = sqlite.Close()
-	if err != nil {
-		return nil, err
-	}
-	sqliteFileName := sqlite.Name()
+	sqliteFileName := file.Name()
+	file.Close()
 	// db := sqlx.MustConnect("sqlite3", ":memory:")
-	return sqlx.ConnectContext(ctx, "sqlite3", sqliteFileName)
+	slog.Info("Creating db attempting", "sqliteFileName", sqliteFileName)
+	return sqlx.MustConnect("sqlite3", sqliteFileName)
 }
 
-func (d *DbFactory) Cleanup() error {
-	return os.RemoveAll(d.TempDir)
+func (d *DbFactory) Cleanup() {
+	if d.TempDir != "" {
+		slog.Info("Cleaning up temp dir", "tempDir", d.TempDir)
+		os.RemoveAll(d.TempDir)
+	}
 }

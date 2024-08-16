@@ -45,7 +45,6 @@ type NonodoSuite struct {
 //
 
 func (s *NonodoSuite) TestItProcessesAdvanceInputs() {
-	// defer s.teardown()
 	opts := NewNonodoOpts()
 	// we are using file cuz there is problem with memory
 	// no such table: reports
@@ -148,7 +147,6 @@ func (s *NonodoSuite) TestGraphQLNotice() {
 }
 
 func (s *NonodoSuite) TestItProcessesInspectInputs() {
-	// defer s.teardown()
 	opts := NewNonodoOpts()
 	opts.EnableEcho = true
 	s.setupTest(opts)

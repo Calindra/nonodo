@@ -23,18 +23,15 @@ type InputRepositorySuite struct {
 func (s *InputRepositorySuite) SetupSuite() {
 	db := commons.NewDbFactory()
 	s.dbFactory = db
-	err := db.CreateRootTmpDir()
-	s.NoError(err)
 }
 
 func (s *InputRepositorySuite) SetupTest() {
 	commons.ConfigureLog(slog.LevelDebug)
-	db, err := s.dbFactory.CreateDb("input-*.sqlite3")
-	s.NoError(err)
+	db := s.dbFactory.CreateDb("input*.sqlite3")
 	s.inputRepository = &InputRepository{
 		Db: *db,
 	}
-	err = s.inputRepository.CreateTables()
+	err := s.inputRepository.CreateTables()
 	s.NoError(err)
 }
 
@@ -297,11 +294,6 @@ func (s *InputRepositorySuite) TestCreateInputAndCheckAppContract() {
 	s.Equal("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", input2.AppContract.Hex())
 }
 
-func (s *InputRepositorySuite) TearDownSuite() {
-	defer func() {
-		if s.dbFactory.TempDir != "" {
-			err := s.dbFactory.Cleanup()
-			s.NoError(err)
-		}
-	}()
+func (s *InputRepositorySuite) TearDownTest() {
+	defer s.dbFactory.Cleanup()
 }
