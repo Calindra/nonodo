@@ -3,6 +3,7 @@ package commons
 import (
 	"log/slog"
 	"os"
+	"path"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -28,27 +29,19 @@ func NewDbFactory() *DbFactory {
 	}
 }
 
-func (d *DbFactory) CreateDb(pattern string) *sqlx.DB {
-	file, err := os.CreateTemp(d.TempDir, pattern)
-	if err != nil {
-		slog.Error("Error creating temp file", "err", err)
-		panic(err)
-	}
-	_, err = file.Write([]byte{})
-	if err != nil {
-		slog.Error("Error writing to temp file", "err", err)
-		panic(err)
-	}
-	sqliteFileName := file.Name()
-	file.Close()
+func (d *DbFactory) CreateDb(sqliteFileName string) *sqlx.DB {
 	// db := sqlx.MustConnect("sqlite3", ":memory:")
-	slog.Info("Creating db attempting", "sqliteFileName", sqliteFileName)
-	return sqlx.MustConnect("sqlite3", sqliteFileName)
+	sqlitePath := path.Join(d.TempDir, sqliteFileName)
+	slog.Info("Creating db attempting", "sqlitePath", sqlitePath)
+	return sqlx.MustConnect("sqlite3", sqlitePath)
 }
 
 func (d *DbFactory) Cleanup() {
 	if d.TempDir != "" {
 		slog.Info("Cleaning up temp dir", "tempDir", d.TempDir)
-		os.RemoveAll(d.TempDir)
+		err := os.RemoveAll(d.TempDir)
+		if err != nil {
+			slog.Error("Error removing temp dir", "err", err)
+		}
 	}
 }

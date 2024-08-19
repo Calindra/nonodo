@@ -20,14 +20,10 @@ type InputRepositorySuite struct {
 	dbFactory       *commons.DbFactory
 }
 
-func (s *InputRepositorySuite) SetupSuite() {
-	db := commons.NewDbFactory()
-	s.dbFactory = db
-}
-
 func (s *InputRepositorySuite) SetupTest() {
 	commons.ConfigureLog(slog.LevelDebug)
-	db := s.dbFactory.CreateDb("input*.sqlite3")
+	s.dbFactory = commons.NewDbFactory()
+	db := s.dbFactory.CreateDb("input.sqlite3")
 	s.inputRepository = &InputRepository{
 		Db: *db,
 	}
