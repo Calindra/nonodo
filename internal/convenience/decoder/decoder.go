@@ -110,14 +110,16 @@ func (o *OutputDecoder) HandleInput(
 		return fmt.Errorf("error getting converted input: %w", err)
 	}
 	_, err = o.convenienceService.CreateInput(ctx, &model.AdvanceInput{
-		Index:          input.Node.Index,
-		Status:         status,
-		MsgSender:      convertedInput.MsgSender,
-		Payload:        []byte(convertedInput.Payload),
-		BlockNumber:    convertedInput.BlockNumber.Uint64(),
-		BlockTimestamp: time.Unix(convertedInput.BlockTimestamp, 0),
-		PrevRandao:     convertedInput.PrevRandao,
-		AppContract:    convertedInput.AppContract,
+		Index:                  input.Node.Index,
+		Status:                 status,
+		MsgSender:              convertedInput.MsgSender,
+		Payload:                []byte(convertedInput.Payload),
+		BlockNumber:            convertedInput.BlockNumber.Uint64(),
+		BlockTimestamp:         time.Unix(convertedInput.BlockTimestamp, 0),
+		PrevRandao:             convertedInput.PrevRandao,
+		AppContract:            convertedInput.AppContract,
+		EspressoBlockNumber:    0,
+		EspressoBlockTimestamp: time.Unix(0, 0),
 	})
 	return err
 }

@@ -42,12 +42,14 @@ func ConvertInput(input cModel.AdvanceInput) (*Input, error) {
 	}
 
 	return &Input{
-		Index:       input.Index,
-		Status:      convertedStatus,
-		MsgSender:   input.MsgSender.String(),
-		Timestamp:   fmt.Sprint(input.BlockTimestamp.Unix()),
-		BlockNumber: fmt.Sprint(input.BlockNumber),
-		Payload:     hexutil.Encode(input.Payload),
+		Index:               input.Index,
+		Status:              convertedStatus,
+		MsgSender:           input.MsgSender.String(),
+		Timestamp:           fmt.Sprint(input.BlockTimestamp.Unix()),
+		BlockNumber:         fmt.Sprint(input.BlockNumber),
+		Payload:             hexutil.Encode(input.Payload),
+		EspressoTimestamp:   fmt.Sprint(input.EspressoBlockTimestamp.Unix()),
+		EspressoBlockNumber: fmt.Sprint(input.EspressoBlockNumber),
 	}, nil
 }
 

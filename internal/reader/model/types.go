@@ -18,6 +18,11 @@ type Input struct {
 	BlockNumber string `json:"blockNumber"`
 	// Input payload in Ethereum hex binary format, starting with '0x'
 	Payload string `json:"payload"`
+	// Timestamp associated with the Espresso input submission
+	EspressoTimestamp string `json:"espressoTimestamp"`
+	// Number of the Espresso block in which the input was recorded
+	EspressoBlockNumber string `json:"espressoBlockNumber"`
+	// Input payload in Ethereum hex binary format, starting with '0x'
 }
 
 // Representation of a transaction that can be carried out on the base layer blockchain, such as a

@@ -93,18 +93,20 @@ type Report struct {
 
 // Rollups advance input type.
 type AdvanceInput struct {
-	Index          int              `db:"input_index"`
-	Status         CompletionStatus `db:"status"`
-	MsgSender      common.Address   `db:"msg_sender"`
-	Payload        []byte           `db:"payload"`
-	BlockNumber    uint64           `db:"block_number"`
-	BlockTimestamp time.Time        `db:"block_timestamp"`
-	PrevRandao     string           `db:"prev_randao"`
-	AppContract    common.Address   `db:"app_contract"`
-	Vouchers       []ConvenienceVoucher
-	Notices        []ConvenienceNotice
-	Reports        []Report
-	Exception      []byte
+	Index                  int              `db:"input_index"`
+	Status                 CompletionStatus `db:"status"`
+	MsgSender              common.Address   `db:"msg_sender"`
+	Payload                []byte           `db:"payload"`
+	BlockNumber            uint64           `db:"block_number"`
+	BlockTimestamp         time.Time        `db:"block_timestamp"`
+	PrevRandao             string           `db:"prev_randao"`
+	AppContract            common.Address   `db:"app_contract"`
+	Vouchers               []ConvenienceVoucher
+	Notices                []ConvenienceNotice
+	Reports                []Report
+	Exception              []byte
+	EspressoBlockNumber    uint64    `db:"espresso_block_number"`
+	EspressoBlockTimestamp time.Time `db:"espresso_block_timestamp"`
 }
 
 type ConvertedInput struct {

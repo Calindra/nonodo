@@ -62,12 +62,14 @@ func (m *NonodoModel) AddAdvanceInput(
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 	input := cModel.AdvanceInput{
-		Index:          index,
-		Status:         cModel.CompletionStatusUnprocessed,
-		MsgSender:      sender,
-		Payload:        payload,
-		BlockTimestamp: timestamp,
-		BlockNumber:    blockNumber,
+		Index:                  index,
+		Status:                 cModel.CompletionStatusUnprocessed,
+		MsgSender:              sender,
+		Payload:                payload,
+		BlockTimestamp:         timestamp,
+		BlockNumber:            blockNumber,
+		EspressoBlockNumber:    0,
+		EspressoBlockTimestamp: time.Unix(0, 0),
 	}
 	ctx := context.Background()
 	_, err := m.inputRepository.Create(ctx, input)
