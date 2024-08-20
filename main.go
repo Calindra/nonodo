@@ -452,7 +452,7 @@ func run(cmd *cobra.Command, args []string) {
 	if opts.AnvilPort == 0 {
 		exitf("--anvil-port cannot be 0")
 	}
-	if cmd.Flags().Changed("rpc-url") && !cmd.Flags().Changed("contracts-input-box-block") {
+	if !cmd.Flags().Changed("sequencer") && cmd.Flags().Changed("rpc-url") && !cmd.Flags().Changed("contracts-input-box-block") {
 		exitf("must set --contracts-input-box-block when setting --rpc-url")
 	}
 	if opts.EnableEcho && len(args) > 0 {
