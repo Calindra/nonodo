@@ -428,6 +428,10 @@ func init() {
 		"If set, disable graphile synchronization")
 
 	cmd.Flags().StringVar(&opts.GraphileUrl, "graphile-url", opts.GraphileUrl, "URL used to connect to Graphile")
+
+	cmd.Flags().BoolVar(&opts.Salsa, "salsa", opts.Salsa, "If set, starts salsa")
+
+	cmd.Flags().StringVar(&opts.SalsaUrl, "salsa-url", opts.SalsaUrl, "Url used to start Salsa")
 }
 
 func run(cmd *cobra.Command, args []string) {
