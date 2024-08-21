@@ -57,22 +57,28 @@ func (m *NonodoModel) AddAdvanceInput(
 	payload []byte,
 	blockNumber uint64,
 	timestamp time.Time,
-	index int,
+	inputBoxIndex int,
 ) error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
+	ctx := context.Background()
+	index, err := m.inputRepository.Count(ctx, nil)
+	if err != nil {
+		return err
+	}
 	input := cModel.AdvanceInput{
-		Index:                  index,
+		Index:                  int(index),
 		Status:                 cModel.CompletionStatusUnprocessed,
 		MsgSender:              sender,
 		Payload:                payload,
 		BlockTimestamp:         timestamp,
 		BlockNumber:            blockNumber,
-		EspressoBlockNumber:    0,
-		EspressoBlockTimestamp: time.Unix(0, 0),
+		EspressoBlockNumber:    -1,
+		EspressoBlockTimestamp: time.Unix(-1, 0),
+		InputBoxIndex:          inputBoxIndex,
 	}
-	ctx := context.Background()
-	_, err := m.inputRepository.Create(ctx, input)
+
+	_, err = m.inputRepository.Create(ctx, input)
 	if err != nil {
 		return err
 	}

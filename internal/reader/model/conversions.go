@@ -50,6 +50,7 @@ func ConvertInput(input cModel.AdvanceInput) (*Input, error) {
 		Payload:             hexutil.Encode(input.Payload),
 		EspressoTimestamp:   fmt.Sprint(input.EspressoBlockTimestamp.Unix()),
 		EspressoBlockNumber: fmt.Sprint(input.EspressoBlockNumber),
+		InputBoxIndex:       input.InputBoxIndex,
 	}, nil
 }
 

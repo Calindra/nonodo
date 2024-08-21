@@ -63,6 +63,8 @@ type Input {
   espressoTimestamp: BigInt!
   "Number of the Espresso block in which the input was recorded"
   espressoBlockNumber: BigInt!
+  "Input index in the Inpux Box"
+  inputBoxIndex: Int!
 }
 
 "Representation of a transaction that can be carried out on the base layer blockchain, such as a transfer of assets"

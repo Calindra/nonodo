@@ -105,8 +105,9 @@ type AdvanceInput struct {
 	Notices                []ConvenienceNotice
 	Reports                []Report
 	Exception              []byte
-	EspressoBlockNumber    uint64    `db:"espresso_block_number"`
+	EspressoBlockNumber    int       `db:"espresso_block_number"`
 	EspressoBlockTimestamp time.Time `db:"espresso_block_timestamp"`
+	InputBoxIndex          int       `db:"input_box_index"`
 }
 
 type ConvertedInput struct {
@@ -116,6 +117,7 @@ type ConvertedInput struct {
 	BlockTimestamp int64          `json:"blockTimestamp"`
 	PrevRandao     string         `json:"prevRandao"`
 	Payload        string         `json:"payload"`
+	InputBoxIndex  int64          `json:"input_box_index"`
 }
 
 type InputEdge struct {
