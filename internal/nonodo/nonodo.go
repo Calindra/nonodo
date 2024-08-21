@@ -377,5 +377,12 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 			RollupEndpoint: fmt.Sprintf("http://%s:%v", opts.HttpAddress, opts.HttpRollupsPort),
 		})
 	}
+
+	if opts.Salsa {
+		w.Workers = append(w.Workers, salsa.SalsaWorker{
+			Address: opts.SalsaUrl,
+		})
+	}
+
 	return w
 }
