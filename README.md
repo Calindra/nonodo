@@ -192,7 +192,21 @@ Graphile can be called using `http://localhost:5001/graphql` and you can test qu
 You can change Graphile address and port using the flags graphile-url.
 
 ```sh
-/nonodo --graphile-url http://mygraphileaddress:5034
+nonodo --graphile-url http://mygraphileaddress:5034
+```
+
+Salsa/Lambada Support
+
+You can start a Lambda server using Salsa
+
+```sh
+nonodo --salsa 
+```
+
+Optionally, you can ser server's host and port
+
+```sh
+nonodo --salsa --salsa-url 127.0.0.1:8080
 ```
 
 ## Compatibility

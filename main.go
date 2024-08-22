@@ -39,6 +39,14 @@ Inspect running at http://localhost:HTTP_PORT/inspect/
 Press Ctrl+C to stop the node
 `
 
+var startupMessageWithLambada = `
+Http Rollups for development started at http://localhost:ROLLUPS_PORT
+GraphQL running at http://localhost:HTTP_PORT/graphql
+Inspect running at http://localhost:HTTP_PORT/inspect/
+Lambada running at http://SALSA_URL
+Press Ctrl+C to stop the node
+`
+
 var cmd = &cobra.Command{
 	Use:     "nonodo [flags] [-- application [args]...]",
 	Short:   "nonodo is a development node for Cartesi Rollups",
@@ -428,6 +436,10 @@ func init() {
 		"If set, disable graphile synchronization")
 
 	cmd.Flags().StringVar(&opts.GraphileUrl, "graphile-url", opts.GraphileUrl, "URL used to connect to Graphile")
+
+	cmd.Flags().BoolVar(&opts.Salsa, "salsa", opts.Salsa, "If set, starts salsa")
+
+	cmd.Flags().StringVar(&opts.SalsaUrl, "salsa-url", opts.SalsaUrl, "Url used to start Salsa")
 }
 
 func run(cmd *cobra.Command, args []string) {
@@ -464,15 +476,27 @@ func run(cmd *cobra.Command, args []string) {
 	ctx, cancel := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
+	var startMessage string
+
+	if opts.Salsa {
+		startMessage = startupMessageWithLambada
+	} else {
+		startMessage = startupMessage
+	}
+
 	// start nonodo
 	ready := make(chan struct{}, 1)
 	go func() {
 		select {
 		case <-ready:
 			msg := strings.Replace(
-				startupMessage,
+				startMessage,
 				"HTTP_PORT",
 				fmt.Sprint(opts.HttpPort), -1)
+			msg = strings.Replace(
+				msg,
+				"SALSA_URL",
+				fmt.Sprint(opts.SalsaUrl), -1)
 			msg = strings.Replace(
 				msg,
 				"ROLLUPS_PORT",
