@@ -24,21 +24,18 @@ func (w SalsaWorker) String() string {
 }
 
 func downloadSalsa(url string, destination string) (string, error) {
-	// Cria o arquivo temporário no destino especificado
 	out, err := os.Create(destination)
 	if err != nil {
 		return "", err
 	}
 	defer out.Close()
 
-	// Faz o download do arquivo
 	resp, err := http.Get(url)
 	if err != nil {
 		return "", err
 	}
 	defer resp.Body.Close()
 
-	// Escreve o conteúdo do download no arquivo
 	_, err = io.Copy(out, resp.Body)
 	if err != nil {
 		return "", err
@@ -86,13 +83,10 @@ func (w SalsaWorker) Start(ctx context.Context, ready chan<- struct{}) error {
 
 	url := "https://github.com/Calindra/salsa/releases/download/v1.1.2/" + binary
 
-	// Obtém o diretório temporário adequado para o sistema operacional
 	tempDir := os.TempDir()
 	tmpFile := filepath.Join(tempDir, binary)
 
-	// Verifica se o arquivo já existe no diretório temporário
 	if _, err := os.Stat(tmpFile); os.IsNotExist(err) {
-		// Arquivo não existe, faça o download
 		slog.Info("Downloading Salsa...")
 
 		_, err := downloadSalsa(url, tmpFile)
@@ -105,7 +99,6 @@ func (w SalsaWorker) Start(ctx context.Context, ready chan<- struct{}) error {
 		slog.Warn("Salsa found. Skipping download.")
 	}
 
-	// Dá permissão de execução ao arquivo temporário
 	err := os.Chmod(tmpFile, filePermission)
 	if err != nil {
 		slog.Error("Error changing Salsa permissions: " + err.Error())
