@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"runtime"
 )
 
 const filePermission = 0755
@@ -44,9 +45,39 @@ func downloadSalsa(url string, destination string) (string, error) {
 	return "", nil
 }
 
+func getBinary() string {
+	os := runtime.GOOS
+	arch := runtime.GOARCH
+
+	var binary string
+
+	switch os {
+	case "linux":
+		if arch == "amd64" {
+			binary = "salsa-linux-amd64"
+		} else if arch == "arm64" {
+			binary = "salsa-linux-arm64"
+		}
+	case "darwin": // macOS
+		if arch == "amd64" {
+			binary = "salsa-macos-amd64"
+		} else if arch == "arm64" {
+			binary = "salsa-macos-arm64"
+		}
+	case "windows":
+		if arch == "amd64" {
+			binary = "salsa-win32-amd64.exe"
+		}
+	default:
+		binary = "unsupported"
+	}
+
+	return binary
+}
+
 func (w SalsaWorker) Start(ctx context.Context, ready chan<- struct{}) error {
-	url := "https://github.com/Calindra/salsa/releases/download/v1.0.10/salsa"
-	tmpFile := "/tmp/salsa"
+	url := "https://github.com/Calindra/salsa/releases/download/v1.1.2/" + getBinary()
+	tmpFile := "/tmp/" + getBinary()
 
 	// Verifica se o arquivo já existe em /tmp
 	if _, err := os.Stat(tmpFile); os.IsNotExist(err) {
