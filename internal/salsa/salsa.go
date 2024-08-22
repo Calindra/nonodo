@@ -8,10 +8,12 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 )
 
 const filePermission = 0755
+const amd64Archicteture = "amd64"
 
 type SalsaWorker struct {
 	Address string
@@ -22,14 +24,14 @@ func (w SalsaWorker) String() string {
 }
 
 func downloadSalsa(url string, destination string) (string, error) {
-	// Creates temp file
+	// Cria o arquivo temporário no destino especificado
 	out, err := os.Create(destination)
 	if err != nil {
 		return "", err
 	}
 	defer out.Close()
 
-	// Download files
+	// Faz o download do arquivo
 	resp, err := http.Get(url)
 	if err != nil {
 		return "", err
@@ -53,19 +55,19 @@ func getBinary() string {
 
 	switch os {
 	case "linux":
-		if arch == "amd64" {
+		if arch == amd64Archicteture {
 			binary = "salsa-linux-amd64"
 		} else if arch == "arm64" {
 			binary = "salsa-linux-arm64"
 		}
 	case "darwin": // macOS
-		if arch == "amd64" {
+		if arch == amd64Archicteture {
 			binary = "salsa-macos-amd64"
 		} else if arch == "arm64" {
 			binary = "salsa-macos-arm64"
 		}
 	case "windows":
-		if arch == "amd64" {
+		if arch == amd64Archicteture {
 			binary = "salsa-win32-amd64.exe"
 		}
 	default:
@@ -76,16 +78,24 @@ func getBinary() string {
 }
 
 func (w SalsaWorker) Start(ctx context.Context, ready chan<- struct{}) error {
-	url := "https://github.com/Calindra/salsa/releases/download/v1.1.2/" + getBinary()
-	tmpFile := "/tmp/" + getBinary()
+	binary := getBinary()
 
-	// Verifica se o arquivo já existe em /tmp
+	if binary == "unsupported" {
+		return fmt.Errorf("unsupported OS")
+	}
+
+	url := "https://github.com/Calindra/salsa/releases/download/v1.1.2/" + binary
+
+	// Obtém o diretório temporário adequado para o sistema operacional
+	tempDir := os.TempDir()
+	tmpFile := filepath.Join(tempDir, binary)
+
+	// Verifica se o arquivo já existe no diretório temporário
 	if _, err := os.Stat(tmpFile); os.IsNotExist(err) {
 		// Arquivo não existe, faça o download
 		slog.Info("Downloading Salsa...")
 
 		_, err := downloadSalsa(url, tmpFile)
-
 		if err != nil {
 			slog.Error("Error downloading Salsa: " + err.Error())
 			return err
