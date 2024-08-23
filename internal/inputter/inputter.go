@@ -112,7 +112,7 @@ func (w InputterWorker) watchNewInputs(
 		opts := bind.WatchOpts{
 			Context: ctx,
 		}
-		filter := []common.Address{w.ApplicationAddress}
+		filter := []common.Address{}
 		sub, err = inputBox.WatchInputAdded(&opts, logs, filter, nil)
 		if err != nil {
 			slog.Error("Inputter", "error", err)
@@ -181,6 +181,14 @@ func (w InputterWorker) addInput(
 			"timestamp", timestamp,
 		),
 	)
+	if w.ApplicationAddress != event.Dapp {
+		msg := fmt.Sprintf("The dapp address is wrong: %s. It should be %s",
+			event.Dapp.Hex(),
+			w.ApplicationAddress,
+		)
+		slog.Warn(msg)
+		return nil
+	}
 	w.Model.AddAdvanceInput(
 		event.Sender,
 		event.Input,

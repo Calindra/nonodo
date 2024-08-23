@@ -7,6 +7,7 @@ package rollup
 //go:generate go run github.com/deepmap/oapi-codegen/v2/cmd/oapi-codegen -config=../oapi.yaml ../../../api/rollup-v1.yaml
 
 import (
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -110,24 +111,28 @@ func (r *rollupAPI) AddVoucher(c echo.Context) error {
 // Handle requests to /notice.
 func (r *rollupAPI) AddNotice(c echo.Context) error {
 	if !checkContentType(c) {
+		slog.Error("invalid notice content type")
 		return c.String(http.StatusUnsupportedMediaType, "invalid content type")
 	}
 
 	// parse body
 	var request AddNoticeJSONRequestBody
 	if err := c.Bind(&request); err != nil {
+		slog.Error("invalid notice body")
 		return err
 	}
 
 	// validate fields
 	payload, err := hexutil.Decode(request.Payload)
 	if err != nil {
+		slog.Error("invalid hex payload", "payload", request.Payload)
 		return c.String(http.StatusBadRequest, "invalid hex payload")
 	}
 
 	// talk to model
 	index, err := r.model.AddNotice(payload)
 	if err != nil {
+		slog.Error("add notice error", "err", err)
 		return c.String(http.StatusForbidden, err.Error())
 	}
 	resp := IndexResponse{
