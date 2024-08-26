@@ -6,7 +6,7 @@ toolchain go1.22.4
 
 require (
 	github.com/99designs/gqlgen v0.17.41
-	github.com/EspressoSystems/espresso-sequencer-go v0.0.16
+	github.com/EspressoSystems/espresso-sequencer-go v0.0.23
 	github.com/Khan/genqlient v0.6.0
 	github.com/carlmjohnson/versioninfo v0.22.5
 	github.com/celestiaorg/celestia-openrpc v0.4.0
