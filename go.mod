@@ -6,7 +6,7 @@ toolchain go1.22.4
 
 require (
 	github.com/99designs/gqlgen v0.17.41
-	github.com/EspressoSystems/espresso-sequencer-go v0.0.16
+	github.com/EspressoSystems/espresso-sequencer-go v0.0.23
 	github.com/Khan/genqlient v0.6.0
 	github.com/btcsuite/btcd v0.20.1-beta
 	github.com/btcsuite/btcutil v1.0.2
