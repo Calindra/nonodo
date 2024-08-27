@@ -415,7 +415,7 @@ func parseRowInput(row inputRow) model.AdvanceInput {
 		AppContract:            common.HexToAddress(row.AppContract),
 		EspressoBlockNumber:    row.EspressoBlockNumber,
 		EspressoBlockTimestamp: time.UnixMilli(int64(row.EspressoBlockTimestamp)),
-		InputBoxIndex:          row.InputBoxIndex,
+		InputBoxIndex:          int64(row.InputBoxIndex),
 	}
 }
 

@@ -120,7 +120,7 @@ func (o *OutputDecoder) HandleInput(
 		AppContract:            convertedInput.AppContract,
 		EspressoBlockNumber:    -1,
 		EspressoBlockTimestamp: time.Unix(-1, 0),
-		InputBoxIndex:          int(convertedInput.InputBoxIndex),
+		InputBoxIndex:          convertedInput.InputBoxIndex,
 	})
 	return err
 }

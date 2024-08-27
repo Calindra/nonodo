@@ -75,7 +75,7 @@ func (m *NonodoModel) AddAdvanceInput(
 		BlockNumber:            blockNumber,
 		EspressoBlockNumber:    -1,
 		EspressoBlockTimestamp: time.Unix(-1, 0),
-		InputBoxIndex:          inputBoxIndex,
+		InputBoxIndex:          int64(inputBoxIndex),
 	}
 
 	_, err = m.inputRepository.Create(ctx, input)

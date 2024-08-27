@@ -45,7 +45,7 @@ func (i *InputBlobAdapter) Adapt(node struct {
 		Timestamp:     values[4].(*big.Int).String(),
 		BlockNumber:   values[3].(*big.Int).String(),
 		Payload:       string(values[7].([]uint8)),
-		InputBoxIndex: values[6].(int),
+		InputBoxIndex: values[6].(*big.Int).Int64(),
 	}, nil
 }
 

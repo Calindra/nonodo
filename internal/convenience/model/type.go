@@ -107,7 +107,7 @@ type AdvanceInput struct {
 	Exception              []byte
 	EspressoBlockNumber    int       `db:"espresso_block_number"`
 	EspressoBlockTimestamp time.Time `db:"espresso_block_timestamp"`
-	InputBoxIndex          int       `db:"input_box_index"`
+	InputBoxIndex          int64     `db:"input_box_index"`
 }
 
 type ConvertedInput struct {

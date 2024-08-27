@@ -23,7 +23,7 @@ type Input struct {
 	// Number of the Espresso block in which the input was recorded
 	EspressoBlockNumber string `json:"espressoBlockNumber"`
 	// Input index in the Inpux Box
-	InputBoxIndex int `json:"inputBoxIndex"`
+	InputBoxIndex int64 `json:"inputBoxIndex"`
 	// Input payload in Ethereum hex binary format, starting with '0x'
 }
 
