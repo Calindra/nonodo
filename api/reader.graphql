@@ -60,11 +60,11 @@ type Input {
   "Get reports from this particular input with support for pagination"
   reports(first: Int, last: Int, after: String, before: String): ReportConnection!
   "Timestamp associated with the Espresso input submission"
-  espressoTimestamp: BigInt!
+  espressoTimestamp: String
   "Number of the Espresso block in which the input was recorded"
-  espressoBlockNumber: BigInt!
+  espressoBlockNumber: String
   "Input index in the Inpux Box"
-  inputBoxIndex: Int!
+  inputBoxIndex: String
 }
 
 "Representation of a transaction that can be carried out on the base layer blockchain, such as a transfer of assets"

@@ -41,6 +41,20 @@ func ConvertInput(input cModel.AdvanceInput) (*Input, error) {
 		return nil, err
 	}
 
+	espressoBlockTimestampStr := strconv.FormatInt(input.EspressoBlockTimestamp.Unix(), 10)
+	if espressoBlockTimestampStr == "-1" {
+		espressoBlockTimestampStr = ""
+	}
+	espressoBlockNumberStr := strconv.FormatInt(int64(input.EspressoBlockNumber), 10)
+	if espressoBlockNumberStr == "-1" {
+		espressoBlockNumberStr = ""
+	}
+
+	var inputBoxIndexStr string
+	if input.InputBoxIndex != -1 {
+		inputBoxIndexStr = strconv.FormatInt(int64(input.InputBoxIndex), 10)
+	}
+
 	return &Input{
 		Index:               input.Index,
 		Status:              convertedStatus,
@@ -48,9 +62,9 @@ func ConvertInput(input cModel.AdvanceInput) (*Input, error) {
 		Timestamp:           fmt.Sprint(input.BlockTimestamp.Unix()),
 		BlockNumber:         fmt.Sprint(input.BlockNumber),
 		Payload:             hexutil.Encode(input.Payload),
-		EspressoTimestamp:   fmt.Sprint(input.EspressoBlockTimestamp.Unix()),
-		EspressoBlockNumber: fmt.Sprint(input.EspressoBlockNumber),
-		InputBoxIndex:       fmt.Sprint(input.InputBoxIndex),
+		EspressoTimestamp:   espressoBlockTimestampStr,
+		EspressoBlockNumber: espressoBlockNumberStr,
+		InputBoxIndex:       inputBoxIndexStr,
 	}, nil
 }
 
