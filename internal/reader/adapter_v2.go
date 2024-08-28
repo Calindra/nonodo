@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"strconv"
 
 	convenience "github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/convenience/services"
@@ -228,6 +229,21 @@ func (a AdapterV2) GetInput(index int) (*graphql.Input, error) {
 	if input == nil {
 		return nil, fmt.Errorf("input not found")
 	}
+
+	espressoBlockTimestampStr := strconv.FormatInt(input.EspressoBlockTimestamp.Unix(), 10)
+	if espressoBlockTimestampStr == "-1" {
+		espressoBlockTimestampStr = ""
+	}
+	espressoBlockNumberStr := strconv.FormatInt(int64(input.EspressoBlockNumber), 10)
+	if espressoBlockNumberStr == "-1" {
+		espressoBlockNumberStr = ""
+	}
+
+	var inputBoxIndexStr string
+	if input.InputBoxIndex != -1 {
+		inputBoxIndexStr = strconv.FormatInt(int64(input.InputBoxIndex), 10)
+	}
+
 	return &graphql.Input{
 		Index:               int(input.Index),
 		MsgSender:           input.MsgSender.String(),
@@ -235,9 +251,9 @@ func (a AdapterV2) GetInput(index int) (*graphql.Input, error) {
 		Status:              a.convertCompletionStatus(*input),
 		Timestamp:           fmt.Sprintf("%d", input.BlockTimestamp.Unix()),
 		BlockNumber:         fmt.Sprintf("%d", input.BlockNumber),
-		EspressoTimestamp:   fmt.Sprintf("%d", input.EspressoBlockTimestamp.Unix()),
-		EspressoBlockNumber: fmt.Sprintf("%d", input.EspressoBlockNumber),
-		InputBoxIndex:       input.InputBoxIndex,
+		EspressoTimestamp:   espressoBlockTimestampStr,
+		EspressoBlockNumber: espressoBlockNumberStr,
+		InputBoxIndex:       inputBoxIndexStr,
 	}, nil
 }
 
