@@ -256,7 +256,7 @@ func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 		})
 	}
 
-	cleanSync := synchronizer.NewCleanSynchronizer(container.GetSyncRepository, nil)
+	cleanSync := synchronizer.NewCleanSynchronizer(container.GetSyncRepository(), nil)
 	w.Workers = append(w.Workers, cleanSync)
 
 	slog.Info("Listening", "port", opts.HttpPort)
@@ -388,7 +388,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		})
 	}
 
-	cleanSync := synchronizer.NewCleanSynchronizer(container.GetSyncRepository, nil)
+	cleanSync := synchronizer.NewCleanSynchronizer(container.GetSyncRepository(), nil)
 	w.Workers = append(w.Workers, cleanSync)
 
 	return w
