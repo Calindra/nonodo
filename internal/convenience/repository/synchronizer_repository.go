@@ -113,7 +113,7 @@ func (c *SynchronizerRepository) PurgeData(
 ) error {
 	// Delete the first 100 records older than timestampBefore
 	// except the last one
-	query := `DELETE FROM synchronizer_fetch where id IN (
+	query := `DELETE FROM synchronizer_fetch WHERE id IN (
 			SELECT id FROM synchronizer_fetch WHERE timestamp_after < $1 AND id <> (
 				SELECT id
 				FROM synchronizer_fetch
