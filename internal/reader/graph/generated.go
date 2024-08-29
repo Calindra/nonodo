@@ -1068,7 +1068,7 @@ input InputFilter {
   "Filter only inputs with the message sender"
   msgSender: String
 
-  "Filter only inputs from 'Espresso' or 'L1'"
+  "Filter only inputs from 'inputbox' or 'espresso'"
   type: String
 }
 
