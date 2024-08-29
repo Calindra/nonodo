@@ -28,6 +28,11 @@ func (s *SynchronizerRepositorySuite) SetupTest() {
 	s.NoError(err)
 }
 
+func (s *SynchronizerRepositorySuite) TearDownTest() {
+	err := s.repository.Db.Close()
+	s.NoError(err)
+}
+
 func TestSynchronizerRepositorySuiteSuite(t *testing.T) {
 	suite.Run(t, new(SynchronizerRepositorySuite))
 }
@@ -50,4 +55,23 @@ func (s *SynchronizerRepositorySuite) TestGetLastFetched() {
 	lastFetch, err := s.repository.GetLastFetched(ctx)
 	s.NoError(err)
 	s.Equal(2, int(lastFetch.Id))
+}
+
+func (s *SynchronizerRepositorySuite) TestPurgeOldData() {
+	ctx := context.Background()
+	var (
+		timeAfter  uint64 = 99
+		timeBefore uint64 = timeAfter + 1
+	)
+	_, err := s.repository.Create(ctx, &model.SynchronizerFetch{
+		TimestampAfter: timeAfter,
+	})
+	s.NoError(err)
+
+	err = s.repository.PurgeData(ctx, timeBefore)
+	s.NoError(err)
+
+	count, err := s.repository.Count(ctx)
+	s.NoError(err)
+	s.Equal(1, int(count))
 }

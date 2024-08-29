@@ -107,3 +107,26 @@ func (c *SynchronizerRepository) GetLastFetched(
 	}
 	return &p, nil
 }
+
+func (c *SynchronizerRepository) PurgeData(
+	ctx context.Context, timestampBefore uint64,
+) error {
+	// Delete the first 100 records older than timestampBefore
+	// except the last one
+	query := `DELETE FROM synchronizer_fetch where id IN (
+			SELECT id FROM synchronizer_fetch WHERE timestamp_after < $1 AND id <> (
+				SELECT id
+				FROM synchronizer_fetch
+				ORDER BY id DESC
+				LIMIT 1
+			) LIMIT 100
+		)`
+
+	exec := DBExecutor{&c.Db}
+	_, err := exec.ExecContext(ctx, query, timestampBefore)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
