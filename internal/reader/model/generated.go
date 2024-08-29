@@ -39,7 +39,7 @@ type InputFilter struct {
 	IndexGreaterThan *int `json:"indexGreaterThan,omitempty"`
 	// Filter only inputs with the message sender
 	MsgSender *string `json:"msgSender,omitempty"`
-	// Filter by input type. Espresso or inputbox
+	// Filter only inputs from 'Espresso' or 'L1'
 	Type *string `json:"type,omitempty"`
 }
 
