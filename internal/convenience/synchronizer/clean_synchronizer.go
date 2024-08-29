@@ -11,10 +11,11 @@ import (
 type CleanSynchronizer struct {
 	SynchronizerRepository *repository.SynchronizerRepository
 	Period                 time.Duration
+	getSyncRepoFn          func() *repository.SynchronizerRepository
 }
 
 func NewCleanSynchronizer(
-	SynchronizerRepository *repository.SynchronizerRepository,
+	getSyncRepoFn func() *repository.SynchronizerRepository,
 	period *time.Duration,
 ) *CleanSynchronizer {
 	var p time.Duration = 10 * time.Minute
@@ -23,7 +24,7 @@ func NewCleanSynchronizer(
 		p = *period
 	}
 
-	return &CleanSynchronizer{SynchronizerRepository: SynchronizerRepository, Period: p}
+	return &CleanSynchronizer{SynchronizerRepository: nil, Period: p, getSyncRepoFn: getSyncRepoFn}
 }
 
 func (x CleanSynchronizer) String() string {
@@ -34,6 +35,7 @@ func (x CleanSynchronizer) Start(ctx context.Context, ready chan<- struct{}) err
 	ready <- struct{}{}
 
 	periodMili := x.Period.Milliseconds()
+	x.SynchronizerRepository = x.getSyncRepoFn()
 
 	for {
 		select {
