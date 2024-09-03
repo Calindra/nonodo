@@ -14,7 +14,7 @@ import (
 )
 
 // Timeout when waiting for workers to finish.
-const DefaultSupervisorTimeout = time.Second * 5
+const DefaultSupervisorTimeout = time.Second * 15
 
 // Start the workers in order, waiting for each one to be ready before starting the next one.
 // When a worker exits, send a cancel signal to all of them and wait for them to finish.
