@@ -14,7 +14,7 @@ import (
 )
 
 // Timeout when waiting for workers to finish.
-const DefaultSupervisorTimeout = time.Second * 5
+const DefaultSupervisorTimeout = time.Second * 15
 
 // Start the workers in order, waiting for each one to be ready before starting the next one.
 // When a worker exits, send a cancel signal to all of them and wait for them to finish.
@@ -35,6 +35,9 @@ func (w SupervisorWorker) Start(ctx context.Context, ready chan<- struct{}) erro
 	timeout := w.Timeout
 	if timeout == 0 {
 		timeout = DefaultSupervisorTimeout
+		slog.Debug("supervisor: using default timeout", "timeout", timeout)
+	} else {
+		slog.Debug("supervisor: using custom timeout", "timeout", timeout)
 	}
 
 	// Start workers

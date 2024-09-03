@@ -82,6 +82,7 @@ type NonodoOpts struct {
 
 	TimeoutInspect time.Duration
 	TimeoutAdvance time.Duration
+	TimeoutWorker  time.Duration
 
 	GraphileUrl         string
 	GraphileDisableSync bool
@@ -132,6 +133,7 @@ func NewNonodoOpts() NonodoOpts {
 		Namespace:           DefaultNamespace,
 		TimeoutInspect:      defaultTimeout,
 		TimeoutAdvance:      defaultTimeout,
+		TimeoutWorker:       supervisor.DefaultSupervisorTimeout,
 		GraphileUrl:         graphileUrl,
 		GraphileDisableSync: false,
 		Salsa:               false,
@@ -141,7 +143,7 @@ func NewNonodoOpts() NonodoOpts {
 
 func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 	var w supervisor.SupervisorWorker
-
+	w.Timeout = opts.TimeoutWorker
 	var db *sqlx.DB
 
 	if opts.DbImplementation == "postgres" {
@@ -279,6 +281,7 @@ func handleAnvilInstallation() (string, error) {
 // Create the nonodo supervisor.
 func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	var w supervisor.SupervisorWorker
+	w.Timeout = opts.TimeoutWorker
 	db := sqlx.MustConnect("sqlite3", opts.SqliteFile)
 	container := convenience.NewContainer(*db)
 	decoder := container.GetOutputDecoder()
