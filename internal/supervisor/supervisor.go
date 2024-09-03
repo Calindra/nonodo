@@ -35,6 +35,9 @@ func (w SupervisorWorker) Start(ctx context.Context, ready chan<- struct{}) erro
 	timeout := w.Timeout
 	if timeout == 0 {
 		timeout = DefaultSupervisorTimeout
+		slog.Debug("supervisor: using default timeout", "timeout", timeout)
+	} else {
+		slog.Debug("supervisor: using custom timeout", "timeout", timeout)
 	}
 
 	// Start workers
