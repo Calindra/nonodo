@@ -245,6 +245,7 @@ func (a AdapterV2) GetInput(index int) (*graphql.Input, error) {
 	}
 
 	return &graphql.Input{
+		ID:                  input.ID,
 		Index:               int(input.Index),
 		MsgSender:           input.MsgSender.String(),
 		Payload:             string(input.Payload),

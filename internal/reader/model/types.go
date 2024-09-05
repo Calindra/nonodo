@@ -5,6 +5,8 @@ package model
 
 // Request submitted to the application to advance its state
 type Input struct {
+	// ID of the input
+	ID string `json:"id"`
 	// Input index starting from genesis
 	Index int `json:"index"`
 	// Status of the input

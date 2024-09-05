@@ -53,6 +53,7 @@ type ComplexityRoot struct {
 		BlockNumber         func(childComplexity int) int
 		EspressoBlockNumber func(childComplexity int) int
 		EspressoTimestamp   func(childComplexity int) int
+		ID                  func(childComplexity int) int
 		Index               func(childComplexity int) int
 		InputBoxIndex       func(childComplexity int) int
 		MsgSender           func(childComplexity int) int
@@ -239,6 +240,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Input.EspressoTimestamp(childComplexity), true
+
+	case "Input.id":
+		if e.complexity.Input.ID == nil {
+			break
+		}
+
+		return e.complexity.Input.ID(childComplexity), true
 
 	case "Input.index":
 		if e.complexity.Input.Index == nil {
@@ -931,6 +939,8 @@ enum CompletionStatus {
 
 "Request submitted to the application to advance its state"
 type Input {
+  "id of the input"
+  id: String!
   "Input index starting from genesis"
   index: Int!
   "Status of the input"
@@ -1680,6 +1690,50 @@ func (ec *executionContext) field___Type_fields_args(ctx context.Context, rawArg
 // endregion ************************** directives.gotpl **************************
 
 // region    **************************** field.gotpl *****************************
+
+func (ec *executionContext) _Input_id(ctx context.Context, field graphql.CollectedField, obj *model.Input) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Input_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Input_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Input",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
 
 func (ec *executionContext) _Input_index(ctx context.Context, field graphql.CollectedField, obj *model.Input) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Input_index(ctx, field)
@@ -2641,6 +2695,8 @@ func (ec *executionContext) fieldContext_InputEdge_node(ctx context.Context, fie
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "id":
+				return ec.fieldContext_Input_id(ctx, field)
 			case "index":
 				return ec.fieldContext_Input_index(ctx, field)
 			case "status":
@@ -2805,6 +2861,8 @@ func (ec *executionContext) fieldContext_Notice_input(ctx context.Context, field
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "id":
+				return ec.fieldContext_Input_id(ctx, field)
 			case "index":
 				return ec.fieldContext_Input_index(ctx, field)
 			case "status":
@@ -3451,6 +3509,8 @@ func (ec *executionContext) fieldContext_Proof_inputByInputIndex(ctx context.Con
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "id":
+				return ec.fieldContext_Input_id(ctx, field)
 			case "index":
 				return ec.fieldContext_Input_index(ctx, field)
 			case "status":
@@ -4011,6 +4071,8 @@ func (ec *executionContext) fieldContext_Query_input(ctx context.Context, field 
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "id":
+				return ec.fieldContext_Input_id(ctx, field)
 			case "index":
 				return ec.fieldContext_Input_index(ctx, field)
 			case "status":
@@ -4720,6 +4782,8 @@ func (ec *executionContext) fieldContext_Report_input(ctx context.Context, field
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "id":
+				return ec.fieldContext_Input_id(ctx, field)
 			case "index":
 				return ec.fieldContext_Input_index(ctx, field)
 			case "status":
@@ -5128,6 +5192,8 @@ func (ec *executionContext) fieldContext_Voucher_input(ctx context.Context, fiel
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "id":
+				return ec.fieldContext_Input_id(ctx, field)
 			case "index":
 				return ec.fieldContext_Input_index(ctx, field)
 			case "status":
@@ -7611,6 +7677,11 @@ func (ec *executionContext) _Input(ctx context.Context, sel ast.SelectionSet, ob
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Input")
+		case "id":
+			out.Values[i] = ec._Input_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
 		case "index":
 			out.Values[i] = ec._Input_index(ctx, field, obj)
 			if out.Values[i] == graphql.Null {

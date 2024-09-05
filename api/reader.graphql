@@ -35,6 +35,8 @@ enum CompletionStatus {
 
 "Request submitted to the application to advance its state"
 type Input {
+  "id of the input"
+  id: String!
   "Input index starting from genesis"
   index: Int!
   "Status of the input"

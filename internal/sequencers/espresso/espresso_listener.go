@@ -111,7 +111,7 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 				//		 	signature,
 				//		 	typedData: btoa(JSON.stringify(typedData)),
 				//		 })
-				msgSender, typedData, err := ExtractSigAndData(string(transaction))
+				msgSender, typedData, hashString, err := ExtractSigAndData(string(transaction))
 				if err != nil {
 					return err
 				}
@@ -147,6 +147,7 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 				}
 
 				_, err = e.InputRepository.Create(ctx, cModel.AdvanceInput{
+					ID:                     hashString,
 					Index:                  int(index),
 					MsgSender:              msgSender,
 					Payload:                payloadBytes,
