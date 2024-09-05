@@ -347,7 +347,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 					Model:              modelInstance,
 					Provider:           opts.RpcUrl,
 					InputBoxAddress:    common.HexToAddress(opts.InputBoxAddress),
-					InputBoxBlock:      opts.InputBoxBlock,
+					InputBoxBlock:      0,
 					ApplicationAddress: common.HexToAddress(opts.ApplicationAddress),
 				},
 			))
