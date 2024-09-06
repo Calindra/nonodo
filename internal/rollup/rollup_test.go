@@ -90,6 +90,8 @@ func TestRollupSuite(t *testing.T) {
 }
 
 func (s *RollupSuite) TearDownTest() {
+	defer os.RemoveAll(s.tempDir)
+
 	// nothing to do
 	s.server.Close()
 	select {
