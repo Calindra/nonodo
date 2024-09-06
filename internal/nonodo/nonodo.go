@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/calindra/nonodo/internal/convenience"
+	"github.com/calindra/nonodo/internal/convenience/synchronizer"
 	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/calindra/nonodo/internal/echoapp"
 	"github.com/calindra/nonodo/internal/health"
@@ -257,6 +258,9 @@ func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 		})
 	}
 
+	cleanSync := synchronizer.NewCleanSynchronizer(container.GetSyncRepository(), nil)
+	w.Workers = append(w.Workers, cleanSync)
+
 	slog.Info("Listening", "port", opts.HttpPort)
 	return w
 }
@@ -386,6 +390,9 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 			Address: opts.SalsaUrl,
 		})
 	}
+
+	cleanSync := synchronizer.NewCleanSynchronizer(container.GetSyncRepository(), nil)
+	w.Workers = append(w.Workers, cleanSync)
 
 	return w
 }
