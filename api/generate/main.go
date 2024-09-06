@@ -24,7 +24,6 @@ func getYAML(v2 string) ([]byte, error) {
 	}
 
 	data, err := io.ReadAll(resp.Body)
-
 	if err != nil {
 		return nil, fmt.Errorf("Failed to read OpenAPI from %s: %s", v2, err.Error())
 	}
@@ -35,7 +34,7 @@ func getYAML(v2 string) ([]byte, error) {
 	// Because oapi-codegen will generate the same name for
 	// both GioResponse from schema and GioResponse from client
 	// https://github.com/deepmap/oapi-codegen/issues/386
-	var str = string(data)
+	str := string(data)
 	str = strings.ReplaceAll(str, "GioResponse", "GioResponseRollup")
 	return []byte(str), nil
 }
@@ -48,8 +47,7 @@ func checkErr(context string, err error) {
 
 func main() {
 	commons.ConfigureLog(slog.LevelDebug)
-	// v2URL := "https://raw.githubusercontent.com/cartesi/openapi-interfaces/v0.8.0/rollup.yaml"
-	v2URL := "https://raw.githubusercontent.com/cartesi/openapi-interfaces/b0209b2203c823a1648330236a7a211d720d48bd/rollup.yaml"
+	v2URL := "https://raw.githubusercontent.com/cartesi/openapi-interfaces/v0.9.0/rollup.yaml"
 	inspectURL := "https://raw.githubusercontent.com/cartesi/rollups-node/v1.4.0/api/openapi/inspect.yaml"
 
 	v2, wrong := getYAML(v2URL)
