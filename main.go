@@ -29,8 +29,9 @@ import (
 )
 
 var (
-	MAX_FILE_SIZE uint64 = 1_440_000 // 1,44 MB
-	APP_ADDRESS          = common.HexToAddress(devnet.ApplicationAddress)
+	MAX_FILE_SIZE     uint64 = 1_440_000 // 1,44 MB
+	APP_ADDRESS              = common.HexToAddress(devnet.ApplicationAddress)
+	DEFAULT_NAMESPACE        = 10008
 )
 
 var startupMessage = `
@@ -92,7 +93,7 @@ var sendCmd = &cobra.Command{
 			espressoClient := espresso.EspressoClient{
 				EspressoUrl: opts.EspressoUrl,
 			}
-			espressoClient.SendInput(opts.InputPayload, 10008)
+			espressoClient.SendInput(opts.InputPayload, DEFAULT_NAMESPACE)
 		} else {
 			cobra.CompError("input-payload option is required for send command")
 		}

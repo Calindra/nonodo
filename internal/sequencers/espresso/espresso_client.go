@@ -22,7 +22,6 @@ type EspressoClient struct {
 	EspressoUrl string
 }
 
-// Estrutura para o domain no EIP712
 type EIP712Domain struct {
 	Name              string `json:"name"`
 	Version           string `json:"version"`
@@ -30,25 +29,21 @@ type EIP712Domain struct {
 	VerifyingContract string `json:"verifyingContract"`
 }
 
-// Estrutura para a mensagem Espresso
 type EspressoMessage struct {
 	Nonce   uint64 `json:"nonce"`
 	Payload string `json:"payload"`
 }
 
-// Estrutura para o tipo EIP712
 type Types struct {
 	EIP712Domain    []TypeDetail `json:"EIP712Domain"`
 	EspressoMessage []TypeDetail `json:"EspressoMessage"`
 }
 
-// Detalhes de cada tipo no EIP712
 type TypeDetail struct {
 	Name string `json:"name"`
 	Type string `json:"type"`
 }
 
-// Estrutura principal que contém o typedData
 type EspressoData struct {
 	Account     string          `json:"account"`
 	Domain      EIP712Domain    `json:"domain"`
@@ -56,6 +51,12 @@ type EspressoData struct {
 	PrimaryType string          `json:"primaryType"`
 	Message     EspressoMessage `json:"message"`
 }
+
+const (
+	HARDHAT         = 31337
+	PURPOSE_INDEX   = 44
+	COIN_TYPE_INDEX = 60
+)
 
 func (e *EspressoClient) SendInput(payload string, namespace int) {
 	mnemonic := "test test test test test test test test test test test junk"
@@ -99,7 +100,7 @@ func addEspressoInput(e *EspressoClient, client *ethclient.Client, privateKey *e
 		Domain: EIP712Domain{
 			Name:              "EspressoM",
 			Version:           "1",
-			ChainId:           31337,
+			ChainId:           HARDHAT,
 			VerifyingContract: "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC",
 		},
 		PrimaryType: "EspressoMessage",
@@ -136,7 +137,7 @@ func addEspressoInput(e *EspressoClient, client *ethclient.Client, privateKey *e
 		return "", fmt.Errorf("Error sending input to Espresso: %v", err)
 	}
 
-	fmt.Println("Input sent to Espresso sucessfully!")
+	fmt.Println("Input sent to Espresso successfully!")
 	return response, nil
 }
 
@@ -155,10 +156,8 @@ func signTypedData(privateKey *ecdsa.PrivateKey, typedData EspressoData) (string
 		return "", fmt.Errorf("erro ao serializar typed data: %v", err)
 	}
 
-	// Criar hash da mensagem
 	hash := crypto.Keccak256Hash(dataBytes)
 
-	// Assinar o hash com a chave privada
 	signature, err := crypto.Sign(hash.Bytes(), privateKey)
 	if err != nil {
 		return "", fmt.Errorf("erro ao assinar os dados: %v", err)
@@ -173,15 +172,14 @@ func submitToEspresso(e *EspressoClient, namespace int, signedMessage string) (s
 		"payload":   base64.StdEncoding.EncodeToString([]byte(signedMessage)),
 	}
 
-	// Serializar em JSON
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
-		return "", fmt.Errorf("erro ao serializar payload: %v", err)
+		return "", fmt.Errorf("Error serializing JSON: %v", err)
 	}
 
 	resp, err := http.Post(e.EspressoUrl+"/v0/submit/submit", "application/json", bytes.NewBuffer(payloadBytes))
 	if err != nil {
-		return "", fmt.Errorf("erro ao enviar requisição HTTP: %v", err)
+		return "", fmt.Errorf("Error sending HTTP Request: %v", err)
 	}
 	defer resp.Body.Close()
 
@@ -209,66 +207,58 @@ func submitToEspresso(e *EspressoClient, namespace int, signedMessage string) (s
 func getPrivateKeyFromMnemonic(mnemonic string) (*ecdsa.PrivateKey, error) {
 	seed := bip39.NewSeed(mnemonic, "")
 
-	// Usar parâmetros da rede principal
 	masterKey, err := hdkeychain.NewMaster(seed, &chaincfg.MainNetParams)
 	if err != nil {
-		return nil, fmt.Errorf("falha ao gerar chave mestre: %w", err)
+		return nil, fmt.Errorf("Fail to generate master key: %w", err)
 	}
 
-	// Caminho derivado: m/44'/60'/0'/0/0 (primeira conta)
-	childKey, err := masterKey.Child(hdkeychain.HardenedKeyStart + 44)
+	childKey, err := masterKey.Child(hdkeychain.HardenedKeyStart + PURPOSE_INDEX)
 	if err != nil {
-		return nil, fmt.Errorf("falha ao derivar chave: %w", err)
+		return nil, fmt.Errorf("Fail to derive key: %w", err)
 	}
-	childKey, err = childKey.Child(hdkeychain.HardenedKeyStart + 60)
+	childKey, err = childKey.Child(hdkeychain.HardenedKeyStart + COIN_TYPE_INDEX)
 	if err != nil {
-		return nil, fmt.Errorf("falha ao derivar chave: %w", err)
+		return nil, fmt.Errorf("Fail to derive key: %w", err)
 	}
 	childKey, err = childKey.Child(hdkeychain.HardenedKeyStart + 0)
 	if err != nil {
-		return nil, fmt.Errorf("falha ao derivar chave: %w", err)
+		return nil, fmt.Errorf("Fail to derive key: %w", err)
 	}
 	childKey, err = childKey.Child(0)
 	if err != nil {
-		return nil, fmt.Errorf("falha ao derivar chave: %w", err)
+		return nil, fmt.Errorf("Fail to derive key: %w", err)
 	}
 	childKey, err = childKey.Child(0)
 	if err != nil {
-		return nil, fmt.Errorf("falha ao derivar chave: %w", err)
+		return nil, fmt.Errorf("Fail to derive key: %w", err)
 	}
 
-	// Serializar a chave privada
 	privKeyBytes, err := childKey.ECPrivKey()
 	if err != nil {
-		return nil, fmt.Errorf("falha ao obter chave privada: %w", err)
+		return nil, fmt.Errorf("Fail to obtain private key: %w", err)
 	}
 
-	// Converter para ECDSA
 	privateKey, err := crypto.ToECDSA(privKeyBytes.Serialize())
 	if err != nil {
-		return nil, fmt.Errorf("falha ao converter para chave ECDSA: %w", err)
+		return nil, fmt.Errorf("Fail to convert to ECDSA key: %w", err)
 	}
 
 	return privateKey, nil
 }
 
 func createSignedMessage(signature string, typedData EspressoData) (string, error) {
-	// Serializa o TypedData para JSON
 	typedDataJSON, err := json.Marshal(typedData)
 	if err != nil {
 		return "", err
 	}
 
-	// Codifica o JSON do TypedData em base64
 	typedDataBase64 := base64.StdEncoding.EncodeToString(typedDataJSON)
 
-	// Cria o objeto final com assinatura e dados codificados
 	signedMessage := SigAndData{
 		Signature: signature,
 		TypedData: typedDataBase64,
 	}
 
-	// Serializa o objeto final para JSON
 	signedMessageJSON, err := json.Marshal(signedMessage)
 	if err != nil {
 		return "", err
