@@ -74,8 +74,11 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 		}
 		for ; currentBlockHeight < lastEspressoBlockHeight; currentBlockHeight++ {
 			slog.Debug("Espresso:", "currentBlockHeight", currentBlockHeight)
+			slog.Debug("Espresso:", "Namespace", e.namespace)
+
 			transactions, err := e.espressoAPI.FetchTransactionsInBlock(ctx, currentBlockHeight, e.namespace)
 			if err != nil {
+
 				return err
 			}
 			tot := len(transactions.Transactions)
@@ -97,9 +100,12 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 			}
 
 			slog.Debug("Espresso:", "transactionsLen", tot)
+			slog.Debug("Espresso:", "transactions", transactions)
+			slog.Debug(string(common.Hex2Bytes("deadbeef")))
 			for i := 0; i < tot; i++ {
 				transaction := transactions.Transactions[i]
 				slog.Debug("transaction", "currentBlockHeight", currentBlockHeight, "transaction", transaction)
+				slog.Debug("transaction:", "transaction", transaction)
 
 				ctx := context.Background()
 				// transform and add to InputRepository
@@ -136,8 +142,10 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 				} else {
 					// nonce repeated
 					slog.Debug("duplicated or incorrect nonce", "nonce", nonce)
-					continue
+					//continue
 				}
+
+				slog.Debug("Inserindo transaction 11111")
 
 				payloadBytes := []byte(payload)
 				if strings.HasPrefix(payload, "0x") {
@@ -147,6 +155,8 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 						return err
 					}
 				}
+
+				slog.Debug("Inserindo transaction 222")
 
 				_, err = e.InputRepository.Create(ctx, cModel.AdvanceInput{
 					Index:                  int(index),
@@ -159,6 +169,7 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 					EspressoBlockTimestamp: e.getEspressoTimestamp(currentBlockHeight),
 				})
 				if err != nil {
+					slog.Debug("err", "err", err)
 					return err
 				}
 			}

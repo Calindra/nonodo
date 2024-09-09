@@ -66,13 +66,18 @@ func (r *InputRepository) CreateTables() error {
 }
 
 func (r *InputRepository) Create(ctx context.Context, input model.AdvanceInput) (*model.AdvanceInput, error) {
+	slog.Debug("Inserindo transaction 55555")
+
 	exist, err := r.FindByIndex(ctx, input.Index)
 	if err != nil {
+		slog.Error("err", "err", err)
 		return nil, err
 	}
 	if exist != nil {
 		return exist, nil
 	}
+
+	slog.Debug("Inserindo transaction 66666")
 	return r.rawCreate(ctx, input)
 }
 
@@ -121,6 +126,7 @@ func (r *InputRepository) rawCreate(ctx context.Context, input model.AdvanceInpu
 	)
 
 	if err != nil {
+		slog.Debug("err", "err", err)
 		return nil, err
 	}
 	return &input, nil

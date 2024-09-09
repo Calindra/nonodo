@@ -169,6 +169,8 @@ input InputFilter {
 
   "Filter only inputs with the message sender"
   msgSender: String
+
+  type: String
 }
 
 scalar BigInt

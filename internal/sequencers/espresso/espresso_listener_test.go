@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"testing"
 
@@ -60,9 +61,14 @@ func submitTransactionWithResp(ctx context.Context, client *http.Client, baseUrl
 		return "", err
 	}
 	responseBody := string(bodyBytes)
+	slog.Info("responseBody", "response", responseBody)
 	return responseBody, nil
 }
 
 func TestEspressoListenerSuite(t *testing.T) {
 	suite.Run(t, &EspressoListenerSuite{})
+}
+
+func (s *EspressoListenerSuite) TestLog() {
+	slog.Debug(string(common.Hex2Bytes("deadbeef")))
 }

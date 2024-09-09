@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -17,6 +18,7 @@ type SigAndData struct {
 }
 
 func ExtractSigAndData(raw string) (common.Address, apitypes.TypedData, error) {
+	slog.Debug("raw", "raw", raw)
 	var sigAndData SigAndData
 	if err := json.Unmarshal([]byte(raw), &sigAndData); err != nil {
 		return common.HexToAddress("0x"), apitypes.TypedData{}, fmt.Errorf("unmarshal sigAndData: %w", err)
