@@ -42,53 +42,42 @@ const (
 
 // Options to nonodo.
 type NonodoOpts struct {
-	AnvilAddress string
-	AnvilPort    int
-	AnvilVerbose bool
-
-	HttpAddress     string
-	HttpPort        int
-	HttpRollupsPort int
-
+	AnvilAddress       string
+	AnvilPort          int
+	AnvilVerbose       bool
+	HttpAddress        string
+	HttpPort           int
+	HttpRollupsPort    int
 	InputBoxAddress    string
 	InputBoxBlock      uint64
 	ApplicationAddress string
-
 	// If RpcUrl is set, connect to it instead of anvil.
-	RpcUrl string
-
+	RpcUrl      string
 	EspressoUrl string
-
 	// If set, start echo dapp.
 	EnableEcho bool
-
 	// If set, disables devnet.
 	DisableDevnet bool
-
 	// If set, disables advances.
 	DisableAdvance bool
-
 	// If set, start application.
-	ApplicationArgs []string
-
-	HLGraphQL        bool
-	SqliteFile       string
-	FromBlock        uint64
-	DbImplementation string
-
-	NodeVersion  string
-	LoadTestMode bool
-	Sequencer    string
-	Namespace    uint64
-
-	TimeoutInspect time.Duration
-	TimeoutAdvance time.Duration
-	TimeoutWorker  time.Duration
-
+	ApplicationArgs     []string
+	HLGraphQL           bool
+	SqliteFile          string
+	FromBlock           uint64
+	DbImplementation    string
+	NodeVersion         string
+	LoadTestMode        bool
+	Sequencer           string
+	Namespace           uint64
+	TimeoutInspect      time.Duration
+	TimeoutAdvance      time.Duration
+	TimeoutWorker       time.Duration
 	GraphileUrl         string
 	GraphileDisableSync bool
 	Salsa               bool
 	SalsaUrl            string
+	InputPayload        string
 }
 
 // Create the options struct with default values.
@@ -139,6 +128,7 @@ func NewNonodoOpts() NonodoOpts {
 		GraphileDisableSync: false,
 		Salsa:               false,
 		SalsaUrl:            "127.0.0.1:5005",
+		InputPayload:        "",
 	}
 }
 

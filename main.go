@@ -19,6 +19,7 @@ import (
 	"github.com/calindra/nonodo/internal/dataavailability"
 	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/calindra/nonodo/internal/nonodo"
+	"github.com/calindra/nonodo/internal/sequencers/espresso"
 	"github.com/carlmjohnson/versioninfo"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -80,6 +81,22 @@ var addressBookCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		slog.Debug("Read json and print address...")
 		devnet.ShowAddresses()
+	},
+}
+
+var sendCmd = &cobra.Command{
+	Use:   "send",
+	Short: "Send an input",
+	Run: func(cmd *cobra.Command, args []string) {
+		if len(opts.InputPayload) > 0 {
+			espressoClient := espresso.EspressoClient{
+				EspressoUrl: opts.EspressoUrl,
+			}
+			espressoClient.SendInput(opts.InputPayload, 10008)
+		} else {
+			cobra.CompError("input-payload option is required for send command")
+		}
+
 	},
 }
 
@@ -441,6 +458,8 @@ func init() {
 	cmd.Flags().BoolVar(&opts.Salsa, "salsa", opts.Salsa, "If set, starts salsa")
 
 	cmd.Flags().StringVar(&opts.SalsaUrl, "salsa-url", opts.SalsaUrl, "Url used to start Salsa")
+
+	sendCmd.Flags().StringVar(&opts.InputPayload, "input-payload", opts.InputPayload, "Payload to be sent to Espresso")
 }
 
 func run(cmd *cobra.Command, args []string) {
@@ -518,7 +537,7 @@ func run(cmd *cobra.Command, args []string) {
 
 func main() {
 	addCelestiaSubcommands(celestiaCmd)
-	cmd.AddCommand(addressBookCmd, celestiaCmd, CompletionCmd)
+	cmd.AddCommand(addressBookCmd, celestiaCmd, CompletionCmd, sendCmd)
 	cobra.CheckErr(cmd.Execute())
 }
 
