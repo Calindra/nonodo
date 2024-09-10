@@ -2,7 +2,6 @@ package espresso
 
 import (
 	"bytes"
-	"context"
 	"crypto/ecdsa"
 	"encoding/base64"
 	"encoding/json"
@@ -20,6 +19,7 @@ import (
 
 type EspressoClient struct {
 	EspressoUrl string
+	GraphQLUrl  string
 }
 
 type EIP712Domain struct {
@@ -52,6 +52,18 @@ type EspressoData struct {
 	Message     EspressoMessage `json:"message"`
 }
 
+type GraphQLQuery struct {
+	Query string `json:"query"`
+}
+
+type GraphQLResponse struct {
+	Data struct {
+		Inputs struct {
+			TotalCount int `json:"totalCount"`
+		} `json:"inputs"`
+	} `json:"data"`
+}
+
 const (
 	HARDHAT         = 31337
 	PURPOSE_INDEX   = 44
@@ -68,7 +80,7 @@ func (e *EspressoClient) SendInput(payload string, namespace int) {
 	// Generate private key from mnemonic
 	privateKey, err := getPrivateKeyFromMnemonic(mnemonic)
 	if err != nil {
-		log.Fatalf("Erro ao derivar chave privada: %v", err)
+		log.Fatalf("Error deriving private key: %v", err)
 	}
 
 	// Sign and Send Espresso Input
@@ -81,12 +93,12 @@ func (e *EspressoClient) SendInput(payload string, namespace int) {
 
 func addEspressoInput(e *EspressoClient, client *ethclient.Client, privateKey *ecdsa.PrivateKey, namespace int, payload string) (string, error) {
 	// Get nonce
-	nonce, err := fetchNonce(client, privateKey)
-	if err != nil {
-		return "", fmt.Errorf("erro ao buscar nonce: %v", err)
-	}
-
 	fromAddress := crypto.PubkeyToAddress(privateKey.PublicKey)
+
+	nonce, err := fetchNonce(fromAddress.Hex(), e.GraphQLUrl)
+	if err != nil {
+		return "", fmt.Errorf("Error getting nonce: %v", err)
+	}
 
 	espressoMessage := EspressoMessage{
 		Nonce:   nonce,
@@ -141,26 +153,59 @@ func addEspressoInput(e *EspressoClient, client *ethclient.Client, privateKey *e
 	return response, nil
 }
 
-func fetchNonce(client *ethclient.Client, privateKey *ecdsa.PrivateKey) (uint64, error) {
-	fromAddress := crypto.PubkeyToAddress(privateKey.PublicKey)
-	nonce, err := client.PendingNonceAt(context.Background(), fromAddress)
-	if err != nil {
-		return 0, fmt.Errorf("erro ao obter nonce: %v", err)
+func fetchNonce(sender string, graphqlURL string) (uint64, error) {
+	query := fmt.Sprintf(`
+		{
+			inputs(where: {msgSender: "%s" type: "Espresso"}) {
+				totalCount
+			}
+		}`, sender)
+
+	requestBody := GraphQLQuery{
+		Query: query,
 	}
-	return nonce, nil
+
+	jsonBody, err := json.Marshal(requestBody)
+	if err != nil {
+		return 0, fmt.Errorf("Error serializng GraphQL query: %v", err)
+	}
+
+	resp, err := http.Post(graphqlURL+"/graphql", "application/json", bytes.NewBuffer(jsonBody))
+	if err != nil {
+		return 0, fmt.Errorf("Error doing graphql request: %v", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return 0, fmt.Errorf("Error reading graphql response: %v", err)
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return 0, fmt.Errorf("Request failed with status: %d, corpo: %s", resp.StatusCode, string(body))
+	}
+
+	var graphqlResponse GraphQLResponse
+	err = json.Unmarshal(body, &graphqlResponse)
+	if err != nil {
+		return 0, fmt.Errorf("Error deserializing GraphQL response: %v", err)
+	}
+
+	nextNonce := graphqlResponse.Data.Inputs.TotalCount + 1
+	return uint64(nextNonce), nil
 }
 
 func signTypedData(privateKey *ecdsa.PrivateKey, typedData EspressoData) (string, error) {
 	dataBytes, err := json.Marshal(typedData)
 	if err != nil {
-		return "", fmt.Errorf("erro ao serializar typed data: %v", err)
+		return "", fmt.Errorf("Error serializing typed data: %v", err)
 	}
 
 	hash := crypto.Keccak256Hash(dataBytes)
 
 	signature, err := crypto.Sign(hash.Bytes(), privateKey)
 	if err != nil {
-		return "", fmt.Errorf("erro ao assinar os dados: %v", err)
+		return "", fmt.Errorf("Error signing data: %v", err)
 	}
 
 	return fmt.Sprintf("0x%x", signature), nil

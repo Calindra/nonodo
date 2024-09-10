@@ -92,6 +92,7 @@ var sendCmd = &cobra.Command{
 		if len(opts.InputPayload) > 0 {
 			espressoClient := espresso.EspressoClient{
 				EspressoUrl: opts.EspressoUrl,
+				GraphQLUrl:  fmt.Sprintf("http://%s:%d", opts.HttpAddress, opts.HttpPort),
 			}
 			espressoClient.SendInput(opts.InputPayload, DEFAULT_NAMESPACE)
 		} else {

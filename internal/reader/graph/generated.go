@@ -1057,6 +1057,8 @@ input InputFilter {
 
   "Filter only inputs with the message sender"
   msgSender: String
+
+  type: String
 }
 
 scalar BigInt
@@ -7491,7 +7493,7 @@ func (ec *executionContext) unmarshalInputInputFilter(ctx context.Context, obj i
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"indexLowerThan", "indexGreaterThan", "msgSender"}
+	fieldsInOrder := [...]string{"indexLowerThan", "indexGreaterThan", "msgSender", "type"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -7519,6 +7521,13 @@ func (ec *executionContext) unmarshalInputInputFilter(ctx context.Context, obj i
 				return it, err
 			}
 			it.MsgSender = data
+		case "type":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("type"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Type = data
 		}
 	}
 
