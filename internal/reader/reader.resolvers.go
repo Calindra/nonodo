@@ -6,6 +6,7 @@ package reader
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
 	"github.com/calindra/nonodo/internal/reader/graph"
@@ -40,6 +41,11 @@ func (r *inputResolver) Notices(ctx context.Context, obj *model.Input, first *in
 // Reports is the resolver for the reports field.
 func (r *inputResolver) Reports(ctx context.Context, obj *model.Input, first *int, last *int, after *string, before *string) (*model.Connection[*model.Report], error) {
 	return r.adapter.GetReports(ctx, first, last, after, before, &obj.Index)
+}
+
+// InputBoxIndex is the resolver for the inputBoxIndex field.
+func (r *inputResolver) InputBoxIndex(ctx context.Context, obj *model.Input) (int, error) {
+	panic(fmt.Errorf("not implemented: InputBoxIndex - inputBoxIndex"))
 }
 
 // Input is the resolver for the input field.

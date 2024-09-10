@@ -237,7 +237,7 @@ func (a AdapterV2) GetInput(index int) (*graphql.Input, error) {
 		BlockNumber:         fmt.Sprintf("%d", input.BlockNumber),
 		EspressoTimestamp:   fmt.Sprintf("%d", input.EspressoBlockTimestamp.Unix()),
 		EspressoBlockNumber: fmt.Sprintf("%d", input.EspressoBlockNumber),
-		InputBoxIndex:       input.InputBoxIndex,
+		InputBoxIndex:       fmt.Sprintf("%d", input.InputBoxIndex),
 	}, nil
 }
 
