@@ -1058,6 +1058,7 @@ input InputFilter {
   "Filter only inputs with the message sender"
   msgSender: String
 
+  "Filter by input type. Espresso or inputbox"
   type: String
 }
 

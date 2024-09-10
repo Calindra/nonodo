@@ -39,7 +39,8 @@ type InputFilter struct {
 	IndexGreaterThan *int `json:"indexGreaterThan,omitempty"`
 	// Filter only inputs with the message sender
 	MsgSender *string `json:"msgSender,omitempty"`
-	Type      *string `json:"type,omitempty"`
+	// Filter by input type. Espresso or inputbox
+	Type *string `json:"type,omitempty"`
 }
 
 // Page metadata for the cursor-based Connection pagination pattern
