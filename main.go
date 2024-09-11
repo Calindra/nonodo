@@ -85,23 +85,6 @@ var addressBookCmd = &cobra.Command{
 	},
 }
 
-var sendCmd = &cobra.Command{
-	Use:   "send",
-	Short: "Send an input",
-	Run: func(cmd *cobra.Command, args []string) {
-		if len(opts.InputPayload) > 0 {
-			espressoClient := espresso.EspressoClient{
-				EspressoUrl: opts.EspressoUrl,
-				GraphQLUrl:  fmt.Sprintf("http://%s:%d", opts.HttpAddress, opts.HttpPort),
-			}
-			espressoClient.SendInput(opts.InputPayload, DEFAULT_NAMESPACE)
-		} else {
-			cobra.CompError("input-payload option is required for send command")
-		}
-
-	},
-}
-
 // Celestia Network
 type CelestiaOpts struct {
 	Payload     string
@@ -115,10 +98,22 @@ type CelestiaOpts struct {
 	chainId     int64
 }
 
+// Espresso
+type EspressoOpts struct {
+	Payload   string
+	Namespace int
+}
+
 var celestiaCmd = &cobra.Command{
 	Use:   "celestia",
 	Short: "Handle blob to Celestia",
 	Long:  "Submit a blob and check proofs after one hour to Celestia Network",
+}
+
+var espressoCmd = &cobra.Command{
+	Use:   "espresso",
+	Short: "Handles Espresso transactions",
+	Long:  "Submit and get a transaction from Espresso using Cappuccino APIs",
 }
 
 var (
@@ -350,6 +345,28 @@ func downloadFile(ctx context.Context, url string) ([]byte, error) {
 	return content, nil
 }
 
+func addEspressoSubcommands(espressoCmd *cobra.Command) {
+	espressoOpts := &EspressoOpts{}
+	// Send
+	espressoSendCmd := &cobra.Command{
+		Use:   "send",
+		Short: "Send a payload to Espresso",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			espressoClient := espresso.EspressoClient{
+				EspressoUrl: opts.EspressoUrl,
+				GraphQLUrl:  fmt.Sprintf("http://%s:%d", opts.HttpAddress, opts.HttpPort),
+			}
+			espressoClient.SendInput(opts.InputPayload, espressoOpts.Namespace)
+			return nil
+		},
+	}
+	espressoSendCmd.Flags().StringVar(&espressoOpts.Payload, "payload", "", "Payload to send to Espresso")
+	espressoSendCmd.Flags().IntVar(&espressoOpts.Namespace, "namespace", DEFAULT_NAMESPACE, "Namespace of the payload")
+	markFlagRequired(espressoSendCmd, "payload")
+	espressoCmd.AddCommand(espressoSendCmd)
+
+}
+
 func readFile(_ context.Context, path string) ([]byte, error) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -461,7 +478,7 @@ func init() {
 
 	cmd.Flags().StringVar(&opts.SalsaUrl, "salsa-url", opts.SalsaUrl, "Url used to start Salsa")
 
-	sendCmd.Flags().StringVar(&opts.InputPayload, "input-payload", opts.InputPayload, "Payload to be sent to Espresso")
+	espressoCmd.Flags().StringVar(&opts.InputPayload, "input-payload", opts.InputPayload, "Payload to be sent to Espresso")
 }
 
 func run(cmd *cobra.Command, args []string) {
@@ -539,7 +556,8 @@ func run(cmd *cobra.Command, args []string) {
 
 func main() {
 	addCelestiaSubcommands(celestiaCmd)
-	cmd.AddCommand(addressBookCmd, celestiaCmd, CompletionCmd, sendCmd)
+	addEspressoSubcommands(espressoCmd)
+	cmd.AddCommand(addressBookCmd, celestiaCmd, CompletionCmd, espressoCmd)
 	cobra.CheckErr(cmd.Execute())
 }
 
