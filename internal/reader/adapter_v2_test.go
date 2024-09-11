@@ -308,12 +308,14 @@ func (s *AdapterV2TestSuite) TestGetInputsFound() {
 	ctx := context.Background()
 
 	_, err := s.inputRepository.Create(ctx, model.AdvanceInput{
+		ID:    "1",
 		Index: 1,
 	})
 
 	s.NoError(err)
 
 	_, error := s.inputRepository.Create(ctx, model.AdvanceInput{
+		ID:    "2",
 		Index: 2,
 	})
 

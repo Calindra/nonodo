@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strconv"
 	"testing"
 	"time"
 
@@ -165,6 +166,7 @@ func (s *InputRepositorySuite) TestFindByIndexGt() {
 	ctx := context.Background()
 	for i := 0; i < 5; i++ {
 		input, err := s.inputRepository.Create(ctx, convenience.AdvanceInput{
+			ID:             strconv.Itoa(i),
 			Index:          i,
 			Status:         convenience.CompletionStatusUnprocessed,
 			MsgSender:      common.Address{},
@@ -192,6 +194,7 @@ func (s *InputRepositorySuite) TestFindByIndexLt() {
 	ctx := context.Background()
 	for i := 0; i < 5; i++ {
 		input, err := s.inputRepository.Create(ctx, convenience.AdvanceInput{
+			ID:             strconv.Itoa(i),
 			Index:          i,
 			Status:         convenience.CompletionStatusUnprocessed,
 			MsgSender:      common.Address{},
@@ -219,6 +222,7 @@ func (s *InputRepositorySuite) TestFindByMsgSender() {
 	ctx := context.Background()
 	for i := 0; i < 5; i++ {
 		input, err := s.inputRepository.Create(ctx, convenience.AdvanceInput{
+			ID:             strconv.Itoa(i),
 			Index:          i,
 			Status:         convenience.CompletionStatusUnprocessed,
 			MsgSender:      common.HexToAddress(fmt.Sprintf("000000000000000000000000000000000000000%d", i)),

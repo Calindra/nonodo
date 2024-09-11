@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strconv"
 	"testing"
 	"time"
 
@@ -94,6 +95,7 @@ func (s *AdapterSuite) TestGetInputs() {
 	ctx := context.Background()
 	for i := 0; i < 3; i++ {
 		_, err := s.inputRepository.Create(ctx, convenience.AdvanceInput{
+			ID:             strconv.Itoa(i),
 			Index:          i,
 			Status:         convenience.CompletionStatusUnprocessed,
 			MsgSender:      common.HexToAddress(fmt.Sprintf("000000000000000000000000000000000000000%d", i)),
