@@ -8,6 +8,8 @@ require (
 	github.com/99designs/gqlgen v0.17.41
 	github.com/EspressoSystems/espresso-sequencer-go v0.0.16
 	github.com/Khan/genqlient v0.6.0
+	github.com/btcsuite/btcd v0.20.1-beta
+	github.com/btcsuite/btcutil v1.0.2
 	github.com/carlmjohnson/versioninfo v0.22.5
 	github.com/celestiaorg/celestia-openrpc v0.4.0
 	github.com/deepmap/oapi-codegen/v2 v2.0.0
@@ -24,6 +26,7 @@ require (
 	github.com/stretchr/testify v1.9.0
 	github.com/tendermint/tendermint v0.0.0-00010101000000-000000000000
 	github.com/tidwall/gjson v1.17.1
+	github.com/tyler-smith/go-bip39 v1.1.0
 	github.com/vektah/gqlparser/v2 v2.5.10
 	golang.org/x/sys v0.20.0
 )
