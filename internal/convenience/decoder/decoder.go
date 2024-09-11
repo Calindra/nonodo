@@ -118,8 +118,9 @@ func (o *OutputDecoder) HandleInput(
 		BlockTimestamp:         time.Unix(convertedInput.BlockTimestamp, 0),
 		PrevRandao:             convertedInput.PrevRandao,
 		AppContract:            convertedInput.AppContract,
-		EspressoBlockNumber:    0,
-		EspressoBlockTimestamp: time.Unix(0, 0),
+		EspressoBlockNumber:    -1,
+		EspressoBlockTimestamp: time.Unix(-1, 0),
+		InputBoxIndex:          int(convertedInput.InputBoxIndex),
 	})
 	return err
 }
@@ -204,6 +205,7 @@ func (o *OutputDecoder) GetConvertedInput(input model.InputEdge) (model.Converte
 		BlockTimestamp: values[4].(*big.Int).Int64(),
 		PrevRandao:     values[5].(*big.Int).String(),
 		AppContract:    values[1].(common.Address),
+		InputBoxIndex:  values[6].(*big.Int).Int64(),
 	}
 
 	return convertedInput, nil

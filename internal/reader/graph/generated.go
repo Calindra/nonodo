@@ -54,6 +54,7 @@ type ComplexityRoot struct {
 		EspressoBlockNumber func(childComplexity int) int
 		EspressoTimestamp   func(childComplexity int) int
 		Index               func(childComplexity int) int
+		InputBoxIndex       func(childComplexity int) int
 		MsgSender           func(childComplexity int) int
 		Notice              func(childComplexity int, index int) int
 		Notices             func(childComplexity int, first *int, last *int, after *string, before *string) int
@@ -174,6 +175,8 @@ type InputResolver interface {
 	Vouchers(ctx context.Context, obj *model.Input, first *int, last *int, after *string, before *string) (*model.Connection[*model.Voucher], error)
 	Notices(ctx context.Context, obj *model.Input, first *int, last *int, after *string, before *string) (*model.Connection[*model.Notice], error)
 	Reports(ctx context.Context, obj *model.Input, first *int, last *int, after *string, before *string) (*model.Connection[*model.Report], error)
+
+	InputBoxIndex(ctx context.Context, obj *model.Input) (int, error)
 }
 type NoticeResolver interface {
 	Input(ctx context.Context, obj *model.Notice) (*model.Input, error)
@@ -245,6 +248,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Input.Index(childComplexity), true
+
+	case "Input.inputBoxIndex":
+		if e.complexity.Input.InputBoxIndex == nil {
+			break
+		}
+
+		return e.complexity.Input.InputBoxIndex(childComplexity), true
 
 	case "Input.msgSender":
 		if e.complexity.Input.MsgSender == nil {
@@ -951,6 +961,8 @@ type Input {
   espressoTimestamp: BigInt!
   "Number of the Espresso block in which the input was recorded"
   espressoBlockNumber: BigInt!
+  "Input index in the Inpux Box"
+  inputBoxIndex: Int!
 }
 
 "Representation of a transaction that can be carried out on the base layer blockchain, such as a transfer of assets"
@@ -2409,6 +2421,50 @@ func (ec *executionContext) fieldContext_Input_espressoBlockNumber(ctx context.C
 	return fc, nil
 }
 
+func (ec *executionContext) _Input_inputBoxIndex(ctx context.Context, field graphql.CollectedField, obj *model.Input) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Input_inputBoxIndex(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Input().InputBoxIndex(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Input_inputBoxIndex(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Input",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _InputConnection_totalCount(ctx context.Context, field graphql.CollectedField, obj *model.Connection[*model.Input]) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_InputConnection_totalCount(ctx, field)
 	if err != nil {
@@ -2624,6 +2680,8 @@ func (ec *executionContext) fieldContext_InputEdge_node(ctx context.Context, fie
 				return ec.fieldContext_Input_espressoTimestamp(ctx, field)
 			case "espressoBlockNumber":
 				return ec.fieldContext_Input_espressoBlockNumber(ctx, field)
+			case "inputBoxIndex":
+				return ec.fieldContext_Input_inputBoxIndex(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Input", field.Name)
 		},
@@ -2786,6 +2844,8 @@ func (ec *executionContext) fieldContext_Notice_input(ctx context.Context, field
 				return ec.fieldContext_Input_espressoTimestamp(ctx, field)
 			case "espressoBlockNumber":
 				return ec.fieldContext_Input_espressoBlockNumber(ctx, field)
+			case "inputBoxIndex":
+				return ec.fieldContext_Input_inputBoxIndex(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Input", field.Name)
 		},
@@ -3430,6 +3490,8 @@ func (ec *executionContext) fieldContext_Proof_inputByInputIndex(ctx context.Con
 				return ec.fieldContext_Input_espressoTimestamp(ctx, field)
 			case "espressoBlockNumber":
 				return ec.fieldContext_Input_espressoBlockNumber(ctx, field)
+			case "inputBoxIndex":
+				return ec.fieldContext_Input_inputBoxIndex(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Input", field.Name)
 		},
@@ -3988,6 +4050,8 @@ func (ec *executionContext) fieldContext_Query_input(ctx context.Context, field 
 				return ec.fieldContext_Input_espressoTimestamp(ctx, field)
 			case "espressoBlockNumber":
 				return ec.fieldContext_Input_espressoBlockNumber(ctx, field)
+			case "inputBoxIndex":
+				return ec.fieldContext_Input_inputBoxIndex(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Input", field.Name)
 		},
@@ -4695,6 +4759,8 @@ func (ec *executionContext) fieldContext_Report_input(ctx context.Context, field
 				return ec.fieldContext_Input_espressoTimestamp(ctx, field)
 			case "espressoBlockNumber":
 				return ec.fieldContext_Input_espressoBlockNumber(ctx, field)
+			case "inputBoxIndex":
+				return ec.fieldContext_Input_inputBoxIndex(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Input", field.Name)
 		},
@@ -5101,6 +5167,8 @@ func (ec *executionContext) fieldContext_Voucher_input(ctx context.Context, fiel
 				return ec.fieldContext_Input_espressoTimestamp(ctx, field)
 			case "espressoBlockNumber":
 				return ec.fieldContext_Input_espressoBlockNumber(ctx, field)
+			case "inputBoxIndex":
+				return ec.fieldContext_Input_inputBoxIndex(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Input", field.Name)
 		},
@@ -7810,6 +7878,42 @@ func (ec *executionContext) _Input(ctx context.Context, sel ast.SelectionSet, ob
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}
+		case "inputBoxIndex":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Input_inputBoxIndex(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}

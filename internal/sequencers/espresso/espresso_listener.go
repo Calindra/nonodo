@@ -155,8 +155,9 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 					BlockNumber:            e.getL1FinalizedHeight(currentBlockHeight),
 					BlockTimestamp:         e.getL1FinalizedTimestamp(currentBlockHeight),
 					AppContract:            e.InputterWorker.ApplicationAddress,
-					EspressoBlockNumber:    currentBlockHeight,
+					EspressoBlockNumber:    int(currentBlockHeight),
 					EspressoBlockTimestamp: e.getEspressoTimestamp(currentBlockHeight),
+					InputBoxIndex:          -1,
 				})
 				if err != nil {
 					return err

@@ -22,6 +22,8 @@ type Input struct {
 	EspressoTimestamp string `json:"espressoTimestamp"`
 	// Number of the Espresso block in which the input was recorded
 	EspressoBlockNumber string `json:"espressoBlockNumber"`
+	// Input index in the Inpux Box
+	InputBoxIndex string `json:"inputBoxIndex"`
 	// Input payload in Ethereum hex binary format, starting with '0x'
 }
 
