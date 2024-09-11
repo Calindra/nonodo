@@ -114,7 +114,7 @@ You can increase the default timeout by passing a flag.
 nonodo --sm-deadline-advance-state 30s --sm-deadline-inspect-state 30s
 ```
 
-### Sending inputs
+### Sending inputs to Inputbox
 
 To send an input to the Cartesi application, you may use cast, a command-line tool from the foundry
 package. For instance, the invocation below sends an input with contents `0xdeadbeef` to the running
@@ -170,6 +170,14 @@ nonodo \
     --contracts-input-box-address 0x59b22D57D4f067708AB0c00552767405926dc768 \
     --contracts-input-box-block 3963384 \
     --rpc-url wss://eth-sepolia.g.alchemy.com/v2/$ALCHEMY_API_KEY
+```
+
+### Espresso Integration
+
+To send an input to Espresso
+
+```sh
+nonodo espresso send --payload aabbcc
 ```
 
 ### Connecting to PostGresDB and Graphile locally
