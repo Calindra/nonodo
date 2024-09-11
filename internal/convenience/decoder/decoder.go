@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"math/big"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/calindra/nonodo/internal/contracts"
@@ -110,6 +111,7 @@ func (o *OutputDecoder) HandleInput(
 		return fmt.Errorf("error getting converted input: %w", err)
 	}
 	_, err = o.convenienceService.CreateInput(ctx, &model.AdvanceInput{
+		ID:                     strconv.Itoa(input.Node.Index),
 		Index:                  input.Node.Index,
 		Status:                 status,
 		MsgSender:              convertedInput.MsgSender,
