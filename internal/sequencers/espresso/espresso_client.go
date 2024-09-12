@@ -197,7 +197,6 @@ func fetchNonce(sender string, graphqlURL string) (uint64, error) {
 	return uint64(nextNonce), nil
 }
 
-// Helper para calcular o hash do domínio EIP712
 func hashEIP712Domain(domain EIP712Domain) common.Hash {
 	domainTypeHash := crypto.Keccak256Hash([]byte("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"))
 	nameHash := crypto.Keccak256Hash([]byte(domain.Name))
@@ -214,7 +213,6 @@ func hashEIP712Domain(domain EIP712Domain) common.Hash {
 	)
 }
 
-// Helper para calcular o hash da mensagem
 func hashEspressoMessage(message EspressoMessage) common.Hash {
 	messageTypeHash := crypto.Keccak256Hash([]byte("EspressoMessage(uint64 nonce,string payload)"))
 	nonceBytes := new(big.Int).SetUint64(message.Nonce).Bytes()
