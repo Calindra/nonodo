@@ -55,6 +55,7 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 	slog.Debug("Espresso: watchNewTransactions", "fromBlock", e.fromBlock)
 	currentBlockHeight := e.fromBlock
 	previousBlockHeight := currentBlockHeight
+	l1FinalizedPrevHeight := e.getL1FinalizedHeight(previousBlockHeight)
 
 	// keep track of msgSender -> nonce
 	nonceMap := make(map[common.Address]int64)
@@ -80,20 +81,17 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 			}
 			tot := len(transactions.Transactions)
 
-			if tot > 0 {
-				l1FinalizedPrevHeight := e.getL1FinalizedHeight(previousBlockHeight)
-				l1FinalizedCurrentHeight := e.getL1FinalizedHeight(currentBlockHeight)
+			// read inputbox
+			l1FinalizedCurrentHeight := e.getL1FinalizedHeight(currentBlockHeight)
+			// read L1 if there might be update
+			if l1FinalizedCurrentHeight > l1FinalizedPrevHeight || currentBlockHeight == e.fromBlock {
 				slog.Debug("L1 finalized", "from", l1FinalizedPrevHeight, "to", l1FinalizedCurrentHeight)
-
-				// read L1 if there might be update
-				if l1FinalizedCurrentHeight > l1FinalizedPrevHeight || previousBlockHeight == e.fromBlock {
-					slog.Debug("Fetching InputBox between Espresso blocks", "from", previousBlockHeight, "to", currentBlockHeight)
-					err = readInputBox(ctx, l1FinalizedPrevHeight, l1FinalizedCurrentHeight, e.InputterWorker)
-					if err != nil {
-						return err
-					}
+				slog.Debug("Fetching InputBox between Espresso blocks", "from", previousBlockHeight, "to", currentBlockHeight)
+				err = readInputBox(ctx, l1FinalizedPrevHeight, l1FinalizedCurrentHeight, e.InputterWorker)
+				if err != nil {
+					return err
 				}
-				previousBlockHeight = currentBlockHeight + 1
+				l1FinalizedPrevHeight = l1FinalizedCurrentHeight
 			}
 
 			slog.Debug("Espresso:", "transactionsLen", tot)
