@@ -217,9 +217,9 @@ func (a AdapterV1) convertToReport(
 	}
 }
 
-func (a AdapterV1) GetInput(index int) (*graphql.Input, error) {
+func (a AdapterV1) GetInput(id string) (*graphql.Input, error) {
 	ctx := context.Background()
-	input, err := a.inputRepository.FindByIndex(ctx, index)
+	input, err := a.inputRepository.FindByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}

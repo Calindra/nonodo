@@ -63,7 +63,7 @@ func (r *InputRepository) CreateTables() error {
 }
 
 func (r *InputRepository) Create(ctx context.Context, input model.AdvanceInput) (*model.AdvanceInput, error) {
-	exist, err := r.FindByIndex(ctx, input.Index)
+	exist, err := r.FindByID(ctx, input.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -218,7 +218,7 @@ func (r *InputRepository) FindByStatus(ctx context.Context, status model.Complet
 	return nil, nil
 }
 
-func (r *InputRepository) FindByIndex(ctx context.Context, index int) (*model.AdvanceInput, error) {
+func (r *InputRepository) FindByID(ctx context.Context, id string) (*model.AdvanceInput, error) {
 	sql := `SELECT
 		id,
 		input_index,
@@ -232,11 +232,11 @@ func (r *InputRepository) FindByIndex(ctx context.Context, index int) (*model.Ad
 		app_contract,
 		espresso_block_number,
 		espresso_block_timestamp,
-		input_box_index FROM convenience_inputs WHERE input_index = $1`
+		input_box_index FROM convenience_inputs WHERE id = $1`
 	res, err := r.Db.QueryxContext(
 		ctx,
 		sql,
-		index,
+		id,
 	)
 	if err != nil {
 		return nil, err
