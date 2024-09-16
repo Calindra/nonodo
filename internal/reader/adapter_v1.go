@@ -264,6 +264,21 @@ func (a AdapterV1) GetInputs(
 				Eq:    where.MsgSender,
 			})
 		}
+		if where.Type != nil {
+			inputboxField := "InputBoxIndex"
+			defaultStr := "-1"
+			if *where.Type == "inputbox" {
+				filters = append(filters, &cModel.ConvenienceFilter{
+					Field: &inputboxField,
+					Ne:    &defaultStr,
+				})
+			} else if *where.Type == "espresso" {
+				filters = append(filters, &cModel.ConvenienceFilter{
+					Field: &inputboxField,
+					Eq:    &defaultStr,
+				})
+			}
+		}
 	}
 	inputs, err := a.inputRepository.FindAll(
 		ctx, first, last, after, before, filters,

@@ -39,12 +39,13 @@ func (i *InputBlobAdapter) Adapt(node struct {
 	}
 
 	return &graphql.Input{
-		Index:       node.Index,
-		Status:      convertedStatus,
-		MsgSender:   values[2].(common.Address).Hex(),
-		Timestamp:   values[4].(*big.Int).String(),
-		BlockNumber: values[3].(*big.Int).String(),
-		Payload:     string(values[7].([]uint8)),
+		Index:         node.Index,
+		Status:        convertedStatus,
+		MsgSender:     values[2].(common.Address).Hex(),
+		Timestamp:     values[4].(*big.Int).String(),
+		BlockNumber:   values[3].(*big.Int).String(),
+		Payload:       string(values[7].([]uint8)),
+		InputBoxIndex: values[6].(*big.Int).String(),
 	}, nil
 }
 

@@ -31,6 +31,7 @@ type inputRow struct {
 	AppContract            string `db:"app_contract"`
 	EspressoBlockNumber    int    `db:"espresso_block_number"`
 	EspressoBlockTimestamp int    `db:"espresso_block_timestamp"`
+	InputBoxIndex          int    `db:"input_box_index"`
 }
 
 func (r *InputRepository) CreateTables() error {
@@ -52,7 +53,8 @@ func (r *InputRepository) CreateTables() error {
 		prev_randao		text,
 		exception		text,
 		espresso_block_number	integer,
-		espresso_block_timestamp	integer);
+		espresso_block_timestamp	integer,
+		input_box_index integer);
 	CREATE INDEX IF NOT EXISTS idx_input_index ON convenience_inputs(input_index);
 	CREATE INDEX IF NOT EXISTS idx_status ON convenience_inputs(status);`
 	schema = fmt.Sprintf(schema, autoIncrement)
@@ -88,7 +90,8 @@ func (r *InputRepository) rawCreate(ctx context.Context, input model.AdvanceInpu
 		exception,
 		app_contract,
 		espresso_block_number,
-		espresso_block_timestamp
+		espresso_block_timestamp,
+		input_box_index
 	) VALUES (
 		$1,
 		$2,
@@ -100,7 +103,8 @@ func (r *InputRepository) rawCreate(ctx context.Context, input model.AdvanceInpu
 		$8,
 		$9,
 		$10,
-		$11
+		$11,
+		$12
 	);`
 
 	exec := DBExecutor{&r.Db}
@@ -118,6 +122,7 @@ func (r *InputRepository) rawCreate(ctx context.Context, input model.AdvanceInpu
 		input.AppContract.Hex(),
 		input.EspressoBlockNumber,
 		input.EspressoBlockTimestamp.UnixMilli(),
+		input.InputBoxIndex,
 	)
 
 	if err != nil {
@@ -157,7 +162,8 @@ func (r *InputRepository) FindByStatusNeDesc(ctx context.Context, status model.C
 		exception,
 		app_contract,
 		espresso_block_number,
-		espresso_block_timestamp FROM convenience_inputs WHERE status <> $1
+		espresso_block_timestamp,
+		input_box_index FROM convenience_inputs WHERE status <> $1
 		ORDER BY input_index DESC`
 	res, err := r.Db.QueryxContext(
 		ctx,
@@ -190,7 +196,8 @@ func (r *InputRepository) FindByStatus(ctx context.Context, status model.Complet
 		exception,
 		app_contract,
 		espresso_block_number,
-		espresso_block_timestamp FROM convenience_inputs WHERE status = $1
+		espresso_block_timestamp,
+		input_box_index FROM convenience_inputs WHERE status = $1
 		ORDER BY input_index ASC`
 	res, err := r.Db.QueryxContext(
 		ctx,
@@ -223,7 +230,8 @@ func (r *InputRepository) FindByIndex(ctx context.Context, index int) (*model.Ad
 		exception,
 		app_contract,
 		espresso_block_number,
-		espresso_block_timestamp FROM convenience_inputs WHERE input_index = $1`
+		espresso_block_timestamp,
+		input_box_index FROM convenience_inputs WHERE input_index = $1`
 	res, err := r.Db.QueryxContext(
 		ctx,
 		sql,
@@ -294,7 +302,8 @@ func (c *InputRepository) FindAll(
 		exception,
 		app_contract,
 		espresso_block_number,
-		espresso_block_timestamp FROM convenience_inputs `
+		espresso_block_timestamp,
+		input_box_index FROM convenience_inputs `
 	where, args, argsCount, err := transformToInputQuery(filter)
 	if err != nil {
 		slog.Error("database error", "err", err)
@@ -385,6 +394,18 @@ func transformToInputQuery(
 			} else {
 				return "", nil, 0, fmt.Errorf("operation not implemented")
 			}
+		} else if *filter.Field == "InputBoxIndex" {
+			if filter.Ne != nil {
+				where = append(where, fmt.Sprintf("input_box_index <> $%d ", count))
+				args = append(args, *filter.Ne)
+				count += 1
+			} else if filter.Eq != nil {
+				where = append(where, fmt.Sprintf("input_box_index = $%d ", count))
+				args = append(args, *filter.Eq)
+				count += 1
+			} else {
+				return "", nil, 0, fmt.Errorf("operation not implemented")
+			}
 		} else {
 			return "", nil, 0, fmt.Errorf("unexpected field %s", *filter.Field)
 		}
@@ -404,8 +425,9 @@ func parseRowInput(row inputRow) model.AdvanceInput {
 		PrevRandao:             row.PrevRandao,
 		Exception:              common.Hex2Bytes(row.Exception),
 		AppContract:            common.HexToAddress(row.AppContract),
-		EspressoBlockNumber:    uint64(row.EspressoBlockNumber),
+		EspressoBlockNumber:    row.EspressoBlockNumber,
 		EspressoBlockTimestamp: time.UnixMilli(int64(row.EspressoBlockTimestamp)),
+		InputBoxIndex:          row.InputBoxIndex,
 	}
 }
 
@@ -432,6 +454,7 @@ func parseInput(res *sqlx.Rows) (*model.AdvanceInput, error) {
 		&appContract,
 		&input.EspressoBlockNumber,
 		&espressoBlockTimestamp,
+		&input.InputBoxIndex,
 	)
 	if err != nil {
 		return nil, err
