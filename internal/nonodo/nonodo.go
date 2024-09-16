@@ -345,6 +345,8 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 					ApplicationAddress: common.HexToAddress(opts.ApplicationAddress),
 				},
 			))
+		} else if opts.Sequencer == "paio" {
+			panic("sequencer not supported yet")
 		} else {
 			panic("sequencer not supported")
 		}
