@@ -16,8 +16,10 @@ ENV POSTGRES_DB=mydatabase
 ENV POSTGRES_USER=myuser
 ENV POSTGRES_PASSWORD=mypassword
 
+ARG ANVIL_TAG=nightly-2cdbfaca634b284084d0f86357623aef7a0d2ce3
+
 # Verifique se o Foundry e anvil estão instalados corretamente
-RUN foundryup --version $ANVIL_TAG && which anvil
+RUN foundryup --version ${ANVIL_TAG} && which anvil
 
 # Crie um diretório de trabalho fora do GOPATH
 WORKDIR /app
