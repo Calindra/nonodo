@@ -24,6 +24,7 @@ import (
 	"github.com/calindra/nonodo/internal/reader"
 	"github.com/calindra/nonodo/internal/rollup"
 	"github.com/calindra/nonodo/internal/salsa"
+	"github.com/calindra/nonodo/internal/sequencers/avail"
 	"github.com/calindra/nonodo/internal/sequencers/espresso"
 	"github.com/calindra/nonodo/internal/sequencers/inputter"
 	"github.com/calindra/nonodo/internal/supervisor"
@@ -351,6 +352,8 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 			panic("sequencer not supported")
 		}
 	}
+
+	w.Workers = append(w.Workers, avail.AvailListener{})
 
 	rollup.Register(re, modelInstance, sequencer)
 	w.Workers = append(w.Workers, supervisor.HttpWorker{

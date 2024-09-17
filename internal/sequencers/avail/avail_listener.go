@@ -2,16 +2,16 @@ package avail
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/calindra/nonodo/internal/supervisor"
 	gsrpc "github.com/centrifuge/go-substrate-rpc-client/v4"
-	config "github.com/centrifuge/go-substrate-rpc-client/v4/config"
 )
 
 type AvailListener struct{}
 
 func NewAvailListener() supervisor.Worker {
-	return &AvailListener{}
+	return AvailListener{}
 }
 
 func (a AvailListener) String() string {
@@ -19,19 +19,20 @@ func (a AvailListener) String() string {
 }
 
 func (a AvailListener) Start(ctx context.Context, ready chan<- struct{}) error {
-	_, err := a.connect()
+	client, err := a.connect()
 	if err != nil {
 		return err
 	}
 	ready <- struct{}{}
-	return nil
+	return a.watchNewTransactions(ctx, client)
 }
 
 func (a AvailListener) connect() (*gsrpc.SubstrateAPI, error) {
 	// uses env RPC_URL for connecting
-	cfg := config.Default()
+	// cfg := config.Default()
+	RPCUrl := "https://turing-rpc.avail.so/rpc"
 
-	client, err := gsrpc.NewSubstrateAPI(cfg.RPCURL)
+	client, err := gsrpc.NewSubstrateAPI(RPCUrl)
 	if err != nil {
 		return nil, err
 	}
@@ -39,6 +40,23 @@ func (a AvailListener) connect() (*gsrpc.SubstrateAPI, error) {
 	return client, nil
 }
 
-func (a AvailListener) watchNewTransactions(ctx context.Context) error {
+func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.SubstrateAPI) error {
+	waitForBlocks := 5
+	count := 0
+
+	subscription, err := client.RPC.Chain.SubscribeNewHeads()
+
+	if err != nil {
+		return err
+	}
+
+	for i := range subscription.Chan() {
+		count++
+		slog.Info("Avail", "Block number: %v\n", i.Number)
+		if count == waitForBlocks {
+			break
+		}
+	}
+
 	return nil
 }
