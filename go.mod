@@ -63,7 +63,7 @@ require (
 	github.com/celestiaorg/merkletree v0.0.0-20210714075610-a84dc3ddbbe4 // indirect
 	github.com/celestiaorg/nmt v0.22.1 // indirect
 	github.com/celestiaorg/rsmt2d v0.11.0 // indirect
-	github.com/centrifuge/go-substrate-rpc-client/v4 v4.0.12
+	github.com/centrifuge/go-substrate-rpc-client/v4 v4.2.1
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/cometbft/cometbft v0.37.2 // indirect
 	github.com/consensys/bavard v0.1.13 // indirect
