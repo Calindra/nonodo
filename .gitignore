@@ -4,4 +4,5 @@ TODO
 /nonodo
 /nonodo.exe
 *.sqlite3
+sqlite3
 .idea/

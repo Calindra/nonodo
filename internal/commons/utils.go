@@ -106,6 +106,30 @@ func GetAssetsFromLastReleaseGitHub(ctx context.Context, client *github.Client, 
 	// List the tags of the GitHub repository
 	slog.Debug("Listing tags for", namespace, repository)
 
+	anvilTag, haveTag := os.LookupEnv("ANVIL_TAG")
+
+	if haveTag {
+		release, _, err := client.Repositories.GetReleaseByTag(ctx, namespace, repository, anvilTag)
+
+		if err != nil {
+			return nil, fmt.Errorf("%s(%s): failed to get release %s", namespace, repository, err.Error())
+		}
+
+		ra := make([]ReleaseAsset, 0)
+
+		for _, a := range release.Assets {
+			slog.Debug("Asset", "tag", release.GetTagName(), "name", a.GetName(), "url", a.GetBrowserDownloadURL())
+			ra = append(ra, ReleaseAsset{
+				Tag:      release.GetTagName(),
+				AssetId:  a.GetID(),
+				Filename: a.GetName(),
+				Url:      a.GetBrowserDownloadURL(),
+			})
+		}
+
+		return ra, nil
+	}
+
 	releases, _, err := client.Repositories.ListReleases(ctx, namespace, repository, &github.ListOptions{
 		PerPage: 1,
 	})

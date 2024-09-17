@@ -80,6 +80,15 @@ func InstallAnvil(ctx context.Context) (string, error) {
 	return anvilExec, nil
 }
 
+func GetAnvilVersion(anvilExec string) (string, error) {
+	output, err := exec.Command(anvilExec, "--version").Output()
+	if err != nil {
+		return "", fmt.Errorf("anvil: failed to run anvil: %w", err)
+	}
+	anvilVersion := strings.TrimSpace(string(output))
+	return anvilVersion, nil
+}
+
 func CheckAnvilAndInstall(ctx context.Context) (string, error) {
 	if !IsAnvilInstalled() {
 		slog.Debug("anvil: anvil is not installed")
@@ -87,11 +96,18 @@ func CheckAnvilAndInstall(ctx context.Context) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("anvil: failed to install %w", err)
 		}
-		slog.Debug("anvil: installed anvil", "location", location)
+		anvilVersion, err := GetAnvilVersion(location)
+		if err != nil {
+			return "", err
+		}
+		slog.Debug("anvil: installed anvil", "location", location, "version", anvilVersion)
 		return location, nil
 	}
-
-	slog.Debug("anvil: anvil is installed")
+	anvilVersion, err := GetAnvilVersion(anvilCommand)
+	if err != nil {
+		return "", err
+	}
+	slog.Debug("anvil: anvil is installed", "version", anvilVersion)
 	return anvilCommand, nil
 }
 
