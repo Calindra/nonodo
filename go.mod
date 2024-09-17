@@ -9,7 +9,7 @@ require (
 	github.com/EspressoSystems/espresso-sequencer-go v0.0.23
 	github.com/Khan/genqlient v0.6.0
 	github.com/btcsuite/btcd v0.20.1-beta
-	github.com/btcsuite/btcutil v1.0.2
+	github.com/btcsuite/btcutil v1.0.3-0.20201208143702-a53e38424cce
 	github.com/carlmjohnson/versioninfo v0.22.5
 	github.com/celestiaorg/celestia-openrpc v0.4.0
 	github.com/deepmap/oapi-codegen/v2 v2.0.0
@@ -30,6 +30,8 @@ require (
 	github.com/vektah/gqlparser/v2 v2.5.10
 	golang.org/x/sys v0.20.0
 )
+
+require github.com/vedhavyas/go-subkey/v2 v2.0.0 // indirect
 
 replace (
 	github.com/cosmos/cosmos-sdk => github.com/celestiaorg/cosmos-sdk v1.18.3-sdk-v0.46.14
@@ -58,7 +60,7 @@ require (
 	github.com/celestiaorg/merkletree v0.0.0-20210714075610-a84dc3ddbbe4 // indirect
 	github.com/celestiaorg/nmt v0.21.0 // indirect
 	github.com/celestiaorg/rsmt2d v0.11.0 // indirect
-	github.com/centrifuge/go-substrate-rpc-client/v4 v4.0.0
+	github.com/centrifuge/go-substrate-rpc-client/v4 v4.0.12
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/cometbft/cometbft v0.37.2 // indirect
 	github.com/consensys/bavard v0.1.13 // indirect
@@ -68,9 +70,9 @@ require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.3 // indirect
 	github.com/crate-crypto/go-kzg-4844 v0.7.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
-	github.com/deckarep/golang-set v1.7.1 // indirect
+	github.com/deckarep/golang-set v1.8.0 // indirect
 	github.com/deckarep/golang-set/v2 v2.1.0 // indirect
-	github.com/decred/base58 v1.0.3 // indirect
+	github.com/decred/base58 v1.0.4 // indirect
 	github.com/decred/dcrd/crypto/blake256 v1.0.1 // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.2.0 // indirect
 	github.com/docker/docker v24.0.7+incompatible // indirect
@@ -117,7 +119,7 @@ require (
 	github.com/libp2p/go-msgio v0.3.0 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
-	github.com/mimoo/StrobeGo v0.0.0-20210601165009-122bf33a46e0 // indirect
+	github.com/mimoo/StrobeGo v0.0.0-20220103164710-9a04d6ca976b // indirect
 	github.com/minio/sha256-simd v1.0.1 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/mmcloughlin/addchain v0.4.0 // indirect
@@ -165,7 +167,6 @@ require (
 	github.com/urfave/cli/v2 v2.25.7 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect
-	github.com/vedhavyas/go-subkey v1.0.2 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	go.opentelemetry.io/otel v1.24.0 // indirect
@@ -191,3 +192,5 @@ require (
 	lukechampine.com/blake3 v1.2.1 // indirect
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
+
+replace github.com/centrifuge/go-substrate-rpc-client/v4 => github.com/availproject/go-substrate-rpc-client/v4 v4.1.0-avail-2.1.5-rc1
