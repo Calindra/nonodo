@@ -19,11 +19,11 @@ func (a AvailListener) String() string {
 }
 
 func (a AvailListener) Start(ctx context.Context, ready chan<- struct{}) error {
+	ready <- struct{}{}
 	client, err := a.connect()
 	if err != nil {
 		return err
 	}
-	ready <- struct{}{}
 	return a.watchNewTransactions(ctx, client)
 }
 
@@ -40,7 +40,7 @@ func (a AvailListener) connect() (*gsrpc.SubstrateAPI, error) {
 	return client, nil
 }
 
-func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.SubstrateAPI) error {
+func (a AvailListener) watchNewTransactions(_ context.Context, client *gsrpc.SubstrateAPI) error {
 	waitForBlocks := 5
 	count := 0
 
