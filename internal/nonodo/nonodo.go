@@ -352,6 +352,8 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		}
 	}
 
+	// w.Workers = append(w.Workers, avail.AvailListener{})
+
 	rollup.Register(re, modelInstance, sequencer)
 	w.Workers = append(w.Workers, supervisor.HttpWorker{
 		Address: fmt.Sprintf("%v:%v", opts.HttpAddress, opts.HttpRollupsPort),
