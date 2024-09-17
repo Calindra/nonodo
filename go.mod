@@ -1,8 +1,6 @@
 module github.com/calindra/nonodo
 
-go 1.22.3
-
-toolchain go1.22.4
+go 1.22.6
 
 require (
 	github.com/99designs/gqlgen v0.17.41
@@ -11,7 +9,7 @@ require (
 	github.com/btcsuite/btcd v0.24.2
 	github.com/btcsuite/btcd/btcutil v1.1.6
 	github.com/carlmjohnson/versioninfo v0.22.5
-	github.com/celestiaorg/celestia-openrpc v0.4.0
+	github.com/celestiaorg/celestia-openrpc v0.5.0
 	github.com/deepmap/oapi-codegen/v2 v2.0.0
 	github.com/ethereum/go-ethereum v1.13.10
 	github.com/google/go-github v17.0.0+incompatible
@@ -31,19 +29,22 @@ require (
 	golang.org/x/sys v0.25.0
 )
 
-require github.com/vedhavyas/go-subkey/v2 v2.0.0 // indirect
-
-require github.com/btcsuite/btcd/chaincfg/chainhash v1.1.0 // indirect
+require (
+	github.com/aws/aws-sdk-go v1.40.45 // indirect
+	github.com/btcsuite/btcd/chaincfg/chainhash v1.1.0 // indirect
+	github.com/jmespath/go-jmespath v0.4.0 // indirect
+	github.com/vedhavyas/go-subkey v1.0.3 // indirect
+)
 
 replace (
 	github.com/cosmos/cosmos-sdk => github.com/celestiaorg/cosmos-sdk v1.18.3-sdk-v0.46.14
 	github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alpha.regen.1
 	github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
-	github.com/tendermint/tendermint => github.com/celestiaorg/celestia-core v1.32.0-tm-v0.34.29
+	github.com/tendermint/tendermint => github.com/celestiaorg/celestia-core v1.41.0-tm-v0.34.29
 )
 
 require (
-	cosmossdk.io/math v1.1.2 // indirect
+	cosmossdk.io/math v1.3.0 // indirect
 	github.com/ChainSafe/go-schnorrkel v1.0.0 // indirect
 	github.com/Microsoft/go-winio v0.6.1 // indirect
 	github.com/StackExchange/wmi v1.2.1 // indirect
@@ -54,13 +55,13 @@ require (
 	github.com/benbjohnson/clock v1.3.5 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bits-and-blooms/bitset v1.10.0 // indirect
-	github.com/btcsuite/btcd/btcec/v2 v2.3.4 // indirect
+	github.com/btcsuite/btcd/btcec/v2 v2.3.2 // indirect
 	github.com/celestiaorg/go-fraud v0.2.0 // indirect
 	github.com/celestiaorg/go-header v0.4.1 // indirect
 	github.com/celestiaorg/go-square v1.0.1 // indirect
 	github.com/celestiaorg/go-square/merkle v0.0.0-20240429192549-dea967e1533b // indirect
 	github.com/celestiaorg/merkletree v0.0.0-20210714075610-a84dc3ddbbe4 // indirect
-	github.com/celestiaorg/nmt v0.21.0 // indirect
+	github.com/celestiaorg/nmt v0.22.1 // indirect
 	github.com/celestiaorg/rsmt2d v0.11.0 // indirect
 	github.com/centrifuge/go-substrate-rpc-client/v4 v4.0.12
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
@@ -79,7 +80,7 @@ require (
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.3.0 // indirect
 	github.com/docker/docker v24.0.7+incompatible // indirect
 	github.com/ethereum/c-kzg-4844 v0.4.0 // indirect
-	github.com/filecoin-project/go-jsonrpc v0.3.1 // indirect
+	github.com/filecoin-project/go-jsonrpc v0.5.0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/getkin/kin-openapi v0.118.0 // indirect
 	github.com/go-kit/kit v0.12.0 // indirect
@@ -111,7 +112,6 @@ require (
 	github.com/jbenet/goprocess v0.1.4 // indirect
 	github.com/joho/godotenv v1.5.1
 	github.com/josharian/intern v1.0.0 // indirect
-	github.com/klauspost/compress v1.17.3 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.5 // indirect
 	github.com/klauspost/reedsolomon v1.11.8 // indirect
 	github.com/labstack/gommon v0.4.0 // indirect
@@ -195,5 +195,3 @@ require (
 	lukechampine.com/blake3 v1.2.1 // indirect
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
-
-replace github.com/centrifuge/go-substrate-rpc-client/v4 => github.com/availproject/go-substrate-rpc-client/v4 v4.1.0-avail-2.1.5-rc1
