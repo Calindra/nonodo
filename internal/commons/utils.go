@@ -102,14 +102,12 @@ func ExtractZip(archive []byte, destDir string) error {
 }
 
 // Get assets of latest release or prerelease from GitHub
-func GetAssetsFromLastReleaseGitHub(ctx context.Context, client *github.Client, namespace, repository string) ([]ReleaseAsset, error) {
+func GetAssetsFromLastReleaseGitHub(ctx context.Context, client *github.Client, namespace, repository string, tag string) ([]ReleaseAsset, error) {
 	// List the tags of the GitHub repository
 	slog.Debug("Listing tags for", namespace, repository)
 
-	anvilTag, haveTag := os.LookupEnv("ANVIL_TAG")
-
-	if haveTag {
-		release, _, err := client.Repositories.GetReleaseByTag(ctx, namespace, repository, anvilTag)
+	if tag != "" {
+		release, _, err := client.Repositories.GetReleaseByTag(ctx, namespace, repository, tag)
 
 		if err != nil {
 			return nil, fmt.Errorf("%s(%s): failed to get release %s", namespace, repository, err.Error())

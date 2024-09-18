@@ -221,7 +221,7 @@ func (a *AnvilRelease) DownloadAsset(ctx context.Context, release *ReleaseAsset)
 
 // ListRelease implements HandleRelease.
 func (a *AnvilRelease) ListRelease(ctx context.Context) ([]ReleaseAsset, error) {
-	return GetAssetsFromLastReleaseGitHub(ctx, a.Client, a.Namespace, a.Repository)
+	return GetAssetsFromLastReleaseGitHub(ctx, a.Client, a.Namespace, a.Repository, "")
 }
 
 // GetLatestReleaseCompatible implements HandleRelease.
@@ -245,7 +245,13 @@ func (a *AnvilRelease) GetLatestReleaseCompatible(ctx context.Context) (*Release
 		return target, nil
 	}
 
-	assets, err := GetAssetsFromLastReleaseGitHub(ctx, a.Client, a.Namespace, a.Repository)
+	anvilTag, haveTag := os.LookupEnv("ANVIL_TAG")
+
+	if !haveTag {
+		anvilTag = ""
+	}
+
+	assets, err := GetAssetsFromLastReleaseGitHub(ctx, a.Client, a.Namespace, a.Repository, anvilTag)
 	if err != nil {
 		return nil, err
 	}
