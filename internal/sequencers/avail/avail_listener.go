@@ -43,8 +43,8 @@ func (a AvailListener) connect(ctx context.Context) (*gsrpc.SubstrateAPI, error)
 	// if err != nil {
 	// 	return nil, err
 	// }
-	rpcURL := os.Getenv("AVAIL_RPC_URL")
-	if rpcURL == "" {
+	rpcURL, haveURL := os.LookupEnv("AVAIL_RPC_URL")
+	if !haveURL {
 		rpcURL = "wss://turing-rpc.avail.so/ws"
 	}
 
