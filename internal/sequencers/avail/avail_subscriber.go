@@ -49,18 +49,10 @@ func main() {
 			panic(err)
 		}
 		block, err := api.RPC.Chain.GetBlock(blockHash)
-		// block, err := api.RPC.Chain.GetBlock(i.ParentHash)
 		if err != nil {
 			panic(err)
 		}
-		// if len(block.Block.Header.Extension.V3.AppLookup.Index) == 0 {
-		// 	fmt.Println("no header extension v3 appLockup index")
-		// 	continue
-		// }
-		// index := block.Block.Header.Extension.V3.AppLookup.Index[0]
-		// fmt.Println("AppID=", index.AppId)
 		for index, ext := range block.Block.Extrinsics {
-			// ext := block.Block.Extrinsics[0]
 			fmt.Printf("ext[%d].AppID=%d\n", index, ext.Signature.AppID.Int64())
 			json, err := ext.MarshalJSON()
 			if err != nil {
@@ -71,7 +63,6 @@ func main() {
 			args := string(ext.Method.Args)
 			fmt.Println("args=" + args)
 		}
-
 		if count == waitForBlocks {
 			break
 		}

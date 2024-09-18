@@ -3,6 +3,7 @@ package avail
 import (
 	"context"
 	"log/slog"
+	"os"
 	"time"
 
 	"github.com/calindra/nonodo/internal/supervisor"
@@ -42,7 +43,10 @@ func (a AvailListener) connect(ctx context.Context) (*gsrpc.SubstrateAPI, error)
 	// if err != nil {
 	// 	return nil, err
 	// }
-	rpcURL := "wss://turing-rpc.avail.so/ws"
+	rpcURL := os.Getenv("AVAIL_RPC_URL")
+	if rpcURL == "" {
+		rpcURL = "wss://turing-rpc.avail.so/ws"
+	}
 
 	errCh := make(chan error)
 	clientCh := make(chan *gsrpc.SubstrateAPI)
