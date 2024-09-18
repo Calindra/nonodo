@@ -80,6 +80,7 @@ type NonodoOpts struct {
 	SalsaUrl            string
 	InputPayload        string
 	AvailFromBlock      uint64
+	AvailEnabled        bool
 }
 
 // Create the options struct with default values.
@@ -132,6 +133,7 @@ func NewNonodoOpts() NonodoOpts {
 		SalsaUrl:            "127.0.0.1:5005",
 		InputPayload:        "",
 		AvailFromBlock:      0,
+		AvailEnabled:        false,
 	}
 }
 
@@ -355,7 +357,9 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		}
 	}
 
-	w.Workers = append(w.Workers, avail.NewAvailListener(opts.AvailFromBlock))
+	if opts.AvailEnabled {
+		w.Workers = append(w.Workers, avail.NewAvailListener(opts.AvailFromBlock))
+	}
 
 	rollup.Register(re, modelInstance, sequencer)
 	w.Workers = append(w.Workers, supervisor.HttpWorker{
