@@ -184,7 +184,7 @@ func (e EspressoListener) readEspressoHeader(espressoBlockHeight uint64) string 
 
 func (e EspressoListener) getL1FinalizedTimestamp(espressoBlockHeight uint64) time.Time {
 	espressoHeader := e.readEspressoHeader(espressoBlockHeight)
-	value := gjson.Get(espressoHeader, "l1_finalized.timestamp")
+	value := gjson.Get(espressoHeader, "fields.l1_finalized.timestamp")
 	timestampStr := value.Str
 	timestampInt, err := strconv.ParseInt(timestampStr[2:], 16, 64)
 	if err != nil {
