@@ -102,9 +102,31 @@ func ExtractZip(archive []byte, destDir string) error {
 }
 
 // Get assets of latest release or prerelease from GitHub
-func GetAssetsFromLastReleaseGitHub(ctx context.Context, client *github.Client, namespace, repository string) ([]ReleaseAsset, error) {
+func GetAssetsFromLastReleaseGitHub(ctx context.Context, client *github.Client, namespace, repository string, tag string) ([]ReleaseAsset, error) {
 	// List the tags of the GitHub repository
 	slog.Debug("Listing tags for", namespace, repository)
+
+	if tag != "" {
+		release, _, err := client.Repositories.GetReleaseByTag(ctx, namespace, repository, tag)
+
+		if err != nil {
+			return nil, fmt.Errorf("%s(%s): failed to get release %s", namespace, repository, err.Error())
+		}
+
+		ra := make([]ReleaseAsset, 0)
+
+		for _, a := range release.Assets {
+			slog.Debug("Asset", "tag", release.GetTagName(), "name", a.GetName(), "url", a.GetBrowserDownloadURL())
+			ra = append(ra, ReleaseAsset{
+				Tag:      release.GetTagName(),
+				AssetId:  a.GetID(),
+				Filename: a.GetName(),
+				Url:      a.GetBrowserDownloadURL(),
+			})
+		}
+
+		return ra, nil
+	}
 
 	releases, _, err := client.Repositories.ListReleases(ctx, namespace, repository, &github.ListOptions{
 		PerPage: 1,

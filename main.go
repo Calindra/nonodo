@@ -18,6 +18,7 @@ import (
 	"github.com/carlmjohnson/versioninfo"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/joho/godotenv"
 	"github.com/lmittmann/tint"
 	"github.com/mattn/go-isatty"
 	"github.com/spf13/cobra"
@@ -175,6 +176,8 @@ func run(cmd *cobra.Command, args []string) {
 }
 
 func main() {
+	err := godotenv.Load()
+	cobra.CheckErr(err)
 	cmd.AddCommand(addressBookCmd)
 	cobra.CheckErr(cmd.Execute())
 }
