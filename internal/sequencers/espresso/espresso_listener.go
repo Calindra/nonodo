@@ -114,6 +114,9 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 				//		 	typedData: btoa(JSON.stringify(typedData)),
 				//		 })
 				msgSender, typedData, err := ExtractSigAndData(string(transaction))
+
+				slog.Info("msgSender", "msgSender", msgSender.Hex())
+
 				if err != nil {
 					return err
 				}

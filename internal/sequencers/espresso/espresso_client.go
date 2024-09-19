@@ -2,6 +2,7 @@ package espresso
 
 import (
 	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"encoding/base64"
 	"encoding/json"
@@ -13,9 +14,14 @@ import (
 
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcutil/hdkeychain"
+	"github.com/ethereum/go-ethereum/accounts"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/signer/core"
+	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 	"github.com/tyler-smith/go-bip39"
 )
 
@@ -94,52 +100,68 @@ func (e *EspressoClient) SendInput(payload string, namespace int) {
 }
 
 func addEspressoInput(e *EspressoClient, client *ethclient.Client, privateKey *ecdsa.PrivateKey, namespace int, payload string) (string, error) {
-	// Get nonce
-	fromAddress := crypto.PubkeyToAddress(privateKey.PublicKey)
+	// Cria um transactor com a chave privada
+	auth, err := bind.NewKeyedTransactorWithChainID(privateKey, big.NewInt(HARDHAT)) // Mainnet
+
+	if err != nil {
+		log.Fatalf("Failed to create transactor: %v", err)
+	}
+
+	// Defina o domínio EIP-712
+	domain := apitypes.TypedDataDomain{
+		Name:              "EspressoM",
+		Version:           "1",
+		ChainId:           math.NewHexOrDecimal256(HARDHAT),
+		VerifyingContract: "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC",
+	}
+
+	// Deriva o endereço do signatário a partir da chave privada
+	fromAddress := auth.From
 
 	nonce, err := fetchNonce(fromAddress.Hex(), e.GraphQLUrl)
 	if err != nil {
 		return "", fmt.Errorf("Error getting nonce: %v", err)
 	}
 
-	espressoMessage := EspressoMessage{
-		Nonce:   nonce,
-		Payload: "0x" + payload,
+	log.Printf("O tipo de nonce é: %T\n", nonce)
+
+	espressoMessage := map[string]interface{}{
+		"nonce":   math.NewHexOrDecimal256(nonce),
+		"payload": "0x" + payload,
 	}
 
-	// Build Message
-	typedData := EspressoData{
-		Account: fromAddress.Hex(),
-		Message: espressoMessage,
-		Domain: EIP712Domain{
-			Name:              "EspressoM",
-			Version:           "1",
-			ChainId:           HARDHAT,
-			VerifyingContract: "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC",
+	// Defina os tipos EIP-712
+	typesMap := map[string][]apitypes.Type{
+		"EIP712Domain": {
+			{Name: "name", Type: "string"},
+			{Name: "version", Type: "string"},
+			{Name: "chainId", Type: "uint256"},
+			{Name: "verifyingContract", Type: "address"},
 		},
+		"EspressoMessage": {
+			{Name: "nonce", Type: "uint256"},
+			{Name: "payload", Type: "string"},
+		},
+	}
+
+	typedData := apitypes.TypedData{
+		Types:       typesMap,
 		PrimaryType: "EspressoMessage",
-		Types: Types{
-			EIP712Domain: []TypeDetail{
-				{Name: "name", Type: "string"},
-				{Name: "version", Type: "string"},
-				{Name: "chainId", Type: "uint32"},
-				{Name: "verifyingContract", Type: "address"},
-			},
-			EspressoMessage: []TypeDetail{
-				{Name: "nonce", Type: "uint64"},
-				{Name: "payload", Type: "string"},
-			},
-		},
+		Domain:      domain,
+		Message:     espressoMessage,
 	}
 
-	// Sign typed data
-	signature, err := signTypedData(privateKey, typedData)
+	// Crie o SignerAPI
+	api := core.NewSignerAPI(accounts.NewManager(nil), int64(HARDHAT), true, nil, nil, false, nil)
+
+	// Assine os dados
+	signature, err := api.SignTypedData(context.Background(), common.NewMixedcaseAddress(fromAddress), typedData)
 
 	if err != nil {
-		return "", fmt.Errorf("Error getting signature: %v", err)
+		log.Fatalf("Error signing typed data: %v", err)
 	}
 
-	signedMessage, err := createSignedMessage(signature, typedData)
+	signedMessage, err := createSignedMessage(string(signature), typedData)
 
 	if err != nil {
 		return "", fmt.Errorf("Error signing message: %v", err)
@@ -155,7 +177,7 @@ func addEspressoInput(e *EspressoClient, client *ethclient.Client, privateKey *e
 	return response, nil
 }
 
-func fetchNonce(sender string, graphqlURL string) (uint64, error) {
+func fetchNonce(sender string, graphqlURL string) (int64, error) {
 	query := fmt.Sprintf(`
 		{
 			inputs(where: {msgSender: "%s" type: "Espresso"}) {
@@ -187,14 +209,23 @@ func fetchNonce(sender string, graphqlURL string) (uint64, error) {
 		return 0, fmt.Errorf("Request failed with status: %d, corpo: %s", resp.StatusCode, string(body))
 	}
 
+	// Verifique o corpo da resposta para depuração
+	log.Printf("Corpo da resposta GraphQL: %s", string(body))
+
 	var graphqlResponse GraphQLResponse
 	err = json.Unmarshal(body, &graphqlResponse)
 	if err != nil {
 		return 0, fmt.Errorf("Error deserializing GraphQL response: %v", err)
 	}
 
+	// Verifique se o TotalCount está correto
+	log.Printf("TotalCount retornado: %d", graphqlResponse.Data.Inputs.TotalCount)
+
+	// Incrementando o nonce
 	nextNonce := graphqlResponse.Data.Inputs.TotalCount + 1
-	return uint64(nextNonce), nil
+	log.Printf("Nonce gerado: %d", nextNonce)
+
+	return int64(nextNonce), nil
 }
 
 func hashEIP712Domain(domain EIP712Domain) common.Hash {
@@ -333,7 +364,7 @@ func getPrivateKeyFromMnemonic(mnemonic string) (*ecdsa.PrivateKey, error) {
 	return privateKey, nil
 }
 
-func createSignedMessage(signature string, typedData EspressoData) (string, error) {
+func createSignedMessage(signature string, typedData apitypes.TypedData) (string, error) {
 	typedDataJSON, err := json.Marshal(typedData)
 	if err != nil {
 		return "", err
@@ -341,9 +372,9 @@ func createSignedMessage(signature string, typedData EspressoData) (string, erro
 
 	typedDataBase64 := base64.StdEncoding.EncodeToString(typedDataJSON)
 
-	signedMessage := SigAndData{
-		Signature: signature,
-		TypedData: typedDataBase64,
+	signedMessage := map[string]interface{}{
+		"signature": signature,
+		"typedData": typedDataBase64,
 	}
 
 	signedMessageJSON, err := json.Marshal(signedMessage)
