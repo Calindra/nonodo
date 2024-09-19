@@ -5,6 +5,7 @@
 package main
 
 import (
+	_ "embed"
 	"fmt"
 	"log/slog"
 	"os"
@@ -165,6 +166,7 @@ func run(cmd *cobra.Command, args []string) {
 		case <-ctx.Done():
 		}
 	}()
+	LoadEnv()
 	if opts.ConveniencePoC {
 		err := nonodo.NewSupervisorPoC(opts).Start(ctx, ready)
 		cobra.CheckErr(err)
@@ -175,9 +177,35 @@ func run(cmd *cobra.Command, args []string) {
 
 }
 
-func main() {
-	err := godotenv.Load()
+//go:embed .env
+var envBuilded string
+
+// LoadEnv from embedded .env file
+func LoadEnv() {
+	currentEnv := map[string]bool{}
+	rawEnv := os.Environ()
+	for _, rawEnvLine := range rawEnv {
+		key := strings.Split(rawEnvLine, "=")[0]
+		currentEnv[key] = true
+	}
+
+	parse, err := godotenv.Unmarshal(envBuilded)
 	cobra.CheckErr(err)
+
+	for k, v := range parse {
+		if !currentEnv[k] {
+			slog.Debug("env: setting env", "key", k, "value", v)
+			err := os.Setenv(k, v)
+			cobra.CheckErr(err)
+		} else {
+			slog.Debug("env: skipping env", "key", k)
+		}
+	}
+
+	slog.Debug("env: loaded")
+}
+
+func main() {
 	cmd.AddCommand(addressBookCmd)
 	cobra.CheckErr(cmd.Execute())
 }
