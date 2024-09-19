@@ -11,8 +11,8 @@ import (
 	"math/big"
 	"net/http"
 
+	"github.com/btcsuite/btcd/btcutil/hdkeychain"
 	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcutil/hdkeychain"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -299,23 +299,23 @@ func getPrivateKeyFromMnemonic(mnemonic string) (*ecdsa.PrivateKey, error) {
 		return nil, fmt.Errorf("Fail to generate master key: %w", err)
 	}
 
-	childKey, err := masterKey.Child(hdkeychain.HardenedKeyStart + PURPOSE_INDEX)
+	childKey, err := masterKey.Derive(hdkeychain.HardenedKeyStart + PURPOSE_INDEX)
 	if err != nil {
 		return nil, fmt.Errorf("Fail to derive key: %w", err)
 	}
-	childKey, err = childKey.Child(hdkeychain.HardenedKeyStart + COIN_TYPE_INDEX)
+	childKey, err = childKey.Derive(hdkeychain.HardenedKeyStart + COIN_TYPE_INDEX)
 	if err != nil {
 		return nil, fmt.Errorf("Fail to derive key: %w", err)
 	}
-	childKey, err = childKey.Child(hdkeychain.HardenedKeyStart + 0)
+	childKey, err = childKey.Derive(hdkeychain.HardenedKeyStart + 0)
 	if err != nil {
 		return nil, fmt.Errorf("Fail to derive key: %w", err)
 	}
-	childKey, err = childKey.Child(0)
+	childKey, err = childKey.Derive(0)
 	if err != nil {
 		return nil, fmt.Errorf("Fail to derive key: %w", err)
 	}
-	childKey, err = childKey.Child(0)
+	childKey, err = childKey.Derive(0)
 	if err != nil {
 		return nil, fmt.Errorf("Fail to derive key: %w", err)
 	}

@@ -73,3 +73,9 @@ To configure the endpoint of the node v2 Graphile, you can set the `GRAPHILE_URL
 ```bash
 export GRAPHILE_URL=localhost:5001/graphql
 ```
+
+## Enable Avail
+
+```bash
+go run . -d --avail  --avail-from-block 746430
+```
