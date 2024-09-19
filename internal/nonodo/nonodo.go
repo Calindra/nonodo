@@ -24,6 +24,7 @@ import (
 	"github.com/calindra/nonodo/internal/reader"
 	"github.com/calindra/nonodo/internal/rollup"
 	"github.com/calindra/nonodo/internal/salsa"
+	"github.com/calindra/nonodo/internal/sequencers/avail"
 	"github.com/calindra/nonodo/internal/sequencers/espresso"
 	"github.com/calindra/nonodo/internal/sequencers/inputter"
 	"github.com/calindra/nonodo/internal/supervisor"
@@ -77,6 +78,8 @@ type NonodoOpts struct {
 	GraphileDisableSync bool
 	Salsa               bool
 	SalsaUrl            string
+	AvailFromBlock      uint64
+	AvailEnabled        bool
 }
 
 // Create the options struct with default values.
@@ -127,6 +130,8 @@ func NewNonodoOpts() NonodoOpts {
 		GraphileDisableSync: false,
 		Salsa:               false,
 		SalsaUrl:            "127.0.0.1:5005",
+		AvailFromBlock:      0,
+		AvailEnabled:        false,
 	}
 }
 
@@ -343,9 +348,15 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 					ApplicationAddress: common.HexToAddress(opts.ApplicationAddress),
 				},
 			))
+		} else if opts.Sequencer == "paio" {
+			panic("sequencer not supported yet")
 		} else {
 			panic("sequencer not supported")
 		}
+	}
+
+	if opts.AvailEnabled {
+		w.Workers = append(w.Workers, avail.NewAvailListener(opts.AvailFromBlock))
 	}
 
 	rollup.Register(re, modelInstance, sequencer)

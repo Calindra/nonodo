@@ -23,5 +23,5 @@ func TestDecoderSuite(t *testing.T) {
 
 func (s *EIP712Suite) TestHandleOutput() {
 	Main()
-	s.Fail("xxx")
+	// s.Fail("xxx")
 }

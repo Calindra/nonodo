@@ -478,6 +478,8 @@ func init() {
 	cmd.Flags().BoolVar(&opts.Salsa, "salsa", opts.Salsa, "If set, starts salsa")
 
 	cmd.Flags().StringVar(&opts.SalsaUrl, "salsa-url", opts.SalsaUrl, "Url used to start Salsa")
+	cmd.Flags().BoolVar(&opts.AvailEnabled, "avail-enabled", opts.AvailEnabled, "If set, enables Avail")
+	cmd.Flags().Uint64Var(&opts.AvailFromBlock, "avail-from-block", opts.AvailFromBlock, "The beginning of the queried range for events")
 }
 
 func run(cmd *cobra.Command, args []string) {
