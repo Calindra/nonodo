@@ -1,12 +1,13 @@
 { pkgs ? import <nixpkgs> {} }:
 
 pkgs.mkShell {
-  buildInputs = [
-    pkgs.go
-    pkgs.delve
-    pkgs.gcc
-    pkgs.watchexec
-    pkgs.sqlite
+  buildInputs = with pkgs; [
+    go
+    delve
+    gcc
+    watchexec
+    sqlite
+    k6
   ];
 
   shellHook = ''
