@@ -13,6 +13,7 @@ import (
 
 	"github.com/btcsuite/btcd/btcutil/hdkeychain"
 	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/calindra/nonodo/internal/commons"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -341,7 +342,7 @@ func createSignedMessage(signature string, typedData EspressoData) (string, erro
 
 	typedDataBase64 := base64.StdEncoding.EncodeToString(typedDataJSON)
 
-	signedMessage := SigAndData{
+	signedMessage := commons.SigAndData{
 		Signature: signature,
 		TypedData: typedDataBase64,
 	}

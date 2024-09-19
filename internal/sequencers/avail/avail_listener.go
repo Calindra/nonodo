@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/supervisor"
 	gsrpc "github.com/centrifuge/go-substrate-rpc-client/v4"
 )
@@ -145,7 +146,16 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 						}
 						strJSON := string(json)
 						args := string(ext.Method.Args)
-
+						msgSender, typedData, err := commons.ExtractSigAndData(args)
+						if err != nil {
+							continue
+						}
+						nonce := int64(typedData.Message["nonce"].(float64)) // by default, JSON number is float64
+						payload, ok := typedData.Message["payload"].(string)
+						if !ok {
+							continue
+						}
+						slog.Debug("Avail input", "msgSender", msgSender, "nonce", nonce, "payload", payload)
 						slog.Debug("Avail Extrinsic", "appID", appID, "index", index, "extId", extId, "args", args, "json", strJSON)
 					}
 

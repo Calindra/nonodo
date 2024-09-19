@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/contracts"
 	cModel "github.com/calindra/nonodo/internal/convenience/model"
 	cRepos "github.com/calindra/nonodo/internal/convenience/repository"
@@ -113,7 +114,7 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 				//		 	signature,
 				//		 	typedData: btoa(JSON.stringify(typedData)),
 				//		 })
-				msgSender, typedData, err := ExtractSigAndData(string(transaction))
+				msgSender, typedData, err := commons.ExtractSigAndData(string(transaction))
 				if err != nil {
 					return err
 				}
