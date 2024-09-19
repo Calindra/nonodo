@@ -21,6 +21,7 @@
         "ethclient",
         "execlistener",
         "exitf",
+        "extrinsics",
         "Extrinsics",
         "exts",
         "genqlient",
