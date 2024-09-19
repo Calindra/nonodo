@@ -46,7 +46,7 @@ func (a AvailListener) connect(ctx context.Context) (*gsrpc.SubstrateAPI, error)
 	// }
 	rpcURL, haveURL := os.LookupEnv("AVAIL_RPC_URL")
 	if !haveURL {
-		rpcURL = "wss://turing-rpc.avail.so/ws"
+		rpcURL = DEFAULT_AVAIL_RPC_URL
 	}
 
 	errCh := make(chan error)
@@ -139,7 +139,7 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 
 					for extId, ext := range block.Block.Extrinsics {
 						appID := ext.Signature.AppID.Int64()
-						if appID != 91 {
+						if appID != DEFAULT_APP_ID {
 							slog.Debug("Skipping", "appID", appID)
 							continue
 						}

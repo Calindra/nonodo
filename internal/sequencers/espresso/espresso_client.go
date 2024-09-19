@@ -147,7 +147,9 @@ func (e *EspressoClient) SendInputV2(payload string, namespace int) (string, err
 	}
 
 	typedDataJSON, err := json.Marshal(data)
-
+	if err != nil {
+		log.Fatal("json error:", err)
+	}
 	log.Printf("data %s", typedDataJSON)
 
 	// Hash the message
@@ -180,7 +182,7 @@ func (e *EspressoClient) SendInputV2(payload string, namespace int) (string, err
 		log.Fatal("Error json.Marshal message:", err)
 	}
 
-	// TODO Será que precisa de outro enconding base 64 aqui ???
+	// Será que precisa de outro encoding base 64 aqui
 	espressoPayload := map[string]interface{}{
 		"namespace": namespace,
 		"payload":   base64.StdEncoding.EncodeToString([]byte(jsonPayload)),

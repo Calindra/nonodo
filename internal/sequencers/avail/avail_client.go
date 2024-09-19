@@ -22,9 +22,11 @@ import (
 )
 
 const (
-	DEFAULT_EVM_MNEMONIC = "test test test test test test test test test test test junk"
-	DEFAULT_ADDRESS      = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
-	DEAFULT_GRAPHQL_URL  = ""
+	DEFAULT_EVM_MNEMONIC  = "test test test test test test test test test test test junk"
+	DEFAULT_ADDRESS       = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+	DEFAULT_GRAPHQL_URL   = "http://localhost:8080"
+	DEFAULT_AVAIL_RPC_URL = "wss://turing-rpc.avail.so/ws"
+	DEFAULT_APP_ID        = 91
 )
 
 type AvailClient struct {
@@ -35,13 +37,13 @@ type AvailClient struct {
 func NewAvailClient() (*AvailClient, error) {
 	apiURL := os.Getenv("AVAIL_RPC_URL")
 	if apiURL == "" {
-		apiURL = "wss://turing-rpc.avail.so/ws"
+		apiURL = DEFAULT_AVAIL_RPC_URL
 	}
 	api, err := gsrpc.NewSubstrateAPI(apiURL)
 	if err != nil {
 		return nil, fmt.Errorf("cannot create api:%w", err)
 	}
-	client := AvailClient{api, "http://localhost:8080"}
+	client := AvailClient{api, DEFAULT_GRAPHQL_URL}
 	return &client, nil
 }
 
@@ -140,7 +142,7 @@ func (av *AvailClient) Submit712(payload string) error {
 func (av *AvailClient) DefaultSubmit(data string) error {
 	apiURL := os.Getenv("AVAIL_RPC_URL")
 	if apiURL == "" {
-		apiURL = "wss://turing-rpc.avail.so/ws"
+		apiURL = DEFAULT_AVAIL_RPC_URL
 	}
 	seed := os.Getenv("AVAIL_MNEMONIC")
 	if seed == "" {
@@ -187,7 +189,8 @@ func (av *AvailClient) SubmitData(data string, ApiURL string, Seed string, AppID
 		return fmt.Errorf("cannot get runtime version:%w", err)
 	}
 
-	keyringPair, err := signature.KeyringPairFromSecret(Seed, 42)
+	networkNumber := 42
+	keyringPair, err := signature.KeyringPairFromSecret(Seed, uint16(networkNumber))
 	if err != nil {
 		return fmt.Errorf("cannot create KeyPair:%w", err)
 	}

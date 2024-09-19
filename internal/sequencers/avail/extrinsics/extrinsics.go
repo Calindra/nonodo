@@ -1,3 +1,4 @@
+//nolint:all
 package extrinsics
 
 import (
@@ -34,10 +35,10 @@ func SubmitData(api *gsrpc.SubstrateAPI, data string, seed string, appID int, fi
 
 	rv, err := api.RPC.State.GetRuntimeVersionLatest()
 	if err != nil {
-		return fmt.Errorf("error retrieveing runtime version: %s", err)
+		return fmt.Errorf("error retrieving runtime version: %s", err)
 	}
-
-	keyringPair, err := signature.KeyringPairFromSecret(seed, 42)
+	networkNumber := uint16(42)
+	keyringPair, err := signature.KeyringPairFromSecret(seed, networkNumber)
 	if err != nil {
 		return fmt.Errorf("error creating keyring pair: %s", err)
 	}
@@ -52,7 +53,7 @@ func SubmitData(api *gsrpc.SubstrateAPI, data string, seed string, appID int, fi
 	if err != nil || !ok {
 		return fmt.Errorf("cannot get latest storage:%v", err)
 	}
-
+	defaultTip := uint64(100)
 	nonce := uint32(accountInfo.Nonce)
 	options := types.SignatureOptions{
 		BlockHash:          genesisHash,
@@ -60,7 +61,7 @@ func SubmitData(api *gsrpc.SubstrateAPI, data string, seed string, appID int, fi
 		GenesisHash:        genesisHash,
 		Nonce:              types.NewUCompactFromUInt(uint64(nonce)),
 		SpecVersion:        rv.SpecVersion,
-		Tip:                types.NewUCompactFromUInt(100),
+		Tip:                types.NewUCompactFromUInt(defaultTip),
 		AppID:              types.NewUCompactFromUInt(uint64(appID)),
 		TransactionVersion: rv.TransactionVersion,
 	}
