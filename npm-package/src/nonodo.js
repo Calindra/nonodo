@@ -21,7 +21,7 @@ const PACKAGE_NONODO_VERSION =
   process.env.PACKAGE_NONODO_VERSION ?? version;
 const PACKAGE_NONODO_URL = new URL(
   process.env.PACKAGE_NONODO_URL ??
-    `https://github.com/Calindra/nonodo/releases/download/v${PACKAGE_NONODO_VERSION}/`,
+  `https://github.com/Calindra/nonodo/releases/download/v${PACKAGE_NONODO_VERSION}/`,
 );
 const PACKAGE_NONODO_DIR = process.env.PACKAGE_NONODO_DIR ?? tmpdir();
 
@@ -101,7 +101,8 @@ function unpackZip(zipPath, destPath) {
 function unpackTarball(tarballPath, destPath) {
   const tarballDownloadBuffer = readFileSync(tarballPath);
   const tarballBuffer = unzipSync(tarballDownloadBuffer);
-  writeFileSync(destPath, extractFileFromTarball(tarballBuffer, "nonodo"), {
+  const file = extractFileFromTarball(tarballBuffer, "nonodo");
+  writeFileSync(destPath, file, {
     mode: 0o755,
   });
 }
@@ -137,6 +138,8 @@ function extractFileFromTarball(tarballBuffer, filepath) {
     // Clamp offset to the uppoer multiple of 512
     offset = (offset + fileSize + 511) & ~511;
   }
+
+  throw new Error(`File ${filepath} not found in tarball.`);
 }
 
 async function downloadBinary() {
@@ -192,8 +195,8 @@ function makeRequest(url) {
     let bar;
 
     const req = request(url, (res) => {
-      if (res.statusCode >= 200 && res.statusCode < 300) {
-        const length = parseInt(res.headers["content-length"], 10);
+      if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
+        const length = parseInt(res.headers?.["content-length"] ?? "", 10);
         const chunks = [];
         let size = 0;
         if (!Number.isNaN(length)) {
@@ -214,6 +217,7 @@ function makeRequest(url) {
           resolve(Buffer.concat(chunks));
         });
       } else if (
+        res.statusCode &&
         res.statusCode >= 300 &&
         res.statusCode < 400 &&
         res.headers.location
