@@ -10,10 +10,10 @@ NoNodo is a valuable development workflow help, but there are some [caveats](#ca
 
 ## Installation
 
-### Pre-requisites
+### Battery-included
 
 NoNodo uses the Anvil as the underlying Ethereum node.
-To install Anvil, read the instructions on the [Foundry book](https://book.getfoundry.sh/getting-started/installation).
+For the current version, NoNodo provides a built-in anvil, *we don't use the system foundry*.
 
 ### Installing from npm
 

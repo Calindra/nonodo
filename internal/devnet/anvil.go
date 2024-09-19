@@ -57,11 +57,6 @@ func (w AnvilWorker) String() string {
 	return anvilCommand
 }
 
-func IsAnvilInstalled() bool {
-	_, err := exec.LookPath(anvilCommand)
-	return err == nil
-}
-
 func InstallAnvil(ctx context.Context) (string, error) {
 	// Try to install anvil
 	anvilClient := commons.NewAnvilRelease()
@@ -89,23 +84,19 @@ func GetAnvilVersion(anvilExec string) (string, error) {
 	return anvilVersion, nil
 }
 
+// For while, we dont check if anvil is already installed.
+// We always install anvil.
 func CheckAnvilAndInstall(ctx context.Context) (string, error) {
-	if !IsAnvilInstalled() {
-		slog.Debug("anvil: anvil is not installed")
-		location, err := InstallAnvil(ctx)
-		if err != nil {
-			return "", fmt.Errorf("anvil: failed to install %w", err)
-		}
-		anvilVersion, err := GetAnvilVersion(location)
-		if err != nil {
-			return "", err
-		}
-		slog.Debug("anvil: installed anvil", "location", location, "version", anvilVersion)
-		return location, nil
+	location, err := InstallAnvil(ctx)
+	if err != nil {
+		return "", fmt.Errorf("anvil: failed to install %w", err)
 	}
-
-	slog.Debug("anvil: anvil is installed")
-	return anvilCommand, nil
+	anvilVersion, err := GetAnvilVersion(location)
+	if err != nil {
+		return "", err
+	}
+	slog.Debug("anvil: installed anvil", "location", location, "version", anvilVersion)
+	return location, nil
 }
 
 func ShowAddresses() {
