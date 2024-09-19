@@ -77,7 +77,6 @@ type NonodoOpts struct {
 	GraphileDisableSync bool
 	Salsa               bool
 	SalsaUrl            string
-	InputPayload        string
 }
 
 // Create the options struct with default values.
@@ -128,7 +127,6 @@ func NewNonodoOpts() NonodoOpts {
 		GraphileDisableSync: false,
 		Salsa:               false,
 		SalsaUrl:            "127.0.0.1:5005",
-		InputPayload:        "",
 	}
 }
 
