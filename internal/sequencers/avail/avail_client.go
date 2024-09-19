@@ -10,6 +10,10 @@ import (
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 )
 
+func Submit712(data string) {
+
+}
+
 func DefaultSubmit(data string) error {
 	apiURL := os.Getenv("AVAIL_RPC_URL")
 	if apiURL == "" {
