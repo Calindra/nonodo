@@ -91,26 +91,45 @@ function calculateHash(path, algorithm) {
 
 async function unpackZip(zipPath, destPath) {
   const zip = new AdmZip(zipPath);
-  const unzipFiles = ["nonodo.exe", ".env"];
-  await Promise.all(unzipFiles.map(async (file) => {
-    const entry = zip.getEntry(file);
+  const entry = zip.getEntry("nonodo.exe");
+  if (!entry) throw new Error(`Dont find ${entry} on zip`);
+  const buffer = entry.getData();
+  await writeFile(destPath, buffer, { mode: 0o755 });
+
+  try {
+    const entry = zip.getEntry(".env");
     if (!entry) throw new Error(`Dont find ${entry} on zip`);
-    const buffer = entry.getData();
-    await writeFile(destPath, buffer, { mode: 0o755 });
-  }));
+    const envBuffer = entry.getData();
+    const envFilePath = path.join(path.dirname(destPath), ".env");
+    await writeFile(envFilePath, envBuffer, {
+      mode: 0o644,
+    });
+  } catch (e) {
+    console.error(e?.toString() ?? e);
+  }
 }
 
 async function unpackTarball(tarballPath, destPath) {
-  const unzipFiles = ["nonodo.exe", ".env"];
   const tarballDownloadBuffer = await readFile(tarballPath);
   const tarballBuffer = unzipSync(tarballDownloadBuffer);
 
-  await Promise.all(unzipFiles.map(async (filename) => {
-    const file = extractFileFromTarball(tarballBuffer, filename);
-    await writeFile(destPath, file, {
-      mode: 0o755,
+  const buffer = Buffer.from(tarballBuffer);
+  const extractedFile = extractFileFromTarball(buffer, "nonodo");
+  await writeFile(destPath, extractedFile, {
+    mode: 0o755,
+  });
+
+  try {
+    const buffer = Buffer.from(tarballBuffer);
+    const envFile = extractFileFromTarball(buffer, ".env");
+    const envFilePath = path.join(path.dirname(destPath), ".env");
+    console.log("envFilePath", envFilePath);
+    await writeFile(envFilePath, envFile, {
+      mode: 0o644,
     });
-  }));
+  } catch (e) {
+    console.error(e?.toString() ?? e);
+  }
 }
 
 /**
@@ -128,8 +147,16 @@ function extractFileFromTarball(tarballBuffer, filepath) {
 
   let offset = 0;
   while (offset < tarballBuffer.length) {
-    const header = tarballBuffer.slice(offset, offset + 512);
+    const header = tarballBuffer.subarray(offset, offset + 512);
     offset += 512;
+
+    // Check for EOF (two consecutive zero-filled blocks)
+    if (header.every(byte => byte === 0)) {
+      const nextBlock = tarballBuffer.subarray(offset, offset + 512)
+      if (nextBlock.every(byte => byte === 0)) {
+        break // EOF reached
+      }
+    }
 
     const fileName = header.toString("utf-8", 0, 100).replace(/\0.*/g, "");
     const fileSize = parseInt(
