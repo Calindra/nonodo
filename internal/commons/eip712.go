@@ -164,7 +164,7 @@ func Main() []byte {
 	}
 	typedDataBase64 := base64.StdEncoding.EncodeToString(typedDataJSON)
 
-	// signature[64] += 27
+	signature[64] += 27
 	sigAndData := SigAndData{
 		Signature: "0x" + common.Bytes2Hex(signature),
 		TypedData: typedDataBase64,
