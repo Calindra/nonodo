@@ -86,7 +86,7 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           goos: ${{ matrix.goos }}
           goarch: ${{ matrix.goarch }}
-          extra_files: CHANGELOG.md LICENSE README.md .env
+          extra_files: CHANGELOG.md LICENSE README.md
 
   # release-darwin-arm64:
   #   name: Build binaries for darwin arm64

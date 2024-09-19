@@ -95,18 +95,6 @@ async function unpackZip(zipPath, destPath) {
   if (!entry) throw new Error(`Dont find ${entry} on zip`);
   const buffer = entry.getData();
   await writeFile(destPath, buffer, { mode: 0o755 });
-
-  try {
-    const entry = zip.getEntry(".env");
-    if (!entry) throw new Error(`Dont find ${entry} on zip`);
-    const envBuffer = entry.getData();
-    const envFilePath = path.join(path.dirname(destPath), ".env");
-    await writeFile(envFilePath, envBuffer, {
-      mode: 0o644,
-    });
-  } catch (e) {
-    console.error(e?.toString() ?? e);
-  }
 }
 
 async function unpackTarball(tarballPath, destPath) {
@@ -118,18 +106,6 @@ async function unpackTarball(tarballPath, destPath) {
   await writeFile(destPath, extractedFile, {
     mode: 0o755,
   });
-
-  try {
-    const buffer = Buffer.from(tarballBuffer);
-    const envFile = extractFileFromTarball(buffer, ".env");
-    const envFilePath = path.join(path.dirname(destPath), ".env");
-    console.log("envFilePath", envFilePath);
-    await writeFile(envFilePath, envFile, {
-      mode: 0o644,
-    });
-  } catch (e) {
-    console.error(e?.toString() ?? e);
-  }
 }
 
 /**
