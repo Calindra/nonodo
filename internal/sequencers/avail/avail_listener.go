@@ -99,9 +99,9 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 			latestBlock = uint64(block.Number)
 		}
 
-		subscription, err := client.RPC.Chain.SubscribeNewHeads()
+		subscription, err := client.RPC.Chain.SubscribeFinalizedHeads()
 		if err != nil {
-			slog.Error("Avail", "Error subscribing to new heads", err)
+			slog.Error("Avail", "Error subscribing to finalized heads", err)
 			slog.Info("Avail reconnecting", "retryInterval", retryInterval)
 			time.Sleep(retryInterval)
 			continue
@@ -119,11 +119,10 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 				case err := <-subscription.Err():
 					errCh <- err
 					return
-				case <-time.After(1 * time.Second):
 				case i := <-subscription.Chan():
 					index++
 
-					slog.Debug("Avail", "index", index, "Chain is at block", i.Number)
+					slog.Debug("avail:", "index", index, "Chain is at block", i.Number)
 
 					blockHash, err := client.RPC.Chain.GetBlockHash(latestBlock)
 					if err != nil {
