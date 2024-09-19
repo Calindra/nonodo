@@ -6,7 +6,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/supervisor"
 	gsrpc "github.com/centrifuge/go-substrate-rpc-client/v4"
 )
@@ -120,6 +119,7 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 				case err := <-subscription.Err():
 					errCh <- err
 					return
+				case <-time.After(1 * time.Second):
 				case i := <-subscription.Chan():
 					index++
 
@@ -141,22 +141,24 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 
 						json, err := ext.MarshalJSON()
 						if err != nil {
-							slog.Error("Avail", "Error marshalling extrinsic to JSON", err)
+							slog.Error("avail: Error marshalling extrinsic to JSON", "err", err)
 							continue
 						}
 						strJSON := string(json)
 						args := string(ext.Method.Args)
-						msgSender, typedData, err := commons.ExtractSigAndData(args)
-						if err != nil {
-							continue
-						}
-						nonce := int64(typedData.Message["nonce"].(float64)) // by default, JSON number is float64
-						payload, ok := typedData.Message["payload"].(string)
-						if !ok {
-							continue
-						}
-						slog.Debug("Avail input", "msgSender", msgSender, "nonce", nonce, "payload", payload)
-						slog.Debug("Avail Extrinsic", "appID", appID, "index", index, "extId", extId, "args", args, "json", strJSON)
+						// msgSender, typedData, err := commons.ExtractSigAndData(args)
+						// if err != nil {
+						// 	slog.Error("avail: error extracting signature and typed data", "err", err)
+						// 	continue
+						// }
+						// nonce := int64(typedData.Message["nonce"].(float64)) // by default, JSON number is float64
+						// payload, ok := typedData.Message["payload"].(string)
+						// if !ok {
+						// 	slog.Error("avail: error extracting payload from typed data")
+						// 	continue
+						// }
+						// slog.Debug("Avail input", "msgSender", msgSender, "nonce", nonce, "payload", payload)
+						slog.Debug("avail extrinsic:", "appID", appID, "index", index, "extId", extId, "args", args, "json", strJSON)
 					}
 
 					latestBlock += 1
