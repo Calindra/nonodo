@@ -285,7 +285,6 @@ func (a *AnvilRelease) GetLatestReleaseCompatible(ctx context.Context) (*Release
 	if err != nil {
 		return nil, err
 	}
-	slog.Debug("PlatformCompatible", "p", p)
 
 	for _, anvilAssets := range assets {
 		if anvilAssets.Filename == platform {
