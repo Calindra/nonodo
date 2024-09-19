@@ -13,7 +13,12 @@ NoNodo is a valuable development workflow help, but there are some [caveats](#ca
 ### Battery-included
 
 NoNodo uses the Anvil as the underlying Ethereum node.
-For the current version, NoNodo provides a built-in anvil, *we don't use the system foundry*.
+For the current version, NoNodo provides a built-in anvil (from Foundry), *we don't use the system foundry*.
+You can change the version by setting the `ANVIL_TAG` environment variable to a specific tag before executing NoNodo:
+
+```bash
+export ANVIL_TAG=nightly-2cdbfaca634b284084d0f86357623aef7a0d2ce3
+```
 
 ### Installing from npm
 
