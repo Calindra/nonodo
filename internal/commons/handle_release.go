@@ -24,7 +24,6 @@ type ReleaseAsset struct {
 	Filename string `json:"filename"`
 	Url      string `json:"url"`
 	Path     string `json:"path"`
-	NodeId   string `json:"node_id"`
 }
 
 // Interface for handle libraries on GitHub
