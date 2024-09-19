@@ -12,6 +12,7 @@ func (r *RollupAPI) Fetcher(ctx echo.Context, request GioJSONRequestBody) (*GioR
 		espresso uint16 = 2222
 		syscoin  uint16 = 5700
 		celestia uint16 = 714
+		avail    uint16 = 9944
 		its_ok   uint16 = 42
 	)
 
@@ -37,6 +38,15 @@ func (r *RollupAPI) Fetcher(ctx echo.Context, request GioJSONRequestBody) (*GioR
 	case celestia:
 		celestiaFetcher := DA.NewCelestiaClient()
 		data, err := celestiaFetcher.Fetch(ctx, request.Id)
+
+		if err != nil {
+			return nil, err
+		}
+
+		return &GioResponseRollup{Data: *data, Code: its_ok}, nil
+	case avail:
+		availFetcher := DA.NewAvailFetcher()
+		data, err := availFetcher.Fetch(ctx, request.Id)
 
 		if err != nil {
 			return nil, err
