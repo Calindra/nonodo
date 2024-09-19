@@ -169,7 +169,7 @@ func (e *EspressoClient) SendInputV2(payload string, namespace int) (string, err
 	typedDataBase64 := base64.StdEncoding.EncodeToString(typedDataJSON)
 
 	signature[64] += 27
-	sigAndData := SigAndData{
+	sigAndData := commons.SigAndData{
 		Signature: "0x" + common.Bytes2Hex(signature),
 		TypedData: typedDataBase64,
 	}

@@ -46,7 +46,7 @@ func SignMessage(hash []byte, privateKey *ecdsa.PrivateKey) ([]byte, error) {
 	return signature, nil
 }
 
-func getPrivateKeyFromMnemonic(mnemonic string) (*ecdsa.PrivateKey, error) {
+func GetPrivateKeyFromMnemonic(mnemonic string) (*ecdsa.PrivateKey, error) {
 	seed := bip39.NewSeed(mnemonic, "")
 
 	masterKey, err := hdkeychain.NewMaster(seed, &chaincfg.MainNetParams)
@@ -130,8 +130,7 @@ func Main() []byte {
 
 	mnemonic := "test test test test test test test test test test test junk"
 	// Private key for signing (this is just a sample, replace with actual private key)
-	// privateKey := "your_private_key_here"
-	privateKey, err := getPrivateKeyFromMnemonic(mnemonic)
+	privateKey, err := GetPrivateKeyFromMnemonic(mnemonic)
 	if err != nil {
 		log.Fatalf("Error deriving private key: %v", err)
 	}
