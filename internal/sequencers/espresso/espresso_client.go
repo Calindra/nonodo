@@ -8,10 +8,12 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/big"
 	"net/http"
 
 	"github.com/btcsuite/btcd/btcutil/hdkeychain"
 	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/tyler-smith/go-bip39"
@@ -25,7 +27,7 @@ type EspressoClient struct {
 type EIP712Domain struct {
 	Name              string `json:"name"`
 	Version           string `json:"version"`
-	ChainId           uint32 `json:"chainId"`
+	ChainId           uint64 `json:"chainId"`
 	VerifyingContract string `json:"verifyingContract"`
 }
 
@@ -195,19 +197,59 @@ func fetchNonce(sender string, graphqlURL string) (uint64, error) {
 	return uint64(nextNonce), nil
 }
 
+func hashEIP712Domain(domain EIP712Domain) common.Hash {
+	domainTypeHash := crypto.Keccak256Hash([]byte("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"))
+	nameHash := crypto.Keccak256Hash([]byte(domain.Name))
+	versionHash := crypto.Keccak256Hash([]byte(domain.Version))
+	chainIdBytes := new(big.Int).SetUint64(domain.ChainId).Bytes()
+	verifyingContractBytes := common.HexToAddress(domain.VerifyingContract).Bytes()
+
+	return crypto.Keccak256Hash(
+		domainTypeHash.Bytes(),
+		nameHash.Bytes(),
+		versionHash.Bytes(),
+		crypto.Keccak256Hash(chainIdBytes).Bytes(),
+		crypto.Keccak256Hash(verifyingContractBytes).Bytes(),
+	)
+}
+
+func hashEspressoMessage(message EspressoMessage) common.Hash {
+	messageTypeHash := crypto.Keccak256Hash([]byte("EspressoMessage(uint64 nonce,string payload)"))
+	nonceBytes := new(big.Int).SetUint64(message.Nonce).Bytes()
+	payloadHash := crypto.Keccak256Hash([]byte(message.Payload))
+
+	return crypto.Keccak256Hash(
+		messageTypeHash.Bytes(),
+		crypto.Keccak256Hash(nonceBytes).Bytes(),
+		payloadHash.Bytes(),
+	)
+}
+
+// Função principal para assinar os dados
 func signTypedData(privateKey *ecdsa.PrivateKey, typedData EspressoData) (string, error) {
-	dataBytes, err := json.Marshal(typedData)
-	if err != nil {
-		return "", fmt.Errorf("Error serializing typed data: %v", err)
-	}
+	// Hash do domínio
+	domainSeparator := hashEIP712Domain(typedData.Domain)
 
-	hash := crypto.Keccak256Hash(dataBytes)
+	// Hash da mensagem
+	messageHash := hashEspressoMessage(typedData.Message)
 
-	signature, err := crypto.Sign(hash.Bytes(), privateKey)
+	// Prefixo EIP-712
+	typedDataHash := crypto.Keccak256Hash(
+		[]byte("\x19\x01"),
+		domainSeparator.Bytes(),
+		messageHash.Bytes(),
+	)
+
+	// Assinar o hash combinado
+	signature, err := crypto.Sign(typedDataHash.Bytes(), privateKey)
 	if err != nil {
 		return "", fmt.Errorf("Error signing data: %v", err)
 	}
 
+	// Ajustar o valor 'v' na assinatura EIP-712 (v = 27 ou 28)
+	signature[64] += 27
+
+	// Retornar a assinatura no formato hexadecimal
 	return fmt.Sprintf("0x%x", signature), nil
 }
 
