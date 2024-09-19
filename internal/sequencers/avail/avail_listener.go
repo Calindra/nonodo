@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/supervisor"
 	gsrpc "github.com/centrifuge/go-substrate-rpc-client/v4"
 )
@@ -138,7 +139,10 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 
 					for extId, ext := range block.Block.Extrinsics {
 						appID := ext.Signature.AppID.Int64()
-
+						if appID != 91 {
+							slog.Debug("Skipping", "appID", appID)
+							continue
+						}
 						json, err := ext.MarshalJSON()
 						if err != nil {
 							slog.Error("avail: Error marshalling extrinsic to JSON", "err", err)
@@ -146,18 +150,18 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 						}
 						strJSON := string(json)
 						args := string(ext.Method.Args)
-						// msgSender, typedData, err := commons.ExtractSigAndData(args)
-						// if err != nil {
-						// 	slog.Error("avail: error extracting signature and typed data", "err", err)
-						// 	continue
-						// }
-						// nonce := int64(typedData.Message["nonce"].(float64)) // by default, JSON number is float64
-						// payload, ok := typedData.Message["payload"].(string)
-						// if !ok {
-						// 	slog.Error("avail: error extracting payload from typed data")
-						// 	continue
-						// }
-						// slog.Debug("Avail input", "msgSender", msgSender, "nonce", nonce, "payload", payload)
+						msgSender, typedData, err := commons.ExtractSigAndData(args[2:])
+						if err != nil {
+							slog.Error("avail: error extracting signature and typed data", "err", err)
+							continue
+						}
+						nonce := typedData.Message["nonce"] // by default, JSON number is float64
+						payload, ok := typedData.Message["payload"].(string)
+						if !ok {
+							slog.Error("avail: error extracting payload from typed data")
+							continue
+						}
+						slog.Debug("Avail input", "msgSender", msgSender, "nonce", nonce, "payload", payload)
 						slog.Debug("avail extrinsic:", "appID", appID, "index", index, "extId", extId, "args", args, "json", strJSON)
 					}
 
