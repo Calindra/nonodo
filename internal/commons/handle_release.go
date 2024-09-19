@@ -58,6 +58,7 @@ type AnvilConfig struct {
 }
 
 const WINDOWS = "windows"
+const LATEST_TAG = "nightly"
 
 func NewAnvilRelease() HandleRelease {
 	return &AnvilRelease{
@@ -119,7 +120,7 @@ func (a AnvilRelease) TryLoadConfig() (*AnvilConfig, error) {
 	if _, err := os.Stat(file); err == nil {
 		slog.Debug("anvil: config already exists", "path", file)
 		cfg, err := LoadAnvilConfig(file)
-		if err == nil && cfg.AssetAnvil.Tag == "nightly" {
+		if err == nil && cfg.AssetAnvil.Tag == LATEST_TAG {
 			slog.Debug("anvil: config is nightly, download new...", "tag", cfg.AssetAnvil.Tag)
 			return nil, nil
 		}
@@ -253,11 +254,11 @@ func (a *AnvilRelease) GetLatestReleaseCompatible(ctx context.Context) (*Release
 
 	if !fromEnv {
 		// Same behavior of Foundryup
-		anvilTag = "nightly"
+		anvilTag = LATEST_TAG
 	}
 	slog.Debug("anvil: using", "tag", anvilTag, "fromEnv", fromEnv)
 
-	if anvilTag == "nightly" {
+	if anvilTag == LATEST_TAG {
 		slog.Debug("anvil: request is nightly, download new..")
 		config = nil
 	}
