@@ -2,8 +2,6 @@
 const {
   existsSync,
   createReadStream,
-  readFileSync,
-  writeFileSync,
 } = require("node:fs");
 const { Buffer } = require("node:buffer");
 const { URL } = require("node:url");
@@ -16,6 +14,7 @@ const { get: request } = require("node:https");
 const { unzipSync } = require("node:zlib");
 const { SingleBar, Presets } = require("cli-progress");
 const AdmZip = require("adm-zip");
+const { writeFile, readFile } = require("node:fs/promises");
 
 const PACKAGE_NONODO_VERSION =
   process.env.PACKAGE_NONODO_VERSION ?? version;
@@ -90,21 +89,28 @@ function calculateHash(path, algorithm) {
   });
 }
 
-function unpackZip(zipPath, destPath) {
+async function unpackZip(zipPath, destPath) {
   const zip = new AdmZip(zipPath);
-  const entry = zip.getEntry("nonodo.exe");
-  if (!entry) throw new Error("Dont find binary on zip");
-  const buffer = entry.getData();
-  writeFileSync(destPath, buffer, { mode: 0o755 });
+  const unzipFiles = ["nonodo.exe", ".env"];
+  await Promise.all(unzipFiles.map(async (file) => {
+    const entry = zip.getEntry(file);
+    if (!entry) throw new Error(`Dont find ${entry} on zip`);
+    const buffer = entry.getData();
+    await writeFile(destPath, buffer, { mode: 0o755 });
+  }));
 }
 
-function unpackTarball(tarballPath, destPath) {
-  const tarballDownloadBuffer = readFileSync(tarballPath);
+async function unpackTarball(tarballPath, destPath) {
+  const unzipFiles = ["nonodo.exe", ".env"];
+  const tarballDownloadBuffer = await readFile(tarballPath);
   const tarballBuffer = unzipSync(tarballDownloadBuffer);
-  const file = extractFileFromTarball(tarballBuffer, "nonodo");
-  writeFileSync(destPath, file, {
-    mode: 0o755,
-  });
+
+  await Promise.all(unzipFiles.map(async (filename) => {
+    const file = extractFileFromTarball(tarballBuffer, filename);
+    await writeFile(destPath, file, {
+      mode: 0o755,
+    });
+  }));
 }
 
 /**
@@ -154,7 +160,7 @@ async function downloadBinary() {
 
   const binary = await makeRequest(url);
 
-  writeFileSync(dest, binary, {
+  await writeFile(dest, binary, {
     signal: asyncController.signal,
   });
 }
@@ -175,7 +181,7 @@ async function downloadHash() {
   const response = await makeRequest(url);
   const body = response.toString("utf-8");
 
-  writeFileSync(dest, body, {
+  await writeFile(dest, body, {
     signal: asyncController.signal,
   });
 
@@ -295,10 +301,10 @@ async function getNonodoAvailable() {
     console.log(`Hash verified.`);
 
     if (getPlatform() !== "windows") {
-      unpackTarball(releasePath, binaryPath);
+      await unpackTarball(releasePath, binaryPath);
     } else {
       /** unzip this */
-      unpackZip(releasePath, binaryPath);
+      await unpackZip(releasePath, binaryPath);
     }
 
     if (!existsSync(binaryPath)) throw new Error("Problem on unpack");
