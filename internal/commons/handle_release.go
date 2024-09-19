@@ -257,6 +257,11 @@ func (a *AnvilRelease) GetLatestReleaseCompatible(ctx context.Context) (*Release
 	}
 	slog.Debug("anvil: using", "tag", anvilTag, "fromEnv", fromEnv)
 
+	if anvilTag == "nightly" {
+		slog.Debug("anvil: request is nightly, download new..")
+		config = nil
+	}
+
 	var target *ReleaseAsset = nil
 
 	// Get release asset from config
