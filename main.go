@@ -19,6 +19,7 @@ import (
 	"github.com/calindra/nonodo/internal/dataavailability"
 	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/calindra/nonodo/internal/nonodo"
+	"github.com/calindra/nonodo/internal/sequencers/avail"
 	"github.com/calindra/nonodo/internal/sequencers/espresso"
 	"github.com/carlmjohnson/versioninfo"
 	"github.com/ethereum/go-ethereum/common"
@@ -120,8 +121,8 @@ var espressoCmd = &cobra.Command{
 type AvailOpts struct {
 	Payload  string
 	Mnemonic string
-	ChainId  string
-	AppId    string
+	ChainId  int
+	AppId    int
 }
 
 var availCmd = &cobra.Command{
@@ -370,7 +371,10 @@ func addEspressoSubcommands(espressoCmd *cobra.Command) {
 				EspressoUrl: opts.EspressoUrl,
 				GraphQLUrl:  fmt.Sprintf("http://%s:%d", opts.HttpAddress, opts.HttpPort),
 			}
-			espressoClient.SendInput(opts.InputPayload, espressoOpts.Namespace)
+			_, err := espressoClient.SendInputV2(espressoOpts.Payload, espressoOpts.Namespace)
+			if err != nil {
+				panic(err)
+			}
 			return nil
 		},
 	}
@@ -382,21 +386,35 @@ func addEspressoSubcommands(espressoCmd *cobra.Command) {
 }
 
 func addAvailSubcommands(availCmd *cobra.Command) {
+
 	availOpts := &AvailOpts{}
 
 	availSendCmd := &cobra.Command{
 		Use:   "send",
 		Short: "Send a payload to Avail",
 		RunE: func(cmd *cobra.Command, args []string) error {
-
+			availClient, err := avail.NewAvailClient(
+				fmt.Sprintf("http://%s:%d", opts.HttpAddress, opts.HttpPort),
+				availOpts.Mnemonic,
+				availOpts.ChainId,
+				availOpts.AppId,
+			)
+			if err != nil {
+				panic(err)
+			}
+			err = availClient.Submit712(availOpts.Payload)
+			if err != nil {
+				panic(err)
+			}
 			return nil
+
 		},
 	}
 	availSendCmd.Flags().StringVar(&availOpts.Payload, "payload", "", "Payload to send to Avail")
-	availSendCmd.Flags().StringVar(&availOpts.AppId, "appId", "91", "AppId on Avail")
-	availSendCmd.Flags().StringVar(&availOpts.ChainId, "chainId", "", "ChainId to be used")
-	availSendCmd.Flags().StringVar(&availOpts.Mnemonic, "mnemonic", "", "Mnemonic to get the key")
-	markFlagRequired(availSendCmd, "payload", "appId", "chainId", "mnemonic")
+	availSendCmd.Flags().IntVar(&availOpts.ChainId, "chanId", avail.DEFAULT_CHAINID_HARDHAT, "ChainId used signing EIP-712 messages")
+	availSendCmd.Flags().IntVar(&availOpts.AppId, "appId", avail.DEFAULT_APP_ID, "Avail AppId")
+	availSendCmd.Flags().StringVar(&availOpts.Mnemonic, "mnemonic", avail.DEFAULT_EVM_MNEMONIC, "Mnemonic used to sign transactions")
+	markFlagRequired(availSendCmd, "payload")
 	availCmd.AddCommand(availSendCmd)
 }
 
@@ -510,9 +528,6 @@ func init() {
 	cmd.Flags().BoolVar(&opts.Salsa, "salsa", opts.Salsa, "If set, starts salsa")
 
 	cmd.Flags().StringVar(&opts.SalsaUrl, "salsa-url", opts.SalsaUrl, "Url used to start Salsa")
-
-	espressoCmd.Flags().StringVar(&opts.InputPayload, "input-payload", opts.InputPayload, "Payload to be sent to Espresso")
-
 	cmd.Flags().BoolVar(&opts.AvailEnabled, "avail-enabled", opts.AvailEnabled, "If set, enables Avail")
 	cmd.Flags().Uint64Var(&opts.AvailFromBlock, "avail-from-block", opts.AvailFromBlock, "The beginning of the queried range for events")
 }

@@ -78,7 +78,6 @@ type NonodoOpts struct {
 	GraphileDisableSync bool
 	Salsa               bool
 	SalsaUrl            string
-	InputPayload        string
 	AvailFromBlock      uint64
 	AvailEnabled        bool
 }
@@ -131,7 +130,6 @@ func NewNonodoOpts() NonodoOpts {
 		GraphileDisableSync: false,
 		Salsa:               false,
 		SalsaUrl:            "127.0.0.1:5005",
-		InputPayload:        "",
 		AvailFromBlock:      0,
 		AvailEnabled:        false,
 	}
