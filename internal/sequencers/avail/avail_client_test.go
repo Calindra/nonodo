@@ -4,6 +4,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -35,7 +36,7 @@ func (s *AvailClientSuite) TestSubmit712() {
 	}
 	Seed := os.Getenv("AVAIL_MNEMONIC")
 	if Seed != "" {
-		err := availClient.Submit712("Cartesi Rocks!")
+		err := availClient.Submit712("Cartesi Rocks!", devnet.ApplicationAddress, uint64(10))
 		s.NoError(err)
 		s.Fail("XXX")
 	}

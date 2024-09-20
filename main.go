@@ -107,8 +107,9 @@ type EspressoOpts struct {
 }
 
 type AvailSendArgs struct {
-	Payload string
-	Address string
+	Payload     string
+	Address     string
+	MaxGasPrice uint64
 }
 
 var celestiaCmd = &cobra.Command{
@@ -394,15 +395,18 @@ func addAvailSubcommands(availCmd *cobra.Command) {
 			if err != nil {
 				panic(err)
 			}
-			err = availClient.Submit712(availArgs.Payload)
+			err = availClient.Submit712(availArgs.Payload, availArgs.Address, availArgs.MaxGasPrice)
 			if err != nil {
 				panic(err)
 			}
 			return nil
 		},
 	}
+	defaultMaxGasPrice := 10
 	availSendCmd.Flags().StringVar(&availArgs.Payload, "payload", "", "Payload to send to Avail")
 	availSendCmd.Flags().StringVar(&availArgs.Address, "address", devnet.ApplicationAddress, "Address of the dapp")
+	availSendCmd.Flags().Uint64Var(&availArgs.MaxGasPrice, "max-gas-price", uint64(defaultMaxGasPrice), "Max gas price")
+
 	markFlagRequired(availSendCmd, "payload")
 	availCmd.AddCommand(availSendCmd)
 }

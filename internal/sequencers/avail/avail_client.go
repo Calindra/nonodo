@@ -23,7 +23,7 @@ import (
 
 const (
 	DEFAULT_EVM_MNEMONIC  = "test test test test test test test test test test test junk"
-	DEFAULT_ADDRESS       = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+	DEFAULT_USER_ADDRESS  = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 	DEFAULT_GRAPHQL_URL   = "http://localhost:8080"
 	DEFAULT_AVAIL_RPC_URL = "wss://turing-rpc.avail.so/ws"
 	DEFAULT_APP_ID        = 91
@@ -50,16 +50,18 @@ func NewAvailClient(graphQLUrl string) (*AvailClient, error) {
 	return &client, nil
 }
 
-func (av *AvailClient) Submit712(payload string) error {
-	nonce, err := fetchNonce(DEFAULT_ADDRESS, av.GraphQLUrl)
+func (av *AvailClient) Submit712(payload string, dappAddress string, maxGasPrice uint64) error {
+	nonce, err := fetchNonce(DEFAULT_USER_ADDRESS, av.GraphQLUrl)
 
 	if err != nil {
 		log.Fatalf("Error getting nonce: %v", err)
 	}
 
 	cartesiMessage := apitypes.TypedDataMessage{}
+	cartesiMessage["app"] = dappAddress
 	cartesiMessage["nonce"] = nonce
-	cartesiMessage["payload"] = payload
+	cartesiMessage["max_gas_price"] = strconv.FormatUint(maxGasPrice, 10)
+	cartesiMessage["data"] = payload
 
 	chainId := math.NewHexOrDecimal256(commons.HARDHAT)
 	domain := apitypes.TypedDataDomain{
@@ -77,8 +79,10 @@ func (av *AvailClient) Submit712(payload string) error {
 			{Name: "verifyingContract", Type: "address"},
 		},
 		"CartesiMessage": {
+			{Name: "app", Type: "address"},
 			{Name: "nonce", Type: "uint64"},
-			{Name: "payload", Type: "string"},
+			{Name: "max_gas_price", Type: "uint128"},
+			{Name: "data", Type: "string"},
 		},
 	}
 

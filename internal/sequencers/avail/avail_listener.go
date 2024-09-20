@@ -172,8 +172,8 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 								slog.Error("avail: error extracting signature and typed data", "err", err)
 								continue
 							}
-							nonce := typedData.Message["nonce"] // by default, JSON number is float64
-							payload, ok := typedData.Message["payload"].(string)
+							nonce := typedData.Message["nonce"].(uint64)
+							payload, ok := typedData.Message["data"].(string)
 							if !ok {
 								slog.Error("avail: error extracting payload from typed data")
 								continue
