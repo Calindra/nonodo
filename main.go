@@ -19,6 +19,7 @@ import (
 	"github.com/calindra/nonodo/internal/dataavailability"
 	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/calindra/nonodo/internal/nonodo"
+	"github.com/calindra/nonodo/internal/sequencers/avail"
 	"github.com/calindra/nonodo/internal/sequencers/espresso"
 	"github.com/carlmjohnson/versioninfo"
 	"github.com/ethereum/go-ethereum/common"
@@ -105,6 +106,11 @@ type EspressoOpts struct {
 	Namespace int
 }
 
+type AvailSendArgs struct {
+	Payload string
+	Address string
+}
+
 var celestiaCmd = &cobra.Command{
 	Use:   "celestia",
 	Short: "Handle blob to Celestia",
@@ -115,6 +121,12 @@ var espressoCmd = &cobra.Command{
 	Use:   "espresso",
 	Short: "Handles Espresso transactions",
 	Long:  "Submit and get a transaction from Espresso using Cappuccino APIs",
+}
+
+var availCmd = &cobra.Command{
+	Use:   "avail",
+	Short: "Handles Avail features",
+	Long:  "Submit and read transactions to Avail",
 }
 
 var (
@@ -371,6 +383,30 @@ func addEspressoSubcommands(espressoCmd *cobra.Command) {
 
 }
 
+func addAvailSubcommands(availCmd *cobra.Command) {
+	availArgs := &AvailSendArgs{}
+	// Send
+	availSendCmd := &cobra.Command{
+		Use:   "send",
+		Short: "Send a payload to Avail",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			availClient, err := avail.NewAvailClient(fmt.Sprintf("http://%s:%d", opts.HttpAddress, opts.HttpPort))
+			if err != nil {
+				panic(err)
+			}
+			err = availClient.Submit712(availArgs.Payload)
+			if err != nil {
+				panic(err)
+			}
+			return nil
+		},
+	}
+	availSendCmd.Flags().StringVar(&availArgs.Payload, "payload", "", "Payload to send to Avail")
+	availSendCmd.Flags().StringVar(&availArgs.Address, "address", devnet.ApplicationAddress, "Address of the dapp")
+	markFlagRequired(availSendCmd, "payload")
+	availCmd.AddCommand(availSendCmd)
+}
+
 func readFile(_ context.Context, path string) ([]byte, error) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -563,7 +599,8 @@ func main() {
 	cobra.CheckErr(err)
 	addCelestiaSubcommands(celestiaCmd)
 	addEspressoSubcommands(espressoCmd)
-	cmd.AddCommand(addressBookCmd, celestiaCmd, CompletionCmd, espressoCmd)
+	addAvailSubcommands(availCmd)
+	cmd.AddCommand(addressBookCmd, availCmd, celestiaCmd, CompletionCmd, espressoCmd)
 	cobra.CheckErr(cmd.Execute())
 }
 

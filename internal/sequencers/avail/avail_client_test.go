@@ -12,7 +12,7 @@ type AvailClientSuite struct {
 }
 
 func (s *AvailClientSuite) XTestSendTransaction() {
-	availClient, err := NewAvailClient()
+	availClient, err := NewAvailClient("")
 	if err != nil {
 		s.NoError(err)
 		return
@@ -28,7 +28,7 @@ func (s *AvailClientSuite) XTestSendTransaction() {
 }
 
 func (s *AvailClientSuite) TestSubmit712() {
-	availClient, err := NewAvailClient()
+	availClient, err := NewAvailClient("")
 	if err != nil {
 		s.NoError(err)
 		return

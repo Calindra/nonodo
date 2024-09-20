@@ -124,7 +124,7 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 				case i := <-subscription.Chan():
 					index++
 
-					slog.Debug("Avail", "index", index, "Chain is at block", i.Number)
+					slog.Debug("Avail", "index", index, "Chain is at block", i.Number, "fetching block", latestBlock)
 
 					blockHash, err := client.RPC.Chain.GetBlockHash(latestBlock)
 					if err != nil {

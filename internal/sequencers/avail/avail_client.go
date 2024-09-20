@@ -34,7 +34,7 @@ type AvailClient struct {
 	GraphQLUrl string
 }
 
-func NewAvailClient() (*AvailClient, error) {
+func NewAvailClient(graphQLUrl string) (*AvailClient, error) {
 	apiURL := os.Getenv("AVAIL_RPC_URL")
 	if apiURL == "" {
 		apiURL = DEFAULT_AVAIL_RPC_URL
@@ -43,7 +43,10 @@ func NewAvailClient() (*AvailClient, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot create api:%w", err)
 	}
-	client := AvailClient{api, DEFAULT_GRAPHQL_URL}
+	if graphQLUrl == "" {
+		graphQLUrl = DEFAULT_GRAPHQL_URL
+	}
+	client := AvailClient{api, graphQLUrl}
 	return &client, nil
 }
 
