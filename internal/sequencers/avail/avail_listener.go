@@ -120,52 +120,55 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 				case err := <-subscription.Err():
 					errCh <- err
 					return
-				case <-time.After(1 * time.Second):
+				case <-time.After(500 * time.Millisecond):
 				case i := <-subscription.Chan():
-					index++
+					for latestBlock <= uint64(i.Number) {
+						index++
 
-					slog.Debug("Avail", "index", index, "Chain is at block", i.Number, "fetching block", latestBlock)
+						slog.Debug("Avail", "index", index, "Chain is at block", i.Number, "fetching block", latestBlock)
 
-					blockHash, err := client.RPC.Chain.GetBlockHash(latestBlock)
-					if err != nil {
-						errCh <- err
-						return
-					}
-					block, err := client.RPC.Chain.GetBlock(blockHash)
-					if err != nil {
-						errCh <- err
-						return
-					}
-
-					for extId, ext := range block.Block.Extrinsics {
-						appID := ext.Signature.AppID.Int64()
-						if appID != DEFAULT_APP_ID {
-							slog.Debug("Skipping", "appID", appID)
-							continue
-						}
-						json, err := ext.MarshalJSON()
+						blockHash, err := client.RPC.Chain.GetBlockHash(latestBlock)
 						if err != nil {
-							slog.Error("avail: Error marshalling extrinsic to JSON", "err", err)
-							continue
+							errCh <- err
+							return
 						}
-						strJSON := string(json)
-						args := string(ext.Method.Args)
-						msgSender, typedData, err := commons.ExtractSigAndData(args[2:])
+						block, err := client.RPC.Chain.GetBlock(blockHash)
 						if err != nil {
-							slog.Error("avail: error extracting signature and typed data", "err", err)
-							continue
+							errCh <- err
+							return
 						}
-						nonce := typedData.Message["nonce"] // by default, JSON number is float64
-						payload, ok := typedData.Message["payload"].(string)
-						if !ok {
-							slog.Error("avail: error extracting payload from typed data")
-							continue
-						}
-						slog.Debug("Avail input", "msgSender", msgSender, "nonce", nonce, "payload", payload)
-						slog.Debug("avail extrinsic:", "appID", appID, "index", index, "extId", extId, "args", args, "json", strJSON)
-					}
 
-					latestBlock += 1
+						for extId, ext := range block.Block.Extrinsics {
+							appID := ext.Signature.AppID.Int64()
+							if appID != DEFAULT_APP_ID {
+								slog.Debug("Skipping", "appID", appID)
+								continue
+							}
+							json, err := ext.MarshalJSON()
+							if err != nil {
+								slog.Error("avail: Error marshalling extrinsic to JSON", "err", err)
+								continue
+							}
+							strJSON := string(json)
+							args := string(ext.Method.Args)
+							msgSender, typedData, err := commons.ExtractSigAndData(args[2:])
+							if err != nil {
+								slog.Error("avail: error extracting signature and typed data", "err", err)
+								continue
+							}
+							nonce := typedData.Message["nonce"] // by default, JSON number is float64
+							payload, ok := typedData.Message["payload"].(string)
+							if !ok {
+								slog.Error("avail: error extracting payload from typed data")
+								continue
+							}
+							slog.Debug("Avail input", "msgSender", msgSender, "nonce", nonce, "payload", payload)
+							slog.Debug("avail extrinsic:", "appID", appID, "index", index, "extId", extId, "args", args, "json", strJSON)
+						}
+
+						latestBlock += 1
+						time.Sleep(500 * time.Millisecond)
+					}
 				}
 			}
 		}()
