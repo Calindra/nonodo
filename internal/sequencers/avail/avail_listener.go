@@ -147,7 +147,7 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 							return
 						}
 						timestamp := uint64(0)
-						for extId, ext := range block.Block.Extrinsics {
+						for _, ext := range block.Block.Extrinsics {
 							appID := ext.Signature.AppID.Int64()
 							mi := ext.Method.CallIndex.MethodIndex
 							si := ext.Method.CallIndex.SectionIndex
@@ -160,26 +160,34 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 								slog.Debug("Skipping", "appID", appID, "MethodIndex", mi, "SessionIndex", si)
 								continue
 							}
-							json, err := ext.MarshalJSON()
-							if err != nil {
-								slog.Error("avail: Error marshalling extrinsic to JSON", "err", err)
-								continue
-							}
-							strJSON := string(json)
+							// json, err := ext.MarshalJSON()
+							// if err != nil {
+							// 	slog.Error("avail: Error marshalling extrinsic to JSON", "err", err)
+							// 	continue
+							// }
+							// strJSON := string(json)
 							args := string(ext.Method.Args)
 							msgSender, typedData, err := commons.ExtractSigAndData(args[2:])
 							if err != nil {
 								slog.Error("avail: error extracting signature and typed data", "err", err)
 								continue
 							}
-							nonce := typedData.Message["nonce"] // by default, JSON number is float64
-							payload, ok := typedData.Message["payload"].(string)
+							dappAddress := typedData.Message["app"].(string)
+							nonce := typedData.Message["nonce"].(string)
+							maxGasPrice := typedData.Message["max_gas_price"].(string)
+							payload, ok := typedData.Message["data"].(string)
 							if !ok {
-								slog.Error("avail: error extracting payload from typed data")
+								slog.Error("avail: error extracting data from message")
 								continue
 							}
-							slog.Debug("Avail input", "msgSender", msgSender, "nonce", nonce, "payload", payload)
-							slog.Debug("avail extrinsic:", "appID", appID, "index", index, "extId", extId, "args", args, "json", strJSON)
+							slog.Debug("Avail input",
+								"dappAddress", dappAddress,
+								"msgSender", msgSender,
+								"nonce", nonce,
+								"maxGasPrice", maxGasPrice,
+								"payload", payload,
+							)
+							// slog.Debug("avail extrinsic:", "appID", appID, "index", index, "extId", extId, "args", args, "json", strJSON)
 						}
 
 						latestBlock += 1

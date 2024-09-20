@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/calindra/nonodo/internal/commons"
 	gsrpc "github.com/centrifuge/go-substrate-rpc-client/v4"
@@ -22,7 +23,7 @@ import (
 
 const (
 	DEFAULT_EVM_MNEMONIC    = "test test test test test test test test test test test junk"
-	DEFAULT_ADDRESS         = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+	DEFAULT_USER_ADDRESS    = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 	DEFAULT_GRAPHQL_URL     = "http://localhost:8080"
 	DEFAULT_AVAIL_RPC_URL   = "wss://turing-rpc.avail.so/ws"
 	DEFAULT_APP_ID          = 91
@@ -32,12 +33,11 @@ const (
 type AvailClient struct {
 	api        *gsrpc.SubstrateAPI
 	GraphQLUrl string
-	mnemonic   string
 	chainId    int
 	appId      int
 }
 
-func NewAvailClient(graphQLUrl string, mnemonic string, chainId int, appId int) (*AvailClient, error) {
+func NewAvailClient(graphQLUrl string, chainId int, appId int) (*AvailClient, error) {
 	apiURL := os.Getenv("AVAIL_RPC_URL")
 	if apiURL == "" {
 		apiURL = DEFAULT_AVAIL_RPC_URL
@@ -49,20 +49,22 @@ func NewAvailClient(graphQLUrl string, mnemonic string, chainId int, appId int) 
 	if graphQLUrl == "" {
 		graphQLUrl = DEFAULT_GRAPHQL_URL
 	}
-	client := AvailClient{api, graphQLUrl, mnemonic, chainId, appId}
+	client := AvailClient{api, graphQLUrl, chainId, appId}
 	return &client, nil
 }
 
-func (av *AvailClient) Submit712(payload string) error {
-	nonce, err := fetchNonce(DEFAULT_ADDRESS, av.GraphQLUrl)
+func (av *AvailClient) Submit712(payload string, dappAddress string, maxGasPrice uint64) error {
+	nonce, err := fetchNonce(DEFAULT_USER_ADDRESS, av.GraphQLUrl)
 
 	if err != nil {
 		log.Fatalf("Error getting nonce: %v", err)
 	}
 
 	cartesiMessage := apitypes.TypedDataMessage{}
+	cartesiMessage["app"] = dappAddress
 	cartesiMessage["nonce"] = nonce
-	cartesiMessage["payload"] = payload
+	cartesiMessage["max_gas_price"] = strconv.FormatUint(maxGasPrice, 10)
+	cartesiMessage["data"] = payload
 
 	chainId := math.NewHexOrDecimal256(int64(av.chainId))
 	domain := apitypes.TypedDataDomain{
@@ -80,8 +82,10 @@ func (av *AvailClient) Submit712(payload string) error {
 			{Name: "verifyingContract", Type: "address"},
 		},
 		"CartesiMessage": {
+			{Name: "app", Type: "address"},
 			{Name: "nonce", Type: "uint64"},
-			{Name: "payload", Type: "string"},
+			{Name: "max_gas_price", Type: "uint128"},
+			{Name: "data", Type: "string"},
 		},
 	}
 
@@ -99,8 +103,14 @@ func (av *AvailClient) Submit712(payload string) error {
 		log.Fatal("Error hashing message:", err)
 	}
 
+	seed := os.Getenv("AVAIL_MNEMONIC")
+
+	if seed == "" {
+		seed = DEFAULT_EVM_MNEMONIC
+	}
+
 	// Private key for signing (this is just a sample, replace with actual private key)
-	privateKey, err := commons.GetPrivateKeyFromMnemonic(av.mnemonic)
+	privateKey, err := commons.GetPrivateKeyFromMnemonic(seed)
 	if err != nil {
 		log.Fatalf("Error deriving private key: %v", err)
 	}
@@ -142,16 +152,16 @@ func (av *AvailClient) Submit712(payload string) error {
 	if err != nil {
 		log.Fatal("Error json.Marshal message:", err)
 	}
-	return av.DefaultSubmit(string(jsonPayload))
+	return av.DefaultSubmit(string(jsonPayload), seed)
 }
 
-func (av *AvailClient) DefaultSubmit(data string) error {
+func (av *AvailClient) DefaultSubmit(data string, seed string) error {
 	apiURL := os.Getenv("AVAIL_RPC_URL")
 	if apiURL == "" {
 		apiURL = DEFAULT_AVAIL_RPC_URL
 	}
 
-	return av.SubmitData(data, apiURL, av.mnemonic, av.appId)
+	return av.SubmitData(data, apiURL, seed, av.appId)
 }
 
 // SubmitData creates a transaction and makes a Avail data submission

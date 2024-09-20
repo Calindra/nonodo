@@ -4,6 +4,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -12,7 +13,7 @@ type AvailClientSuite struct {
 }
 
 func (s *AvailClientSuite) XTestSendTransaction() {
-	availClient, err := NewAvailClient("", DEFAULT_EVM_MNEMONIC, DEFAULT_CHAINID_HARDHAT, DEFAULT_APP_ID)
+	availClient, err := NewAvailClient("", DEFAULT_CHAINID_HARDHAT, DEFAULT_APP_ID)
 	if err != nil {
 		s.NoError(err)
 		return
@@ -28,14 +29,14 @@ func (s *AvailClientSuite) XTestSendTransaction() {
 }
 
 func (s *AvailClientSuite) TestSubmit712() {
-	availClient, err := NewAvailClient("")
+	availClient, err := NewAvailClient("", DEFAULT_CHAINID_HARDHAT, DEFAULT_APP_ID)
 	if err != nil {
 		s.NoError(err)
 		return
 	}
 	Seed := os.Getenv("AVAIL_MNEMONIC")
 	if Seed != "" {
-		err := availClient.Submit712("Cartesi Rocks!")
+		err := availClient.Submit712("Cartesi Rocks!", devnet.ApplicationAddress, uint64(10))
 		s.NoError(err)
 		s.Fail("XXX")
 	}

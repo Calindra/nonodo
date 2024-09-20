@@ -119,10 +119,11 @@ var espressoCmd = &cobra.Command{
 }
 
 type AvailOpts struct {
-	Payload  string
-	Mnemonic string
-	ChainId  int
-	AppId    int
+	Payload     string
+	ChainId     int
+	AppId       int
+	Address     string
+	MaxGasPrice uint64
 }
 
 var availCmd = &cobra.Command{
@@ -395,14 +396,13 @@ func addAvailSubcommands(availCmd *cobra.Command) {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			availClient, err := avail.NewAvailClient(
 				fmt.Sprintf("http://%s:%d", opts.HttpAddress, opts.HttpPort),
-				availOpts.Mnemonic,
 				availOpts.ChainId,
 				availOpts.AppId,
 			)
 			if err != nil {
 				panic(err)
 			}
-			err = availClient.Submit712(availOpts.Payload)
+			err = availClient.Submit712(availOpts.Payload, availOpts.Address, availOpts.MaxGasPrice)
 			if err != nil {
 				panic(err)
 			}
@@ -411,9 +411,11 @@ func addAvailSubcommands(availCmd *cobra.Command) {
 		},
 	}
 	availSendCmd.Flags().StringVar(&availOpts.Payload, "payload", "", "Payload to send to Avail")
-	availSendCmd.Flags().IntVar(&availOpts.ChainId, "chanId", avail.DEFAULT_CHAINID_HARDHAT, "ChainId used signing EIP-712 messages")
+	availSendCmd.Flags().IntVar(&availOpts.ChainId, "chainId", avail.DEFAULT_CHAINID_HARDHAT, "ChainId used signing EIP-712 messages")
 	availSendCmd.Flags().IntVar(&availOpts.AppId, "appId", avail.DEFAULT_APP_ID, "Avail AppId")
-	availSendCmd.Flags().StringVar(&availOpts.Mnemonic, "mnemonic", avail.DEFAULT_EVM_MNEMONIC, "Mnemonic used to sign transactions")
+	defaultMaxGasPrice := 10
+	availSendCmd.Flags().StringVar(&availOpts.Address, "address", devnet.ApplicationAddress, "Address of the dapp")
+	availSendCmd.Flags().Uint64Var(&availOpts.MaxGasPrice, "max-gas-price", uint64(defaultMaxGasPrice), "Max gas price")
 	markFlagRequired(availSendCmd, "payload")
 	availCmd.AddCommand(availSendCmd)
 }
