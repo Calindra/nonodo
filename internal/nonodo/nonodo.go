@@ -300,7 +300,11 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	reader.Register(e, modelInstance, convenienceService, adapter)
 	health.Register(e)
 
-	availClient, err := avail.NewAvailClient(fmt.Sprintf("http://%s:%d", opts.HttpAddress, opts.HttpPort))
+	availClient, err := avail.NewAvailClient(
+		fmt.Sprintf("http://%s:%d", opts.HttpAddress, opts.HttpPort),
+		avail.DEFAULT_CHAINID_HARDHAT,
+		avail.DEFAULT_APP_ID,
+	)
 	if err != nil {
 		panic(err)
 	}
