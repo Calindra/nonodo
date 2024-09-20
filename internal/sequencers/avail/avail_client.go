@@ -103,14 +103,8 @@ func (av *AvailClient) Submit712(payload string, dappAddress string, maxGasPrice
 		log.Fatal("Error hashing message:", err)
 	}
 
-	seed := os.Getenv("AVAIL_MNEMONIC")
-
-	if seed == "" {
-		seed = DEFAULT_EVM_MNEMONIC
-	}
-
 	// Private key for signing (this is just a sample, replace with actual private key)
-	privateKey, err := commons.GetPrivateKeyFromMnemonic(seed)
+	privateKey, err := commons.GetPrivateKeyFromMnemonic(DEFAULT_EVM_MNEMONIC)
 	if err != nil {
 		log.Fatalf("Error deriving private key: %v", err)
 	}
@@ -152,13 +146,19 @@ func (av *AvailClient) Submit712(payload string, dappAddress string, maxGasPrice
 	if err != nil {
 		log.Fatal("Error json.Marshal message:", err)
 	}
-	return av.DefaultSubmit(string(jsonPayload), seed)
+	return av.DefaultSubmit(string(jsonPayload))
 }
 
-func (av *AvailClient) DefaultSubmit(data string, seed string) error {
+func (av *AvailClient) DefaultSubmit(data string) error {
 	apiURL := os.Getenv("AVAIL_RPC_URL")
 	if apiURL == "" {
 		apiURL = DEFAULT_AVAIL_RPC_URL
+	}
+
+	seed := os.Getenv("AVAIL_MNEMONIC")
+
+	if seed == "" {
+		seed = DEFAULT_EVM_MNEMONIC
 	}
 
 	return av.SubmitData(data, apiURL, seed, av.appId)

@@ -91,7 +91,7 @@ func SignMessage(hash []byte, privateKey *ecdsa.PrivateKey) ([]byte, error) {
 	return signature, nil
 }
 
-func (e *EspressoClient) SendInputV2(payload string, namespace int) (string, error) {
+func (e *EspressoClient) SendInput(payload string, namespace int) (string, error) {
 	mnemonic := "test test test test test test test test test test test junk"
 
 	// Generate private key from mnemonic
@@ -220,89 +220,6 @@ func (e *EspressoClient) SendInputV2(payload string, namespace int) (string, err
 	return bodyString, nil
 
 }
-
-// func (e *EspressoClient) SendInput(payload string, namespace int) {
-// 	mnemonic := "test test test test test test test test test test test junk"
-// 	client, err := ethclient.Dial("http://localhost:8545")
-// 	if err != nil {
-// 		log.Fatalf("Error connection to the node: %v", err)
-// 	}
-
-// 	// Generate private key from mnemonic
-// 	privateKey, err := getPrivateKeyFromMnemonic(mnemonic)
-// 	if err != nil {
-// 		log.Fatalf("Error deriving private key: %v", err)
-// 	}
-
-// 	// Sign and Send Espresso Input
-// 	response, err := addEspressoInput(e, client, privateKey, namespace, payload)
-// 	if err != nil {
-// 		log.Fatalf("Error sending to Espresso: %v", err)
-// 	}
-// 	fmt.Println("Transaction received:", response)
-// }
-
-// func addEspressoInput(e *EspressoClient, client *ethclient.Client, privateKey *ecdsa.PrivateKey, namespace int, payload string) (string, error) {
-// 	// Get nonce
-// 	fromAddress := crypto.PubkeyToAddress(privateKey.PublicKey)
-
-// 	nonce, err := fetchNonce(fromAddress.Hex(), e.GraphQLUrl)
-// 	if err != nil {
-// 		return "", fmt.Errorf("Error getting nonce: %v", err)
-// 	}
-
-// 	espressoMessage := EspressoMessage{
-// 		Nonce:   nonce,
-// 		Payload: "0x" + payload,
-// 	}
-
-// 	// Build Message
-// 	typedData := EspressoData{
-// 		Account: fromAddress.Hex(),
-// 		Message: espressoMessage,
-// 		Domain: EIP712Domain{
-// 			Name:              "EspressoM",
-// 			Version:           "1",
-// 			ChainId:           HARDHAT,
-// 			VerifyingContract: "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC",
-// 		},
-// 		PrimaryType: "EspressoMessage",
-// 		Types: Types{
-// 			EIP712Domain: []TypeDetail{
-// 				{Name: "name", Type: "string"},
-// 				{Name: "version", Type: "string"},
-// 				{Name: "chainId", Type: "uint32"},
-// 				{Name: "verifyingContract", Type: "address"},
-// 			},
-// 			EspressoMessage: []TypeDetail{
-// 				{Name: "nonce", Type: "uint64"},
-// 				{Name: "payload", Type: "string"},
-// 			},
-// 		},
-// 	}
-
-// 	// Sign typed data
-// 	signature, err := signTypedData(privateKey, typedData)
-
-// 	if err != nil {
-// 		return "", fmt.Errorf("Error getting signature: %v", err)
-// 	}
-
-// 	signedMessage, err := createSignedMessage(signature, typedData)
-
-// 	if err != nil {
-// 		return "", fmt.Errorf("Error signing message: %v", err)
-// 	}
-
-// 	// Send signed message to Espresso
-// 	response, err := submitToEspresso(e, namespace, signedMessage)
-// 	if err != nil {
-// 		return "", fmt.Errorf("Error sending input to Espresso: %v", err)
-// 	}
-
-// 	fmt.Println("Input sent to Espresso successfully!")
-// 	return response, nil
-// }
 
 func fetchNonce(sender string, graphqlURL string) (string, error) {
 	query := fmt.Sprintf(`

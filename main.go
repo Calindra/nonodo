@@ -372,7 +372,7 @@ func addEspressoSubcommands(espressoCmd *cobra.Command) {
 				EspressoUrl: opts.EspressoUrl,
 				GraphQLUrl:  fmt.Sprintf("http://%s:%d", opts.HttpAddress, opts.HttpPort),
 			}
-			_, err := espressoClient.SendInputV2(espressoOpts.Payload, espressoOpts.Namespace)
+			_, err := espressoClient.SendInput(espressoOpts.Payload, espressoOpts.Namespace)
 			if err != nil {
 				panic(err)
 			}
