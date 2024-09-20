@@ -117,6 +117,19 @@ var espressoCmd = &cobra.Command{
 	Long:  "Submit and get a transaction from Espresso using Cappuccino APIs",
 }
 
+type AvailOpts struct {
+	Payload  string
+	Mnemonic string
+	ChainId  string
+	AppId    string
+}
+
+var availCmd = &cobra.Command{
+	Use:   "avail",
+	Short: "Handles Avail transactions",
+	Long:  "Submit a transaction to Avail",
+}
+
 var (
 	debug bool
 	color bool
@@ -368,6 +381,25 @@ func addEspressoSubcommands(espressoCmd *cobra.Command) {
 
 }
 
+func addAvailSubcommands(availCmd *cobra.Command) {
+	availOpts := &AvailOpts{}
+
+	availSendCmd := &cobra.Command{
+		Use:   "send",
+		Short: "Send a payload to Avail",
+		RunE: func(cmd *cobra.Command, args []string) error {
+
+			return nil
+		},
+	}
+	availSendCmd.Flags().StringVar(&availOpts.Payload, "payload", "", "Payload to send to Avail")
+	availSendCmd.Flags().StringVar(&availOpts.AppId, "appId", "91", "AppId on Avail")
+	availSendCmd.Flags().StringVar(&availOpts.ChainId, "chainId", "", "ChainId to be used")
+	availSendCmd.Flags().StringVar(&availOpts.Mnemonic, "mnemonic", "", "Mnemonic to get the key")
+	markFlagRequired(availSendCmd, "payload", "appId", "chainId", "mnemonic")
+	availCmd.AddCommand(availSendCmd)
+}
+
 func readFile(_ context.Context, path string) ([]byte, error) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -563,7 +595,8 @@ func main() {
 	cobra.CheckErr(err)
 	addCelestiaSubcommands(celestiaCmd)
 	addEspressoSubcommands(espressoCmd)
-	cmd.AddCommand(addressBookCmd, celestiaCmd, CompletionCmd, espressoCmd)
+	addAvailSubcommands(availCmd)
+	cmd.AddCommand(addressBookCmd, celestiaCmd, CompletionCmd, espressoCmd, availCmd)
 	cobra.CheckErr(cmd.Execute())
 }
 
