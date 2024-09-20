@@ -2,6 +2,8 @@ package avail
 
 import (
 	"context"
+	"encoding/hex"
+	"fmt"
 	"log/slog"
 	"os"
 	"time"
@@ -9,6 +11,7 @@ import (
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/supervisor"
 	gsrpc "github.com/centrifuge/go-substrate-rpc-client/v4"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 type AvailListener struct {
@@ -110,7 +113,9 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 		defer subscription.Unsubscribe()
 
 		errCh := make(chan error)
-
+		timestampSectionIndex := uint8(3)
+		timestampMethodIndex := uint8(0)
+		coreAppID := int64(0)
 		go func() {
 			for {
 				select {
@@ -125,7 +130,11 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 					for latestBlock <= uint64(i.Number) {
 						index++
 
-						slog.Debug("Avail", "index", index, "Chain is at block", i.Number, "fetching block", latestBlock)
+						if latestBlock < uint64(i.Number) {
+							slog.Debug("Avail Catching up", "Chain is at block", i.Number, "fetching block", latestBlock)
+						} else {
+							slog.Debug("Avail", "index", index, "Chain is at block", i.Number, "fetching block", latestBlock)
+						}
 
 						blockHash, err := client.RPC.Chain.GetBlockHash(latestBlock)
 						if err != nil {
@@ -137,11 +146,18 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 							errCh <- err
 							return
 						}
-
+						timestamp := uint64(0)
 						for extId, ext := range block.Block.Extrinsics {
 							appID := ext.Signature.AppID.Int64()
+							mi := ext.Method.CallIndex.MethodIndex
+							si := ext.Method.CallIndex.SectionIndex
+							if appID == coreAppID && si == timestampSectionIndex && mi == timestampMethodIndex {
+								timestamp = DecodeTimestamp(common.Bytes2Hex(ext.Method.Args))
+							}
+							slog.Debug("Block", "timestamp", timestamp, "blockNumber", latestBlock)
+
 							if appID != DEFAULT_APP_ID {
-								slog.Debug("Skipping", "appID", appID)
+								slog.Debug("Skipping", "appID", appID, "MethodIndex", mi, "SessionIndex", si)
 								continue
 							}
 							json, err := ext.MarshalJSON()
@@ -188,4 +204,40 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 			return nil
 		}
 	}
+}
+
+func DecodeTimestamp(hexStr string) uint64 {
+	decoded, err := hex.DecodeString(padHexStringRight(hexStr))
+	if err != nil {
+		fmt.Println("Error decoding hex:", err)
+		return 0
+	}
+	return decodeCompactU64(decoded)
+}
+
+func decodeCompactU64(data []byte) uint64 {
+	firstByte := data[0]
+	if firstByte&0b11 == 0b00 { // Single byte (6-bit value)
+		return uint64(firstByte >> 2)
+	} else if firstByte&0b11 == 0b01 { // Two bytes (14-bit value)
+		return uint64(firstByte>>2) | uint64(data[1])<<6
+	} else if firstByte&0b11 == 0b10 { // Four bytes (30-bit value)
+		return uint64(firstByte>>2) | uint64(data[1])<<6 | uint64(data[2])<<14 | uint64(data[3])<<22
+	} else { // Eight bytes (64-bit value)
+		return uint64(data[1]) | uint64(data[2])<<8 | uint64(data[3])<<16 | uint64(data[4])<<24 |
+			uint64(data[5])<<32 | uint64(data[6])<<40 | uint64(data[7])<<48
+	}
+}
+
+func padHexStringRight(hexStr string) string {
+	if len(hexStr) > 1 && hexStr[:2] == "0x" {
+		hexStr = hexStr[2:]
+	}
+
+	// Right pad with zeros to ensure it's 16 characters long (8 bytes)
+	for len(hexStr) < 16 {
+		hexStr += "0"
+	}
+
+	return hexStr
 }
