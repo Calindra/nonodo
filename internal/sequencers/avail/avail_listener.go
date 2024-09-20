@@ -9,18 +9,22 @@ import (
 	"time"
 
 	"github.com/calindra/nonodo/internal/commons"
+	cModel "github.com/calindra/nonodo/internal/convenience/model"
+	cRepos "github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/calindra/nonodo/internal/supervisor"
 	gsrpc "github.com/centrifuge/go-substrate-rpc-client/v4"
 	"github.com/ethereum/go-ethereum/common"
 )
 
 type AvailListener struct {
-	FromBlock uint64
+	FromBlock       uint64
+	InputRepository *cRepos.InputRepository
 }
 
-func NewAvailListener(fromBlock uint64) supervisor.Worker {
+func NewAvailListener(fromBlock uint64, repository *cRepos.InputRepository) supervisor.Worker {
 	return AvailListener{
-		FromBlock: fromBlock,
+		FromBlock:       fromBlock,
+		InputRepository: repository,
 	}
 }
 
@@ -147,6 +151,13 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 							return
 						}
 						timestamp := uint64(0)
+
+						total := len(block.Block.Extrinsics)
+
+						if total > 0 {
+							// Get InputBox transactions
+						}
+
 						for _, ext := range block.Block.Extrinsics {
 							appID := ext.Signature.AppID.Int64()
 							mi := ext.Method.CallIndex.MethodIndex
@@ -160,12 +171,7 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 								slog.Debug("Skipping", "appID", appID, "MethodIndex", mi, "SessionIndex", si)
 								continue
 							}
-							// json, err := ext.MarshalJSON()
-							// if err != nil {
-							// 	slog.Error("avail: Error marshalling extrinsic to JSON", "err", err)
-							// 	continue
-							// }
-							// strJSON := string(json)
+
 							args := string(ext.Method.Args)
 							msgSender, typedData, err := commons.ExtractSigAndData(args[2:])
 							if err != nil {
@@ -187,7 +193,23 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 								"maxGasPrice", maxGasPrice,
 								"payload", payload,
 							)
-							// slog.Debug("avail extrinsic:", "appID", appID, "index", index, "extId", extId, "args", args, "json", strJSON)
+
+							// TODO save to input table
+							_, err = a.InputRepository.Create(ctx, cModel.AdvanceInput{
+								Index:     int(index),
+								MsgSender: msgSender,
+								Payload:   []byte(payload),
+								// BlockNumber:         e.getL1FinalizedHeight(currentBlockHeight),
+								// BlockTimestamp:      e.getL1FinalizedTimestamp(currentBlockHeight),
+								AppContract:         common.HexToAddress(dappAddress),
+								AvailBlockNumber:    int(i.Number),
+								AvailBlockTimestamp: time.Unix(int64(timestamp), 0),
+								InputBoxIndex:       -2,
+							})
+							if err != nil {
+								errCh <- err
+								return
+							}
 						}
 
 						latestBlock += 1

@@ -266,16 +266,23 @@ func (a AdapterV1) GetInputs(
 		}
 		if where.Type != nil {
 			inputboxField := "InputBoxIndex"
-			defaultStr := "-1"
+			espressoStr := "-1"
+			availStr := "-2"
+			inputBoxStr := "0"
 			if *where.Type == "inputbox" {
 				filters = append(filters, &cModel.ConvenienceFilter{
 					Field: &inputboxField,
-					Ne:    &defaultStr,
+					Gt:    &inputBoxStr,
 				})
 			} else if *where.Type == "espresso" {
 				filters = append(filters, &cModel.ConvenienceFilter{
 					Field: &inputboxField,
-					Eq:    &defaultStr,
+					Eq:    &espressoStr,
+				})
+			} else if *where.Type == "avail" {
+				filters = append(filters, &cModel.ConvenienceFilter{
+					Field: &inputboxField,
+					Eq:    &availStr,
 				})
 			}
 		}
