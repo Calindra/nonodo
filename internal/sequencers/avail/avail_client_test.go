@@ -13,7 +13,7 @@ type AvailClientSuite struct {
 }
 
 func (s *AvailClientSuite) XTestSendTransaction() {
-	availClient, err := NewAvailClient("")
+	availClient, err := NewAvailClient("", DEFAULT_CHAINID_HARDHAT, DEFAULT_APP_ID)
 	if err != nil {
 		s.NoError(err)
 		return
@@ -29,7 +29,7 @@ func (s *AvailClientSuite) XTestSendTransaction() {
 }
 
 func (s *AvailClientSuite) TestSubmit712() {
-	availClient, err := NewAvailClient("")
+	availClient, err := NewAvailClient("", DEFAULT_CHAINID_HARDHAT, DEFAULT_APP_ID)
 	if err != nil {
 		s.NoError(err)
 		return

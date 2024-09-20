@@ -22,19 +22,22 @@ import (
 )
 
 const (
-	DEFAULT_EVM_MNEMONIC  = "test test test test test test test test test test test junk"
-	DEFAULT_USER_ADDRESS  = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
-	DEFAULT_GRAPHQL_URL   = "http://localhost:8080"
-	DEFAULT_AVAIL_RPC_URL = "wss://turing-rpc.avail.so/ws"
-	DEFAULT_APP_ID        = 91
+	DEFAULT_EVM_MNEMONIC    = "test test test test test test test test test test test junk"
+	DEFAULT_USER_ADDRESS    = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+	DEFAULT_GRAPHQL_URL     = "http://localhost:8080"
+	DEFAULT_AVAIL_RPC_URL   = "wss://turing-rpc.avail.so/ws"
+	DEFAULT_APP_ID          = 91
+	DEFAULT_CHAINID_HARDHAT = 31337
 )
 
 type AvailClient struct {
 	api        *gsrpc.SubstrateAPI
 	GraphQLUrl string
+	chainId    int
+	appId      int
 }
 
-func NewAvailClient(graphQLUrl string) (*AvailClient, error) {
+func NewAvailClient(graphQLUrl string, chainId int, appId int) (*AvailClient, error) {
 	apiURL := os.Getenv("AVAIL_RPC_URL")
 	if apiURL == "" {
 		apiURL = DEFAULT_AVAIL_RPC_URL
@@ -46,7 +49,7 @@ func NewAvailClient(graphQLUrl string) (*AvailClient, error) {
 	if graphQLUrl == "" {
 		graphQLUrl = DEFAULT_GRAPHQL_URL
 	}
-	client := AvailClient{api, graphQLUrl}
+	client := AvailClient{api, graphQLUrl, chainId, appId}
 	return &client, nil
 }
 
@@ -63,7 +66,7 @@ func (av *AvailClient) Submit712(payload string, dappAddress string, maxGasPrice
 	cartesiMessage["max_gas_price"] = strconv.FormatUint(maxGasPrice, 10)
 	cartesiMessage["data"] = payload
 
-	chainId := math.NewHexOrDecimal256(commons.HARDHAT)
+	chainId := math.NewHexOrDecimal256(int64(av.chainId))
 	domain := apitypes.TypedDataDomain{
 		Name:              "AvailM",
 		Version:           "1",
@@ -151,19 +154,14 @@ func (av *AvailClient) DefaultSubmit(data string) (*types.Hash, error) {
 	if apiURL == "" {
 		apiURL = DEFAULT_AVAIL_RPC_URL
 	}
+
 	seed := os.Getenv("AVAIL_MNEMONIC")
+
 	if seed == "" {
-		return nil, fmt.Errorf("missing AVAIL_MNEMONIC environment variable")
+		seed = DEFAULT_EVM_MNEMONIC
 	}
-	strAppID := os.Getenv("AVAIL_APP_ID")
-	if strAppID == "" {
-		strAppID = "91"
-	}
-	appID, err := strconv.Atoi(strAppID)
-	if err != nil {
-		return nil, fmt.Errorf("AVAIL_APP_ID is not a number: %s", strAppID)
-	}
-	return av.SubmitData(data, apiURL, seed, appID)
+
+	return av.SubmitData(data, apiURL, seed, av.appId)
 }
 
 // SubmitData creates a transaction and makes a Avail data submission

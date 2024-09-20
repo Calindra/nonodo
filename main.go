@@ -106,12 +106,6 @@ type EspressoOpts struct {
 	Namespace int
 }
 
-type AvailSendArgs struct {
-	Payload     string
-	Address     string
-	MaxGasPrice uint64
-}
-
 var celestiaCmd = &cobra.Command{
 	Use:   "celestia",
 	Short: "Handle blob to Celestia",
@@ -124,10 +118,18 @@ var espressoCmd = &cobra.Command{
 	Long:  "Submit and get a transaction from Espresso using Cappuccino APIs",
 }
 
+type AvailOpts struct {
+	Payload     string
+	ChainId     int
+	AppId       int
+	Address     string
+	MaxGasPrice uint64
+}
+
 var availCmd = &cobra.Command{
 	Use:   "avail",
-	Short: "Handles Avail features",
-	Long:  "Submit and read transactions to Avail",
+	Short: "Handles Avail transactions",
+	Long:  "Submit a transaction to Avail",
 }
 
 var (
@@ -370,7 +372,7 @@ func addEspressoSubcommands(espressoCmd *cobra.Command) {
 				EspressoUrl: opts.EspressoUrl,
 				GraphQLUrl:  fmt.Sprintf("http://%s:%d", opts.HttpAddress, opts.HttpPort),
 			}
-			_, err := espressoClient.SendInputV2(espressoOpts.Payload, espressoOpts.Namespace)
+			_, err := espressoClient.SendInput(espressoOpts.Payload, espressoOpts.Namespace)
 			if err != nil {
 				panic(err)
 			}
@@ -385,28 +387,35 @@ func addEspressoSubcommands(espressoCmd *cobra.Command) {
 }
 
 func addAvailSubcommands(availCmd *cobra.Command) {
-	availArgs := &AvailSendArgs{}
-	// Send
+
+	availOpts := &AvailOpts{}
+
 	availSendCmd := &cobra.Command{
 		Use:   "send",
 		Short: "Send a payload to Avail",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			availClient, err := avail.NewAvailClient(fmt.Sprintf("http://%s:%d", opts.HttpAddress, opts.HttpPort))
+			availClient, err := avail.NewAvailClient(
+				fmt.Sprintf("http://%s:%d", opts.HttpAddress, opts.HttpPort),
+				availOpts.ChainId,
+				availOpts.AppId,
+			)
 			if err != nil {
 				panic(err)
 			}
-			_, err = availClient.Submit712(availArgs.Payload, availArgs.Address, availArgs.MaxGasPrice)
+			_, err = availClient.Submit712(availOpts.Payload, availOpts.Address, availOpts.MaxGasPrice)
 			if err != nil {
 				panic(err)
 			}
 			return nil
+
 		},
 	}
+	availSendCmd.Flags().StringVar(&availOpts.Payload, "payload", "", "Payload to send to Avail")
+	availSendCmd.Flags().IntVar(&availOpts.ChainId, "chainId", avail.DEFAULT_CHAINID_HARDHAT, "ChainId used signing EIP-712 messages")
+	availSendCmd.Flags().IntVar(&availOpts.AppId, "appId", avail.DEFAULT_APP_ID, "Avail AppId")
 	defaultMaxGasPrice := 10
-	availSendCmd.Flags().StringVar(&availArgs.Payload, "payload", "", "Payload to send to Avail")
-	availSendCmd.Flags().StringVar(&availArgs.Address, "address", devnet.ApplicationAddress, "Address of the dapp")
-	availSendCmd.Flags().Uint64Var(&availArgs.MaxGasPrice, "max-gas-price", uint64(defaultMaxGasPrice), "Max gas price")
-
+	availSendCmd.Flags().StringVar(&availOpts.Address, "address", devnet.ApplicationAddress, "Address of the dapp")
+	availSendCmd.Flags().Uint64Var(&availOpts.MaxGasPrice, "max-gas-price", uint64(defaultMaxGasPrice), "Max gas price")
 	markFlagRequired(availSendCmd, "payload")
 	availCmd.AddCommand(availSendCmd)
 }
@@ -604,7 +613,7 @@ func main() {
 	addCelestiaSubcommands(celestiaCmd)
 	addEspressoSubcommands(espressoCmd)
 	addAvailSubcommands(availCmd)
-	cmd.AddCommand(addressBookCmd, availCmd, celestiaCmd, CompletionCmd, espressoCmd)
+	cmd.AddCommand(addressBookCmd, celestiaCmd, CompletionCmd, espressoCmd, availCmd)
 	cobra.CheckErr(cmd.Execute())
 }
 
