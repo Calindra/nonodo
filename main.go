@@ -395,7 +395,7 @@ func addAvailSubcommands(availCmd *cobra.Command) {
 			if err != nil {
 				panic(err)
 			}
-			err = availClient.Submit712(availArgs.Payload, availArgs.Address, availArgs.MaxGasPrice)
+			_, err = availClient.Submit712(availArgs.Payload, availArgs.Address, availArgs.MaxGasPrice)
 			if err != nil {
 				panic(err)
 			}
