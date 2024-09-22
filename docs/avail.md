@@ -1,12 +1,65 @@
 # Avail + Cartesi
 
+Diagram:
+
+```mermaid
+graph TD
+    %% Define colors of elements
+    style CartesiCLI fill:#8CBFE6,stroke:#000,color:#000
+    style AppFrontEnd fill:#B6D7A8,stroke:#000,color:#000
+    style AppBackEnd fill:#B6D7A8,stroke:#000,color:#000
+    style Paio fill:#F4A67A,stroke:#000,color:#000
+    style InputBox fill:#A4C2F4,stroke:#000,color:#000
+    style Avail fill:#D9D9D9,stroke:#000,color:#000
+    style AvailReader fill:#F4A67A,stroke:#000,color:#000
+    style GraphQLAPI fill:#A4C2F4,stroke:#000,color:#000
+    style InspectAPI fill:#A4C2F4,stroke:#000,color:#000
+    style RollupAPI fill:#A4C2F4,stroke:#000,color:#000
+    style DB fill:#A4C2F4,stroke:#000,color:#000
+
+    AppFrontEnd["App Front End"]
+    AppBackEnd["App Back End"]
+    DB[(Database)]
+
+    %% Subgraph Base Layer
+    subgraph Base Layer
+        InputBox
+    end
+
+    %% Subgraph Nonodo
+    subgraph Nonodo
+        GraphQLAPI
+        InspectAPI
+        RollupAPI --> DB
+        AvailReader --> DB
+    end
+
+
+    %% Conections
+    CartesiCLI -->|submit EIP-712| Paio
+    CartesiCLI --> InputBox
+
+    AppFrontEnd --> Paio
+    AppFrontEnd --> InputBox
+    AppFrontEnd --> GraphQLAPI
+    AppFrontEnd --> InspectAPI
+
+    Paio -->|submit batch| Avail
+    AvailReader -->|read inputbox| InputBox
+    AvailReader -->|read + decode batch| Avail
+
+    subgraph CM["CM + Networking"]
+        AppBackEnd --> RollupAPI
+    end
+```
+
 ## Environment Variables
 
-- **`AVAIL_RPC_URL`**  
-  Default value: `wss://turing-rpc.avail.so/ws`  
+- **`AVAIL_RPC_URL`**
+  Default value: `wss://turing-rpc.avail.so/ws`
   Description: URL for connecting to the Avail RPC. For more details, see [WSS Endpoints](https://docs.availproject.org/docs/networks#turing-testnet).
 
-- **`AVAIL_MNEMONIC`**  
+- **`AVAIL_MNEMONIC`**
   Description: Mnemonic phrase used to send data to Avail.
 
 ## Sending a Transaction
