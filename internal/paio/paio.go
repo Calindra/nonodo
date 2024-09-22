@@ -36,6 +36,7 @@ func (p *PaioAPI) SendTransaction(ctx echo.Context) error {
 		slog.Error("Error DefaultSubmit message:", "err", err)
 		return err
 	}
+	//nolint
 	ctx.String(200, hash.Hex())
 	return nil
 }

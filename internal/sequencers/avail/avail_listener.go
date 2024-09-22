@@ -113,8 +113,8 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 		defer subscription.Unsubscribe()
 
 		errCh := make(chan error)
-		timestampSectionIndex := uint8(3)
-		timestampMethodIndex := uint8(0)
+		timestampSectionIndex := 3
+		timestampMethodIndex := 0
 		coreAppID := int64(0)
 		go func() {
 			for {
@@ -125,7 +125,8 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 				case err := <-subscription.Err():
 					errCh <- err
 					return
-				case <-time.After(500 * time.Millisecond):
+
+				case <-time.After(500 * time.Millisecond): // nolint
 				case i := <-subscription.Chan():
 					for latestBlock <= uint64(i.Number) {
 						index++
@@ -151,7 +152,7 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 							appID := ext.Signature.AppID.Int64()
 							mi := ext.Method.CallIndex.MethodIndex
 							si := ext.Method.CallIndex.SectionIndex
-							if appID == coreAppID && si == timestampSectionIndex && mi == timestampMethodIndex {
+							if appID == coreAppID && si == uint8(timestampSectionIndex) && mi == uint8(timestampMethodIndex) {
 								timestamp = DecodeTimestamp(common.Bytes2Hex(ext.Method.Args))
 							}
 							slog.Debug("Block", "timestamp", timestamp, "blockNumber", latestBlock)
@@ -191,7 +192,7 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 						}
 
 						latestBlock += 1
-						time.Sleep(500 * time.Millisecond)
+						time.Sleep(500 * time.Millisecond) // nolint
 					}
 				}
 			}
@@ -223,6 +224,7 @@ func DecodeTimestamp(hexStr string) uint64 {
 	return decodeCompactU64(decoded)
 }
 
+// nolint
 func decodeCompactU64(data []byte) uint64 {
 	firstByte := data[0]
 	if firstByte&0b11 == 0b00 { // Single byte (6-bit value)
