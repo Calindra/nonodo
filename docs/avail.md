@@ -9,6 +9,20 @@
 - **`AVAIL_MNEMONIC`**  
   Description: Mnemonic phrase used to send data to Avail.
 
+## Nonodo
+
+Build:
+
+```bash
+go build .
+```
+
+Run with avail + debug + sqlite
+
+```bash
+./nonodo --avail-enabled -d --sqlite-file db.sqlite
+```
+
 ## Sending a Transaction
 
 ```bash
