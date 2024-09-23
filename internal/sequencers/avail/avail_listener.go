@@ -168,7 +168,7 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 							// }
 							// strJSON := string(json)
 							args := string(ext.Method.Args)
-							msgSender, typedData, err := commons.ExtractSigAndData(args[2:])
+							msgSender, typedData, err := commons.ExtractSigAndData(args)
 							if err != nil {
 								slog.Error("avail: error extracting signature and typed data", "err", err)
 								continue

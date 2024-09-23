@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"unicode"
 
 	"github.com/btcsuite/btcd/btcutil/hdkeychain"
 	"github.com/btcsuite/btcd/chaincfg"
@@ -182,9 +183,18 @@ func Main() []byte {
 	return signature
 }
 
+func trimNonPrintablePrefix(s string) string {
+	for i, r := range s {
+		if unicode.IsPrint(r) {
+			return s[i:] // Return the substring starting from the first printable character
+		}
+	}
+	return "" // Return empty string if no printable character is found
+}
+
 func ExtractSigAndData(raw string) (common.Address, apitypes.TypedData, error) {
 	var sigAndData SigAndData
-	if err := json.Unmarshal([]byte(raw), &sigAndData); err != nil {
+	if err := json.Unmarshal([]byte(trimNonPrintablePrefix(raw)), &sigAndData); err != nil {
 		return common.HexToAddress("0x"), apitypes.TypedData{}, fmt.Errorf("unmarshal sigAndData: %w", err)
 	}
 
