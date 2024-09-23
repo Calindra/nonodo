@@ -323,6 +323,14 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		opts.RpcUrl = fmt.Sprintf("ws://%s:%v", opts.AnvilAddress, opts.AnvilPort)
 	}
 	var sequencer model.Sequencer = nil
+	var inputterWorker = &inputter.InputterWorker{
+		Model:              modelInstance,
+		Provider:           opts.RpcUrl,
+		InputBoxAddress:    common.HexToAddress(opts.InputBoxAddress),
+		InputBoxBlock:      0,
+		ApplicationAddress: common.HexToAddress(opts.ApplicationAddress),
+	}
+
 	if !opts.DisableAdvance {
 		if opts.Sequencer == "inputbox" {
 			sequencer = model.NewInputBoxSequencer(modelInstance)
@@ -340,13 +348,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 				opts.Namespace,
 				modelInstance.GetInputRepository(),
 				opts.FromBlock,
-				&inputter.InputterWorker{
-					Model:              modelInstance,
-					Provider:           opts.RpcUrl,
-					InputBoxAddress:    common.HexToAddress(opts.InputBoxAddress),
-					InputBoxBlock:      0,
-					ApplicationAddress: common.HexToAddress(opts.ApplicationAddress),
-				},
+				inputterWorker,
 			))
 		} else if opts.Sequencer == "paio" {
 			panic("sequencer not supported yet")
@@ -356,7 +358,9 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	}
 
 	if opts.AvailEnabled {
-		w.Workers = append(w.Workers, avail.NewAvailListener(opts.AvailFromBlock, modelInstance.GetInputRepository()))
+		w.Workers = append(w.Workers, avail.NewAvailListener(
+			opts.AvailFromBlock,
+			modelInstance.GetInputRepository()))
 	}
 
 	rollup.Register(re, modelInstance, sequencer)

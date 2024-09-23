@@ -6,25 +6,31 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/calindra/nonodo/internal/commons"
+	"github.com/calindra/nonodo/internal/contracts"
 	cModel "github.com/calindra/nonodo/internal/convenience/model"
 	cRepos "github.com/calindra/nonodo/internal/convenience/repository"
+	"github.com/calindra/nonodo/internal/sequencers/inputter"
 	"github.com/calindra/nonodo/internal/supervisor"
 	gsrpc "github.com/centrifuge/go-substrate-rpc-client/v4"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
 )
 
 type AvailListener struct {
 	FromBlock       uint64
 	InputRepository *cRepos.InputRepository
+	InputterWorker  *inputter.InputterWorker
 }
 
-func NewAvailListener(fromBlock uint64, repository *cRepos.InputRepository) supervisor.Worker {
+func NewAvailListener(fromBlock uint64, repository *cRepos.InputRepository, w *inputter.InputterWorker) supervisor.Worker {
 	return AvailListener{
 		FromBlock:       fromBlock,
 		InputRepository: repository,
+		InputterWorker:  w,
 	}
 }
 
@@ -91,6 +97,7 @@ const retryInterval = 5 * time.Second
 
 func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.SubstrateAPI) error {
 	latestBlock := a.FromBlock
+	previousBlockHeight := latestBlock
 	var index uint = 0
 
 	for {
@@ -155,7 +162,20 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 						total := len(block.Block.Extrinsics)
 
 						if total > 0 {
-							// Get InputBox transactions
+							l1FinalizedPrevHeight := a.getL1FinalizedHeight(previousBlockHeight)
+							l1FinalizedCurrentHeight := a.getL1FinalizedHeight(latestBlock)
+							slog.Debug("L1 finalized", "from", l1FinalizedPrevHeight, "to", l1FinalizedCurrentHeight)
+
+							// read L1 if there might be update
+							if l1FinalizedCurrentHeight > l1FinalizedPrevHeight || previousBlockHeight == a.FromBlock {
+								slog.Debug("Fetching InputBox between Avail blocks", "from", previousBlockHeight, "to", latestBlock)
+								err = readInputBox(ctx, l1FinalizedPrevHeight, l1FinalizedCurrentHeight, a.InputterWorker)
+								if err != nil {
+									errCh <- err
+									return
+								}
+							}
+							previousBlockHeight = latestBlock + 1
 						}
 
 						for _, ext := range block.Block.Extrinsics {
@@ -194,13 +214,23 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 								"payload", payload,
 							)
 
-							// TODO save to input table
+							payloadBytes := []byte(payload)
+							if strings.HasPrefix(payload, "0x") {
+								payload = payload[2:] // remove 0x
+								payloadBytes, err = hex.DecodeString(payload)
+								if err != nil {
+									errCh <- err
+									return
+								}
+							}
+
+							// TODO Verify blockNUmber and block timestamps
 							_, err = a.InputRepository.Create(ctx, cModel.AdvanceInput{
-								Index:     int(index),
-								MsgSender: msgSender,
-								Payload:   []byte(payload),
-								// BlockNumber:         e.getL1FinalizedHeight(currentBlockHeight),
-								// BlockTimestamp:      e.getL1FinalizedTimestamp(currentBlockHeight),
+								Index:               int(index),
+								MsgSender:           msgSender,
+								Payload:             payloadBytes,
+								BlockNumber:         a.getL1FinalizedHeight(latestBlock),
+								BlockTimestamp:      a.getL1FinalizedTimestamp(latestBlock),
 								AppContract:         common.HexToAddress(dappAddress),
 								AvailBlockNumber:    int(i.Number),
 								AvailBlockTimestamp: time.Unix(int64(timestamp), 0),
@@ -270,4 +300,32 @@ func padHexStringRight(hexStr string) string {
 	}
 
 	return hexStr
+}
+
+func (a AvailListener) getL1FinalizedHeight(blockHeight uint64) uint64 {
+	// TODO implement
+	return 0
+}
+
+func (a AvailListener) getL1FinalizedTimestamp(blockHeight uint64) time.Time {
+	// TODO implement
+	return time.Now()
+}
+
+func readInputBox(ctx context.Context, l1FinalizedPrevHeight uint64, l1FinalizedCurrentHeight uint64, w *inputter.InputterWorker) error {
+	client, err := ethclient.DialContext(ctx, w.Provider)
+	if err != nil {
+		return fmt.Errorf("avail inputter: dial: %w", err)
+	}
+	inputBox, err := contracts.NewInputBox(w.InputBoxAddress, client)
+	if err != nil {
+		return fmt.Errorf("avail inputter: bind input box: %w", err)
+	}
+
+	err = w.ReadPastInputs(ctx, client, inputBox, l1FinalizedPrevHeight, &l1FinalizedCurrentHeight)
+	if err != nil {
+		return fmt.Errorf("avail inputter: read past inputs: %w", err)
+	}
+
+	return nil
 }
