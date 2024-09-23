@@ -30,7 +30,7 @@ const (
 )
 
 // Implement the hashing function based on EIP-712 requirements
-func HashEIP712Message(domain apitypes.TypedDataDomain, data apitypes.TypedData) ([]byte, error) {
+func HashEIP712Message(data apitypes.TypedData) ([]byte, error) {
 	hash, _, err := apitypes.TypedDataAndHash(data)
 	if err != nil {
 		return []byte(""), err
@@ -124,7 +124,7 @@ func Main() []byte {
 	}
 
 	// Hash the message
-	messageHash, err := HashEIP712Message(domain, data)
+	messageHash, err := HashEIP712Message(data)
 	if err != nil {
 		log.Fatal("Error hashing message:", err)
 	}

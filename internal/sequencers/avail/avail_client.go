@@ -90,7 +90,7 @@ func (av *AvailClient) Submit712(payload string, dappAddress string, maxGasPrice
 	}
 
 	// Build Message
-	data := apitypes.TypedData{
+	typedData := apitypes.TypedData{
 		Message:     cartesiMessage,
 		Domain:      domain,
 		PrimaryType: "CartesiMessage",
@@ -98,7 +98,7 @@ func (av *AvailClient) Submit712(payload string, dappAddress string, maxGasPrice
 	}
 
 	// Hash the message
-	messageHash, err := commons.HashEIP712Message(domain, data)
+	messageHash, err := commons.HashEIP712Message(typedData)
 	if err != nil {
 		log.Fatal("Error hashing message:", err)
 	}
@@ -131,7 +131,7 @@ func (av *AvailClient) Submit712(payload string, dappAddress string, maxGasPrice
 	fmt.Printf("SigPubkey: %s\n", common.Bytes2Hex(sigPubkey))
 	fmt.Printf("Pubkey: %s\n", address1.Hex())
 
-	typedDataJSON, err := json.Marshal(data)
+	typedDataJSON, err := json.Marshal(typedData)
 	if err != nil {
 		log.Fatal("Error signing message:", err)
 	}
