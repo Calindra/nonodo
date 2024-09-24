@@ -110,6 +110,7 @@ type AdvanceInput struct {
 	InputBoxIndex          int       `db:"input_box_index"`
 	AvailBlockNumber       int       `db:"avail_block_number"`
 	AvailBlockTimestamp    time.Time `db:"avail_block_timestamp"`
+	Type                   string    `db:"type"`
 }
 
 type ConvertedInput struct {

@@ -233,8 +233,9 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 								Payload:             payloadBytes,
 								AppContract:         common.HexToAddress(dappAddress),
 								AvailBlockNumber:    int(i.Number),
-								AvailBlockTimestamp: time.Unix(int64(timestamp)/1000, 0).UTC(),
+								AvailBlockTimestamp: time.Unix(int64(timestamp)/1000, 0),
 								InputBoxIndex:       -2,
+								Type:                "Avail",
 							})
 							if err != nil {
 								errCh <- err

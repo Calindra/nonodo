@@ -34,6 +34,7 @@ type inputRow struct {
 	InputBoxIndex          int    `db:"input_box_index"`
 	AvailBlockNumber       int    `db:"avail_block_number"`
 	AvailBlockTimestamp    int    `db:"avail_block_timestamp"`
+	Type                   string `db:"type"`
 }
 
 func (r *InputRepository) CreateTables() error {
@@ -58,8 +59,8 @@ func (r *InputRepository) CreateTables() error {
 		espresso_block_timestamp	integer,
 		input_box_index integer,
 		avail_block_number integer,
-		avail_block_timestamp integer
-		);
+		avail_block_timestamp integer,
+		type string);
 	CREATE INDEX IF NOT EXISTS idx_input_index ON convenience_inputs(input_index);
 	CREATE INDEX IF NOT EXISTS idx_status ON convenience_inputs(status);`
 	schema = fmt.Sprintf(schema, autoIncrement)
@@ -99,7 +100,8 @@ func (r *InputRepository) rawCreate(ctx context.Context, input model.AdvanceInpu
 		espresso_block_timestamp,
 		input_box_index,
 		avail_block_number,
-		avail_block_timestamp
+		avail_block_timestamp,
+		type
 	) VALUES (
 		$1,
 		$2,
@@ -114,8 +116,15 @@ func (r *InputRepository) rawCreate(ctx context.Context, input model.AdvanceInpu
 		$11,
 		$12,
 		$13,
-		$14
+		$14,
+		$15
 	);`
+
+	var typee string = "inputbox"
+
+	if input.Type != "" {
+		typee = input.Type
+	}
 
 	exec := DBExecutor{&r.Db}
 	_, err := exec.ExecContext(
@@ -134,7 +143,8 @@ func (r *InputRepository) rawCreate(ctx context.Context, input model.AdvanceInpu
 		input.EspressoBlockTimestamp.UnixMilli(),
 		input.InputBoxIndex,
 		input.AvailBlockNumber,
-		input.AvailBlockTimestamp,
+		input.AvailBlockTimestamp.UnixMilli(),
+		typee,
 	)
 
 	if err != nil {
@@ -177,7 +187,8 @@ func (r *InputRepository) FindByStatusNeDesc(ctx context.Context, status model.C
 		espresso_block_timestamp,
 		input_box_index,
 		avail_block_number,
-		avail_block_timestamp FROM convenience_inputs WHERE status <> $1
+		avail_block_timestamp,
+		type FROM convenience_inputs WHERE status <> $1
 		ORDER BY input_index DESC`
 	res, err := r.Db.QueryxContext(
 		ctx,
@@ -213,7 +224,8 @@ func (r *InputRepository) FindByStatus(ctx context.Context, status model.Complet
 		espresso_block_timestamp,
 		input_box_index 
 		avail_block_number,
-		avail_block_timestamp FROM convenience_inputs WHERE status = $1
+		avail_block_timestamp,
+		type FROM convenience_inputs WHERE status = $1
 		ORDER BY input_index ASC`
 	res, err := r.Db.QueryxContext(
 		ctx,
@@ -249,7 +261,8 @@ func (r *InputRepository) FindByIndex(ctx context.Context, index int) (*model.Ad
 		espresso_block_timestamp,
 		input_box_index 
 		avail_block_number,
-		avail_block_timestamp FROM convenience_inputs WHERE input_index = $1`
+		avail_block_timestamp,
+		type FROM convenience_inputs WHERE input_index = $1`
 	res, err := r.Db.QueryxContext(
 		ctx,
 		sql,
@@ -323,7 +336,8 @@ func (c *InputRepository) FindAll(
 		espresso_block_timestamp,
 		input_box_index 
 		avail_block_number,
-		avail_block_timestamp FROM convenience_inputs `
+		avail_block_timestamp,
+		type FROM convenience_inputs `
 	where, args, argsCount, err := transformToInputQuery(filter)
 	if err != nil {
 		slog.Error("database error", "err", err)
@@ -414,6 +428,14 @@ func transformToInputQuery(
 			} else {
 				return "", nil, 0, fmt.Errorf("operation not implemented")
 			}
+		} else if *filter.Field == "Type" {
+			if filter.Eq != nil {
+				where = append(where, fmt.Sprintf("type = $%d ", count))
+				args = append(args, *filter.Eq)
+				count += 1
+			} else {
+				return "", nil, 0, fmt.Errorf("operation not implemented")
+			}
 		} else if *filter.Field == "InputBoxIndex" {
 			if filter.Ne != nil {
 				where = append(where, fmt.Sprintf("input_box_index <> $%d ", count))
@@ -450,6 +472,7 @@ func parseRowInput(row inputRow) model.AdvanceInput {
 		InputBoxIndex:          row.InputBoxIndex,
 		AvailBlockNumber:       row.AvailBlockNumber,
 		AvailBlockTimestamp:    time.UnixMilli(int64(row.AvailBlockTimestamp)),
+		Type:                   row.Type,
 	}
 }
 
@@ -480,6 +503,7 @@ func parseInput(res *sqlx.Rows) (*model.AdvanceInput, error) {
 		&input.InputBoxIndex,
 		&input.AvailBlockNumber,
 		&availBlockTimestamp,
+		&input.Type,
 	)
 	if err != nil {
 		return nil, err
