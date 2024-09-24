@@ -2,11 +2,11 @@
 
 ## Environment Variables
 
-- **`AVAIL_RPC_URL`**  
-  Default value: `wss://turing-rpc.avail.so/ws`  
+- **`AVAIL_RPC_URL`**
+  Default value: `wss://turing-rpc.avail.so/ws`
   Description: URL for connecting to the Avail RPC. For more details, see [WSS Endpoints](https://docs.availproject.org/docs/networks#turing-testnet).
 
-- **`AVAIL_MNEMONIC`**  
+- **`AVAIL_MNEMONIC`**
   Description: Mnemonic phrase used to send data to Avail.
 
 ## Nonodo
@@ -20,7 +20,7 @@ go build .
 Run with avail + debug + sqlite
 
 ```bash
-./nonodo --avail-enabled -d --sqlite-file db.sqlite
+./nonodo --avail-enabled -d --sqlite-file db.sqlite3
 ```
 
 ## Sending a Transaction
