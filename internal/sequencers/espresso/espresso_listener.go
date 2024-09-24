@@ -196,7 +196,7 @@ func (e EspressoListener) getL1FinalizedTimestamp(espressoBlockHeight uint64) ti
 
 func (e EspressoListener) getL1FinalizedHeight(espressoBlockHeight uint64) uint64 {
 	espressoHeader := e.readEspressoHeader(espressoBlockHeight)
-	value := gjson.Get(espressoHeader, "l1_finalized.number")
+	value := gjson.Get(espressoHeader, "fields.l1_finalized.number")
 	return value.Uint()
 }
 
