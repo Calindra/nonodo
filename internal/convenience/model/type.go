@@ -111,6 +111,7 @@ type AdvanceInput struct {
 	AvailBlockNumber       int       `db:"avail_block_number"`
 	AvailBlockTimestamp    time.Time `db:"avail_block_timestamp"`
 	Type                   string    `db:"type"`
+	CartesiTransactionId   string    `db:"cartesi_transaction_id"`
 }
 
 type ConvertedInput struct {

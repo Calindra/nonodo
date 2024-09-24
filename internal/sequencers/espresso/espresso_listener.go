@@ -19,6 +19,7 @@ import (
 	"github.com/calindra/nonodo/internal/dataavailability"
 	"github.com/calindra/nonodo/internal/sequencers/inputter"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/tidwall/gjson"
 )
@@ -114,7 +115,7 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 				//		 	signature,
 				//		 	typedData: btoa(JSON.stringify(typedData)),
 				//		 })
-				msgSender, typedData, err := commons.ExtractSigAndData(string(transaction))
+				msgSender, typedData, signature, err := commons.ExtractSigAndData(string(transaction))
 				if err != nil {
 					return err
 				}
@@ -178,6 +179,7 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 					EspressoBlockTimestamp: e.getEspressoTimestamp(currentBlockHeight),
 					InputBoxIndex:          -1,
 					Type:                   "Espresso",
+					CartesiTransactionId:   string(crypto.Keccak256(signature)),
 				})
 				if err != nil {
 					return err

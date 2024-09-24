@@ -225,3 +225,54 @@ func (w InputterWorker) addInput(
 
 	return nil
 }
+
+func (w InputterWorker) ReadInputsByBlockAndTimestamp(
+	ctx context.Context,
+	client *ethclient.Client,
+	inputBox *contracts.InputBox,
+	startBlockNumber uint64,
+	endTimestamp uint64,
+) (uint64, error) {
+	slog.Debug("ReadInputsByBlockAndTimestamp",
+		"startBlockNumber", startBlockNumber,
+		"dappAddress", w.ApplicationAddress,
+		"endTimestamp", endTimestamp,
+	)
+	lastL1BlockRead := startBlockNumber
+
+	opts := bind.FilterOpts{
+		Context: ctx,
+		Start:   startBlockNumber,
+	}
+	filter := []common.Address{w.ApplicationAddress}
+	it, err := inputBox.FilterInputAdded(&opts, filter, nil)
+
+	if err != nil {
+		return 0, fmt.Errorf("inputter: filter input added: %v", err)
+	}
+	defer it.Close()
+
+	for it.Next() {
+		header, err := client.HeaderByHash(ctx, it.Event.Raw.BlockHash)
+
+		if err != nil {
+			return 0, fmt.Errorf("inputter: failed to get tx header: %w", err)
+		}
+		timestamp := uint64(header.Time)
+
+		slog.Debug("Timestamp from inputbox event " + fmt.Sprintf("%d", timestamp))
+		fmt.Println("Timestamp from inputbox event " + fmt.Sprintf("%d", timestamp))
+		fmt.Println("Block Number " + fmt.Sprintf("%d", it.Event.Raw.BlockNumber))
+
+		if timestamp < endTimestamp {
+			w.InputBoxBlock = it.Event.Raw.BlockNumber - 1
+			if err := w.addInput(ctx, client, it.Event); err != nil {
+				return 0, err
+			}
+			lastL1BlockRead = it.Event.Raw.BlockNumber
+		}
+
+	}
+
+	return lastL1BlockRead, nil
+}

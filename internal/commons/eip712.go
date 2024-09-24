@@ -173,39 +173,40 @@ func Main() []byte {
 	if err != nil {
 		log.Fatal("Error json.Marshal message:", err)
 	}
-	address, theData, err := ExtractSigAndData(string(jsonPayload))
+	address, theData, signature, err := ExtractSigAndData(string(jsonPayload))
 	if err != nil {
 		log.Fatal("Error ExtractSigAndData message:", err)
 	}
 	fmt.Println("msgSender", address)
 	fmt.Println("The data: ", theData.Message)
+	fmt.Println("Signature: ", string(signature))
 	return signature
 }
 
-func ExtractSigAndData(raw string) (common.Address, apitypes.TypedData, error) {
+func ExtractSigAndData(raw string) (common.Address, apitypes.TypedData, []byte, error) {
 	var sigAndData SigAndData
 	if err := json.Unmarshal([]byte(raw), &sigAndData); err != nil {
-		return common.HexToAddress("0x"), apitypes.TypedData{}, fmt.Errorf("unmarshal sigAndData: %w", err)
+		return common.HexToAddress("0x"), apitypes.TypedData{}, []byte{}, fmt.Errorf("unmarshal sigAndData: %w", err)
 	}
 
 	signature, err := hexutil.Decode(sigAndData.Signature)
 	if err != nil {
-		return common.HexToAddress("0x"), apitypes.TypedData{}, fmt.Errorf("decode signature: %w", err)
+		return common.HexToAddress("0x"), apitypes.TypedData{}, []byte{}, fmt.Errorf("decode signature: %w", err)
 	}
 
 	typedDataBytes, err := base64.StdEncoding.DecodeString(sigAndData.TypedData)
 	if err != nil {
-		return common.HexToAddress("0x"), apitypes.TypedData{}, fmt.Errorf("decode typed data: %w", err)
+		return common.HexToAddress("0x"), apitypes.TypedData{}, []byte{}, fmt.Errorf("decode typed data: %w", err)
 	}
 
 	typedData := apitypes.TypedData{}
 	if err := json.Unmarshal(typedDataBytes, &typedData); err != nil {
-		return common.HexToAddress("0x"), apitypes.TypedData{}, fmt.Errorf("unmarshal typed data: %w", err)
+		return common.HexToAddress("0x"), apitypes.TypedData{}, []byte{}, fmt.Errorf("unmarshal typed data: %w", err)
 	}
 
 	dataHash, _, err := apitypes.TypedDataAndHash(typedData)
 	if err != nil {
-		return common.HexToAddress("0x"), apitypes.TypedData{}, fmt.Errorf("typed data hash: %w", err)
+		return common.HexToAddress("0x"), apitypes.TypedData{}, []byte{}, fmt.Errorf("typed data hash: %w", err)
 	}
 
 	// update the recovery id
@@ -215,14 +216,14 @@ func ExtractSigAndData(raw string) (common.Address, apitypes.TypedData, error) {
 	// get the pubkey used to sign this signature
 	sigPubkey, err := crypto.Ecrecover(dataHash, signature)
 	if err != nil {
-		return common.HexToAddress("0x"), apitypes.TypedData{}, fmt.Errorf("ecrecover: %w", err)
+		return common.HexToAddress("0x"), apitypes.TypedData{}, []byte{}, fmt.Errorf("ecrecover: %w", err)
 	}
 	fmt.Printf("SigPubkey: %s\n", common.Bytes2Hex(sigPubkey))
 	pubkey, err := crypto.UnmarshalPubkey(sigPubkey)
 	if err != nil {
-		return common.HexToAddress("0x"), apitypes.TypedData{}, fmt.Errorf("unmarshal: %w", err)
+		return common.HexToAddress("0x"), apitypes.TypedData{}, []byte{}, fmt.Errorf("unmarshal: %w", err)
 	}
 	address := crypto.PubkeyToAddress(*pubkey)
 
-	return address, typedData, nil
+	return address, typedData, signature, nil
 }
