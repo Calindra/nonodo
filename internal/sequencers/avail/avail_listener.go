@@ -162,14 +162,10 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 						total := len(block.Block.Extrinsics)
 
 						if total > 0 {
-							l1FinalizedPrevHeight := a.getL1FinalizedHeight(previousBlockHeight)
-							l1FinalizedCurrentHeight := a.getL1FinalizedHeight(latestBlock)
-							slog.Debug("L1 finalized", "from", l1FinalizedPrevHeight, "to", l1FinalizedCurrentHeight)
-
 							// read L1 if there might be update
-							if l1FinalizedCurrentHeight > l1FinalizedPrevHeight || previousBlockHeight == a.FromBlock {
+							if latestBlock > previousBlockHeight || previousBlockHeight == a.FromBlock {
 								slog.Debug("Fetching InputBox between Avail blocks", "from", previousBlockHeight, "to", latestBlock)
-								err = readInputBox(ctx, l1FinalizedPrevHeight, l1FinalizedCurrentHeight, a.InputterWorker)
+								err = readInputBox(ctx, previousBlockHeight, latestBlock, a.InputterWorker)
 								if err != nil {
 									errCh <- err
 									return
@@ -223,17 +219,21 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 									return
 								}
 							}
+							inputCount, err := a.InputRepository.Count(ctx, nil)
+
+							if err != nil {
+								errCh <- err
+								return
+							}
 
 							// TODO Verify blockNUmber and block timestamps
 							_, err = a.InputRepository.Create(ctx, cModel.AdvanceInput{
-								Index:               int(index),
+								Index:               int(inputCount + 1),
 								MsgSender:           msgSender,
 								Payload:             payloadBytes,
-								BlockNumber:         a.getL1FinalizedHeight(latestBlock),
-								BlockTimestamp:      a.getL1FinalizedTimestamp(latestBlock),
 								AppContract:         common.HexToAddress(dappAddress),
 								AvailBlockNumber:    int(i.Number),
-								AvailBlockTimestamp: time.Unix(int64(timestamp), 0),
+								AvailBlockTimestamp: time.Unix(int64(timestamp)/1000, 0).UTC(),
 								InputBoxIndex:       -2,
 							})
 							if err != nil {

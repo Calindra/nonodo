@@ -360,7 +360,8 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	if opts.AvailEnabled {
 		w.Workers = append(w.Workers, avail.NewAvailListener(
 			opts.AvailFromBlock,
-			modelInstance.GetInputRepository()))
+			modelInstance.GetInputRepository(),
+			inputterWorker))
 	}
 
 	rollup.Register(re, modelInstance, sequencer)
