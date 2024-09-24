@@ -20,6 +20,12 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
+const (
+	TIMESTAMP_SECTION_INDEX = 3
+	DELAY                   = 500
+	ONE_SECOND_IN_MS        = 1000
+)
+
 type AvailListener struct {
 	FromBlock       uint64
 	InputRepository *cRepos.InputRepository
@@ -124,7 +130,7 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 		defer subscription.Unsubscribe()
 
 		errCh := make(chan error)
-		timestampSectionIndex := uint8(3)
+		timestampSectionIndex := uint8(TIMESTAMP_SECTION_INDEX)
 		timestampMethodIndex := uint8(0)
 		coreAppID := int64(0)
 		go func() {
@@ -136,7 +142,7 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 				case err := <-subscription.Err():
 					errCh <- err
 					return
-				case <-time.After(500 * time.Millisecond):
+				case <-time.After(DELAY * time.Millisecond):
 				case i := <-subscription.Chan():
 					for latestBlock <= uint64(i.Number) {
 						index++
@@ -233,7 +239,7 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 								Payload:             payloadBytes,
 								AppContract:         common.HexToAddress(dappAddress),
 								AvailBlockNumber:    int(i.Number),
-								AvailBlockTimestamp: time.Unix(int64(timestamp)/1000, 0),
+								AvailBlockTimestamp: time.Unix(int64(timestamp)/ONE_SECOND_IN_MS, 0),
 								InputBoxIndex:       -2,
 								Type:                "Avail",
 							})
@@ -301,16 +307,6 @@ func padHexStringRight(hexStr string) string {
 	}
 
 	return hexStr
-}
-
-func (a AvailListener) getL1FinalizedHeight(blockHeight uint64) uint64 {
-	// TODO implement
-	return 0
-}
-
-func (a AvailListener) getL1FinalizedTimestamp(blockHeight uint64) time.Time {
-	// TODO implement
-	return time.Now()
 }
 
 func readInputBox(ctx context.Context, l1FinalizedPrevHeight uint64, l1FinalizedCurrentHeight uint64, w *inputter.InputterWorker) error {
