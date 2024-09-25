@@ -18,7 +18,7 @@ type EspressoListenerSuite struct {
 	suite.Suite
 }
 
-func (s *EspressoListenerSuite) TestSendTransaction() {
+func (s *EspressoListenerSuite) XTestSendTransaction() {
 	// this test is just to understand the api
 	ctx := context.Background()
 	url := "https://query.cappuccino.testnet.espresso.network/"
