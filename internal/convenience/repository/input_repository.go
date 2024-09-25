@@ -61,7 +61,7 @@ func (r *InputRepository) CreateTables() error {
 		input_box_index integer,
 		avail_block_number integer,
 		avail_block_timestamp integer,
-		type string,
+		type text,
 		cartesi_transaction_id);
 	CREATE INDEX IF NOT EXISTS idx_input_index ON convenience_inputs(input_index);
 	CREATE INDEX IF NOT EXISTS idx_status ON convenience_inputs(status);`
