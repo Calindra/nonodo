@@ -58,6 +58,7 @@ type AnvilConfig struct {
 }
 
 const WINDOWS = "windows"
+const LATEST_TAG = "nightly"
 
 func NewAnvilRelease() HandleRelease {
 	return &AnvilRelease{
@@ -117,10 +118,15 @@ func (a AnvilRelease) TryLoadConfig() (*AnvilConfig, error) {
 	root := filepath.Join(os.TempDir())
 	file := filepath.Join(root, a.ConfigFilename)
 	if _, err := os.Stat(file); err == nil {
-		slog.Debug("Anvil config already exists", "path", file)
-		return LoadAnvilConfig(file)
+		slog.Debug("anvil: config already exists", "path", file)
+		cfg, err := LoadAnvilConfig(file)
+		if err == nil && cfg.AssetAnvil.Tag == LATEST_TAG {
+			slog.Debug("anvil: config is nightly, download new...", "tag", cfg.AssetAnvil.Tag)
+			return nil, nil
+		}
+		return cfg, err
 	}
-	slog.Debug("Anvil config not found", "path", file)
+	slog.Debug("anvil: config not found", "path", file)
 
 	return nil, nil
 }
@@ -140,7 +146,7 @@ func (a AnvilRelease) FormatNameRelease(_, goos, goarch, _ string) string {
 // PlatformCompatible implements HandleRelease.
 func (a AnvilRelease) PlatformCompatible() (string, error) {
 	// Check if the platform is compatible with Anvil
-	slog.Debug("System", "GOARCH:", runtime.GOARCH, "GOOS:", runtime.GOOS)
+	slog.Debug("anvil: System", "GOARCH:", runtime.GOARCH, "GOOS:", runtime.GOOS)
 	goarch := runtime.GOARCH
 	goos := runtime.GOOS
 
@@ -158,7 +164,7 @@ func (a *AnvilRelease) ExtractAsset(archive []byte, filename string, destDir str
 	} else if strings.HasSuffix(filename, ".tar.gz") {
 		return ExtractTarGz(archive, destDir)
 	} else {
-		return fmt.Errorf("format unsupported: %s", filename)
+		return fmt.Errorf("anvil: format unsupported: %s", filename)
 	}
 }
 
@@ -177,13 +183,13 @@ func (a *AnvilRelease) DownloadAsset(ctx context.Context, release *ReleaseAsset)
 	}
 
 	anvilExec := filepath.Join(root, filename)
-	slog.Debug("Anvil executable", "path", anvilExec)
+	slog.Debug("anvil: executable", "path", anvilExec)
 	if _, err := os.Stat(anvilExec); err == nil {
-		slog.Debug("Anvil already downloaded", "path", anvilExec)
+		slog.Debug("anvil: executable already downloaded", "path", anvilExec)
 		return anvilExec, nil
 	}
 
-	slog.Debug("Downloading anvil", "id", release.AssetId, "to", root)
+	slog.Debug("anvil: downloading", "id", release.AssetId, "to", root)
 
 	rc, redirect, err := a.Client.Repositories.DownloadReleaseAsset(ctx, a.Namespace, a.Repository, release.AssetId)
 	if err != nil {
@@ -191,7 +197,7 @@ func (a *AnvilRelease) DownloadAsset(ctx context.Context, release *ReleaseAsset)
 	}
 
 	if redirect != "" {
-		slog.Debug("Redirect", "url", redirect)
+		slog.Debug("anvil: redirect asset", "url", redirect)
 
 		res, err := http.Get(redirect)
 		if err != nil {
@@ -207,7 +213,7 @@ func (a *AnvilRelease) DownloadAsset(ctx context.Context, release *ReleaseAsset)
 		return "", fmt.Errorf("anvil: failed to read asset %s", err.Error())
 	}
 
-	slog.Debug("Downloaded compacted file anvil")
+	slog.Debug("anvil: downloaded compacted file anvil")
 
 	err = a.ExtractAsset(data, release.Filename, root)
 	if err != nil {
@@ -216,48 +222,84 @@ func (a *AnvilRelease) DownloadAsset(ctx context.Context, release *ReleaseAsset)
 
 	release.Path = root
 
+	// Save path on config
+	cfg := NewAnvilConfig(*release)
+	err = a.SaveConfigOnDefaultLocation(cfg)
+	if err != nil {
+		return "", err
+	}
+
 	return anvilExec, nil
 }
 
 // ListRelease implements HandleRelease.
 func (a *AnvilRelease) ListRelease(ctx context.Context) ([]ReleaseAsset, error) {
-	return GetAssetsFromLastReleaseGitHub(ctx, a.Client, a.Namespace, a.Repository)
+	return GetAssetsFromLastReleaseGitHub(ctx, a.Client, a.Namespace, a.Repository, "")
 }
 
 // GetLatestReleaseCompatible implements HandleRelease.
 func (a *AnvilRelease) GetLatestReleaseCompatible(ctx context.Context) (*ReleaseAsset, error) {
-	p, err := a.PlatformCompatible()
+	platform, err := a.PlatformCompatible()
 	if err != nil {
 		return nil, err
 	}
+	slog.Debug("anvil:", "platform", platform)
 
 	config, err := a.TryLoadConfig()
 	if err != nil {
 		return nil, err
 	}
 
+	anvilTag, fromEnv := os.LookupEnv("ANVIL_TAG")
+
+	if !fromEnv {
+		// Same behavior of Foundryup
+		anvilTag = LATEST_TAG
+	}
+	slog.Debug("anvil: using", "tag", anvilTag, "fromEnv", fromEnv)
+
+	if anvilTag == LATEST_TAG {
+		slog.Debug("anvil: request is nightly, download new..")
+		config = nil
+	}
+
 	var target *ReleaseAsset = nil
 
 	// Get release asset from config
 	if config != nil {
-		target = &config.AssetAnvil
-		return target, nil
+		// Show config
+		cfgStr, err := json.Marshal(config)
+		if err != nil {
+			slog.Debug("anvil:", "config", config)
+		} else {
+			slog.Debug("anvil:", "config", string(cfgStr))
+		}
+
+		if config.AssetAnvil.Tag == anvilTag {
+			target = &config.AssetAnvil
+			return target, nil
+		}
 	}
 
-	assets, err := GetAssetsFromLastReleaseGitHub(ctx, a.Client, a.Namespace, a.Repository)
+	assets, err := GetAssetsFromLastReleaseGitHub(ctx, a.Client, a.Namespace, a.Repository, anvilTag)
 	if err != nil {
 		return nil, err
 	}
-	slog.Debug("PlatformCompatible", "p", p)
 
-	for _, a := range assets {
-		if a.Filename == p {
-			target = &a
+	for _, anvilAssets := range assets {
+		if anvilAssets.Filename == platform {
+			target = &anvilAssets
 			break
 		}
 	}
 
-	slog.Debug("PlatformCompatible", "target", target)
+	targetStr, err := json.Marshal(target)
+	if err != nil {
+		slog.Debug("anvil:", "target", target)
+	} else {
+		slog.Debug("anvil:", "target", string(targetStr))
+	}
+
 	if target != nil {
 		c := NewAnvilConfig(*target)
 		err := a.SaveConfigOnDefaultLocation(c)
