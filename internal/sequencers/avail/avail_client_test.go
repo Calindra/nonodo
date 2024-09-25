@@ -23,7 +23,7 @@ func (s *AvailClientSuite) XTestSendTransaction() {
 	Seed := os.Getenv("AVAIL_MNEMONIC")
 	AppID := 91
 	if Seed != "" {
-		err := availClient.SubmitData(data, ApiURL, Seed, AppID)
+		_, err := availClient.SubmitData(data, ApiURL, Seed, AppID)
 		s.NoError(err)
 	}
 }
@@ -36,7 +36,7 @@ func (s *AvailClientSuite) TestSubmit712() {
 	}
 	Seed := os.Getenv("AVAIL_MNEMONIC")
 	if Seed != "" {
-		err := availClient.Submit712("Cartesi Rocks!", devnet.ApplicationAddress, uint64(10))
+		_, err := availClient.Submit712("Cartesi Rocks!", devnet.ApplicationAddress, uint64(10))
 		s.NoError(err)
 		s.Fail("XXX")
 	}

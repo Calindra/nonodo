@@ -21,6 +21,7 @@ import (
 	"github.com/calindra/nonodo/internal/health"
 	"github.com/calindra/nonodo/internal/inspect"
 	"github.com/calindra/nonodo/internal/model"
+	"github.com/calindra/nonodo/internal/paio"
 	"github.com/calindra/nonodo/internal/reader"
 	"github.com/calindra/nonodo/internal/rollup"
 	"github.com/calindra/nonodo/internal/salsa"
@@ -298,6 +299,16 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	inspect.Register(e, modelInstance)
 	reader.Register(e, modelInstance, convenienceService, adapter)
 	health.Register(e)
+
+	availClient, err := avail.NewAvailClient(
+		fmt.Sprintf("http://%s:%d", opts.HttpAddress, opts.HttpPort),
+		avail.DEFAULT_CHAINID_HARDHAT,
+		avail.DEFAULT_APP_ID,
+	)
+	if err != nil {
+		panic(err)
+	}
+	paio.Register(e, availClient)
 
 	// Start the "internal" http rollup server
 	re := echo.New()

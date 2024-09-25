@@ -53,7 +53,7 @@ func NewAvailClient(graphQLUrl string, chainId int, appId int) (*AvailClient, er
 	return &client, nil
 }
 
-func (av *AvailClient) Submit712(payload string, dappAddress string, maxGasPrice uint64) error {
+func (av *AvailClient) Submit712(payload string, dappAddress string, maxGasPrice uint64) (*types.Hash, error) {
 	nonce, err := fetchNonce(DEFAULT_USER_ADDRESS, av.GraphQLUrl)
 
 	if err != nil {
@@ -90,7 +90,7 @@ func (av *AvailClient) Submit712(payload string, dappAddress string, maxGasPrice
 	}
 
 	// Build Message
-	data := apitypes.TypedData{
+	typedData := apitypes.TypedData{
 		Message:     cartesiMessage,
 		Domain:      domain,
 		PrimaryType: "CartesiMessage",
@@ -98,7 +98,7 @@ func (av *AvailClient) Submit712(payload string, dappAddress string, maxGasPrice
 	}
 
 	// Hash the message
-	messageHash, err := commons.HashEIP712Message(domain, data)
+	messageHash, err := commons.HashEIP712Message(typedData)
 	if err != nil {
 		log.Fatal("Error hashing message:", err)
 	}
@@ -131,7 +131,7 @@ func (av *AvailClient) Submit712(payload string, dappAddress string, maxGasPrice
 	fmt.Printf("SigPubkey: %s\n", common.Bytes2Hex(sigPubkey))
 	fmt.Printf("Pubkey: %s\n", address1.Hex())
 
-	typedDataJSON, err := json.Marshal(data)
+	typedDataJSON, err := json.Marshal(typedData)
 	if err != nil {
 		log.Fatal("Error signing message:", err)
 	}
@@ -149,7 +149,7 @@ func (av *AvailClient) Submit712(payload string, dappAddress string, maxGasPrice
 	return av.DefaultSubmit(string(jsonPayload))
 }
 
-func (av *AvailClient) DefaultSubmit(data string) error {
+func (av *AvailClient) DefaultSubmit(data string) (*types.Hash, error) {
 	apiURL := os.Getenv("AVAIL_RPC_URL")
 	if apiURL == "" {
 		apiURL = DEFAULT_AVAIL_RPC_URL
@@ -165,15 +165,15 @@ func (av *AvailClient) DefaultSubmit(data string) error {
 }
 
 // SubmitData creates a transaction and makes a Avail data submission
-func (av *AvailClient) SubmitData(data string, ApiURL string, Seed string, AppID int) error {
+func (av *AvailClient) SubmitData(data string, ApiURL string, Seed string, AppID int) (*types.Hash, error) {
 	fmt.Printf("AppID=%d\n", AppID)
 	if AppID == 0 {
-		return nil
+		return nil, fmt.Errorf("wrong app id")
 	}
 
 	meta, err := av.api.RPC.State.GetMetadataLatest()
 	if err != nil {
-		return fmt.Errorf("cannot get metadata:%w", err)
+		return nil, fmt.Errorf("cannot get metadata:%w", err)
 	}
 
 	// Set data and appID according to need
@@ -186,29 +186,29 @@ func (av *AvailClient) SubmitData(data string, ApiURL string, Seed string, AppID
 
 	genesisHash, err := av.api.RPC.Chain.GetBlockHash(0)
 	if err != nil {
-		return fmt.Errorf("cannot get block hash:%w", err)
+		return nil, fmt.Errorf("cannot get block hash:%w", err)
 	}
 
 	rv, err := av.api.RPC.State.GetRuntimeVersionLatest()
 	if err != nil {
-		return fmt.Errorf("cannot get runtime version:%w", err)
+		return nil, fmt.Errorf("cannot get runtime version:%w", err)
 	}
 
 	networkNumber := 42
 	keyringPair, err := signature.KeyringPairFromSecret(Seed, uint16(networkNumber))
 	if err != nil {
-		return fmt.Errorf("cannot create KeyPair:%w", err)
+		return nil, fmt.Errorf("cannot create KeyPair:%w", err)
 	}
 
 	key, err := types.CreateStorageKey(meta, "System", "Account", keyringPair.PublicKey)
 	if err != nil {
-		return fmt.Errorf("cannot create storage key:%w", err)
+		return nil, fmt.Errorf("cannot create storage key:%w", err)
 	}
 
 	var accountInfo types.AccountInfo
 	ok, err := av.api.RPC.State.GetStorageLatest(key, &accountInfo)
 	if err != nil || !ok {
-		return fmt.Errorf("cannot get latest storage:%w", err)
+		return nil, fmt.Errorf("cannot get latest storage:%w", err)
 	}
 	nonce := uint32(accountInfo.Nonce)
 	o := types.SignatureOptions{
@@ -224,7 +224,7 @@ func (av *AvailClient) SubmitData(data string, ApiURL string, Seed string, AppID
 
 	c, err := types.NewCall(meta, "DataAvailability.submit_data", types.NewBytes([]byte(data)))
 	if err != nil {
-		return fmt.Errorf("cannot create new call:%w", err)
+		return nil, fmt.Errorf("cannot create new call:%w", err)
 	}
 
 	// Create the extrinsic
@@ -233,17 +233,17 @@ func (av *AvailClient) SubmitData(data string, ApiURL string, Seed string, AppID
 	// Sign the transaction using Alice's default account
 	err = ext.Sign(keyringPair, o)
 	if err != nil {
-		return fmt.Errorf("cannot sign:%w", err)
+		return nil, fmt.Errorf("cannot sign:%w", err)
 	}
 
 	// Send the extrinsic
 	hash, err := av.api.RPC.Author.SubmitExtrinsic(ext)
 	if err != nil {
-		return fmt.Errorf("cannot submit extrinsic:%w", err)
+		return nil, fmt.Errorf("cannot submit extrinsic:%w", err)
 	}
 	fmt.Printf("Data submitted: %v against appID %v  sent with hash %#x\n", data, appID, hash)
 
-	return nil
+	return &hash, nil
 }
 
 // GraphQL

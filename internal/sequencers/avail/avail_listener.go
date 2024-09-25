@@ -132,6 +132,7 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 		defer subscription.Unsubscribe()
 
 		errCh := make(chan error)
+
 		timestampSectionIndex := uint8(TIMESTAMP_SECTION_INDEX)
 		timestampMethodIndex := uint8(0)
 		coreAppID := int64(0)
@@ -145,6 +146,7 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 					errCh <- err
 					return
 				case <-time.After(DELAY * time.Millisecond):
+
 				case i := <-subscription.Chan():
 					for latestBlock <= uint64(i.Number) {
 						index++
@@ -190,7 +192,7 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 							mi := ext.Method.CallIndex.MethodIndex
 							si := ext.Method.CallIndex.SectionIndex
 
-							if appID == coreAppID && si == timestampSectionIndex && mi == timestampMethodIndex {
+							if appID == coreAppID && si == uint8(timestampSectionIndex) && mi == uint8(timestampMethodIndex) {
 								timestamp = DecodeTimestamp(common.Bytes2Hex(ext.Method.Args))
 							}
 							slog.Debug("Block", "timestamp", timestamp, "blockNumber", latestBlock)
@@ -201,7 +203,9 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 							}
 
 							args := string(ext.Method.Args)
+
 							msgSender, typedData, signature, err := commons.ExtractSigAndData(args[2:])
+
 							if err != nil {
 								slog.Error("avail: error extracting signature and typed data", "err", err)
 								continue
@@ -257,7 +261,7 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 						}
 
 						latestBlock += 1
-						time.Sleep(500 * time.Millisecond)
+						time.Sleep(500 * time.Millisecond) // nolint
 					}
 				}
 			}
@@ -289,6 +293,7 @@ func DecodeTimestamp(hexStr string) uint64 {
 	return decodeCompactU64(decoded)
 }
 
+// nolint
 func decodeCompactU64(data []byte) uint64 {
 	firstByte := data[0]
 	if firstByte&0b11 == 0b00 { // Single byte (6-bit value)
