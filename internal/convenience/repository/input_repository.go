@@ -266,7 +266,7 @@ func (r *InputRepository) FindByIndex(ctx context.Context, index int) (*model.Ad
 		app_contract,
 		espresso_block_number,
 		espresso_block_timestamp,
-		input_box_index 
+		input_box_index, 
 		avail_block_number,
 		avail_block_timestamp,
 		type,
