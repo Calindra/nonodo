@@ -153,18 +153,7 @@ func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 
 		db = sqlx.MustConnect("postgres", connectionString)
 	} else {
-		slog.Info("Using SQLite ...")
-		sqliteFile := opts.SqliteFile
-		if sqliteFile == "" {
-			sqlitePath, err := os.MkdirTemp("", "nonodo-db-*")
-			if err != nil {
-				slog.Error("Error creating temp dir for SQLite3 file", "error", err)
-				panic(err)
-			}
-			sqliteFile = path.Join(sqlitePath, "nonodo.sqlite3")
-			slog.Debug("SQLite3 file created", "path", sqliteFile)
-		}
-		db = sqlx.MustConnect("sqlite3", sqliteFile)
+		db = handleSQLite(opts)
 	}
 
 	container := convenience.NewContainer(*db)
@@ -266,6 +255,21 @@ func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 	return w
 }
 
+func handleSQLite(opts NonodoOpts) *sqlx.DB {
+	slog.Info("Using SQLite ...")
+	sqliteFile := opts.SqliteFile
+	if sqliteFile == "" {
+		sqlitePath, err := os.MkdirTemp("", "nonodo-db-*")
+		if err != nil {
+			panic(err)
+		}
+		sqliteFile = path.Join(sqlitePath, "nonodo.sqlite3")
+		slog.Debug("SQLite3 file created", "path", sqliteFile)
+	}
+
+	return sqlx.MustConnect("sqlite3", sqliteFile)
+}
+
 func handleAnvilInstallation() (string, error) {
 	// Create Anvil Worker
 	var timeoutAnvil time.Duration = 10 * time.Minute
@@ -287,18 +291,7 @@ func handleAnvilInstallation() (string, error) {
 func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	var w supervisor.SupervisorWorker
 	w.Timeout = opts.TimeoutWorker
-	slog.Info("Using SQLite ...")
-	sqliteFile := opts.SqliteFile
-	if sqliteFile == "" {
-		sqlitePath, err := os.MkdirTemp("", "nonodo-db-*")
-		if err != nil {
-			slog.Error("Error creating temp dir for SQLite3 file", "error", err)
-			panic(err)
-		}
-		sqliteFile = path.Join(sqlitePath, "nonodo.sqlite3")
-		slog.Debug("SQLite3 file created", "path", sqliteFile)
-	}
-	db := sqlx.MustConnect("sqlite3", sqliteFile)
+	db := handleSQLite(opts)
 	container := convenience.NewContainer(*db)
 	decoder := container.GetOutputDecoder()
 	convenienceService := container.GetConvenienceService()
