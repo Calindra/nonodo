@@ -331,7 +331,7 @@ func readInputBoxByBlockAndTimestamp(ctx context.Context, l1FinalizedPrevHeight 
 		return 0, fmt.Errorf("avail inputter: bind input box: %w", err)
 	}
 	//Avail timestamps are in miliseconds and event timestamps are in seconds
-	lastL1BlockRead, err := w.ReadInputsByBlockAndTimestamp(ctx, client, inputBox, l1FinalizedPrevHeight, (timestamp/1000)-FIVE_MINUTES)
+	lastL1BlockRead, err := w.ReadInputsByBlockAndTimestamp(ctx, client, inputBox, l1FinalizedPrevHeight, (timestamp/ONE_SECOND_IN_MS)-FIVE_MINUTES)
 
 	if err != nil {
 		return 0, fmt.Errorf("avail inputter: read past inputs: %w", err)
