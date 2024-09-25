@@ -139,10 +139,11 @@ func (a AvailListener) handleData(ctx context.Context, header types.Header, clie
 		// read L1 if there might be update
 		if l1CurrentBlock > l1PreviousBlock || l1PreviousBlock == a.FromBlock {
 			slog.Debug("Fetching InputBox between Avail blocks", "from", l1CurrentBlock, "to timestamp", l1FinalizedTimestamp)
-			_, err := readInputBoxByBlockAndTimestamp(ctx, l1CurrentBlock, l1FinalizedTimestamp, a.InputterWorker)
+			lastL1BlockRead, err := readInputBoxByBlockAndTimestamp(ctx, l1CurrentBlock, l1FinalizedTimestamp, a.InputterWorker)
 			if err != nil {
 				return err
 			}
+			slog.Debug("Avail", "lastL1BlockRead", lastL1BlockRead)
 			// l1PreviousBlock = l1CurrentBlock
 			// l1CurrentBlock = lastL1BlockRead
 		}
