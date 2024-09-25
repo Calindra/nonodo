@@ -12,6 +12,7 @@ import (
 	"math/big"
 	"net/url"
 	"os"
+	"path"
 	"time"
 
 	"github.com/calindra/nonodo/internal/convenience"
@@ -114,7 +115,7 @@ func NewNonodoOpts() NonodoOpts {
 		DisableAdvance:      false,
 		ApplicationArgs:     nil,
 		HLGraphQL:           false,
-		SqliteFile:          "file:memory1?mode=memory&cache=shared",
+		SqliteFile:          "",
 		FromBlock:           0,
 		DbImplementation:    "sqlite",
 		NodeVersion:         "v1",
@@ -152,8 +153,7 @@ func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 
 		db = sqlx.MustConnect("postgres", connectionString)
 	} else {
-		slog.Info("Using SQLite ...")
-		db = sqlx.MustConnect("sqlite3", opts.SqliteFile)
+		db = handleSQLite(opts)
 	}
 
 	container := convenience.NewContainer(*db)
@@ -255,6 +255,21 @@ func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 	return w
 }
 
+func handleSQLite(opts NonodoOpts) *sqlx.DB {
+	slog.Info("Using SQLite ...")
+	sqliteFile := opts.SqliteFile
+	if sqliteFile == "" {
+		sqlitePath, err := os.MkdirTemp("", "nonodo-db-*")
+		if err != nil {
+			panic(err)
+		}
+		sqliteFile = path.Join(sqlitePath, "nonodo.sqlite3")
+		slog.Debug("SQLite3 file created", "path", sqliteFile)
+	}
+
+	return sqlx.MustConnect("sqlite3", sqliteFile)
+}
+
 func handleAnvilInstallation() (string, error) {
 	// Create Anvil Worker
 	var timeoutAnvil time.Duration = 10 * time.Minute
@@ -276,7 +291,7 @@ func handleAnvilInstallation() (string, error) {
 func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	var w supervisor.SupervisorWorker
 	w.Timeout = opts.TimeoutWorker
-	db := sqlx.MustConnect("sqlite3", opts.SqliteFile)
+	db := handleSQLite(opts)
 	container := convenience.NewContainer(*db)
 	decoder := container.GetOutputDecoder()
 	convenienceService := container.GetConvenienceService()
