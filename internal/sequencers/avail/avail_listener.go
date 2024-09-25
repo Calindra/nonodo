@@ -105,6 +105,7 @@ func (a AvailListener) connect(ctx context.Context) (*gsrpc.SubstrateAPI, error)
 const retryConnectionInterval = 5 * time.Second
 const intervalNextBlock = 500 * time.Millisecond
 
+// This handleData for one block
 func (a AvailListener) handleData(ctx context.Context, header types.Header, client *gsrpc.SubstrateAPI, index uint64) error {
 	var (
 		// l1CurrentBlock              = a.FromBlock
@@ -312,7 +313,6 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 			for {
 				select {
 				case <-ctx.Done():
-					slog.Warn(">>>>>>>>>>>>>>>> Avail signal shutting down")
 					errCh <- ctx.Err()
 					return
 				case err := <-subscription.Err():
