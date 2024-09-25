@@ -179,7 +179,7 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 					EspressoBlockTimestamp: e.getEspressoTimestamp(currentBlockHeight),
 					InputBoxIndex:          -1,
 					Type:                   "Espresso",
-					CartesiTransactionId:   string(crypto.Keccak256(signature)),
+					CartesiTransactionId:   common.Bytes2Hex(crypto.Keccak256(signature)),
 				})
 				if err != nil {
 					return err

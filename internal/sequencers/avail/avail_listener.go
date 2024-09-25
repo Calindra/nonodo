@@ -25,6 +25,7 @@ const (
 	TIMESTAMP_SECTION_INDEX = 3
 	DELAY                   = 500
 	ONE_SECOND_IN_MS        = 1000
+	FIVE_SECONDS_IN_MS      = 5000
 )
 
 type AvailListener struct {
@@ -245,7 +246,7 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 							// TODO Verify blockNUmber and block timestamps
 							_, err = a.InputRepository.Create(ctx, cModel.AdvanceInput{
 								Index:                int(inputCount),
-								CartesiTransactionId: string(crypto.Keccak256(signature)),
+								CartesiTransactionId: common.Bytes2Hex(crypto.Keccak256(signature)),
 								MsgSender:            msgSender,
 								Payload:              payloadBytes,
 								AppContract:          common.HexToAddress(dappAddress),
@@ -321,24 +322,6 @@ func padHexStringRight(hexStr string) string {
 	return hexStr
 }
 
-func readInputBox(ctx context.Context, l1FinalizedPrevHeight uint64, l1FinalizedCurrentHeight uint64, w *inputter.InputterWorker) error {
-	client, err := ethclient.DialContext(ctx, w.Provider)
-	if err != nil {
-		return fmt.Errorf("avail inputter: dial: %w", err)
-	}
-	inputBox, err := contracts.NewInputBox(w.InputBoxAddress, client)
-	if err != nil {
-		return fmt.Errorf("avail inputter: bind input box: %w", err)
-	}
-
-	err = w.ReadPastInputs(ctx, client, inputBox, l1FinalizedPrevHeight, &l1FinalizedCurrentHeight)
-	if err != nil {
-		return fmt.Errorf("avail inputter: read past inputs: %w", err)
-	}
-
-	return nil
-}
-
 func readInputBoxByBlockAndTimestamp(ctx context.Context, l1FinalizedPrevHeight uint64, timestamp uint64, w *inputter.InputterWorker) (uint64, error) {
 	client, err := ethclient.DialContext(ctx, w.Provider)
 	if err != nil {
@@ -348,7 +331,7 @@ func readInputBoxByBlockAndTimestamp(ctx context.Context, l1FinalizedPrevHeight 
 	if err != nil {
 		return 0, fmt.Errorf("avail inputter: bind input box: %w", err)
 	}
-	lastL1BlockRead, err := w.ReadInputsByBlockAndTimestamp(ctx, client, inputBox, l1FinalizedPrevHeight, timestamp-5000)
+	lastL1BlockRead, err := w.ReadInputsByBlockAndTimestamp(ctx, client, inputBox, l1FinalizedPrevHeight, timestamp-FIVE_SECONDS_IN_MS)
 
 	if err != nil {
 		return 0, fmt.Errorf("avail inputter: read past inputs: %w", err)
