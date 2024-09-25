@@ -395,6 +395,8 @@ func addAvailSubcommands(availCmd *cobra.Command) {
 		Use:   "send",
 		Short: "Send a payload to Avail",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx, cancel := context.WithCancel(cmd.Context())
+			defer cancel()
 			availClient, err := avail.NewAvailClient(
 				fmt.Sprintf("http://%s:%d", opts.HttpAddress, opts.HttpPort),
 				availOpts.ChainId,
@@ -403,7 +405,7 @@ func addAvailSubcommands(availCmd *cobra.Command) {
 			if err != nil {
 				panic(err)
 			}
-			_, err = availClient.Submit712(availOpts.Payload, availOpts.Address, availOpts.MaxGasPrice)
+			_, err = availClient.Submit712(ctx, availOpts.Payload, availOpts.Address, availOpts.MaxGasPrice)
 			if err != nil {
 				panic(err)
 			}
