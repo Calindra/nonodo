@@ -78,7 +78,7 @@ function testNoticeFound() {
 
 function testInputFound() {
     const payload = JSON.stringify({
-        query: "query { input(index: \"1\") { index }}"
+        query: 'query { input(id: "1") { index }}'
     });
 
     const params = {
