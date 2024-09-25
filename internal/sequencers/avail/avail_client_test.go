@@ -1,6 +1,7 @@
 package avail
 
 import (
+	"context"
 	"os"
 	"testing"
 
@@ -13,6 +14,8 @@ type AvailClientSuite struct {
 }
 
 func (s *AvailClientSuite) XTestSendTransaction() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	availClient, err := NewAvailClient("", DEFAULT_CHAINID_HARDHAT, DEFAULT_APP_ID)
 	if err != nil {
 		s.NoError(err)
@@ -23,12 +26,14 @@ func (s *AvailClientSuite) XTestSendTransaction() {
 	Seed := os.Getenv("AVAIL_MNEMONIC")
 	AppID := 91
 	if Seed != "" {
-		_, err := availClient.SubmitData(data, ApiURL, Seed, AppID)
+		_, err := availClient.SubmitData(ctx, data, ApiURL, Seed, AppID)
 		s.NoError(err)
 	}
 }
 
 func (s *AvailClientSuite) TestSubmit712() {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	availClient, err := NewAvailClient("", DEFAULT_CHAINID_HARDHAT, DEFAULT_APP_ID)
 	if err != nil {
 		s.NoError(err)
@@ -36,7 +41,7 @@ func (s *AvailClientSuite) TestSubmit712() {
 	}
 	Seed := os.Getenv("AVAIL_MNEMONIC")
 	if Seed != "" {
-		_, err := availClient.Submit712("Cartesi Rocks!", devnet.ApplicationAddress, uint64(10))
+		_, err := availClient.Submit712(ctx, "Cartesi Rocks!", devnet.ApplicationAddress, uint64(10))
 		s.NoError(err)
 		s.Fail("XXX")
 	}

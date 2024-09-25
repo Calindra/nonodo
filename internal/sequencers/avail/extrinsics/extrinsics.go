@@ -1,4 +1,3 @@
-//nolint:all
 package extrinsics
 
 import (
@@ -37,7 +36,7 @@ func SubmitData(api *gsrpc.SubstrateAPI, data string, seed string, appID int, fi
 	if err != nil {
 		return fmt.Errorf("error retrieving runtime version: %s", err)
 	}
-	networkNumber := uint16(42)
+	var networkNumber uint16 = 42
 	keyringPair, err := signature.KeyringPairFromSecret(seed, networkNumber)
 	if err != nil {
 		return fmt.Errorf("error creating keyring pair: %s", err)
@@ -53,7 +52,7 @@ func SubmitData(api *gsrpc.SubstrateAPI, data string, seed string, appID int, fi
 	if err != nil || !ok {
 		return fmt.Errorf("cannot get latest storage:%v", err)
 	}
-	defaultTip := uint64(100)
+	var defaultTip uint64 = 100
 	nonce := uint32(accountInfo.Nonce)
 	options := types.SignatureOptions{
 		BlockHash:          genesisHash,
@@ -79,7 +78,8 @@ func SubmitData(api *gsrpc.SubstrateAPI, data string, seed string, appID int, fi
 	}
 
 	defer sub.Unsubscribe()
-	timeout := time.After(100 * time.Second)
+	var delay time.Duration = 100 * time.Second
+	timeout := time.After(delay)
 	for {
 		select {
 		case status := <-sub.Chan():
