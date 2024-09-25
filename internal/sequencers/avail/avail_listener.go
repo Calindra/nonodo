@@ -393,6 +393,7 @@ func readInputBoxByBlockAndTimestamp(ctx context.Context, l1FinalizedPrevHeight 
 	if err != nil {
 		return 0, fmt.Errorf("avail inputter: dial: %w", err)
 	}
+	defer client.Close()
 	inputBox, err := contracts.NewInputBox(w.InputBoxAddress, client)
 	if err != nil {
 		return 0, fmt.Errorf("avail inputter: bind input box: %w", err)
