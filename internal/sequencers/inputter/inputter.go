@@ -259,10 +259,6 @@ func (w InputterWorker) ReadInputsByBlockAndTimestamp(
 		}
 		timestamp := uint64(header.Time)
 
-		slog.Debug("Timestamp from inputbox event " + fmt.Sprintf("%d", timestamp))
-		fmt.Println("Timestamp from inputbox event " + fmt.Sprintf("%d", timestamp))
-		fmt.Println("Block Number " + fmt.Sprintf("%d", it.Event.Raw.BlockNumber))
-
 		if timestamp < endTimestamp {
 			w.InputBoxBlock = it.Event.Raw.BlockNumber - 1
 			if err := w.addInput(ctx, client, it.Event); err != nil {
