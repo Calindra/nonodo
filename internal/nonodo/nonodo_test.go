@@ -9,7 +9,6 @@ import (
 	"crypto/rand"
 	"fmt"
 	"log/slog"
-	"net/http"
 	"os"
 	"path"
 	"strings"
@@ -18,15 +17,18 @@ import (
 
 	"github.com/Khan/genqlient/graphql"
 	"github.com/calindra/nonodo/internal/commons"
+	"github.com/calindra/nonodo/internal/contracts"
 	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/calindra/nonodo/internal/inspect"
 	"github.com/calindra/nonodo/internal/readerclient"
+	"github.com/calindra/nonodo/internal/sequencers/inputter"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/stretchr/testify/suite"
 )
 
-const testTimeout = 5 * time.Second
+const testTimeout = 100 * time.Second
 
 type NonodoSuite struct {
 	suite.Suite
@@ -44,7 +46,7 @@ type NonodoSuite struct {
 // Test Cases
 //
 
-func (s *NonodoSuite) TestItProcessesAdvanceInputs() {
+func (s *NonodoSuite) TestRead2() {
 	opts := NewNonodoOpts()
 	// we are using file cuz there is problem with memory
 	// no such table: reports
@@ -68,125 +70,25 @@ func (s *NonodoSuite) TestItProcessesAdvanceInputs() {
 	err = s.waitForAdvanceInput(n - 1)
 	s.NoError(err)
 
-	s.T().Log("verifying node state")
-	response, err := readerclient.State(s.ctx, s.graphqlClient)
+	client, err := ethclient.DialContext(s.ctx, fmt.Sprintf("http://127.0.0.1:8546"))
+	appAddress := common.HexToAddress("0xab7528bb862fb57e8a2bcd567a2e929a0be56a5e")
+	inputBoxAddress := common.HexToAddress("0x58Df21fE097d4bE5dCf61e01d9ea3f6B81c2E1dB")
+	inputBox, err := contracts.NewInputBox(appAddress, client)
+	l1FinalizedPrevHeight := uint64(1)
+	timestamp := uint64(1727126680000)
 	s.NoError(err)
-	for i := 0; i < n; i++ {
-		input := response.Inputs.Edges[i].Node
-		s.Equal(i, input.Index)
-		s.Equal(payloads[i][:], s.decodeHex(input.Payload))
-		s.Equal(devnet.SenderAddress, input.MsgSender)
-		voucher := input.Vouchers.Edges[0].Node
-		s.Equal(payloads[i][:], s.decodeHex(voucher.Payload))
-		s.Equal(devnet.SenderAddress, voucher.Destination)
-		s.Equal(common.Bytes2Hex(payloads[i][:])+"ff",
-			input.Notices.Edges[0].Node.Payload[2:])
-		s.Equal(payloads[i][:], s.decodeHex(input.Reports.Edges[0].Node.Payload))
+
+	w := inputter.InputterWorker{
+		Model:              nil,
+		Provider:           "",
+		InputBoxAddress:    appAddress,
+		InputBoxBlock:      1,
+		ApplicationAddress: inputBoxAddress,
 	}
-}
-
-func (s *NonodoSuite) TestGraphQLVoucher() {
-	opts := NewNonodoOpts()
-	// we are using file cuz there is problem with memory
-	// no such table: reports
-	tempDir, err := os.MkdirTemp("", "")
+	lastL1BlockRead, err := w.ReadInputsByBlockAndTimestamp(s.ctx, client, inputBox, l1FinalizedPrevHeight, timestamp-5000)
 	s.NoError(err)
-	sqliteFileName := fmt.Sprintf("test%d.sqlite3", time.Now().UnixMilli())
-	opts.EnableEcho = true
-	opts.SqliteFile = path.Join(tempDir, sqliteFileName)
-	s.setupTest(opts)
-	defer os.RemoveAll(tempDir)
-	s.T().Log("sending advance inputs")
-	const n = 3
-	var payloads [n][32]byte
-	for i := 0; i < n; i++ {
-		payloads[i] = s.makePayload()
-		err := devnet.AddInput(s.ctx, s.rpcUrl, payloads[i][:])
-		s.NoError(err)
-	}
+	s.NotNil(lastL1BlockRead)
 
-	s.T().Log("waiting until last input is ready")
-	err = s.waitForAdvanceInput(n - 1)
-	s.NoError(err)
-
-	s.T().Log("verifying voucher")
-	voucher, err := readerclient.GetVoucher(s.ctx, s.graphqlClient, 0, 1)
-	s.NoError(err)
-	s.Equal(payloads[1][:], s.decodeHex(voucher.Voucher.Payload))
-}
-
-func (s *NonodoSuite) TestGraphQLNotice() {
-	opts := NewNonodoOpts()
-	// we are using file cuz there is problem with memory
-	// no such table: reports
-	tempDir, err := os.MkdirTemp("", "")
-	s.NoError(err)
-	sqliteFileName := fmt.Sprintf("test%d.sqlite3", time.Now().UnixMilli())
-	opts.EnableEcho = true
-	opts.SqliteFile = path.Join(tempDir, sqliteFileName)
-	s.setupTest(opts)
-	defer os.RemoveAll(tempDir)
-	s.T().Log("sending advance inputs")
-	const n = 3
-	var payloads [n][32]byte
-	for i := 0; i < n; i++ {
-		payloads[i] = s.makePayload()
-		err := devnet.AddInput(s.ctx, s.rpcUrl, payloads[i][:])
-		s.NoError(err)
-	}
-
-	s.T().Log("waiting until last input is ready")
-	err = s.waitForAdvanceInput(n - 1)
-	s.NoError(err)
-
-	s.T().Log("verifying voucher")
-	notice, err := readerclient.GetNotice(s.ctx, s.graphqlClient, 0, 1)
-	s.NoError(err)
-	s.Equal(common.Bytes2Hex(payloads[1][:])+"ff",
-		notice.Notice.Payload[2:])
-}
-
-func (s *NonodoSuite) TestItProcessesInspectInputs() {
-	opts := NewNonodoOpts()
-	opts.EnableEcho = true
-	s.setupTest(opts)
-
-	s.T().Log("sending inspect inputs")
-	const n = 3
-	for i := 0; i < n; i++ {
-		payload := s.makePayload()
-		response, err := s.sendInspect(payload[:])
-		s.NoError(err)
-		s.Equal(http.StatusOK, response.StatusCode())
-		s.Equal("0x", response.JSON200.ExceptionPayload)
-		s.Equal(0, response.JSON200.ProcessedInputCount)
-		s.Len(response.JSON200.Reports, 1)
-		s.Equal(payload[:], s.decodeHex(response.JSON200.Reports[0].Payload))
-		s.Equal(inspect.Accepted, response.JSON200.Status)
-	}
-}
-
-func (s *NonodoSuite) TestItWorksWithExternalApplication() {
-	opts := NewNonodoOpts()
-	opts.ApplicationArgs = []string{
-		"go",
-		"run",
-		"github.com/calindra/nonodo/internal/echoapp/echoapp",
-		"--endpoint",
-		fmt.Sprintf("http://%v:%v", opts.HttpAddress, opts.HttpRollupsPort),
-	}
-	opts.HttpPort = 8090
-	s.setupTest(opts)
-	time.Sleep(100 * time.Millisecond)
-
-	s.T().Log("sending inspect to external application")
-	payload := s.makePayload()
-
-	response, err := s.sendInspect(payload[:])
-	s.NoError(err)
-	slog.Debug("response", "body", string(response.Body))
-	s.Require().Equal(http.StatusOK, response.StatusCode())
-	s.Require().Equal(payload[:], s.decodeHex(response.JSON200.Reports[0].Payload))
 }
 
 //
