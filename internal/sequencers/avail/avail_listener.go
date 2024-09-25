@@ -243,7 +243,6 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 								return
 							}
 
-							// TODO Verify blockNUmber and block timestamps
 							_, err = a.InputRepository.Create(ctx, cModel.AdvanceInput{
 								Index:                int(inputCount),
 								CartesiTransactionId: common.Bytes2Hex(crypto.Keccak256(signature)),
