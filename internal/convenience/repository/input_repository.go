@@ -62,7 +62,7 @@ func (r *InputRepository) CreateTables() error {
 		avail_block_number integer,
 		avail_block_timestamp integer,
 		type text,
-		cartesi_transaction_id);
+		cartesi_transaction_id text);
 	CREATE INDEX IF NOT EXISTS idx_input_index ON convenience_inputs(input_index);
 	CREATE INDEX IF NOT EXISTS idx_status ON convenience_inputs(status);`
 	schema = fmt.Sprintf(schema, autoIncrement)
