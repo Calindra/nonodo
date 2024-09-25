@@ -59,6 +59,23 @@ func (r *queryResolver) Input(ctx context.Context, id string) (*model.Input, err
 	return r.adapter.GetInput(id)
 }
 
+// Voucher is the resolver for the voucher field.
+func (r *queryResolver) Voucher(ctx context.Context, voucherIndex int, inputIndex int) (*model.Voucher, error) {
+	slog.Debug("queryResolver.Voucher", "voucherIndex", voucherIndex, "inputIndex", inputIndex)
+	return r.adapter.GetVoucher(voucherIndex, inputIndex)
+}
+
+// Notice is the resolver for the notice field.
+func (r *queryResolver) Notice(ctx context.Context, noticeIndex int, inputIndex int) (*model.Notice, error) {
+	slog.Debug("queryResolver.Notice", "noticeIndex", noticeIndex, "inputIndex", inputIndex)
+	return r.adapter.GetNotice(noticeIndex, inputIndex)
+}
+
+// Report is the resolver for the report field.
+func (r *queryResolver) Report(ctx context.Context, reportIndex int, inputIndex int) (*model.Report, error) {
+	return r.adapter.GetReport(reportIndex, inputIndex)
+}
+
 // Inputs is the resolver for the inputs field.
 func (r *queryResolver) Inputs(ctx context.Context, first *int, last *int, after *string, before *string, where *model.InputFilter) (*model.Connection[*model.Input], error) {
 	return r.adapter.GetInputs(ctx, first, last, after, before, where)
