@@ -67,8 +67,8 @@ type Input {
   inputBoxIndex: String
   "Type of input. Can be inputbox, Espresso or Avail"
   type: String
-  "Hash of Avail's transactionId"
-  availTransactionId: String
+  "Hash of Cartesi's transactionId"
+  cartesiTransactionId: String
 }
 
 "Representation of a transaction that can be carried out on the base layer blockchain, such as a transfer of assets"

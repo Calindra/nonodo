@@ -48,6 +48,11 @@ func (r *inputResolver) Type(ctx context.Context, obj *model.Input) (*string, er
 	panic(fmt.Errorf("not implemented: Type - type"))
 }
 
+// CartesiTransactionID is the resolver for the cartesiTransactionId field.
+func (r *inputResolver) CartesiTransactionID(ctx context.Context, obj *model.Input) (*string, error) {
+	panic(fmt.Errorf("not implemented: CartesiTransactionID - cartesiTransactionId"))
+}
+
 // Input is the resolver for the input field.
 func (r *noticeResolver) Input(ctx context.Context, obj *model.Notice) (*model.Input, error) {
 	return r.adapter.GetInput(obj.InputIndex)

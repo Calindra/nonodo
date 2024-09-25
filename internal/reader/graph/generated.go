@@ -50,22 +50,23 @@ type DirectiveRoot struct {
 
 type ComplexityRoot struct {
 	Input struct {
-		BlockNumber         func(childComplexity int) int
-		EspressoBlockNumber func(childComplexity int) int
-		EspressoTimestamp   func(childComplexity int) int
-		Index               func(childComplexity int) int
-		InputBoxIndex       func(childComplexity int) int
-		MsgSender           func(childComplexity int) int
-		Notice              func(childComplexity int, index int) int
-		Notices             func(childComplexity int, first *int, last *int, after *string, before *string) int
-		Payload             func(childComplexity int) int
-		Report              func(childComplexity int, index int) int
-		Reports             func(childComplexity int, first *int, last *int, after *string, before *string) int
-		Status              func(childComplexity int) int
-		Timestamp           func(childComplexity int) int
-		Type                func(childComplexity int) int
-		Voucher             func(childComplexity int, index int) int
-		Vouchers            func(childComplexity int, first *int, last *int, after *string, before *string) int
+		BlockNumber          func(childComplexity int) int
+		CartesiTransactionID func(childComplexity int) int
+		EspressoBlockNumber  func(childComplexity int) int
+		EspressoTimestamp    func(childComplexity int) int
+		Index                func(childComplexity int) int
+		InputBoxIndex        func(childComplexity int) int
+		MsgSender            func(childComplexity int) int
+		Notice               func(childComplexity int, index int) int
+		Notices              func(childComplexity int, first *int, last *int, after *string, before *string) int
+		Payload              func(childComplexity int) int
+		Report               func(childComplexity int, index int) int
+		Reports              func(childComplexity int, first *int, last *int, after *string, before *string) int
+		Status               func(childComplexity int) int
+		Timestamp            func(childComplexity int) int
+		Type                 func(childComplexity int) int
+		Voucher              func(childComplexity int, index int) int
+		Vouchers             func(childComplexity int, first *int, last *int, after *string, before *string) int
 	}
 
 	InputConnection struct {
@@ -178,6 +179,7 @@ type InputResolver interface {
 	Reports(ctx context.Context, obj *model.Input, first *int, last *int, after *string, before *string) (*model.Connection[*model.Report], error)
 
 	Type(ctx context.Context, obj *model.Input) (*string, error)
+	CartesiTransactionID(ctx context.Context, obj *model.Input) (*string, error)
 }
 type NoticeResolver interface {
 	Input(ctx context.Context, obj *model.Notice) (*model.Input, error)
@@ -228,6 +230,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Input.BlockNumber(childComplexity), true
+
+	case "Input.cartesiTransactionId":
+		if e.complexity.Input.CartesiTransactionID == nil {
+			break
+		}
+
+		return e.complexity.Input.CartesiTransactionID(childComplexity), true
 
 	case "Input.espressoBlockNumber":
 		if e.complexity.Input.EspressoBlockNumber == nil {
@@ -971,8 +980,10 @@ type Input {
   espressoBlockNumber: String
   "Input index in the Inpux Box"
   inputBoxIndex: String
-
-  type:String
+  "Type of input. Can be inputbox, Espresso or Avail"
+  type: String
+  "Hash of Cartesi's transactionId"
+  cartesiTransactionId: String
 }
 
 "Representation of a transaction that can be carried out on the base layer blockchain, such as a transfer of assets"
@@ -2507,6 +2518,47 @@ func (ec *executionContext) fieldContext_Input_type(ctx context.Context, field g
 	return fc, nil
 }
 
+func (ec *executionContext) _Input_cartesiTransactionId(ctx context.Context, field graphql.CollectedField, obj *model.Input) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Input_cartesiTransactionId(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Input().CartesiTransactionID(rctx, obj)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Input_cartesiTransactionId(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Input",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _InputConnection_totalCount(ctx context.Context, field graphql.CollectedField, obj *model.Connection[*model.Input]) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_InputConnection_totalCount(ctx, field)
 	if err != nil {
@@ -2726,6 +2778,8 @@ func (ec *executionContext) fieldContext_InputEdge_node(ctx context.Context, fie
 				return ec.fieldContext_Input_inputBoxIndex(ctx, field)
 			case "type":
 				return ec.fieldContext_Input_type(ctx, field)
+			case "cartesiTransactionId":
+				return ec.fieldContext_Input_cartesiTransactionId(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Input", field.Name)
 		},
@@ -2892,6 +2946,8 @@ func (ec *executionContext) fieldContext_Notice_input(ctx context.Context, field
 				return ec.fieldContext_Input_inputBoxIndex(ctx, field)
 			case "type":
 				return ec.fieldContext_Input_type(ctx, field)
+			case "cartesiTransactionId":
+				return ec.fieldContext_Input_cartesiTransactionId(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Input", field.Name)
 		},
@@ -3540,6 +3596,8 @@ func (ec *executionContext) fieldContext_Proof_inputByInputIndex(ctx context.Con
 				return ec.fieldContext_Input_inputBoxIndex(ctx, field)
 			case "type":
 				return ec.fieldContext_Input_type(ctx, field)
+			case "cartesiTransactionId":
+				return ec.fieldContext_Input_cartesiTransactionId(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Input", field.Name)
 		},
@@ -4102,6 +4160,8 @@ func (ec *executionContext) fieldContext_Query_input(ctx context.Context, field 
 				return ec.fieldContext_Input_inputBoxIndex(ctx, field)
 			case "type":
 				return ec.fieldContext_Input_type(ctx, field)
+			case "cartesiTransactionId":
+				return ec.fieldContext_Input_cartesiTransactionId(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Input", field.Name)
 		},
@@ -4813,6 +4873,8 @@ func (ec *executionContext) fieldContext_Report_input(ctx context.Context, field
 				return ec.fieldContext_Input_inputBoxIndex(ctx, field)
 			case "type":
 				return ec.fieldContext_Input_type(ctx, field)
+			case "cartesiTransactionId":
+				return ec.fieldContext_Input_cartesiTransactionId(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Input", field.Name)
 		},
@@ -5223,6 +5285,8 @@ func (ec *executionContext) fieldContext_Voucher_input(ctx context.Context, fiel
 				return ec.fieldContext_Input_inputBoxIndex(ctx, field)
 			case "type":
 				return ec.fieldContext_Input_type(ctx, field)
+			case "cartesiTransactionId":
+				return ec.fieldContext_Input_cartesiTransactionId(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Input", field.Name)
 		},
@@ -7938,6 +8002,39 @@ func (ec *executionContext) _Input(ctx context.Context, sel ast.SelectionSet, ob
 					}
 				}()
 				res = ec._Input_type(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "cartesiTransactionId":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Input_cartesiTransactionId(ctx, field, obj)
 				return res
 			}
 
