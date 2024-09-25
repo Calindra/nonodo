@@ -78,7 +78,7 @@ function testNoticeFound() {
 
 function testInputFound() {
     const payload = JSON.stringify({
-        query: "query { input(index: 1) { index }}"
+        query: "query { input(index: \"1\") { index }}"
     });
 
     const params = {
@@ -91,7 +91,7 @@ function testInputFound() {
 
     check(response, {
         'testInputFound is status 200': (r) => r.status === 200,
-        'testInputFound response body contains expected content': (r) => assertStringContains(r.body, '{"data":{"input":{"index":1}}}'),
+        'testInputFound response body contains expected content': (r) => assertStringContains(r.body, '{"data":{"input":{"index":"1"}}}'),
     });
 }
 
