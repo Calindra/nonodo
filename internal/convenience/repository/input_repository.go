@@ -228,7 +228,7 @@ func (r *InputRepository) FindByStatus(ctx context.Context, status model.Complet
 		app_contract,
 		espresso_block_number,
 		espresso_block_timestamp,
-		input_box_index 
+		input_box_index, 
 		avail_block_number,
 		avail_block_timestamp,
 		type,
@@ -342,7 +342,7 @@ func (c *InputRepository) FindAll(
 		app_contract,
 		espresso_block_number,
 		espresso_block_timestamp,
-		input_box_index 
+		input_box_index, 
 		avail_block_number,
 		avail_block_timestamp,
 		type,
