@@ -2,6 +2,7 @@ package avail
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -12,7 +13,6 @@ import (
 	"strconv"
 
 	"github.com/calindra/nonodo/internal/commons"
-	gsrpc "github.com/centrifuge/go-substrate-rpc-client/v4"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/signature"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 	"github.com/ethereum/go-ethereum/common"
@@ -31,29 +31,25 @@ const (
 )
 
 type AvailClient struct {
-	api        *gsrpc.SubstrateAPI
+	apiURL     string
 	GraphQLUrl string
 	chainId    int
 	appId      int
 }
 
 func NewAvailClient(graphQLUrl string, chainId int, appId int) (*AvailClient, error) {
-	apiURL := os.Getenv("AVAIL_RPC_URL")
-	if apiURL == "" {
+	apiURL, hasEnv := os.LookupEnv("AVAIL_RPC_URL")
+	if !hasEnv {
 		apiURL = DEFAULT_AVAIL_RPC_URL
-	}
-	api, err := gsrpc.NewSubstrateAPI(apiURL)
-	if err != nil {
-		return nil, fmt.Errorf("cannot create api:%w", err)
 	}
 	if graphQLUrl == "" {
 		graphQLUrl = DEFAULT_GRAPHQL_URL
 	}
-	client := AvailClient{api, graphQLUrl, chainId, appId}
+	client := AvailClient{apiURL, graphQLUrl, chainId, appId}
 	return &client, nil
 }
 
-func (av *AvailClient) Submit712(payload string, dappAddress string, maxGasPrice uint64) (*types.Hash, error) {
+func (av *AvailClient) Submit712(ctx context.Context, payload string, dappAddress string, maxGasPrice uint64) (*types.Hash, error) {
 	nonce, err := fetchNonce(DEFAULT_USER_ADDRESS, av.GraphQLUrl)
 
 	if err != nil {
@@ -146,10 +142,10 @@ func (av *AvailClient) Submit712(payload string, dappAddress string, maxGasPrice
 	if err != nil {
 		log.Fatal("Error json.Marshal message:", err)
 	}
-	return av.DefaultSubmit(string(jsonPayload))
+	return av.DefaultSubmit(ctx, string(jsonPayload))
 }
 
-func (av *AvailClient) DefaultSubmit(data string) (*types.Hash, error) {
+func (av *AvailClient) DefaultSubmit(ctx context.Context, data string) (*types.Hash, error) {
 	apiURL := os.Getenv("AVAIL_RPC_URL")
 	if apiURL == "" {
 		apiURL = DEFAULT_AVAIL_RPC_URL
@@ -161,17 +157,24 @@ func (av *AvailClient) DefaultSubmit(data string) (*types.Hash, error) {
 		seed = DEFAULT_EVM_MNEMONIC
 	}
 
-	return av.SubmitData(data, apiURL, seed, av.appId)
+	return av.SubmitData(ctx, data, apiURL, seed, av.appId)
 }
 
 // SubmitData creates a transaction and makes a Avail data submission
-func (av *AvailClient) SubmitData(data string, ApiURL string, Seed string, AppID int) (*types.Hash, error) {
+func (av *AvailClient) SubmitData(ctx context.Context, data string, ApiURL string, Seed string, AppID int) (*types.Hash, error) {
 	fmt.Printf("AppID=%d\n", AppID)
+
+	api, err := NewSubstrateAPICtx(ctx, av.apiURL)
+	if err != nil {
+		return nil, fmt.Errorf("cannot create api:%w", err)
+	}
+	defer api.Client.Close()
+
 	if AppID == 0 {
 		return nil, fmt.Errorf("wrong app id")
 	}
 
-	meta, err := av.api.RPC.State.GetMetadataLatest()
+	meta, err := api.RPC.State.GetMetadataLatest()
 	if err != nil {
 		return nil, fmt.Errorf("cannot get metadata:%w", err)
 	}
@@ -184,12 +187,12 @@ func (av *AvailClient) SubmitData(data string, ApiURL string, Seed string, AppID
 		appID = AppID
 	}
 
-	genesisHash, err := av.api.RPC.Chain.GetBlockHash(0)
+	genesisHash, err := api.RPC.Chain.GetBlockHash(0)
 	if err != nil {
 		return nil, fmt.Errorf("cannot get block hash:%w", err)
 	}
 
-	rv, err := av.api.RPC.State.GetRuntimeVersionLatest()
+	rv, err := api.RPC.State.GetRuntimeVersionLatest()
 	if err != nil {
 		return nil, fmt.Errorf("cannot get runtime version:%w", err)
 	}
@@ -206,7 +209,7 @@ func (av *AvailClient) SubmitData(data string, ApiURL string, Seed string, AppID
 	}
 
 	var accountInfo types.AccountInfo
-	ok, err := av.api.RPC.State.GetStorageLatest(key, &accountInfo)
+	ok, err := api.RPC.State.GetStorageLatest(key, &accountInfo)
 	if err != nil || !ok {
 		return nil, fmt.Errorf("cannot get latest storage:%w", err)
 	}
@@ -237,7 +240,7 @@ func (av *AvailClient) SubmitData(data string, ApiURL string, Seed string, AppID
 	}
 
 	// Send the extrinsic
-	hash, err := av.api.RPC.Author.SubmitExtrinsic(ext)
+	hash, err := api.RPC.Author.SubmitExtrinsic(ext)
 	if err != nil {
 		return nil, fmt.Errorf("cannot submit extrinsic:%w", err)
 	}
