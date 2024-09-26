@@ -16,9 +16,11 @@ import (
 	"github.com/calindra/nonodo/internal/sequencers/inputter"
 	"github.com/calindra/nonodo/internal/supervisor"
 	gsrpc "github.com/centrifuge/go-substrate-rpc-client/v4"
+	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 )
 
 const (
@@ -135,9 +137,6 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 
 		errCh := make(chan error)
 
-		timestampSectionIndex := uint8(TIMESTAMP_SECTION_INDEX)
-		timestampMethodIndex := uint8(0)
-		coreAppID := int64(0)
 		go func() {
 			for {
 				select {
@@ -169,13 +168,16 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 							errCh <- err
 							return
 						}
-						timestamp := uint64(0)
-
+						timestamp, err := ReadTimestampFromBlock(block)
+						if err != nil {
+							errCh <- err
+							return
+						}
 						total := len(block.Block.Extrinsics)
 
 						if total > 0 {
 
-							l1FinalizedTimestamp := DecodeTimestamp(common.Bytes2Hex(block.Block.Extrinsics[0].Method.Args))
+							l1FinalizedTimestamp := timestamp
 							// read L1 if there might be update
 							if latestBlock > l1CurrentBlock || l1PreviousBlock == a.FromBlock {
 								slog.Debug("Fetching InputBox between Avail blocks", "from", l1CurrentBlock, "to timestamp", l1FinalizedTimestamp)
@@ -191,18 +193,12 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 
 						for _, ext := range block.Block.Extrinsics {
 							appID := ext.Signature.AppID.Int64()
-							mi := ext.Method.CallIndex.MethodIndex
-							si := ext.Method.CallIndex.SectionIndex
-
-							if appID == coreAppID && si == uint8(timestampSectionIndex) && mi == uint8(timestampMethodIndex) {
-								timestamp = DecodeTimestamp(common.Bytes2Hex(ext.Method.Args))
-							}
 							iso := time.UnixMilli(int64(timestamp)).Format(time.RFC3339)
 
 							slog.Debug("Block", "timestamp", timestamp, "iso", iso, "blockNumber", latestBlock)
 
 							if appID != DEFAULT_APP_ID {
-								slog.Debug("Skipping", "appID", appID, "MethodIndex", mi, "SessionIndex", si)
+								slog.Debug("Skipping", "appID", appID)
 								continue
 							}
 
@@ -333,7 +329,7 @@ func readInputBoxByBlockAndTimestamp(ctx context.Context, l1FinalizedPrevHeight 
 	if err != nil {
 		return 0, fmt.Errorf("avail inputter: bind input box: %w", err)
 	}
-	//Avail timestamps are in miliseconds and event timestamps are in seconds
+	//Avail timestamps are in milliseconds and event timestamps are in seconds
 	lastL1BlockRead, err := w.ReadInputsByBlockAndTimestamp(ctx, client, inputBox, l1FinalizedPrevHeight, (timestamp/ONE_SECOND_IN_MS)-FIVE_MINUTES)
 
 	if err != nil {
@@ -342,4 +338,40 @@ func readInputBoxByBlockAndTimestamp(ctx context.Context, l1FinalizedPrevHeight 
 
 	return lastL1BlockRead, nil
 
+}
+
+func ReadTimestampFromBlock(block *types.SignedBlock) (uint64, error) {
+	timestampSectionIndex := uint8(TIMESTAMP_SECTION_INDEX)
+	timestampMethodIndex := uint8(0)
+	coreAppID := int64(0)
+	for _, ext := range block.Block.Extrinsics {
+		appID := ext.Signature.AppID.Int64()
+
+		mi := ext.Method.CallIndex.MethodIndex
+		si := ext.Method.CallIndex.SectionIndex
+
+		if appID == coreAppID && si == uint8(timestampSectionIndex) && mi == uint8(timestampMethodIndex) {
+			timestamp := DecodeTimestamp(common.Bytes2Hex(ext.Method.Args))
+			return timestamp, nil
+		}
+	}
+	return 0, fmt.Errorf("block %d without timestamp", block.Block.Header.Number)
+}
+
+func ParsePaioFrom712Message(typedData apitypes.TypedData) (PaioMessage, error) {
+	message := PaioMessage{
+		App:         typedData.Message["app"].(string),
+		Nonce:       typedData.Message["nonce"].(string),
+		MaxGasPrice: typedData.Message["max_gas_price"].(string),
+		Payload:     common.Hex2Bytes(typedData.Message["data"].(string)),
+	}
+	return message, nil
+}
+
+// altera para usar o nome do Paio
+type PaioMessage struct {
+	App         string
+	Nonce       string
+	MaxGasPrice string
+	Payload     []byte
 }
