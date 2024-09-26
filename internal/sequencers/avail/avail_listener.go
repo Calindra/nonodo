@@ -185,7 +185,7 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 									return
 								}
 								l1PreviousBlock = l1CurrentBlock
-								l1CurrentBlock = lastL1BlockRead
+								l1CurrentBlock = lastL1BlockRead + 1
 							}
 						}
 
