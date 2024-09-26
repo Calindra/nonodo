@@ -24,38 +24,13 @@ paths:
           content:
             application/json:
               schema:
-                type: string
-                example: "1"
+                $ref: "#/components/schemas/NonceResponse"
 
       requestBody:
         content:
           application/json:
             schema:
               $ref: "#/components/schemas/GetNonce"
-        required: true
-
-  /transaction:
-    post:
-      operationId: saveTransaction
-      summary: Send Paio's transaction
-      description: |
-        A good description
-      
-      responses:
-        "200":
-          description: PaioTransaction accepted
-          content:
-            application/json:
-              schema:
-                type: string
-                example: "no rollup request available"
-
-
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PaioTransaction"
         required: true
 
   /transactions:
@@ -125,6 +100,13 @@ components:
       required:
         - msg_sender
         - app_contract
+    NonceResponse:
+        type: object
+        properties:
+          nonce:
+            type: integer
+            description: Nonce number
+            example: 1
       
 
     Error:

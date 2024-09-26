@@ -3,7 +3,6 @@ package paio
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"net/http"
 
@@ -53,7 +52,11 @@ func (p *PaioAPI) GetNonce(ctx echo.Context) error {
 	stdCtx, cancel := context.WithCancel(ctx.Request().Context())
 	defer cancel()
 	if err := ctx.Bind(&request); err != nil {
-		return err
+		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": err.Error()})
+	}
+
+	if request.MsgSender == "" {
+		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "msg_sender is required"})
 	}
 
 	filters := []*model.ConvenienceFilter{}
@@ -75,13 +78,13 @@ func (p *PaioAPI) GetNonce(ctx echo.Context) error {
 		slog.Error("Error querying for inputs:", "err", err)
 		return err
 	}
-	nonce := fmt.Sprintf("%d", inputs.Total+1)
-	return ctx.String(http.StatusOK, nonce)
-}
 
-func (p *PaioAPI) SaveTransaction(ctx echo.Context) error {
-	transactionId := "1234"
-	return ctx.String(http.StatusOK, transactionId)
+	nonce := int(inputs.Total + 1)
+	response := NonceResponse{
+		Nonce: &nonce,
+	}
+
+	return ctx.JSON(http.StatusOK, response)
 }
 
 // Register the Paio API to echo
