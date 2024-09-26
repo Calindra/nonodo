@@ -11,7 +11,6 @@ import (
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/supervisor"
 	gsrpc "github.com/centrifuge/go-substrate-rpc-client/v4"
-	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -62,11 +61,11 @@ func (a AvailListener) connect(ctx context.Context) (*gsrpc.SubstrateAPI, error)
 			case <-ctx.Done():
 				errCh <- ctx.Err()
 			default:
-				client, err := NewSubstrateAPICtx(ctx, rpcURL)
+				client, err := gsrpc.NewSubstrateAPI(rpcURL)
 				if err != nil {
 					slog.Error("Avail", "Error connecting to Avail client", err)
-					slog.Info("Avail reconnecting client", "retryInterval", retryConnectionInterval)
-					time.Sleep(retryConnectionInterval)
+					slog.Info("Avail reconnecting client", "retryInterval", retryInterval)
+					time.Sleep(retryInterval)
 				} else {
 					clientCh <- client
 					return
@@ -84,183 +83,116 @@ func (a AvailListener) connect(ctx context.Context) (*gsrpc.SubstrateAPI, error)
 	}
 }
 
-const retryConnectionInterval = 5 * time.Second
-const intervalNextBlock = 500 * time.Millisecond
-
-func (a AvailListener) handleData(header types.Header, client *gsrpc.SubstrateAPI, index uint64, fromBlock uint64) error {
-	var (
-		timestampSectionIndex       = 3
-		timestampMethodIndex        = 0
-		coreAppID             int64 = 0
-	)
-
-	if fromBlock < uint64(header.Number) {
-		slog.Debug("Avail Catching up", "Chain is at block", header.Number, "fetching block", fromBlock)
-	} else {
-		slog.Debug("Avail", "index", index, "Chain is at block", header.Number, "fetching block", fromBlock)
-	}
-
-	blockHash, err := client.RPC.Chain.GetBlockHash(fromBlock)
-	if err != nil {
-		return err
-	}
-	block, err := client.RPC.Chain.GetBlock(blockHash)
-	if err != nil {
-		return err
-	}
-	timestamp := uint64(0)
-	for _, ext := range block.Block.Extrinsics {
-		appID := ext.Signature.AppID.Int64()
-		mi := ext.Method.CallIndex.MethodIndex
-		si := ext.Method.CallIndex.SectionIndex
-		if appID == coreAppID && si == uint8(timestampSectionIndex) && mi == uint8(timestampMethodIndex) {
-			timestamp = DecodeTimestamp(common.Bytes2Hex(ext.Method.Args))
-		}
-		slog.Debug("Block", "timestamp", timestamp, "blockNumber", fromBlock)
-
-		if appID != DEFAULT_APP_ID {
-			slog.Debug("Skipping", "appID", appID, "MethodIndex", mi, "SessionIndex", si)
-			return nil
-		}
-		// json, err := ext.MarshalJSON()
-		// if err != nil {
-		// 	slog.Error("avail: Error marshalling extrinsic to JSON", "err", err)
-		// 	continue
-		// }
-		// strJSON := string(json)
-		args := string(ext.Method.Args)
-		msgSender, typedData, err := commons.ExtractSigAndData(args)
-		if err != nil {
-			slog.Error("avail: error extracting signature and typed data", "err", err)
-			return nil
-		}
-		dappAddress := typedData.Message["app"].(string)
-		nonce := typedData.Message["nonce"].(string)
-		maxGasPrice := typedData.Message["max_gas_price"].(string)
-		payload, ok := typedData.Message["data"].(string)
-		if !ok {
-			slog.Error("avail: error extracting data from message")
-			return nil
-		}
-		slog.Debug("Avail input",
-			"dappAddress", dappAddress,
-			"msgSender", msgSender,
-			"nonce", nonce,
-			"maxGasPrice", maxGasPrice,
-			"payload", payload,
-		)
-		// slog.Debug("avail extrinsic:", "appID", appID, "index", index, "extId", extId, "args", args, "json", strJSON)
-	}
-
-	return nil
-}
-
-func (a AvailListener) ReadPastTransactions(ctx context.Context, client *gsrpc.SubstrateAPI, endBlock uint64, finished chan<- struct{}, errCh chan<- error) {
-	for block := a.FromBlock; block < endBlock; block++ {
-		index := block - a.FromBlock
-		slog.Debug("Avail", "Reading past block", block)
-		blockHash, err := client.RPC.Chain.GetBlockHash(block)
-		if err != nil {
-			errCh <- fmt.Errorf("Error getting block hash %v", err)
-			continue
-		}
-
-		header, err := client.RPC.Chain.GetHeader(blockHash)
-		if err != nil {
-			errCh <- fmt.Errorf("Error getting block %v", err)
-			continue
-		}
-
-		err = a.handleData(*header, client, index, a.FromBlock)
-
-		if err != nil {
-			errCh <- fmt.Errorf("Error handling data %v", err)
-			continue
-		}
-
-	}
-
-	finished <- struct{}{}
-}
+const retryInterval = 5 * time.Second
 
 func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.SubstrateAPI) error {
-	var (
-		finishedPast = make(chan struct{})
-		errPastCh    = make(chan error)
-	)
+	latestBlock := a.FromBlock
+	var index uint = 0
 
 	for {
-		if a.FromBlock == 0 {
-			return fmt.Errorf("avail: fromBlock is 0")
-			// block, err := client.RPC.Chain.GetHeaderLatest()
-			// if err != nil {
-			// 	slog.Error("Avail", "Error getting latest block hash", err)
-			// 	slog.Info("Avail reconnecting", "retryInterval", retryConnectionInterval)
-			// 	// time.Sleep(retryConnectionInterval)
-			// 	continue
-			// }
-
-			// slog.Info("Avail", "Set last block", block.Number)
-			// fromBlock = uint64(block.Number)
-		}
-
-		latestBlock, err := client.RPC.Chain.GetHeaderLatest()
-		if err != nil {
-			slog.Error("Avail", "Error getting latest block hash", err)
-			slog.Info("Avail reconnecting", "retryInterval", retryConnectionInterval)
-			time.Sleep(retryConnectionInterval)
-			continue
-		}
-
-		slog.Info("Avail", "Set last block", latestBlock.Number)
-
-		go func() {
-			a.ReadPastTransactions(ctx, client, uint64(latestBlock.Number), finishedPast, errPastCh)
-
-			for {
-				select {
-				case <-ctx.Done():
-					return
-				case err := <-errPastCh:
-					slog.Error("Avail", "Error reading past transactions", err)
-				case <-finishedPast:
-					slog.Info("Avail finished reading past transactions")
-					return
-				}
+		if latestBlock == 0 {
+			block, err := client.RPC.Chain.GetHeaderLatest()
+			if err != nil {
+				slog.Error("Avail", "Error getting latest block hash", err)
+				slog.Info("Avail reconnecting", "retryInterval", retryInterval)
+				time.Sleep(retryInterval)
+				continue
 			}
-		}()
 
-		subscription, err := client.RPC.Chain.SubscribeFinalizedHeads()
+			slog.Info("Avail", "Set last block", block.Number)
+			latestBlock = uint64(block.Number)
+		}
+
+		subscription, err := client.RPC.Chain.SubscribeNewHeads()
 		if err != nil {
 			slog.Error("Avail", "Error subscribing to new heads", err)
-			slog.Info("Avail reconnecting", "retryInterval", retryConnectionInterval)
-			time.Sleep(retryConnectionInterval)
+			slog.Info("Avail reconnecting", "retryInterval", retryInterval)
+			time.Sleep(retryInterval)
 			continue
 		}
 		defer subscription.Unsubscribe()
 
-		errCh := make(chan error, 1)
-
+		errCh := make(chan error)
+		timestampSectionIndex := 3
+		timestampMethodIndex := 0
+		coreAppID := int64(0)
 		go func() {
 			for {
 				select {
 				case <-ctx.Done():
-					slog.Warn(">>>>>>>>>>>>>>>> Avail signal shutting down")
 					errCh <- ctx.Err()
 					return
 				case err := <-subscription.Err():
 					errCh <- err
 					return
 
-				case <-time.After(intervalNextBlock):
-				case header := <-subscription.Chan():
-					index := uint64(header.Number) - a.FromBlock
-					slog.Debug("Avail", "index", index, "New block", header.Number)
-					err := a.handleData(header, client, index, a.FromBlock)
+				case <-time.After(500 * time.Millisecond): // nolint
+				case i := <-subscription.Chan():
+					for latestBlock <= uint64(i.Number) {
+						index++
 
-					if err != nil {
-						errCh <- err
-						return
+						if latestBlock < uint64(i.Number) {
+							slog.Debug("Avail Catching up", "Chain is at block", i.Number, "fetching block", latestBlock)
+						} else {
+							slog.Debug("Avail", "index", index, "Chain is at block", i.Number, "fetching block", latestBlock)
+						}
+
+						blockHash, err := client.RPC.Chain.GetBlockHash(latestBlock)
+						if err != nil {
+							errCh <- err
+							return
+						}
+						block, err := client.RPC.Chain.GetBlock(blockHash)
+						if err != nil {
+							errCh <- err
+							return
+						}
+						timestamp := uint64(0)
+						for _, ext := range block.Block.Extrinsics {
+							appID := ext.Signature.AppID.Int64()
+							mi := ext.Method.CallIndex.MethodIndex
+							si := ext.Method.CallIndex.SectionIndex
+							if appID == coreAppID && si == uint8(timestampSectionIndex) && mi == uint8(timestampMethodIndex) {
+								timestamp = DecodeTimestamp(common.Bytes2Hex(ext.Method.Args))
+							}
+							slog.Debug("Block", "timestamp", timestamp, "blockNumber", latestBlock)
+
+							if appID != DEFAULT_APP_ID {
+								slog.Debug("Skipping", "appID", appID, "MethodIndex", mi, "SessionIndex", si)
+								continue
+							}
+							// json, err := ext.MarshalJSON()
+							// if err != nil {
+							// 	slog.Error("avail: Error marshalling extrinsic to JSON", "err", err)
+							// 	continue
+							// }
+							// strJSON := string(json)
+							args := string(ext.Method.Args)
+							msgSender, typedData, err := commons.ExtractSigAndData(args)
+							if err != nil {
+								slog.Error("avail: error extracting signature and typed data", "err", err)
+								continue
+							}
+							dappAddress := typedData.Message["app"].(string)
+							nonce := typedData.Message["nonce"].(string)
+							maxGasPrice := typedData.Message["max_gas_price"].(string)
+							payload, ok := typedData.Message["data"].(string)
+							if !ok {
+								slog.Error("avail: error extracting data from message")
+								continue
+							}
+							slog.Debug("Avail input",
+								"dappAddress", dappAddress,
+								"msgSender", msgSender,
+								"nonce", nonce,
+								"maxGasPrice", maxGasPrice,
+								"payload", payload,
+							)
+							// slog.Debug("avail extrinsic:", "appID", appID, "index", index, "extId", extId, "args", args, "json", strJSON)
+						}
+
+						latestBlock += 1
+						time.Sleep(500 * time.Millisecond) // nolint
 					}
 				}
 			}
@@ -275,8 +207,8 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 
 		if err != nil {
 			slog.Error("Avail", "Error", err)
-			slog.Info("Avail reconnecting", "retryInterval", retryConnectionInterval)
-			time.Sleep(retryConnectionInterval)
+			slog.Info("Avail reconnecting", "retryInterval", retryInterval)
+			time.Sleep(retryInterval)
 		} else {
 			return nil
 		}
