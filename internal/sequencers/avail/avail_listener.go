@@ -177,7 +177,8 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 
 							l1FinalizedTimestamp := DecodeTimestamp(common.Bytes2Hex(block.Block.Extrinsics[0].Method.Args))
 							// read L1 if there might be update
-							if l1CurrentBlock > l1PreviousBlock || l1PreviousBlock == a.FromBlock {
+							slog.Debug("l1PreviousBlock", l1PreviousBlock, "l1CurrentBlock", l1CurrentBlock, "latestBlock", latestBlock, "to timestamp", l1FinalizedTimestamp)
+							if latestBlock > l1CurrentBlock || l1PreviousBlock == a.FromBlock {
 								slog.Debug("Fetching InputBox between Avail blocks", "from", l1CurrentBlock, "to timestamp", l1FinalizedTimestamp)
 								lastL1BlockRead, err := readInputBoxByBlockAndTimestamp(ctx, l1CurrentBlock, l1FinalizedTimestamp, a.InputterWorker)
 								if err != nil {

@@ -251,6 +251,7 @@ func (w InputterWorker) ReadInputsByBlockAndTimestamp(
 
 	opts := bind.FilterOpts{
 		Context: ctx,
+		Start:   startBlockNumber,
 	}
 	filter := []common.Address{w.ApplicationAddress}
 	it, err := inputBox.FilterInputAdded(&opts, filter, nil)
