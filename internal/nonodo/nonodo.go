@@ -357,7 +357,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		ApplicationAddress: common.HexToAddress(opts.ApplicationAddress),
 	}
 
-	if !opts.DisableAdvance {
+	if !opts.DisableAdvance && !opts.AvailEnabled {
 		if opts.Sequencer == "inputbox" {
 			sequencer = model.NewInputBoxSequencer(modelInstance)
 			w.Workers = append(w.Workers, inputter.InputterWorker{
