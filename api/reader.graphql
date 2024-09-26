@@ -90,12 +90,6 @@ type Voucher {
 type Query {
   "Get input based on its identifier"
   input(id: String!): Input!
-  "Get a voucher based on its index"
-  voucher(voucherIndex: Int!, inputIndex: Int!): Voucher!
-  "Get a notice based on its index"
-  notice(noticeIndex: Int!, inputIndex: Int!): Notice!
-  "Get a report based on its index"
-  report(reportIndex: Int!, inputIndex: Int!): Report!
   "Get inputs with support for pagination"
   inputs(first: Int, last: Int, after: String, before: String, where: InputFilter): InputConnection!
   "Get vouchers with support for pagination"
