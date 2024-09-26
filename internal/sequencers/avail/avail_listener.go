@@ -204,7 +204,7 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 
 							args := string(ext.Method.Args)
 
-							msgSender, typedData, signature, err := commons.ExtractSigAndData(args[2:])
+							msgSender, typedData, signature, err := commons.ExtractSigAndData(args)
 
 							if err != nil {
 								slog.Error("avail: error extracting signature and typed data", "err", err)
@@ -340,6 +340,45 @@ func readInputBoxByBlockAndTimestamp(ctx context.Context, l1FinalizedPrevHeight 
 
 }
 
+func ReadInputsFromAvailBlock(block *types.SignedBlock) ([]cModel.AdvanceInput, error) {
+	inputs := []cModel.AdvanceInput{}
+	timestamp, err := ReadTimestampFromBlock(block)
+	if err != nil {
+		return inputs, err
+	}
+	for _, ext := range block.Block.Extrinsics {
+		appID := ext.Signature.AppID.Int64()
+		slog.Debug("debug", "appID", appID, "timestamp", timestamp)
+		if appID != DEFAULT_APP_ID {
+			slog.Debug("Skipping", "appID", appID)
+			continue
+		}
+		args := string(ext.Method.Args)
+
+		msgSender, typedData, signature, err := commons.ExtractSigAndData(args)
+		if err != nil {
+			return inputs, err
+		}
+		paioMessage, err := ParsePaioFrom712Message(typedData)
+		if err != nil {
+			return inputs, err
+		}
+		slog.Debug("MsgSender", "value", msgSender)
+		inputs = append(inputs, cModel.AdvanceInput{
+			Index:                int(0),
+			CartesiTransactionId: common.Bytes2Hex(crypto.Keccak256(signature)),
+			MsgSender:            msgSender,
+			Payload:              paioMessage.Payload,
+			AppContract:          common.HexToAddress(paioMessage.App),
+			AvailBlockNumber:     int(block.Block.Header.Number),
+			AvailBlockTimestamp:  time.Unix(int64(timestamp)/ONE_SECOND_IN_MS, 0),
+			InputBoxIndex:        -2,
+			Type:                 "Avail",
+		})
+	}
+	return inputs, nil
+}
+
 func ReadTimestampFromBlock(block *types.SignedBlock) (uint64, error) {
 	timestampSectionIndex := uint8(TIMESTAMP_SECTION_INDEX)
 	timestampMethodIndex := uint8(0)
@@ -363,12 +402,12 @@ func ParsePaioFrom712Message(typedData apitypes.TypedData) (PaioMessage, error) 
 		App:         typedData.Message["app"].(string),
 		Nonce:       typedData.Message["nonce"].(string),
 		MaxGasPrice: typedData.Message["max_gas_price"].(string),
-		Payload:     common.Hex2Bytes(typedData.Message["data"].(string)),
+		Payload:     []byte(typedData.Message["data"].(string)),
 	}
 	return message, nil
 }
 
-// altera para usar o nome do Paio
+// alterar para usar o nome do Paio
 type PaioMessage struct {
 	App         string
 	Nonce       string

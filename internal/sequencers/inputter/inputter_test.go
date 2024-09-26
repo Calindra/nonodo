@@ -5,11 +5,15 @@ package inputter
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
-	"os"
+	"os/exec"
 	"testing"
 
+	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/contracts"
+	"github.com/calindra/nonodo/internal/devnet"
+	"github.com/calindra/nonodo/internal/supervisor"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/stretchr/testify/suite"
@@ -17,14 +21,46 @@ import (
 
 type InputterTestSuite struct {
 	suite.Suite
+	ctx           context.Context
+	timeoutCancel context.CancelFunc
+	workerCancel  context.CancelFunc
+	workerResult  chan error
+	rpcUrl        string
+	// nonce         int
 }
 
-func (s *InputterTestSuite) XTestReadInputsByBlockAndTimestamp() {
-	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-		Level: slog.LevelDebug,
-	}))
-	slog.SetDefault(logger)
+func (s *InputterTestSuite) SetupTest() {
+	commons.ConfigureLog(slog.LevelDebug)
+	slog.Debug("Setup!!!")
+	var w supervisor.SupervisorWorker
+	w.Name = "TesteInputter"
+	s.ctx = context.Background()
+	anvilLocation, err := devnet.CheckAnvilAndInstall(s.ctx)
+	s.NoError(err)
+	w.Workers = append(w.Workers, devnet.AnvilWorker{
+		Address:  devnet.AnvilDefaultAddress,
+		Port:     devnet.AnvilDefaultPort,
+		Verbose:  true,
+		AnvilCmd: anvilLocation,
+	})
+	var workerCtx context.Context
+	workerCtx, s.workerCancel = context.WithCancel(s.ctx)
+	s.rpcUrl = fmt.Sprintf("ws://%s:%v", devnet.AnvilDefaultAddress, devnet.AnvilDefaultPort)
+	ready := make(chan struct{})
+	go func() {
+		s.workerResult <- w.Start(workerCtx, ready)
+	}()
+	select {
+	case <-s.ctx.Done():
+		s.Fail("context error", s.ctx.Err())
+	case err := <-s.workerResult:
+		s.Fail("worker exited before being ready", err)
+	case <-ready:
+		s.T().Log("nonodo ready")
+	}
+}
 
+func (s *InputterTestSuite) TestReadInputsByBlockAndTimestamp() {
 	ctx := context.Background()
 	client, err := ethclient.DialContext(ctx, "http://127.0.0.1:8545")
 	s.NoError(err)
@@ -44,6 +80,20 @@ func (s *InputterTestSuite) XTestReadInputsByBlockAndTimestamp() {
 	lastL1BlockRead, err := w.ReadInputsByBlockAndTimestamp(ctx, client, inputBox, l1FinalizedPrevHeight, (timestamp/1000)-300)
 	s.NoError(err)
 	s.NotNil(lastL1BlockRead)
+}
+
+func (s *InputterTestSuite) TearDownTest() {
+	s.workerCancel()
+	select {
+	case <-s.ctx.Done():
+		s.Fail("context error", s.ctx.Err())
+	case err := <-s.workerResult:
+		s.NoError(err)
+	}
+	s.timeoutCancel()
+	err := exec.Command("pkill", "avail").Run()
+	s.NoError(err)
+	s.T().Log("teardown ok.")
 }
 
 func TestInputterTestSuite(t *testing.T) {
