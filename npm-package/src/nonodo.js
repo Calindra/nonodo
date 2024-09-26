@@ -2,8 +2,6 @@
 const {
   existsSync,
   createReadStream,
-  readFileSync,
-  writeFileSync,
 } = require("node:fs");
 const { Buffer } = require("node:buffer");
 const { URL } = require("node:url");
@@ -16,12 +14,13 @@ const { get: request } = require("node:https");
 const { unzipSync } = require("node:zlib");
 const { SingleBar, Presets } = require("cli-progress");
 const AdmZip = require("adm-zip");
+const { writeFile, readFile } = require("node:fs/promises");
 
 const PACKAGE_NONODO_VERSION =
   process.env.PACKAGE_NONODO_VERSION ?? version;
 const PACKAGE_NONODO_URL = new URL(
   process.env.PACKAGE_NONODO_URL ??
-    `https://github.com/Calindra/nonodo/releases/download/v${PACKAGE_NONODO_VERSION}/`,
+  `https://github.com/Calindra/nonodo/releases/download/v${PACKAGE_NONODO_VERSION}/`,
 );
 const PACKAGE_NONODO_DIR = process.env.PACKAGE_NONODO_DIR ?? tmpdir();
 
@@ -90,18 +89,21 @@ function calculateHash(path, algorithm) {
   });
 }
 
-function unpackZip(zipPath, destPath) {
+async function unpackZip(zipPath, destPath) {
   const zip = new AdmZip(zipPath);
   const entry = zip.getEntry("nonodo.exe");
-  if (!entry) throw new Error("Dont find binary on zip");
+  if (!entry) throw new Error(`Dont find ${entry} on zip`);
   const buffer = entry.getData();
-  writeFileSync(destPath, buffer, { mode: 0o755 });
+  await writeFile(destPath, buffer, { mode: 0o755 });
 }
 
-function unpackTarball(tarballPath, destPath) {
-  const tarballDownloadBuffer = readFileSync(tarballPath);
+async function unpackTarball(tarballPath, destPath) {
+  const tarballDownloadBuffer = await readFile(tarballPath);
   const tarballBuffer = unzipSync(tarballDownloadBuffer);
-  writeFileSync(destPath, extractFileFromTarball(tarballBuffer, "nonodo"), {
+
+  const buffer = Buffer.from(tarballBuffer);
+  const extractedFile = extractFileFromTarball(buffer, "nonodo");
+  await writeFile(destPath, extractedFile, {
     mode: 0o755,
   });
 }
@@ -121,8 +123,16 @@ function extractFileFromTarball(tarballBuffer, filepath) {
 
   let offset = 0;
   while (offset < tarballBuffer.length) {
-    const header = tarballBuffer.slice(offset, offset + 512);
+    const header = tarballBuffer.subarray(offset, offset + 512);
     offset += 512;
+
+    // Check for EOF (two consecutive zero-filled blocks)
+    if (header.every(byte => byte === 0)) {
+      const nextBlock = tarballBuffer.subarray(offset, offset + 512)
+      if (nextBlock.every(byte => byte === 0)) {
+        break // EOF reached
+      }
+    }
 
     const fileName = header.toString("utf-8", 0, 100).replace(/\0.*/g, "");
     const fileSize = parseInt(
@@ -137,6 +147,8 @@ function extractFileFromTarball(tarballBuffer, filepath) {
     // Clamp offset to the uppoer multiple of 512
     offset = (offset + fileSize + 511) & ~511;
   }
+
+  throw new Error(`File ${filepath} not found in tarball.`);
 }
 
 async function downloadBinary() {
@@ -151,7 +163,7 @@ async function downloadBinary() {
 
   const binary = await makeRequest(url);
 
-  writeFileSync(dest, binary, {
+  await writeFile(dest, binary, {
     signal: asyncController.signal,
   });
 }
@@ -172,7 +184,7 @@ async function downloadHash() {
   const response = await makeRequest(url);
   const body = response.toString("utf-8");
 
-  writeFileSync(dest, body, {
+  await writeFile(dest, body, {
     signal: asyncController.signal,
   });
 
@@ -192,8 +204,8 @@ function makeRequest(url) {
     let bar;
 
     const req = request(url, (res) => {
-      if (res.statusCode >= 200 && res.statusCode < 300) {
-        const length = parseInt(res.headers["content-length"], 10);
+      if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
+        const length = parseInt(res.headers?.["content-length"] ?? "", 10);
         const chunks = [];
         let size = 0;
         if (!Number.isNaN(length)) {
@@ -214,6 +226,7 @@ function makeRequest(url) {
           resolve(Buffer.concat(chunks));
         });
       } else if (
+        res.statusCode &&
         res.statusCode >= 300 &&
         res.statusCode < 400 &&
         res.headers.location
@@ -291,10 +304,10 @@ async function getNonodoAvailable() {
     console.log(`Hash verified.`);
 
     if (getPlatform() !== "windows") {
-      unpackTarball(releasePath, binaryPath);
+      await unpackTarball(releasePath, binaryPath);
     } else {
       /** unzip this */
-      unpackZip(releasePath, binaryPath);
+      await unpackZip(releasePath, binaryPath);
     }
 
     if (!existsSync(binaryPath)) throw new Error("Problem on unpack");

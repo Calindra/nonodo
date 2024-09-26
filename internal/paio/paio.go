@@ -24,6 +24,8 @@ type PaioAPI struct {
 // SendTransaction implements ServerInterface.
 func (p *PaioAPI) SendTransaction(ctx echo.Context) error {
 	var request SendTransactionJSONRequestBody
+	stdCtx, cancel := context.WithCancel(ctx.Request().Context())
+	defer cancel()
 	if err := ctx.Bind(&request); err != nil {
 		return err
 	}
@@ -37,13 +39,12 @@ func (p *PaioAPI) SendTransaction(ctx echo.Context) error {
 		slog.Error("Error json.Marshal message:", "err", err)
 		return err
 	}
-	hash, err := p.availClient.DefaultSubmit(string(jsonPayload))
+	hash, err := p.availClient.DefaultSubmit(stdCtx, string(jsonPayload))
 	if err != nil {
 		slog.Error("Error DefaultSubmit message:", "err", err)
 		return err
 	}
-	//nolint
-	ctx.String(200, hash.Hex())
+	_ = ctx.String(http.StatusOK, hash.Hex())
 	return nil
 }
 
