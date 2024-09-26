@@ -24,8 +24,7 @@ paths:
           content:
             application/json:
               schema:
-                type: string
-                example: "1"
+                $ref: "#/components/schemas/NonceResponse"
 
       requestBody:
         content:
@@ -55,7 +54,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/PaioTransaction"
+              $ref: "#/components/schemas/PaioSingleTransaction"
         required: true
 
   /transactions:
@@ -111,6 +110,19 @@ components:
       required:
         - signature
         - typedData
+    PaioSingleTransaction:
+      type: object
+      properties:
+        signature:
+          type: string
+          example: "0x0"
+        message:
+          type: string
+          description: "OxO"
+          example: "AA"
+      required:
+        - signature
+        - typedData
     GetNonce:
       type: object
       properties:
@@ -125,6 +137,13 @@ components:
       required:
         - msg_sender
         - app_contract
+    NonceResponse:
+        type: object
+        properties:
+          nonce:
+            type: integer
+            description: Nonce number
+            example: 1
       
 
     Error:

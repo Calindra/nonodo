@@ -28,6 +28,19 @@ type GetNonce struct {
 	MsgSender string `json:"msg_sender"`
 }
 
+// NonceResponse defines model for NonceResponse.
+type NonceResponse struct {
+	// Nonce Nonce number
+	Nonce *int `json:"nonce,omitempty"`
+}
+
+// PaioSingleTransaction defines model for PaioSingleTransaction.
+type PaioSingleTransaction struct {
+	// Message OxO
+	Message   *string `json:"message,omitempty"`
+	Signature string  `json:"signature"`
+}
+
 // PaioTransaction defines model for PaioTransaction.
 type PaioTransaction struct {
 	Signature string `json:"signature"`
@@ -40,7 +53,7 @@ type PaioTransaction struct {
 type GetNonceJSONRequestBody = GetNonce
 
 // SaveTransactionJSONRequestBody defines body for SaveTransaction for application/json ContentType.
-type SaveTransactionJSONRequestBody = PaioTransaction
+type SaveTransactionJSONRequestBody = PaioSingleTransaction
 
 // SendTransactionJSONRequestBody defines body for SendTransaction for application/json ContentType.
 type SendTransactionJSONRequestBody = PaioTransaction
@@ -388,7 +401,7 @@ type ClientWithResponsesInterface interface {
 type GetNonceResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
-	JSON200      *string
+	JSON200      *NonceResponse
 }
 
 // Status returns HTTPResponse.Status
@@ -517,7 +530,7 @@ func ParseGetNonceResponse(rsp *http.Response) (*GetNonceResponse, error) {
 
 	switch {
 	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest string
+		var dest NonceResponse
 		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
 			return nil, err
 		}

@@ -53,7 +53,7 @@ func (p *PaioAPI) GetNonce(ctx echo.Context) error {
 	stdCtx, cancel := context.WithCancel(ctx.Request().Context())
 	defer cancel()
 	if err := ctx.Bind(&request); err != nil {
-		return err
+		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": err.Error()})
 	}
 
 	filters := []*model.ConvenienceFilter{}
@@ -75,13 +75,32 @@ func (p *PaioAPI) GetNonce(ctx echo.Context) error {
 		slog.Error("Error querying for inputs:", "err", err)
 		return err
 	}
-	nonce := fmt.Sprintf("%d", inputs.Total+1)
-	return ctx.String(http.StatusOK, nonce)
+
+	nonce := int(inputs.Total + 1)
+	response := NonceResponse{
+		Nonce: &nonce,
+	}
+
+	return ctx.JSON(http.StatusOK, response)
 }
 
 func (p *PaioAPI) SaveTransaction(ctx echo.Context) error {
-	transactionId := "1234"
-	return ctx.String(http.StatusOK, transactionId)
+	var request GetNonceJSONRequestBody
+	stdCtx, cancel := context.WithCancel(ctx.Request().Context())
+	defer cancel()
+	if err := ctx.Bind(&request); err != nil {
+		return err
+	}
+
+	createdInput, err := p.inputRepository.Create(stdCtx, model.AdvanceInput{})
+
+	if err != nil {
+		slog.Error("Error querying for inputs:", "err", err)
+		return err
+	}
+
+	transactionId := createdInput.Index
+	return ctx.String(http.StatusOK, fmt.Sprintf("%d", transactionId))
 }
 
 // Register the Paio API to echo
