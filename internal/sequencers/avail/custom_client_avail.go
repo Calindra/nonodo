@@ -12,7 +12,8 @@ import (
 
 type CustomClient struct {
 	gethrpc.Client
-	url string
+	ctxApp context.Context
+	url    string
 }
 
 // URL returns the URL the client connects to
@@ -20,25 +21,26 @@ func (c CustomClient) URL() string {
 	return c.url
 }
 
-func (c CustomClient) Close() {
-	c.Client.Close()
+func (c CustomClient) Call(result interface{}, method string, args ...interface{}) error {
+	return c.Client.CallContext(c.ctxApp, result, method, args...)
 }
 
 // Connect connects to the provided url
 func Connect(ctx context.Context, url string) (*CustomClient, error) {
 	slog.Info("avail: connecting to", "url", url)
 
-	ctx, cancel := context.WithTimeout(ctx, config.Default().DialTimeout)
+	ctxDial, cancel := context.WithTimeout(ctx, config.Default().DialTimeout)
 	defer cancel()
 
-	c, err := gethrpc.DialContext(ctx, url)
+	c, err := gethrpc.DialContext(ctxDial, url)
 	if err != nil {
 		return nil, err
 	}
-	cc := CustomClient{*c, url}
+	cc := CustomClient{*c, ctx, url}
 	return &cc, nil
 }
 
+// Same as gsrpc.NewSubstrateAPI with context of the application
 func NewSubstrateAPICtx(ctx context.Context, url string) (*gsrpc.SubstrateAPI, error) {
 	cl, err := Connect(ctx, url)
 	if err != nil {
