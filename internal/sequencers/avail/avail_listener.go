@@ -108,6 +108,7 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 	l1CurrentBlock := a.FromBlock
 	l1PreviousBlock := a.FromBlock
 	var index uint = 0
+	defer client.Client.Close()
 
 	for {
 		if latestBlock == 0 {
