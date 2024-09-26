@@ -196,7 +196,9 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 							if appID == coreAppID && si == uint8(timestampSectionIndex) && mi == uint8(timestampMethodIndex) {
 								timestamp = DecodeTimestamp(common.Bytes2Hex(ext.Method.Args))
 							}
-							slog.Debug("Block", "timestamp", timestamp, "blockNumber", latestBlock)
+							iso := time.UnixMilli(int64(timestamp)).Format(time.RFC3339)
+
+							slog.Debug("Block", "timestamp", timestamp, "iso", iso, "blockNumber", latestBlock)
 
 							if appID != DEFAULT_APP_ID {
 								slog.Debug("Skipping", "appID", appID, "MethodIndex", mi, "SessionIndex", si)
