@@ -34,13 +34,6 @@ type NonceResponse struct {
 	Nonce *int `json:"nonce,omitempty"`
 }
 
-// PaioSingleTransaction defines model for PaioSingleTransaction.
-type PaioSingleTransaction struct {
-	// Message OxO
-	Message   *string `json:"message,omitempty"`
-	Signature string  `json:"signature"`
-}
-
 // PaioTransaction defines model for PaioTransaction.
 type PaioTransaction struct {
 	Signature string `json:"signature"`
@@ -51,9 +44,6 @@ type PaioTransaction struct {
 
 // GetNonceJSONRequestBody defines body for GetNonce for application/json ContentType.
 type GetNonceJSONRequestBody = GetNonce
-
-// SaveTransactionJSONRequestBody defines body for SaveTransaction for application/json ContentType.
-type SaveTransactionJSONRequestBody = PaioSingleTransaction
 
 // SendTransactionJSONRequestBody defines body for SendTransaction for application/json ContentType.
 type SendTransactionJSONRequestBody = PaioTransaction
@@ -136,11 +126,6 @@ type ClientInterface interface {
 
 	GetNonce(ctx context.Context, body GetNonceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
-	// SaveTransactionWithBody request with any body
-	SaveTransactionWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	SaveTransaction(ctx context.Context, body SaveTransactionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
-
 	// SendTransactionWithBody request with any body
 	SendTransactionWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -161,30 +146,6 @@ func (c *Client) GetNonceWithBody(ctx context.Context, contentType string, body 
 
 func (c *Client) GetNonce(ctx context.Context, body GetNonceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetNonceRequest(c.Server, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) SaveTransactionWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewSaveTransactionRequestWithBody(c.Server, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
-
-func (c *Client) SaveTransaction(ctx context.Context, body SaveTransactionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewSaveTransactionRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -240,46 +201,6 @@ func NewGetNonceRequestWithBody(server string, contentType string, body io.Reade
 	}
 
 	operationPath := fmt.Sprintf("/nonce")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", queryURL.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
-
-	return req, nil
-}
-
-// NewSaveTransactionRequest calls the generic SaveTransaction builder with application/json body
-func NewSaveTransactionRequest(server string, body SaveTransactionJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewSaveTransactionRequestWithBody(server, "application/json", bodyReader)
-}
-
-// NewSaveTransactionRequestWithBody generates requests for SaveTransaction with any type of body
-func NewSaveTransactionRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/transaction")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -387,11 +308,6 @@ type ClientWithResponsesInterface interface {
 
 	GetNonceWithResponse(ctx context.Context, body GetNonceJSONRequestBody, reqEditors ...RequestEditorFn) (*GetNonceResponse, error)
 
-	// SaveTransactionWithBodyWithResponse request with any body
-	SaveTransactionWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SaveTransactionResponse, error)
-
-	SaveTransactionWithResponse(ctx context.Context, body SaveTransactionJSONRequestBody, reqEditors ...RequestEditorFn) (*SaveTransactionResponse, error)
-
 	// SendTransactionWithBodyWithResponse request with any body
 	SendTransactionWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendTransactionResponse, error)
 
@@ -414,28 +330,6 @@ func (r GetNonceResponse) Status() string {
 
 // StatusCode returns HTTPResponse.StatusCode
 func (r GetNonceResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
-}
-
-type SaveTransactionResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *string
-}
-
-// Status returns HTTPResponse.Status
-func (r SaveTransactionResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
-	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r SaveTransactionResponse) StatusCode() int {
 	if r.HTTPResponse != nil {
 		return r.HTTPResponse.StatusCode
 	}
@@ -481,23 +375,6 @@ func (c *ClientWithResponses) GetNonceWithResponse(ctx context.Context, body Get
 	return ParseGetNonceResponse(rsp)
 }
 
-// SaveTransactionWithBodyWithResponse request with arbitrary body returning *SaveTransactionResponse
-func (c *ClientWithResponses) SaveTransactionWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SaveTransactionResponse, error) {
-	rsp, err := c.SaveTransactionWithBody(ctx, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseSaveTransactionResponse(rsp)
-}
-
-func (c *ClientWithResponses) SaveTransactionWithResponse(ctx context.Context, body SaveTransactionJSONRequestBody, reqEditors ...RequestEditorFn) (*SaveTransactionResponse, error) {
-	rsp, err := c.SaveTransaction(ctx, body, reqEditors...)
-	if err != nil {
-		return nil, err
-	}
-	return ParseSaveTransactionResponse(rsp)
-}
-
 // SendTransactionWithBodyWithResponse request with arbitrary body returning *SendTransactionResponse
 func (c *ClientWithResponses) SendTransactionWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendTransactionResponse, error) {
 	rsp, err := c.SendTransactionWithBody(ctx, contentType, body, reqEditors...)
@@ -541,32 +418,6 @@ func ParseGetNonceResponse(rsp *http.Response) (*GetNonceResponse, error) {
 	return response, nil
 }
 
-// ParseSaveTransactionResponse parses an HTTP response from a SaveTransactionWithResponse call
-func ParseSaveTransactionResponse(rsp *http.Response) (*SaveTransactionResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &SaveTransactionResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest string
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	}
-
-	return response, nil
-}
-
 // ParseSendTransactionResponse parses an HTTP response from a SendTransactionWithResponse call
 func ParseSendTransactionResponse(rsp *http.Response) (*SendTransactionResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -599,9 +450,6 @@ type ServerInterface interface {
 	// (POST /nonce)
 	GetNonce(ctx echo.Context) error
 	// Send Paio's transaction
-	// (POST /transaction)
-	SaveTransaction(ctx echo.Context) error
-	// Send Paio's transaction
 	// (POST /transactions)
 	SendTransaction(ctx echo.Context) error
 }
@@ -617,15 +465,6 @@ func (w *ServerInterfaceWrapper) GetNonce(ctx echo.Context) error {
 
 	// Invoke the callback with all the unmarshaled arguments
 	err = w.Handler.GetNonce(ctx)
-	return err
-}
-
-// SaveTransaction converts echo context to params.
-func (w *ServerInterfaceWrapper) SaveTransaction(ctx echo.Context) error {
-	var err error
-
-	// Invoke the callback with all the unmarshaled arguments
-	err = w.Handler.SaveTransaction(ctx)
 	return err
 }
 
@@ -667,7 +506,6 @@ func RegisterHandlersWithBaseURL(router EchoRouter, si ServerInterface, baseURL 
 	}
 
 	router.POST(baseURL+"/nonce", wrapper.GetNonce)
-	router.POST(baseURL+"/transaction", wrapper.SaveTransaction)
 	router.POST(baseURL+"/transactions", wrapper.SendTransaction)
 
 }
