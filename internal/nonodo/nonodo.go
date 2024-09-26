@@ -323,7 +323,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	if err != nil {
 		panic(err)
 	}
-	paio.Register(e, availClient)
+	paio.Register(e, availClient, container.GetInputRepository())
 
 	// Start the "internal" http rollup server
 	re := echo.New()
