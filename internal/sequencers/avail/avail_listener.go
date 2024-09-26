@@ -79,7 +79,7 @@ func (a AvailListener) connect(ctx context.Context) (*gsrpc.SubstrateAPI, error)
 			case <-ctx.Done():
 				errCh <- ctx.Err()
 			default:
-				client, err := gsrpc.NewSubstrateAPI(rpcURL)
+				client, err := NewSubstrateAPICtx(ctx, rpcURL)
 				if err != nil {
 					slog.Error("Avail", "Error connecting to Avail client", err)
 					slog.Info("Avail reconnecting client", "retryInterval", retryInterval)
