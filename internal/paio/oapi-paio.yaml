@@ -11,6 +11,53 @@ info:
     Some good description
 
 paths:
+  /nonce:
+    post:
+      operationId: getNonce
+      summary: Get Nonce
+      desctiption:
+        A good description
+      
+      responses:
+        "200":
+          description: Nonce
+          content:
+            application/json:
+              schema:
+                type: string
+                example: "1"
+
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GetNonce"
+        required: true
+
+  /transaction:
+    post:
+      operationId: saveTransaction
+      summary: Send Paio's transaction
+      description: |
+        A good description
+      
+      responses:
+        "200":
+          description: PaioTransaction accepted
+          content:
+            application/json:
+              schema:
+                type: string
+                example: "no rollup request available"
+
+
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaioTransaction"
+        required: true
+
   /transactions:
     post:
       operationId: sendTransaction
@@ -64,6 +111,21 @@ components:
       required:
         - signature
         - typedData
+    GetNonce:
+      type: object
+      properties:
+        msg_sender:
+          type: string
+          description: Message sender address
+          example: "0x0"
+        app_contract:
+          type: string
+          description: App contract address
+          example: "Ox24545"
+      required:
+        - msg_sender
+        - app_contract
+      
 
     Error:
       type: string
