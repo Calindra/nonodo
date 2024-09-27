@@ -11,6 +11,34 @@ info:
     Some good description
 
 paths:
+  /transaction:
+    post:
+      operationId: saveTransaction
+      summary: Save transaction
+      description: |
+        A good description
+
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveTransactionRequest"
+        required: true
+
+      responses:
+        "201":
+          description: Transaction created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionResponse"
+
+        default:
+          description: Error response.
+          content:
+            text/plain:
+              schema:
+                $ref: "#/components/schemas/Error"
   /nonce:
     post:
       operationId: getNonce
@@ -86,6 +114,19 @@ components:
       required:
         - signature
         - typedData
+    SaveTransactionRequest:
+      type: object
+      properties:
+        signature:
+          type: string
+          example: "0x0"
+        message:
+          type: string
+          description: Base 64
+          example: "AA"
+      required:
+        - signature
+        - message
     GetNonce:
       type: object
       properties:
@@ -101,13 +142,20 @@ components:
         - msg_sender
         - app_contract
     NonceResponse:
-        type: object
-        properties:
-          nonce:
-            type: integer
-            description: Nonce number
-            example: 1
-      
+      type: object
+      properties:
+        nonce:
+          type: integer
+          description: Nonce number
+          example: 1
+    TransactionResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: tx number
+          example: "1"
+        
 
     Error:
       type: string

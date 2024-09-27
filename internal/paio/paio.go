@@ -2,14 +2,19 @@ package paio
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/calindra/nonodo/internal/sequencers/avail"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/labstack/echo/v4"
 )
 
@@ -67,10 +72,10 @@ func (p *PaioAPI) GetNonce(ctx echo.Context) error {
 	})
 
 	typeField := "Type"
-	availType := "Avail"
+	inputBoxType := "inputbox"
 	filters = append(filters, &model.ConvenienceFilter{
 		Field: &typeField,
-		Eq:    &availType,
+		Ne:    &inputBoxType,
 	})
 	inputs, err := p.inputRepository.FindAll(stdCtx, nil, nil, nil, nil, filters)
 
@@ -82,6 +87,97 @@ func (p *PaioAPI) GetNonce(ctx echo.Context) error {
 	nonce := int(inputs.Total + 1)
 	response := NonceResponse{
 		Nonce: &nonce,
+	}
+
+	return ctx.JSON(http.StatusOK, response)
+}
+
+func (p *PaioAPI) SaveTransaction(ctx echo.Context) error {
+	var request SaveTransactionJSONRequestBody
+	stdCtx, cancel := context.WithCancel(ctx.Request().Context())
+	defer cancel()
+	if err := ctx.Bind(&request); err != nil {
+		return err
+	}
+
+	if request.Signature == "" {
+		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "signature is required"})
+	}
+
+	if request.Message == "" {
+		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "message is required"})
+	}
+
+	sigAndData := commons.SigAndData{
+		Signature: request.Signature,
+		TypedData: request.Message,
+	}
+	jsonPayload, err := json.Marshal(sigAndData)
+	if err != nil {
+		slog.Error("Error json.Marshal message:", "err", err)
+		return err
+	}
+
+	msgSender, typedData, signature, err := commons.ExtractSigAndData(string(jsonPayload))
+
+	if err != nil {
+		slog.Error("Error:", "err", err)
+		return err
+	}
+
+	dappAddress := typedData.Message["app"].(string)
+	nonce := typedData.Message["nonce"].(string)
+	maxGasPrice := typedData.Message["max_gas_price"].(string)
+	payload, ok := typedData.Message["data"].(string)
+
+	if !ok {
+		slog.Error("avail: error extracting data from message")
+		return err
+	}
+
+	slog.Debug("Save input",
+		"dappAddress", dappAddress,
+		"msgSender", msgSender,
+		"nonce", nonce,
+		"maxGasPrice", maxGasPrice,
+		"payload", payload,
+	)
+
+	payloadBytes := []byte(payload)
+	if strings.HasPrefix(payload, "0x") {
+		payload = payload[2:] // remove 0x
+		payloadBytes, err = hex.DecodeString(payload)
+		if err != nil {
+			return err
+		}
+	}
+
+	inputCount, err := p.inputRepository.Count(stdCtx, nil)
+
+	if err != nil {
+		slog.Error("Error counting inputs:", "err", err)
+		return err
+	}
+
+	createdInput, err := p.inputRepository.Create(stdCtx, model.AdvanceInput{
+		Index:                int(inputCount + 1),
+		CartesiTransactionId: common.Bytes2Hex(crypto.Keccak256(signature)),
+		MsgSender:            msgSender,
+		Payload:              payloadBytes,
+		AppContract:          common.HexToAddress(dappAddress),
+		InputBoxIndex:        -2,
+		Type:                 "Avail",
+	})
+
+	if err != nil {
+		slog.Error("Error creating inputs:", "err", err)
+		return err
+	}
+
+	transactionId := fmt.Sprintf("%d", createdInput.Index)
+
+	response := TransactionResponse{
+		Id: &transactionId,
 	}
 
 	return ctx.JSON(http.StatusOK, response)
