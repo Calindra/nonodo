@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"os/exec"
 	"testing"
+	"time"
 
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/contracts"
@@ -22,6 +23,7 @@ import (
 type InputterTestSuite struct {
 	suite.Suite
 	ctx           context.Context
+	workerCtx     context.Context
 	timeoutCancel context.CancelFunc
 	workerCancel  context.CancelFunc
 	workerResult  chan error
@@ -34,7 +36,11 @@ func (s *InputterTestSuite) SetupTest() {
 	slog.Debug("Setup!!!")
 	var w supervisor.SupervisorWorker
 	w.Name = "TesteInputter"
-	s.ctx = context.Background()
+	const testTimeout = 5 * time.Second
+	s.ctx, s.timeoutCancel = context.WithTimeout(context.Background(), testTimeout)
+	s.workerResult = make(chan error)
+
+	s.workerCtx, s.workerCancel = context.WithCancel(s.ctx)
 	anvilLocation, err := devnet.CheckAnvilAndInstall(s.ctx)
 	s.NoError(err)
 	w.Workers = append(w.Workers, devnet.AnvilWorker{
@@ -43,12 +49,12 @@ func (s *InputterTestSuite) SetupTest() {
 		Verbose:  true,
 		AnvilCmd: anvilLocation,
 	})
-	var workerCtx context.Context
-	workerCtx, s.workerCancel = context.WithCancel(s.ctx)
+	// var workerCtx context.Context
+
 	s.rpcUrl = fmt.Sprintf("ws://%s:%v", devnet.AnvilDefaultAddress, devnet.AnvilDefaultPort)
 	ready := make(chan struct{})
 	go func() {
-		s.workerResult <- w.Start(workerCtx, ready)
+		s.workerResult <- w.Start(s.workerCtx, ready)
 	}()
 	select {
 	case <-s.ctx.Done():
@@ -61,15 +67,14 @@ func (s *InputterTestSuite) SetupTest() {
 }
 
 func (s *InputterTestSuite) TestReadInputsByBlockAndTimestamp() {
-	ctx := context.Background()
-	client, err := ethclient.DialContext(ctx, "http://127.0.0.1:8545")
+	client, err := ethclient.DialContext(s.ctx, "http://127.0.0.1:8545")
 	s.NoError(err)
 	appAddress := common.HexToAddress("0xab7528bb862fb57e8a2bcd567a2e929a0be56a5e")
 	inputBoxAddress := common.HexToAddress("0x58Df21fE097d4bE5dCf61e01d9ea3f6B81c2E1dB")
 	inputBox, err := contracts.NewInputBox(inputBoxAddress, client)
 	s.NoError(err)
 	l1FinalizedPrevHeight := uint64(1)
-	timestamp := uint64(1727126680000)
+	timestamp := uint64(time.Now().UnixMilli())
 	w := InputterWorker{
 		Model:              nil,
 		Provider:           "",
@@ -77,12 +82,15 @@ func (s *InputterTestSuite) TestReadInputsByBlockAndTimestamp() {
 		InputBoxBlock:      1,
 		ApplicationAddress: appAddress,
 	}
+	ctx := context.Background()
 	lastL1BlockRead, err := w.ReadInputsByBlockAndTimestamp(ctx, client, inputBox, l1FinalizedPrevHeight, (timestamp/1000)-300)
 	s.NoError(err)
 	s.NotNil(lastL1BlockRead)
 }
 
 func (s *InputterTestSuite) TearDownTest() {
+	err := exec.Command("pkill", "anvil").Run()
+	s.NoError(err)
 	s.workerCancel()
 	select {
 	case <-s.ctx.Done():
@@ -91,8 +99,6 @@ func (s *InputterTestSuite) TearDownTest() {
 		s.NoError(err)
 	}
 	s.timeoutCancel()
-	err := exec.Command("pkill", "avail").Run()
-	s.NoError(err)
 	s.T().Log("teardown ok.")
 }
 
