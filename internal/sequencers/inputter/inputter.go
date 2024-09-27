@@ -345,6 +345,7 @@ func (w InputterWorker) FindAllInputsByBlockAndTimestampLT(
 				EspressoBlockNumber:    -1,
 				EspressoBlockTimestamp: time.Unix(-1, 0),
 				InputBoxIndex:          inputIndex,
+				Type:                   "inputbox",
 			}
 			result = append(result, input)
 		}

@@ -1,11 +1,18 @@
 package avail
 
 import (
+	"context"
+	"encoding/hex"
+	"fmt"
 	"log/slog"
 	"math/big"
 	"testing"
+	"time"
 
 	"github.com/calindra/nonodo/internal/commons"
+	"github.com/calindra/nonodo/internal/devnet"
+	"github.com/calindra/nonodo/internal/sequencers/inputter"
+	"github.com/calindra/nonodo/internal/supervisor"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/signer/core/apitypes"
@@ -14,11 +21,50 @@ import (
 
 type AvailListenerSuite struct {
 	suite.Suite
+	ctx           context.Context
+	workerCtx     context.Context
+	timeoutCancel context.CancelFunc
+	workerCancel  context.CancelFunc
+	workerResult  chan error
+	rpcUrl        string
 }
 
 func TestAvailListenerSuite(t *testing.T) {
 	commons.ConfigureLog(slog.LevelDebug)
 	suite.Run(t, &AvailListenerSuite{})
+}
+
+func (s *AvailListenerSuite) SetupTest() {
+	var w supervisor.SupervisorWorker
+	w.Name = "TesteInputter"
+	const testTimeout = 5 * time.Second
+	s.ctx, s.timeoutCancel = context.WithTimeout(context.Background(), testTimeout)
+	s.workerResult = make(chan error)
+
+	s.workerCtx, s.workerCancel = context.WithCancel(s.ctx)
+	anvilLocation, err := devnet.CheckAnvilAndInstall(s.ctx)
+	s.NoError(err)
+	w.Workers = append(w.Workers, devnet.AnvilWorker{
+		Address:  devnet.AnvilDefaultAddress,
+		Port:     devnet.AnvilDefaultPort,
+		Verbose:  true,
+		AnvilCmd: anvilLocation,
+	})
+	// var workerCtx context.Context
+
+	s.rpcUrl = fmt.Sprintf("ws://%s:%v", devnet.AnvilDefaultAddress, devnet.AnvilDefaultPort)
+	ready := make(chan struct{})
+	go func() {
+		s.workerResult <- w.Start(s.workerCtx, ready)
+	}()
+	select {
+	case <-s.ctx.Done():
+		s.Fail("context error", s.ctx.Err())
+	case err := <-s.workerResult:
+		s.Fail("worker exited before being ready", err)
+	case <-ready:
+		s.T().Log("nonodo ready")
+	}
 }
 
 func (s *AvailListenerSuite) TestDecodeTimestamp() {
@@ -109,4 +155,66 @@ func (s *AvailListenerSuite) TestReadInputsFromBlock() {
 	s.Equal(common.HexToAddress("0xab7528bb862fb57e8a2bcd567a2e929a0be56a5e"), inputs[0].AppContract)
 	s.Equal("GM", string(inputs[0].Payload))
 	s.Equal(common.HexToAddress("0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"), inputs[0].MsgSender)
+}
+
+func (s *AvailListenerSuite) TestReadBlocksFromInputBox() {
+	block := types.SignedBlock{}
+	block.Block = types.Block{}
+
+	currentTimestamp := time.Now().UnixMilli()
+	timestampPlusOneDay := uint64(currentTimestamp + 86400*1000) // 86400 segundos em um dia
+
+	// Codificar o timestampPlusOneDay para o formato compactado
+	encodedTimestamp := encodeCompactU64(timestampPlusOneDay)
+	hexTimestamp := hex.EncodeToString(encodedTimestamp)
+
+	slog.Debug(hexTimestamp)
+
+	timestampExtrinsic := types.Extrinsic{
+		Method: types.Call{
+			Args: common.Hex2Bytes(hexTimestamp),
+			CallIndex: types.CallIndex{
+				SectionIndex: 3,
+				MethodIndex:  0,
+			},
+		},
+	}
+	block.Block.Extrinsics = append([]types.Extrinsic{}, timestampExtrinsic)
+
+	appAddress := common.HexToAddress("0xab7528bb862fb57e8a2bcd567a2e929a0be56a5e")
+	inputBoxAddress := common.HexToAddress("0x58Df21fE097d4bE5dCf61e01d9ea3f6B81c2E1dB")
+	err := devnet.AddInput(s.ctx, s.rpcUrl, common.Hex2Bytes("deadbeef"))
+	s.NoError(err)
+	l1FinalizedPrevHeight := uint64(1)
+	w := inputter.InputterWorker{
+		Model:              nil,
+		Provider:           s.rpcUrl,
+		InputBoxAddress:    inputBoxAddress,
+		InputBoxBlock:      1,
+		ApplicationAddress: appAddress,
+	}
+
+	inputs, err := ReadInputsFromInputBox(s.ctx, &w, &block, l1FinalizedPrevHeight)
+
+	s.NoError(err)
+	s.Equal(1, len(inputs))
+
+}
+
+// Codificação compacta do timestamp para bytes
+func encodeCompactU64(value uint64) []byte {
+	if value < 1<<6 {
+		return []byte{byte(value << 2)}
+	} else if value < 1<<14 {
+		return []byte{byte((value << 2) | 0b01), byte(value >> 6)}
+	} else if value < 1<<30 {
+		return []byte{byte((value << 2) | 0b10), byte(value >> 6), byte(value >> 14), byte(value >> 22)}
+	} else {
+		bytes := make([]byte, 9)
+		bytes[0] = 0b11
+		for i := 0; i < 8; i++ {
+			bytes[i+1] = byte(value >> (8 * i))
+		}
+		return bytes
+	}
 }

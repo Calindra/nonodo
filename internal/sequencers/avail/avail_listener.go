@@ -379,6 +379,41 @@ func ReadInputsFromAvailBlock(block *types.SignedBlock) ([]cModel.AdvanceInput, 
 	return inputs, nil
 }
 
+func ReadInputsFromInputBox(ctx context.Context, w *inputter.InputterWorker, block *types.SignedBlock, fromBlock uint64) ([]cModel.AdvanceInput, error) {
+	inputs := []cModel.AdvanceInput{}
+	total := len(block.Block.Extrinsics)
+	timestamp, err := ReadTimestampFromBlock(block)
+
+	if err != nil {
+		return inputs, err
+	}
+
+	if total > 0 {
+		client, err := ethclient.DialContext(ctx, w.Provider)
+		if err != nil {
+			return inputs, fmt.Errorf("avail inputter: dial: %w", err)
+		}
+		inputBox, err := contracts.NewInputBox(w.InputBoxAddress, client)
+		if err != nil {
+			return inputs, fmt.Errorf("avail inputter: bind input box: %w", err)
+		}
+
+		inputsFromInputBox, err := w.FindAllInputsByBlockAndTimestampLT(ctx, client, inputBox, fromBlock, (timestamp/ONE_SECOND_IN_MS)-FIVE_MINUTES)
+
+		if err != nil {
+			return inputs, err
+		}
+
+		slog.Debug("inputsFromInputBox" + fmt.Sprintf("%d", len(inputsFromInputBox)))
+
+		if len(inputsFromInputBox) > 0 {
+			inputs = append(inputs, inputsFromInputBox...)
+		}
+	}
+
+	return inputs, nil
+}
+
 func ReadTimestampFromBlock(block *types.SignedBlock) (uint64, error) {
 	timestampSectionIndex := uint8(TIMESTAMP_SECTION_INDEX)
 	timestampMethodIndex := uint8(0)
