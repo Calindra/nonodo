@@ -62,7 +62,7 @@ func AddInput(ctx context.Context, rpcUrl string, payload []byte) error {
 	if err != nil {
 		return fmt.Errorf("bind input box: %w", err)
 	}
-
+	slog.Debug("AddInput", "dapp", ApplicationAddress)
 	tx, err := inputBox.AddInput(txOpts, common.HexToAddress(ApplicationAddress), payload)
 	if err != nil {
 		return fmt.Errorf("add input: %w", err)
