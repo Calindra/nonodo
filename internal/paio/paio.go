@@ -125,11 +125,13 @@ func (p *PaioAPI) SaveTransaction(ctx echo.Context) error {
 	// https://github.com/fabiooshiro/frontend-web-cartesi/blob/16913e945ef687bd07b6c3900d63cb23d69390b1/src/Input.tsx#L195C13-L212C15
 	decoder, err := abi.JSON(strings.NewReader(DEFINITION))
 	if err != nil {
-		return fmt.Errorf("error decoding ABI: %w", err)
+		slog.Error("error decoding ABI:", "err", err)
+		return ctx.JSON(http.StatusInternalServerError, echo.Map{"error": "avail: error decoding ABI"})
 	}
 	method, ok := decoder.Methods["signingMessage"]
 	if !ok {
-		return fmt.Errorf("error getting method: %w", err)
+		slog.Error("error getting method signingMessage", "err", err)
+		return ctx.JSON(http.StatusInternalServerError, echo.Map{"error": "avail: error getting method signingMessage"})
 	}
 
 	// decode the message, message dont have 4 bytes of method id
@@ -137,7 +139,30 @@ func (p *PaioAPI) SaveTransaction(ctx echo.Context) error {
 	data := make(map[string]any)
 	err = method.Inputs.UnpackIntoMap(data, message)
 	if err != nil {
-		return fmt.Errorf("error unpacking message: %w", err)
+		slog.Error("error unpacking message", "err", err)
+		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "avail: error unpacking message"})
+	}
+
+	// Validate the data from the message
+	app, ok := data["app"].(common.Address)
+	if !ok {
+		slog.Error("error extracting app from message", "err", err)
+		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "avail: error extracting app from message"})
+	}
+	nonce, ok := data["nonce"].(uint64)
+	if !ok {
+		slog.Error("error extracting nonce from message", "err", err)
+		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "avail: error extracting nonce from message"})
+	}
+	maxGasPrice, ok := data["max_gas_price"].(*big.Int)
+	if !ok {
+		slog.Error("error extracting max_gas_price from message", "err", err)
+		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "avail: error extracting max_gas_price from message"})
+	}
+	dataBytes, ok := data["data"].([]byte)
+	if !ok {
+		slog.Error("error extracting data from message", "err", err)
+		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "avail: error extracting data from message"})
 	}
 
 	// fill the typedData
@@ -168,10 +193,10 @@ func (p *PaioAPI) SaveTransaction(ctx echo.Context) error {
 		}}
 	typedata.PrimaryType = "CartesiMessage"
 	typedata.Message = apitypes.TypedDataMessage{
-		"app":           data["app"].(common.Address).String(),
-		"nonce":         data["nonce"].(uint64),
-		"max_gas_price": data["max_gas_price"].(*big.Int).String(),
-		"data":          data["data"].([]byte),
+		"app":           app.String(),
+		"nonce":         nonce,
+		"max_gas_price": maxGasPrice.String(),
+		"data":          dataBytes,
 	}
 
 	typeJSON, err := json.Marshal(typedata)
@@ -190,22 +215,15 @@ func (p *PaioAPI) SaveTransaction(ctx echo.Context) error {
 		return err
 	}
 
-	msgSender, typedData, signature, err := commons.ExtractSigAndData(string(jsonPayload))
+	msgSender, _, signature, err := commons.ExtractSigAndData(string(jsonPayload))
 
 	if err != nil {
 		slog.Error("Error:", "err", err)
 		return err
 	}
 
-	dappAddress := typedData.Message["app"].(string)
-	nonce := typedData.Message["nonce"].(string)
-	maxGasPrice := typedData.Message["max_gas_price"].(string)
-	payload, ok := typedData.Message["data"].(string)
-
-	if !ok {
-		slog.Error("avail: error extracting data from message")
-		return err
-	}
+	dappAddress := app.String()
+	payload := string(dataBytes)
 
 	slog.Debug("Save input",
 		"dappAddress", dappAddress,
