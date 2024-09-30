@@ -1,6 +1,7 @@
 package paio
 
 import (
+	"encoding/json"
 	"log/slog"
 	"math/big"
 	"strings"
@@ -43,18 +44,36 @@ func (p *PaioSuite) TestPaioDecoder() {
 	dataEncoded := "0xd24f8fa800000000000000000000000000000000000000000000000000000000deadbeef000000000000000000000000000000000000000000000000000000000000007b00000000000000000000000000000000000000000000000000000000000001c80000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000000b68656c6c6f20776f726c64000000000000000000000000000000000000000000" // nolint
 
 	data := common.Hex2Bytes(strings.TrimPrefix(dataEncoded, "0x"))
-	// decoded := PaioDefinition{
-	// 	Address:     common.HexToAddress("0x0"),
-	// 	Nonce:       0,
-	// 	MaxGasPrice: new(big.Int).SetUint64(0),
-	// 	Data:        []byte{},
-	// }
+	decoded := PaioDefinition{
+		Address:     common.HexToAddress("0x0"),
+		Nonce:       0,
+		MaxGasPrice: new(big.Int).SetUint64(0),
+		Data:        []byte{},
+	}
 	method, err := abi.MethodById(data)
 	p.NoError(err)
 	args := method.Inputs
-	decoded, err := args.Unpack(data[4:])
+	decodedMap := make(map[string]any)
+	err = args.UnpackIntoMap(decodedMap, data[4:])
 	p.NoError(err)
-	slog.Info("decoded", "decoded", decoded, "method", method, "args", args)
+
+	for key, val := range decodedMap {
+		switch key {
+		case "account":
+			decoded.Address = val.(common.Address)
+		case "nonce":
+			decoded.Nonce = val.(uint64)
+		case "max_gas_price":
+			decoded.MaxGasPrice = val.(*big.Int)
+		case "data":
+			decoded.Data = val.([]byte)
+		}
+	}
+
+	output, err := json.Marshal(decoded)
+	p.NoError(err)
+
+	slog.Debug("decoded", "method", method, "args", args, "decoded", string(output), "data", string(decoded.Data))
 }
 
 func TestPaioSuite(t *testing.T) {
