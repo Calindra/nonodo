@@ -122,21 +122,3 @@ type noticeResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type reportResolver struct{ *Resolver }
 type voucherResolver struct{ *Resolver }
-
-// !!! WARNING !!!
-// The code below was going to be deleted when updating resolvers. It has been copied here so you have
-// one last chance to move it out of harms way if you want. There are two reasons this happens:
-//   - When renaming or deleting a resolver the old code will be put in here. You can safely delete
-//     it when you're done.
-//   - You have helper methods in this file. Move them out to keep these resolver files clean.
-func (r *queryResolver) Voucher(ctx context.Context, voucherIndex int, inputIndex int) (*model.Voucher, error) {
-	slog.Debug("queryResolver.Voucher", "voucherIndex", voucherIndex, "inputIndex", inputIndex)
-	return r.adapter.GetVoucher(voucherIndex, inputIndex)
-}
-func (r *queryResolver) Notice(ctx context.Context, noticeIndex int, inputIndex int) (*model.Notice, error) {
-	slog.Debug("queryResolver.Notice", "noticeIndex", noticeIndex, "inputIndex", inputIndex)
-	return r.adapter.GetNotice(noticeIndex, inputIndex)
-}
-func (r *queryResolver) Report(ctx context.Context, reportIndex int, inputIndex int) (*model.Report, error) {
-	return r.adapter.GetReport(reportIndex, inputIndex)
-}
