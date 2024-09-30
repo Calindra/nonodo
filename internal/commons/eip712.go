@@ -186,7 +186,7 @@ func Main() []byte {
 
 func trimNonPrintablePrefix(s string) string {
 	for i, r := range s {
-		if unicode.IsPrint(r) {
+		if unicode.IsPrint(r) && r == '{' {
 			return s[i:] // Return the substring starting from the first printable character
 		}
 	}
