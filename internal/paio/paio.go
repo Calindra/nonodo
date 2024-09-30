@@ -29,7 +29,7 @@ import (
 //go:embed paio.json
 var DEFINITION string
 
-type PaioTypedata struct {
+type PaioTypedData struct {
 	apitypes.TypedData
 	Account common.Address `json:"account"`
 }
@@ -135,7 +135,7 @@ func (p *PaioAPI) SaveTransaction(ctx echo.Context) error {
 		return ctx.JSON(http.StatusInternalServerError, echo.Map{"error": "avail: error getting method signingMessage"})
 	}
 
-	// decode the message, message dont have 4 bytes of method id
+	// decode the message, message don't have 4 bytes of method id
 	message := common.Hex2Bytes(strings.TrimPrefix(request.Message, "0x"))
 	data := make(map[string]any)
 	err = method.Inputs.UnpackIntoMap(data, message)
@@ -171,15 +171,15 @@ func (p *PaioAPI) SaveTransaction(ctx echo.Context) error {
 	chainId := 11155111 // Paio's fixed value for Anvil and Hardhat
 	verifyingContract := common.HexToAddress("0x0")
 
-	var typedata PaioTypedata
-	typedata.Account = common.Address{}
-	typedata.Domain = apitypes.TypedDataDomain{
+	var typedData PaioTypedData
+	typedData.Account = common.Address{}
+	typedData.Domain = apitypes.TypedDataDomain{
 		Name:              "CartesiPaio",
 		Version:           "0.0.1",
 		ChainId:           math.NewHexOrDecimal256(int64(chainId)),
 		VerifyingContract: verifyingContract.String(),
 	}
-	typedata.Types = apitypes.Types{
+	typedData.Types = apitypes.Types{
 		"EIP712Domain": {
 			{Name: "name", Type: "string"},
 			{Name: "version", Type: "string"},
@@ -192,17 +192,17 @@ func (p *PaioAPI) SaveTransaction(ctx echo.Context) error {
 			{Name: "max_gas_price", Type: "uint128"},
 			{Name: "data", Type: "bytes"},
 		}}
-	typedata.PrimaryType = "CartesiMessage"
-	typedata.Message = apitypes.TypedDataMessage{
+	typedData.PrimaryType = "CartesiMessage"
+	typedData.Message = apitypes.TypedDataMessage{
 		"app":           app.String(),
 		"nonce":         nonce,
 		"max_gas_price": maxGasPrice.String(),
 		"data":          fmt.Sprintf("0x%s", common.Bytes2Hex(dataBytes)),
 	}
 
-	typeJSON, err := json.Marshal(typedata)
+	typeJSON, err := json.Marshal(typedData)
 	if err != nil {
-		return fmt.Errorf("error marshalling typedata: %w", err)
+		return fmt.Errorf("error marshalling typed data: %w", err)
 	}
 
 	// set the typedData as string json below
