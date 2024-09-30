@@ -77,6 +77,13 @@ func (p *PaioAPI) GetNonce(ctx echo.Context) error {
 		Field: &typeField,
 		Ne:    &inputBoxType,
 	})
+
+	appContractField := "AppContract"
+	filters = append(filters, &model.ConvenienceFilter{
+		Field: &appContractField,
+		Eq:    &request.AppContract,
+	})
+
 	inputs, err := p.inputRepository.FindAll(stdCtx, nil, nil, nil, nil, filters)
 
 	if err != nil {

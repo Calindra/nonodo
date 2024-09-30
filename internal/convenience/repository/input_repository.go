@@ -297,7 +297,7 @@ func (c *InputRepository) Count(
 	query := `SELECT count(*) FROM convenience_inputs `
 	where, args, _, err := transformToInputQuery(filter)
 	if err != nil {
-		slog.Error("Count execution error")
+		slog.Error("Count execution error", "err", err)
 		return 0, err
 	}
 	query += where
@@ -435,15 +435,27 @@ func transformToInputQuery(
 				args = append(args, *filter.Eq)
 				count += 1
 			} else {
-				return "", nil, 0, fmt.Errorf("operation not implemented")
+				return "", nil, 0, fmt.Errorf("operation not implemented field msg_sender")
 			}
 		} else if *filter.Field == "Type" {
 			if filter.Eq != nil {
 				where = append(where, fmt.Sprintf("type = $%d ", count))
 				args = append(args, *filter.Eq)
 				count += 1
+			} else if filter.Ne != nil {
+				where = append(where, fmt.Sprintf("type <> $%d ", count))
+				args = append(args, *filter.Eq)
+				count += 1
 			} else {
-				return "", nil, 0, fmt.Errorf("operation not implemented")
+				return "", nil, 0, fmt.Errorf("operation not implemented field type")
+			}
+		} else if *filter.Field == "AppContract" {
+			if filter.Eq != nil {
+				where = append(where, fmt.Sprintf("app_contract = $%d ", count))
+				args = append(args, *filter.Eq)
+				count += 1
+			} else {
+				return "", nil, 0, fmt.Errorf("operation not implemented field app_contract")
 			}
 		} else if *filter.Field == "InputBoxIndex" {
 			if filter.Ne != nil {
