@@ -3,6 +3,7 @@ package paio
 import (
 	"context"
 	_ "embed"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
@@ -196,7 +197,7 @@ func (p *PaioAPI) SaveTransaction(ctx echo.Context) error {
 		"app":           app.String(),
 		"nonce":         nonce,
 		"max_gas_price": maxGasPrice.String(),
-		"data":          dataBytes,
+		"data":          fmt.Sprintf("0x%s", common.Bytes2Hex(dataBytes)),
 	}
 
 	typeJSON, err := json.Marshal(typedata)
@@ -207,14 +208,14 @@ func (p *PaioAPI) SaveTransaction(ctx echo.Context) error {
 	// set the typedData as string json below
 	sigAndData := commons.SigAndData{
 		Signature: request.Signature,
-		TypedData: string(typeJSON),
+		TypedData: base64.StdEncoding.EncodeToString(typeJSON),
 	}
 	jsonPayload, err := json.Marshal(sigAndData)
 	if err != nil {
 		slog.Error("Error json.Marshal message:", "err", err)
 		return err
 	}
-
+	slog.Debug("SaveTransaction", "jsonPayload", string(jsonPayload))
 	msgSender, _, signature, err := commons.ExtractSigAndData(string(jsonPayload))
 
 	if err != nil {
