@@ -84,6 +84,8 @@ func (p *PaioAPI) GetNonce(ctx echo.Context) error {
 		Eq:    &request.AppContract,
 	})
 
+	slog.Debug("GetNonce", "AppContract", request.AppContract, "MsgSender", request.MsgSender)
+
 	inputs, err := p.inputRepository.FindAll(stdCtx, nil, nil, nil, nil, filters)
 
 	if err != nil {

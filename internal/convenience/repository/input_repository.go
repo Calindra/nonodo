@@ -444,7 +444,7 @@ func transformToInputQuery(
 				count += 1
 			} else if filter.Ne != nil {
 				where = append(where, fmt.Sprintf("type <> $%d ", count))
-				args = append(args, *filter.Eq)
+				args = append(args, *filter.Ne)
 				count += 1
 			} else {
 				return "", nil, 0, fmt.Errorf("operation not implemented field type")
