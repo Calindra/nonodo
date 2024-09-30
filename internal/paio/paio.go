@@ -108,6 +108,13 @@ func (p *PaioAPI) SaveTransaction(ctx echo.Context) error {
 		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "message is required"})
 	}
 
+	// decode the ABI from message
+	// https://github.com/fabiooshiro/frontend-web-cartesi/blob/16913e945ef687bd07b6c3900d63cb23d69390b1/src/Input.tsx#L195C13-L212C15
+
+	// fill the typedData
+	// https://github.com/fabiooshiro/frontend-web-cartesi/blob/16913e945ef687bd07b6c3900d63cb23d69390b1/src/Input.tsx#L65
+
+	// set the typedData as string json below
 	sigAndData := commons.SigAndData{
 		Signature: request.Signature,
 		TypedData: request.Message,
