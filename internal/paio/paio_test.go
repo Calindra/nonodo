@@ -17,6 +17,13 @@ type PaioSuite struct {
 	suite.Suite
 }
 
+type PaioDefinition struct {
+	Address     common.Address `json:"address"`
+	Nonce       uint64         `json:"nonce"`
+	MaxGasPrice *big.Int       `json:"max_gas_price"`
+	Data        []byte         `json:"data"`
+}
+
 func (s *PaioSuite) SetupTest() {
 	commons.ConfigureLog(slog.LevelDebug)
 }

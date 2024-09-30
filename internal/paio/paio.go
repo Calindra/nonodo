@@ -15,7 +15,9 @@ import (
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/calindra/nonodo/internal/sequencers/avail"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 	"github.com/labstack/echo/v4"
@@ -25,13 +27,6 @@ import (
 
 //go:embed paio.json
 var DEFINITION string
-
-type PaioDefinition struct {
-	Address     common.Address `json:"address"`
-	Nonce       uint64         `json:"nonce"`
-	MaxGasPrice *big.Int       `json:"max_gas_price"`
-	Data        []byte         `json:"data"`
-}
 
 type PaioTypedata struct {
 	apitypes.TypedData
@@ -128,18 +123,56 @@ func (p *PaioAPI) SaveTransaction(ctx echo.Context) error {
 
 	// decode the ABI from message
 	// https://github.com/fabiooshiro/frontend-web-cartesi/blob/16913e945ef687bd07b6c3900d63cb23d69390b1/src/Input.tsx#L195C13-L212C15
-	// address := common.HexToAddress(request.Message[2:42])
-	// nonce, err := strconv.ParseUint(request.Message[42:106], 10, 64) // 8 bytes
-	// if err != nil {
-	// 	return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "nonce is invalid"})
-	// }
-	// maxGasPriceBytes := common.Hex2Bytes(request.Message[106:138])
-	// maxGasPrice := big.NewInt(0).SetBytes(maxGasPriceBytes)
+	decoder, err := abi.JSON(strings.NewReader(DEFINITION))
+	if err != nil {
+		return fmt.Errorf("error decoding ABI: %w", err)
+	}
+	method, ok := decoder.Methods["signingMessage"]
+	if !ok {
+		return fmt.Errorf("error getting method: %w", err)
+	}
+
+	// decode the message, message dont have 4 bytes of method id
+	message := common.Hex2Bytes(strings.TrimPrefix(request.Message, "0x"))
+	data := make(map[string]any)
+	err = method.Inputs.UnpackIntoMap(data, message)
+	if err != nil {
+		return fmt.Errorf("error unpacking message: %w", err)
+	}
 
 	// fill the typedData
 	// https://github.com/fabiooshiro/frontend-web-cartesi/blob/16913e945ef687bd07b6c3900d63cb23d69390b1/src/Input.tsx#L65
+	chainId := 11155111 // Paio's fixed value for Anvil and Hardhat
+	verifyingContract := common.HexToAddress("0x0")
 
-	typedata := PaioTypedata{}
+	var typedata PaioTypedata
+	typedata.Account = common.Address{}
+	typedata.Domain = apitypes.TypedDataDomain{
+		Name:              "CartesiPaio",
+		Version:           "0.0.1",
+		ChainId:           math.NewHexOrDecimal256(int64(chainId)),
+		VerifyingContract: verifyingContract.String(),
+	}
+	typedata.Types = apitypes.Types{
+		"EIP712Domain": {
+			{Name: "name", Type: "string"},
+			{Name: "version", Type: "string"},
+			{Name: "chainId", Type: "uint256"},
+			{Name: "verifyingContract", Type: "address"},
+		},
+		"CartesiMessage": {
+			{Name: "app", Type: "address"},
+			{Name: "nonce", Type: "uint64"},
+			{Name: "max_gas_price", Type: "uint128"},
+			{Name: "data", Type: "bytes"},
+		}}
+	typedata.PrimaryType = "CartesiMessage"
+	typedata.Message = apitypes.TypedDataMessage{
+		"app":           data["app"].(common.Address).String(),
+		"nonce":         data["nonce"].(uint64),
+		"max_gas_price": data["max_gas_price"].(*big.Int).String(),
+		"data":          data["data"].([]byte),
+	}
 
 	typeJSON, err := json.Marshal(typedata)
 	if err != nil {
