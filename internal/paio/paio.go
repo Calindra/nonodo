@@ -2,10 +2,12 @@ package paio
 
 import (
 	"context"
+	_ "embed"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"math/big"
 	"net/http"
 	"strings"
 
@@ -15,10 +17,26 @@ import (
 	"github.com/calindra/nonodo/internal/sequencers/avail"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 	"github.com/labstack/echo/v4"
 )
 
 //go:generate go run github.com/deepmap/oapi-codegen/v2/cmd/oapi-codegen -config=oapi.yaml ./oapi-paio.yaml
+
+//go:embed paio.json
+var DEFINITION string
+
+type PaioDefinition struct {
+	Address     common.Address `json:"address"`
+	Nonce       uint64         `json:"nonce"`
+	MaxGasPrice *big.Int       `json:"max_gas_price"`
+	Data        []byte         `json:"data"`
+}
+
+type PaioTypedata struct {
+	apitypes.TypedData
+	Account common.Address `json:"account"`
+}
 
 type PaioAPI struct {
 	availClient     *avail.AvailClient
@@ -110,14 +128,28 @@ func (p *PaioAPI) SaveTransaction(ctx echo.Context) error {
 
 	// decode the ABI from message
 	// https://github.com/fabiooshiro/frontend-web-cartesi/blob/16913e945ef687bd07b6c3900d63cb23d69390b1/src/Input.tsx#L195C13-L212C15
+	// address := common.HexToAddress(request.Message[2:42])
+	// nonce, err := strconv.ParseUint(request.Message[42:106], 10, 64) // 8 bytes
+	// if err != nil {
+	// 	return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "nonce is invalid"})
+	// }
+	// maxGasPriceBytes := common.Hex2Bytes(request.Message[106:138])
+	// maxGasPrice := big.NewInt(0).SetBytes(maxGasPriceBytes)
 
 	// fill the typedData
 	// https://github.com/fabiooshiro/frontend-web-cartesi/blob/16913e945ef687bd07b6c3900d63cb23d69390b1/src/Input.tsx#L65
 
+	typedata := PaioTypedata{}
+
+	typeJSON, err := json.Marshal(typedata)
+	if err != nil {
+		return fmt.Errorf("error marshalling typedata: %w", err)
+	}
+
 	// set the typedData as string json below
 	sigAndData := commons.SigAndData{
 		Signature: request.Signature,
-		TypedData: request.Message,
+		TypedData: string(typeJSON),
 	}
 	jsonPayload, err := json.Marshal(sigAndData)
 	if err != nil {
