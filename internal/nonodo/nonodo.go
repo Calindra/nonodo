@@ -391,6 +391,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 			opts.AvailFromBlock,
 			modelInstance.GetInputRepository(),
 			inputterWorker))
+		sequencer = model.NewInputBoxSequencer(modelInstance)
 	}
 
 	rollup.Register(re, modelInstance, sequencer)
