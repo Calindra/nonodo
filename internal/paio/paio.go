@@ -233,7 +233,7 @@ func (p *PaioAPI) SaveTransaction(ctx echo.Context) error {
 		return err
 	}
 
-	txId := common.Bytes2Hex(crypto.Keccak256(signature))
+	txId := fmt.Sprintf("0x%s", common.Bytes2Hex(crypto.Keccak256(signature)))
 	createdInput, err := p.inputRepository.Create(stdCtx, model.AdvanceInput{
 		ID:            txId,
 		Index:         int(inputCount + 1),
