@@ -433,21 +433,22 @@ func ParsePaioBatchToInputs(jsonStr string) ([]cModel.AdvanceInput, error) {
 			return inputs, err
 		}
 		slog.Debug("SaveTransaction", "jsonPayload", string(jsonPayload))
-		msgSender, _, _, err := commons.ExtractSigAndData(string(jsonPayload))
+		msgSender, _, signature, err := commons.ExtractSigAndData(string(jsonPayload))
 		if err != nil {
 			slog.Error("Error ExtractSigAndData message:", "err", err)
 			return inputs, err
 		}
+		txId := fmt.Sprintf("0x%s", common.Bytes2Hex(crypto.Keccak256(signature)))
 		inputs = append(inputs, cModel.AdvanceInput{
-			Index: int(0),
-			// CartesiTransactionId: common.Bytes2Hex(crypto.Keccak256(signature)),
+			Index:               int(0),
+			ID:                  txId,
 			MsgSender:           msgSender,
 			Payload:             tx.Data,
 			AppContract:         common.HexToAddress(tx.App),
 			AvailBlockNumber:    0,
 			AvailBlockTimestamp: time.Unix(0, 0),
 			InputBoxIndex:       -2,
-			Type:                "",
+			Type:                "Avail",
 		})
 	}
 	return inputs, nil
