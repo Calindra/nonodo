@@ -80,9 +80,10 @@ func (p *PaioAPI) GetNonce(ctx echo.Context) error {
 
 	filters := []*model.ConvenienceFilter{}
 	msgSenderField := "MsgSender"
+	msgSender := common.HexToAddress(request.MsgSender).Hex()
 	filters = append(filters, &model.ConvenienceFilter{
 		Field: &msgSenderField,
-		Eq:    &request.MsgSender,
+		Eq:    &msgSender,
 	})
 
 	typeField := "Type"
@@ -93,9 +94,10 @@ func (p *PaioAPI) GetNonce(ctx echo.Context) error {
 	})
 
 	appContractField := "AppContract"
+	appContract := common.HexToAddress(request.AppContract).Hex()
 	filters = append(filters, &model.ConvenienceFilter{
 		Field: &appContractField,
-		Eq:    &request.AppContract,
+		Eq:    &appContract,
 	})
 
 	slog.Debug("GetNonce", "AppContract", request.AppContract, "MsgSender", request.MsgSender)
@@ -231,14 +233,15 @@ func (p *PaioAPI) SaveTransaction(ctx echo.Context) error {
 		return err
 	}
 
+	txId := common.Bytes2Hex(crypto.Keccak256(signature))
 	createdInput, err := p.inputRepository.Create(stdCtx, model.AdvanceInput{
-		Index:                int(inputCount + 1),
-		CartesiTransactionId: common.Bytes2Hex(crypto.Keccak256(signature)),
-		MsgSender:            msgSender,
-		Payload:              payloadBytes,
-		AppContract:          common.HexToAddress(dappAddress),
-		InputBoxIndex:        -2,
-		Type:                 "Avail",
+		ID:            txId,
+		Index:         int(inputCount + 1),
+		MsgSender:     msgSender,
+		Payload:       payloadBytes,
+		AppContract:   common.HexToAddress(dappAddress),
+		InputBoxIndex: -2,
+		Type:          "Avail",
 	})
 
 	if err != nil {
@@ -246,10 +249,10 @@ func (p *PaioAPI) SaveTransaction(ctx echo.Context) error {
 		return err
 	}
 
-	transactionId := fmt.Sprintf("%d", createdInput.Index)
+	slog.Info("Input created", "id", createdInput.ID)
 
 	response := TransactionResponse{
-		Id: &transactionId,
+		Id: &txId,
 	}
 
 	return ctx.JSON(http.StatusOK, response)
