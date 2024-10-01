@@ -140,26 +140,7 @@ func NewNonodoOpts() NonodoOpts {
 func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 	var w supervisor.SupervisorWorker
 	w.Timeout = opts.TimeoutWorker
-	var db *sqlx.DB
-
-	if opts.DbImplementation == "postgres" {
-		slog.Info("Using PostGres DB ...")
-		postgresHost := os.Getenv("POSTGRES_HOST")
-		postgresPort := os.Getenv("POSTGRES_PORT")
-		postgresDataBase := os.Getenv("POSTGRES_DB")
-		postgresUser := os.Getenv("POSTGRES_USER")
-		postgresPassword := os.Getenv("POSTGRES_PASSWORD")
-
-		connectionString := fmt.Sprintf("host=%s port=%s user=%s "+
-			"dbname=%s password=%s sslmode=disable",
-			postgresHost, postgresPort, postgresUser,
-			postgresDataBase, postgresPassword)
-
-		db = sqlx.MustConnect("postgres", connectionString)
-	} else {
-		db = handleSQLite(opts)
-	}
-
+	db := CreateDBInstance(opts)
 	container := convenience.NewContainer(*db)
 	decoder := container.GetOutputDecoder()
 	convenienceService := container.GetConvenienceService()
@@ -259,6 +240,28 @@ func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 	return w
 }
 
+func CreateDBInstance(opts NonodoOpts) *sqlx.DB {
+	var db *sqlx.DB
+	if opts.DbImplementation == "postgres" {
+		slog.Info("Using PostGres DB ...")
+		postgresHost := os.Getenv("POSTGRES_HOST")
+		postgresPort := os.Getenv("POSTGRES_PORT")
+		postgresDataBase := os.Getenv("POSTGRES_DB")
+		postgresUser := os.Getenv("POSTGRES_USER")
+		postgresPassword := os.Getenv("POSTGRES_PASSWORD")
+
+		connectionString := fmt.Sprintf("host=%s port=%s user=%s "+
+			"dbname=%s password=%s sslmode=disable",
+			postgresHost, postgresPort, postgresUser,
+			postgresDataBase, postgresPassword)
+
+		db = sqlx.MustConnect("postgres", connectionString)
+	} else {
+		db = handleSQLite(opts)
+	}
+	return db
+}
+
 func handleSQLite(opts NonodoOpts) *sqlx.DB {
 	slog.Info("Using SQLite ...")
 	sqliteFile := opts.SqliteFile
@@ -295,7 +298,7 @@ func handleAnvilInstallation() (string, error) {
 func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	var w supervisor.SupervisorWorker
 	w.Timeout = opts.TimeoutWorker
-	db := handleSQLite(opts)
+	db := CreateDBInstance(opts)
 	container := convenience.NewContainer(*db)
 	decoder := container.GetOutputDecoder()
 	convenienceService := container.GetConvenienceService()
