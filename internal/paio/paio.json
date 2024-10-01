@@ -1,0 +1,26 @@
+[
+    {
+        "inputs": [
+            {
+                "name": "app",
+                "type": "address"
+            },
+            {
+                "name": "nonce",
+                "type": "uint64"
+            },
+            {
+                "name": "max_gas_price",
+                "type": "uint128"
+            },
+            {
+                "name": "data",
+                "type": "bytes"
+            }
+        ],
+        "name": "signingMessage",
+        "outputs": [],
+        "stateMutability": "pure",
+        "type": "function"
+    }
+]

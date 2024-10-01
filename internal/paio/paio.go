@@ -2,10 +2,13 @@ package paio
 
 import (
 	"context"
+	_ "embed"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"math/big"
 	"net/http"
 	"strings"
 
@@ -13,12 +16,23 @@ import (
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/calindra/nonodo/internal/sequencers/avail"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 	"github.com/labstack/echo/v4"
 )
 
 //go:generate go run github.com/deepmap/oapi-codegen/v2/cmd/oapi-codegen -config=oapi.yaml ./oapi-paio.yaml
+
+//go:embed paio.json
+var DEFINITION string
+
+type PaioTypedData struct {
+	apitypes.TypedData
+	Account common.Address `json:"account"`
+}
 
 type PaioAPI struct {
 	availClient     *avail.AvailClient
@@ -119,37 +133,107 @@ func (p *PaioAPI) SaveTransaction(ctx echo.Context) error {
 
 	// decode the ABI from message
 	// https://github.com/fabiooshiro/frontend-web-cartesi/blob/16913e945ef687bd07b6c3900d63cb23d69390b1/src/Input.tsx#L195C13-L212C15
+	decoder, err := abi.JSON(strings.NewReader(DEFINITION))
+	if err != nil {
+		slog.Error("error decoding ABI:", "err", err)
+		return ctx.JSON(http.StatusInternalServerError, echo.Map{"error": "avail: error decoding ABI"})
+	}
+	method, ok := decoder.Methods["signingMessage"]
+	if !ok {
+		slog.Error("error getting method signingMessage", "err", err)
+		return ctx.JSON(http.StatusInternalServerError, echo.Map{"error": "avail: error getting method signingMessage"})
+	}
+
+	// decode the message, message don't have 4 bytes of method id
+	message := common.Hex2Bytes(strings.TrimPrefix(request.Message, "0x"))
+	data := make(map[string]any)
+	err = method.Inputs.UnpackIntoMap(data, message)
+	if err != nil {
+		slog.Error("error unpacking message", "err", err)
+		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "avail: error unpacking message"})
+	}
+
+	// Validate the data from the message
+	app, ok := data["app"].(common.Address)
+	if !ok {
+		slog.Error("error extracting app from message", "err", err)
+		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "avail: error extracting app from message"})
+	}
+	nonce, ok := data["nonce"].(uint64)
+	if !ok {
+		slog.Error("error extracting nonce from message", "err", err)
+		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "avail: error extracting nonce from message"})
+	}
+	maxGasPrice, ok := data["max_gas_price"].(*big.Int)
+	if !ok {
+		slog.Error("error extracting max_gas_price from message", "err", err)
+		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "avail: error extracting max_gas_price from message"})
+	}
+	dataBytes, ok := data["data"].([]byte)
+	if !ok {
+		slog.Error("error extracting data from message", "err", err)
+		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "avail: error extracting data from message"})
+	}
 
 	// fill the typedData
 	// https://github.com/fabiooshiro/frontend-web-cartesi/blob/16913e945ef687bd07b6c3900d63cb23d69390b1/src/Input.tsx#L65
+	chainId := 11155111 // Paio's fixed value for Anvil and Hardhat
+	verifyingContract := common.HexToAddress("0x0")
+
+	var typedData PaioTypedData
+	typedData.Account = common.Address{}
+	typedData.Domain = apitypes.TypedDataDomain{
+		Name:              "CartesiPaio",
+		Version:           "0.0.1",
+		ChainId:           math.NewHexOrDecimal256(int64(chainId)),
+		VerifyingContract: verifyingContract.String(),
+	}
+	typedData.Types = apitypes.Types{
+		"EIP712Domain": {
+			{Name: "name", Type: "string"},
+			{Name: "version", Type: "string"},
+			{Name: "chainId", Type: "uint256"},
+			{Name: "verifyingContract", Type: "address"},
+		},
+		"CartesiMessage": {
+			{Name: "app", Type: "address"},
+			{Name: "nonce", Type: "uint64"},
+			{Name: "max_gas_price", Type: "uint128"},
+			{Name: "data", Type: "bytes"},
+		}}
+	typedData.PrimaryType = "CartesiMessage"
+	typedData.Message = apitypes.TypedDataMessage{
+		"app":           app.String(),
+		"nonce":         nonce,
+		"max_gas_price": maxGasPrice.String(),
+		"data":          fmt.Sprintf("0x%s", common.Bytes2Hex(dataBytes)),
+	}
+
+	typeJSON, err := json.Marshal(typedData)
+	if err != nil {
+		return fmt.Errorf("error marshalling typed data: %w", err)
+	}
 
 	// set the typedData as string json below
 	sigAndData := commons.SigAndData{
 		Signature: request.Signature,
-		TypedData: request.Message,
+		TypedData: base64.StdEncoding.EncodeToString(typeJSON),
 	}
 	jsonPayload, err := json.Marshal(sigAndData)
 	if err != nil {
 		slog.Error("Error json.Marshal message:", "err", err)
 		return err
 	}
-
-	msgSender, typedData, signature, err := commons.ExtractSigAndData(string(jsonPayload))
+	slog.Debug("SaveTransaction", "jsonPayload", string(jsonPayload))
+	msgSender, _, signature, err := commons.ExtractSigAndData(string(jsonPayload))
 
 	if err != nil {
 		slog.Error("Error:", "err", err)
 		return err
 	}
 
-	dappAddress := typedData.Message["app"].(string)
-	nonce := typedData.Message["nonce"].(string)
-	maxGasPrice := typedData.Message["max_gas_price"].(string)
-	payload, ok := typedData.Message["data"].(string)
-
-	if !ok {
-		slog.Error("avail: error extracting data from message")
-		return err
-	}
+	dappAddress := app.String()
+	payload := string(dataBytes)
 
 	slog.Debug("Save input",
 		"dappAddress", dappAddress,
