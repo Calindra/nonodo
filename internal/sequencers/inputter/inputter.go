@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"math/big"
 	"time"
 
 	"github.com/calindra/nonodo/internal/contracts"
@@ -35,6 +36,7 @@ type InputterWorker struct {
 	InputBoxBlock      uint64
 	ApplicationAddress common.Address
 	Repository         cRepos.InputRepository
+	EthClient          *ethclient.Client
 }
 
 func (w InputterWorker) String() string {
@@ -42,7 +44,7 @@ func (w InputterWorker) String() string {
 }
 
 func (w InputterWorker) Start(ctx context.Context, ready chan<- struct{}) error {
-	client, err := ethclient.DialContext(ctx, w.Provider)
+	client, err := w.GetEthClient()
 	if err != nil {
 		return fmt.Errorf("inputter: dial: %w", err)
 	}
@@ -52,6 +54,27 @@ func (w InputterWorker) Start(ctx context.Context, ready chan<- struct{}) error 
 	}
 	ready <- struct{}{}
 	return w.watchNewInputs(ctx, client, inputBox)
+}
+
+func (w *InputterWorker) GetEthClient() (*ethclient.Client, error) {
+	if w.EthClient == nil {
+		ctx := context.Background()
+		client, err := ethclient.DialContext(ctx, w.Provider)
+		if err != nil {
+			return nil, fmt.Errorf("inputter: dial: %w", err)
+		}
+		w.EthClient = client
+	}
+	return w.EthClient, nil
+}
+
+func (w *InputterWorker) ChainID() (*big.Int, error) {
+	client, err := w.GetEthClient()
+	if err != nil {
+		return nil, err
+	}
+	ctx := context.Background()
+	return client.ChainID(ctx)
 }
 
 // Read inputs starting from the input box deployment block until the latest block.

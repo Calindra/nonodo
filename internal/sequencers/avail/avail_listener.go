@@ -355,6 +355,10 @@ func (av *AvailListener) ReadInputsFromPaioBlock(block *types.SignedBlock) ([]cM
 	if err != nil {
 		return inputs, err
 	}
+	chainId, err := av.InputterWorker.ChainID()
+	if err != nil {
+		return inputs, err
+	}
 	for _, ext := range block.Block.Extrinsics {
 		appID := ext.Signature.AppID.Int64()
 		slog.Debug("debug", "appID", appID, "timestamp", timestamp)
@@ -368,7 +372,7 @@ func (av *AvailListener) ReadInputsFromPaioBlock(block *types.SignedBlock) ([]cM
 			return inputs, err
 		}
 		slog.Debug("PaioJson", "json", jsonStr)
-		inputs, err := ParsePaioBatchToInputs(jsonStr)
+		inputs, err := ParsePaioBatchToInputs(jsonStr, chainId)
 		if err != nil {
 			return inputs, err
 		}
@@ -400,7 +404,7 @@ func (ps *PaioSignature) Hex() string {
 	return fmt.Sprintf("%s%s%s", ps.R, ps.S[2:], ps.V[2:])
 }
 
-func ParsePaioBatchToInputs(jsonStr string) ([]cModel.AdvanceInput, error) {
+func ParsePaioBatchToInputs(jsonStr string, chainId *big.Int) ([]cModel.AdvanceInput, error) {
 	inputs := []cModel.AdvanceInput{}
 	var paioBatch PaioBatch
 	if err := json.Unmarshal([]byte(jsonStr), &paioBatch); err != nil {
@@ -417,6 +421,7 @@ func ParsePaioBatchToInputs(jsonStr string) ([]cModel.AdvanceInput, error) {
 			tx.Nonce,
 			big.NewInt(int64(tx.MaxGasPrice)),
 			tx.Data,
+			chainId,
 		)
 		typeJSON, err := json.Marshal(typedData)
 		if err != nil {

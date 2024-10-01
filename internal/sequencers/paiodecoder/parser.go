@@ -22,15 +22,15 @@ func CreateTypedData(
 	nonce uint64,
 	maxGasPrice *big.Int,
 	dataBytes []byte,
+	chainId *big.Int,
 ) apitypes.TypedData {
-	chainId := 11155111 // Paio's fixed value for Anvil and Hardhat
 	verifyingContract := common.HexToAddress("0x0")
 
 	var typedData apitypes.TypedData
 	typedData.Domain = apitypes.TypedDataDomain{
 		Name:              "CartesiDomain",
 		Version:           "0.0.1",
-		ChainId:           math.NewHexOrDecimal256(int64(chainId)),
+		ChainId:           math.NewHexOrDecimal256(chainId.Int64()),
 		VerifyingContract: verifyingContract.String(),
 	}
 	typedData.Types = apitypes.Types{

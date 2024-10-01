@@ -20,6 +20,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 	"github.com/labstack/echo/v4"
 )
@@ -37,6 +38,25 @@ type PaioTypedData struct {
 type PaioAPI struct {
 	availClient     *avail.AvailClient
 	inputRepository *repository.InputRepository
+	EvmRpcUrl       string
+	chainID         *big.Int
+}
+
+func (p *PaioAPI) getChainID() (*big.Int, error) {
+	if p.chainID != nil {
+		return p.chainID, nil
+	}
+	stdCtx := context.Background()
+	client, err := ethclient.DialContext(stdCtx, p.EvmRpcUrl)
+	if err != nil {
+		return nil, fmt.Errorf("ethclient dial error: %w", err)
+	}
+	chainId, err := client.ChainID(stdCtx)
+	if err != nil {
+		return nil, fmt.Errorf("ethclient chainId error: %w", err)
+	}
+	slog.Info("Using", "chainId", chainId.Uint64())
+	return chainId, nil
 }
 
 // SendTransaction implements ServerInterface.
@@ -177,10 +197,15 @@ func (p *PaioAPI) SaveTransaction(ctx echo.Context) error {
 		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "avail: error extracting data from message"})
 	}
 
+	chainId, err := p.getChainID()
+	if err != nil {
+		return fmt.Errorf("ethclient dial error: %w", err)
+	}
+
 	// fill the typedData
 	// https://github.com/fabiooshiro/frontend-web-cartesi/blob/16913e945ef687bd07b6c3900d63cb23d69390b1/src/Input.tsx#L65
 	typedData := paiodecoder.CreateTypedData(
-		app, nonce, maxGasPrice, dataBytes,
+		app, nonce, maxGasPrice, dataBytes, chainId,
 	)
 
 	typeJSON, err := json.Marshal(typedData)
@@ -259,7 +284,7 @@ func (p *PaioAPI) SaveTransaction(ctx echo.Context) error {
 }
 
 // Register the Paio API to echo
-func Register(e *echo.Echo, availClient *avail.AvailClient, inputRepository *repository.InputRepository) {
-	var paioAPI ServerInterface = &PaioAPI{availClient, inputRepository}
+func Register(e *echo.Echo, availClient *avail.AvailClient, inputRepository *repository.InputRepository, rpcUrl string) {
+	var paioAPI ServerInterface = &PaioAPI{availClient, inputRepository, rpcUrl, nil}
 	RegisterHandlers(e, paioAPI)
 }

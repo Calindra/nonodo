@@ -106,7 +106,8 @@ func (s *AvailListenerSuite) TestParsePaioBatchToInputs() {
 	fd := FakeDecoder{}
 	jsonStr, err := fd.DecodePaioBatch("it doesn't matter")
 	s.NoError(err)
-	inputs, err := ParsePaioBatchToInputs(jsonStr)
+	chainId := big.NewInt(11155111)
+	inputs, err := ParsePaioBatchToInputs(jsonStr, chainId)
 	s.NoError(err)
 	s.Equal(1, len(inputs))
 

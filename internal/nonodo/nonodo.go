@@ -326,7 +326,6 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	if err != nil {
 		panic(err)
 	}
-	paio.Register(e, availClient, container.GetInputRepository())
 
 	// Start the "internal" http rollup server
 	re := echo.New()
@@ -351,6 +350,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		})
 		opts.RpcUrl = fmt.Sprintf("ws://%s:%v", opts.AnvilAddress, opts.AnvilPort)
 	}
+	paio.Register(e, availClient, container.GetInputRepository(), opts.RpcUrl)
 	var sequencer model.Sequencer = nil
 	var inputterWorker = &inputter.InputterWorker{
 		Model:              modelInstance,
