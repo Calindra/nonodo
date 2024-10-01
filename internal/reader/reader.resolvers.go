@@ -6,7 +6,6 @@ package reader
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"strconv"
 
@@ -42,16 +41,6 @@ func (r *inputResolver) Notices(ctx context.Context, obj *model.Input, first *in
 // Reports is the resolver for the reports field.
 func (r *inputResolver) Reports(ctx context.Context, obj *model.Input, first *int, last *int, after *string, before *string) (*model.Connection[*model.Report], error) {
 	return r.adapter.GetReports(ctx, first, last, after, before, &obj.Index)
-}
-
-// Type is the resolver for the type field.
-func (r *inputResolver) Type(ctx context.Context, obj *model.Input) (*string, error) {
-	panic(fmt.Errorf("not implemented: Type - type"))
-}
-
-// CartesiTransactionID is the resolver for the cartesiTransactionId field.
-func (r *inputResolver) CartesiTransactionID(ctx context.Context, obj *model.Input) (*string, error) {
-	panic(fmt.Errorf("not implemented: CartesiTransactionID - cartesiTransactionId"))
 }
 
 // Input is the resolver for the input field.
