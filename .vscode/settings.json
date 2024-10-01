@@ -63,6 +63,7 @@
         "oapi",
         "openrpc",
         "outputdecoder",
+        "paiodecoder",
         "posix",
         "postgraphile",
         "postgres",

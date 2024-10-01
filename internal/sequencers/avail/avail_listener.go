@@ -3,6 +3,7 @@ package avail
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"os"
@@ -34,6 +35,11 @@ type AvailListener struct {
 	FromBlock       uint64
 	InputRepository *cRepos.InputRepository
 	InputterWorker  *inputter.InputterWorker
+	PaioDecoder     PaioDecoder
+}
+
+type PaioDecoder interface {
+	DecodePaioBatch(bytes string) (string, error)
 }
 
 func NewAvailListener(fromBlock uint64, repository *cRepos.InputRepository, w *inputter.InputterWorker) supervisor.Worker {
@@ -340,7 +346,85 @@ func readInputBoxByBlockAndTimestamp(ctx context.Context, l1FinalizedPrevHeight 
 
 }
 
-func ReadInputsFromAvailBlock(block *types.SignedBlock) ([]cModel.AdvanceInput, error) {
+func (av *AvailListener) ReadInputsFromPaioBlock(block *types.SignedBlock) ([]cModel.AdvanceInput, error) {
+	inputs := []cModel.AdvanceInput{}
+	timestamp, err := ReadTimestampFromBlock(block)
+	if err != nil {
+		return inputs, err
+	}
+	for _, ext := range block.Block.Extrinsics {
+		appID := ext.Signature.AppID.Int64()
+		slog.Debug("debug", "appID", appID, "timestamp", timestamp)
+		if appID != DEFAULT_APP_ID {
+			slog.Debug("Skipping", "appID", appID)
+			continue
+		}
+		args := string(ext.Method.Args)
+		jsonStr, err := av.PaioDecoder.DecodePaioBatch(args)
+		if err != nil {
+			return inputs, err
+		}
+		slog.Debug("PaioJson", "json", jsonStr)
+		inputs, err := ParsePaioBatchToInputs(jsonStr)
+		if err != nil {
+			return inputs, err
+		}
+		slog.Debug("Inputs", "len", len(inputs))
+	}
+	return inputs, nil
+}
+
+type PaioBatch struct {
+	SequencerPaymentAddress string            `json:"sequencer_payment_address"`
+	Txs                     []PaioTransaction `json:"txs"`
+}
+
+type PaioTransaction struct {
+	App         string        `json:"app"`
+	Nonce       uint64        `json:"nonce"`
+	MaxGasPrice uint64        `json:"max_gas_price"`
+	Data        []byte        `json:"data"`
+	Signature   PaioSignature `json:"signature"`
+}
+
+type PaioSignature struct {
+	R string `json:"r"`
+	S string `json:"s"`
+	V string `json:"v"`
+}
+
+func (ps *PaioSignature) Hex() string {
+	return fmt.Sprintf("%s%s%s", ps.R, ps.S[2:], ps.V[2:])
+}
+
+func ParsePaioBatchToInputs(jsonStr string) ([]cModel.AdvanceInput, error) {
+	inputs := []cModel.AdvanceInput{}
+	var paioBatch PaioBatch
+	if err := json.Unmarshal([]byte(jsonStr), &paioBatch); err != nil {
+		return inputs, fmt.Errorf("unmarshal paio batch: %w", err)
+	}
+	slog.Debug("PaioBatch", "tx len", len(paioBatch.Txs), "json", jsonStr)
+	for _, tx := range paioBatch.Txs {
+		slog.Debug("Tx",
+			"app", tx.App,
+			"signature", tx.Signature.Hex(),
+		)
+		inputs = append(inputs, cModel.AdvanceInput{
+			Index: int(0),
+			// CartesiTransactionId: common.Bytes2Hex(crypto.Keccak256(signature)),
+			MsgSender:           common.Address{},
+			Payload:             tx.Data,
+			AppContract:         common.HexToAddress(tx.App),
+			AvailBlockNumber:    0,
+			AvailBlockTimestamp: time.Unix(0, 0),
+			InputBoxIndex:       -2,
+			Type:                "",
+		})
+	}
+	return inputs, nil
+}
+
+func ReadInputsFromAvailBlockZzzHui(block *types.SignedBlock) ([]cModel.AdvanceInput, error) {
 	inputs := []cModel.AdvanceInput{}
 	timestamp, err := ReadTimestampFromBlock(block)
 	if err != nil {
