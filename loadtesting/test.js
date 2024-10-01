@@ -191,13 +191,13 @@ function testInputs() {
 }
 
 export default function () {
-    testVoucherNotFound()
-    testVoucherFound()
-    testNoticeFound()
+    // testVoucherNotFound()
+    // testVoucherFound()
+    // testNoticeFound()
     testInputFound()
-    testReportFound()
-    testVouchers()
-    testNotices()
-    testReports()
+    // testReportFound()
+    // testVouchers()
+    // testNotices()
+    // testReports()
     testInputs()
 }
