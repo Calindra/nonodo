@@ -109,6 +109,10 @@ type AdvanceInput struct {
 	EspressoBlockNumber    int       `db:"espresso_block_number"`
 	EspressoBlockTimestamp time.Time `db:"espresso_block_timestamp"`
 	InputBoxIndex          int       `db:"input_box_index"`
+	AvailBlockNumber       int       `db:"avail_block_number"`
+	AvailBlockTimestamp    time.Time `db:"avail_block_timestamp"`
+	Type                   string    `db:"type"`
+	CartesiTransactionId   string    `db:"cartesi_transaction_id"`
 }
 
 type ConvertedInput struct {

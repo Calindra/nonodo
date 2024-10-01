@@ -123,6 +123,9 @@ func (o *OutputDecoder) HandleInput(
 		EspressoBlockNumber:    -1,
 		EspressoBlockTimestamp: time.Unix(-1, 0),
 		InputBoxIndex:          int(convertedInput.InputBoxIndex),
+		AvailBlockNumber:       -1,
+		AvailBlockTimestamp:    time.Unix(-1, 0),
+		CartesiTransactionId:   "0",
 	})
 	return err
 }

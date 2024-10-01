@@ -33,6 +33,10 @@ type inputRow struct {
 	EspressoBlockNumber    int    `db:"espresso_block_number"`
 	EspressoBlockTimestamp int    `db:"espresso_block_timestamp"`
 	InputBoxIndex          int    `db:"input_box_index"`
+	AvailBlockNumber       int    `db:"avail_block_number"`
+	AvailBlockTimestamp    int    `db:"avail_block_timestamp"`
+	Type                   string `db:"type"`
+	CartesiTransactionId   string `db:"cartesi_transaction_id"`
 }
 
 func (r *InputRepository) CreateTables() error {
@@ -50,7 +54,11 @@ func (r *InputRepository) CreateTables() error {
 		exception		text,
 		espresso_block_number	integer,
 		espresso_block_timestamp	integer,
-		input_box_index integer);
+		input_box_index integer,
+		avail_block_number integer,
+		avail_block_timestamp integer,
+		type text,
+		cartesi_transaction_id text);
 	CREATE INDEX IF NOT EXISTS idx_input_index ON convenience_inputs(input_index);
 	CREATE INDEX IF NOT EXISTS idx_status ON convenience_inputs(status);`
 	_, err := r.Db.Exec(schema)
@@ -68,6 +76,7 @@ func (r *InputRepository) Create(ctx context.Context, input model.AdvanceInput) 
 		return nil, err
 	}
 	if exist != nil {
+		slog.Warn("Input already exists. Skipping creation")
 		return exist, nil
 	}
 	return r.rawCreate(ctx, input)
@@ -87,7 +96,10 @@ func (r *InputRepository) rawCreate(ctx context.Context, input model.AdvanceInpu
 		app_contract,
 		espresso_block_number,
 		espresso_block_timestamp,
-		input_box_index
+		input_box_index,
+		avail_block_number,
+		avail_block_timestamp,
+		type
 	) VALUES (
 		$1,
 		$2,
@@ -101,8 +113,17 @@ func (r *InputRepository) rawCreate(ctx context.Context, input model.AdvanceInpu
 		$10,
 		$11,
 		$12,
-		$13
+		$13,
+		$14,
+		$15,
+		$16
 	);`
+
+	var typee string = "inputbox"
+
+	if input.Type != "" {
+		typee = input.Type
+	}
 
 	exec := DBExecutor{&r.Db}
 	_, err := exec.ExecContext(
@@ -121,6 +142,9 @@ func (r *InputRepository) rawCreate(ctx context.Context, input model.AdvanceInpu
 		input.EspressoBlockNumber,
 		input.EspressoBlockTimestamp.UnixMilli(),
 		input.InputBoxIndex,
+		input.AvailBlockNumber,
+		input.AvailBlockTimestamp.UnixMilli(),
+		typee,
 	)
 
 	if err != nil {
@@ -162,7 +186,11 @@ func (r *InputRepository) FindByStatusNeDesc(ctx context.Context, status model.C
 		app_contract,
 		espresso_block_number,
 		espresso_block_timestamp,
-		input_box_index FROM convenience_inputs WHERE status <> $1
+		input_box_index,
+		avail_block_number,
+		avail_block_timestamp,
+		type,
+		cartesi_transaction_id FROM convenience_inputs WHERE status <> $1
 		ORDER BY input_index DESC`
 	res, err := r.Db.QueryxContext(
 		ctx,
@@ -185,19 +213,23 @@ func (r *InputRepository) FindByStatusNeDesc(ctx context.Context, status model.C
 
 func (r *InputRepository) FindByStatus(ctx context.Context, status model.CompletionStatus) (*model.AdvanceInput, error) {
 	sql := `SELECT
-		id,
-		input_index,
-		status,
-		msg_sender,
-		payload,
-		block_number,
-		block_timestamp,
-		prev_randao,
-		exception,
-		app_contract,
-		espresso_block_number,
-		espresso_block_timestamp,
-		input_box_index FROM convenience_inputs WHERE status = $1
+			id,
+			input_index,
+			status,
+			msg_sender,
+			payload,
+			block_number,
+			block_timestamp,
+			prev_randao,
+			exception,
+			app_contract,
+			espresso_block_number,
+			espresso_block_timestamp,
+			input_box_index, 
+			avail_block_number,
+			avail_block_timestamp,
+			type
+		FROM convenience_inputs WHERE status = $1
 		ORDER BY input_index ASC`
 	res, err := r.Db.QueryxContext(
 		ctx,
@@ -232,7 +264,11 @@ func (r *InputRepository) FindByID(ctx context.Context, id string) (*model.Advan
 		app_contract,
 		espresso_block_number,
 		espresso_block_timestamp,
-		input_box_index FROM convenience_inputs WHERE id = $1`
+		input_box_index, 
+		avail_block_number,
+		avail_block_timestamp,
+		type
+	FROM convenience_inputs WHERE id = $1`
 	res, err := r.Db.QueryxContext(
 		ctx,
 		sql,
@@ -259,7 +295,7 @@ func (c *InputRepository) Count(
 	query := `SELECT count(*) FROM convenience_inputs `
 	where, args, _, err := transformToInputQuery(filter)
 	if err != nil {
-		slog.Error("Count execution error")
+		slog.Error("Count execution error", "err", err)
 		return 0, err
 	}
 	query += where
@@ -293,19 +329,23 @@ func (c *InputRepository) FindAll(
 		return nil, err
 	}
 	query := `SELECT
-		id,
-		input_index,
-		status,
-		msg_sender,
-		payload,
-		block_number,
-		block_timestamp,
-		prev_randao,
-		exception,
-		app_contract,
-		espresso_block_number,
-		espresso_block_timestamp,
-		input_box_index FROM convenience_inputs `
+			id,
+			input_index,
+			status,
+			msg_sender,
+			payload,
+			block_number,
+			block_timestamp,
+			prev_randao,
+			exception,
+			app_contract,
+			espresso_block_number,
+			espresso_block_timestamp,
+			input_box_index, 
+			avail_block_number,
+			avail_block_timestamp,
+			type
+		FROM convenience_inputs `
 	where, args, argsCount, err := transformToInputQuery(filter)
 	if err != nil {
 		slog.Error("database error", "err", err)
@@ -394,7 +434,27 @@ func transformToInputQuery(
 				args = append(args, *filter.Eq)
 				count += 1
 			} else {
-				return "", nil, 0, fmt.Errorf("operation not implemented")
+				return "", nil, 0, fmt.Errorf("operation not implemented field msg_sender")
+			}
+		} else if *filter.Field == "Type" {
+			if filter.Eq != nil {
+				where = append(where, fmt.Sprintf("type = $%d ", count))
+				args = append(args, *filter.Eq)
+				count += 1
+			} else if filter.Ne != nil {
+				where = append(where, fmt.Sprintf("type <> $%d ", count))
+				args = append(args, *filter.Ne)
+				count += 1
+			} else {
+				return "", nil, 0, fmt.Errorf("operation not implemented field type")
+			}
+		} else if *filter.Field == "AppContract" {
+			if filter.Eq != nil {
+				where = append(where, fmt.Sprintf("app_contract = $%d ", count))
+				args = append(args, *filter.Eq)
+				count += 1
+			} else {
+				return "", nil, 0, fmt.Errorf("operation not implemented field app_contract")
 			}
 		} else if *filter.Field == "InputBoxIndex" {
 			if filter.Ne != nil {
@@ -431,6 +491,10 @@ func parseRowInput(row inputRow) model.AdvanceInput {
 		EspressoBlockNumber:    row.EspressoBlockNumber,
 		EspressoBlockTimestamp: time.UnixMilli(int64(row.EspressoBlockTimestamp)),
 		InputBoxIndex:          row.InputBoxIndex,
+		AvailBlockNumber:       row.AvailBlockNumber,
+		AvailBlockTimestamp:    time.UnixMilli(int64(row.AvailBlockTimestamp)),
+		Type:                   row.Type,
+		CartesiTransactionId:   row.CartesiTransactionId,
 	}
 }
 
@@ -444,6 +508,7 @@ func parseInput(res *sqlx.Rows) (*model.AdvanceInput, error) {
 		prevRandao             string
 		exception              string
 		appContract            string
+		availBlockTimestamp    int64
 	)
 	err := res.Scan(
 		&input.ID,
@@ -459,6 +524,10 @@ func parseInput(res *sqlx.Rows) (*model.AdvanceInput, error) {
 		&input.EspressoBlockNumber,
 		&espressoBlockTimestamp,
 		&input.InputBoxIndex,
+		&input.AvailBlockNumber,
+		&availBlockTimestamp,
+		&input.Type,
+		// &input.CartesiTransactionId,
 	)
 	if err != nil {
 		return nil, err
@@ -470,5 +539,6 @@ func parseInput(res *sqlx.Rows) (*model.AdvanceInput, error) {
 	input.Exception = common.Hex2Bytes(exception)
 	input.AppContract = common.HexToAddress(appContract)
 	input.EspressoBlockTimestamp = time.UnixMilli(espressoBlockTimestamp)
+	input.AvailBlockTimestamp = time.UnixMilli(availBlockTimestamp)
 	return &input, nil
 }

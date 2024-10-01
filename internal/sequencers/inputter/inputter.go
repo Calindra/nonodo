@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/calindra/nonodo/internal/contracts"
+	cModel "github.com/calindra/nonodo/internal/convenience/model"
 	cRepos "github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -233,4 +234,121 @@ func (w InputterWorker) addInput(
 	}
 
 	return nil
+}
+
+func (w InputterWorker) ReadInputsByBlockAndTimestamp(
+	ctx context.Context,
+	client *ethclient.Client,
+	inputBox *contracts.InputBox,
+	startBlockNumber uint64,
+	endTimestamp uint64,
+) (uint64, error) {
+	slog.Debug("ReadInputsByBlockAndTimestamp",
+		"startBlockNumber", startBlockNumber,
+		"dappAddress", w.ApplicationAddress,
+		"endTimestamp", endTimestamp,
+	)
+	lastL1BlockRead := startBlockNumber
+
+	opts := bind.FilterOpts{
+		Context: ctx,
+		Start:   startBlockNumber,
+	}
+	filter := []common.Address{w.ApplicationAddress}
+	it, err := inputBox.FilterInputAdded(&opts, filter, nil)
+
+	if err != nil {
+		return 0, fmt.Errorf("inputter: filter input added: %v", err)
+	}
+	defer it.Close()
+
+	for it.Next() {
+		header, err := client.HeaderByHash(ctx, it.Event.Raw.BlockHash)
+
+		if err != nil {
+			return 0, fmt.Errorf("inputter: failed to get tx header: %w", err)
+		}
+		timestamp := uint64(header.Time)
+
+		if timestamp < endTimestamp {
+			w.InputBoxBlock = it.Event.Raw.BlockNumber - 1
+			if err := w.addInput(ctx, client, it.Event); err != nil {
+				return 0, err
+			}
+			lastL1BlockRead = it.Event.Raw.BlockNumber
+		} else {
+			slog.Debug("InputAdded ignored", "timestamp", timestamp, "endTimestamp", endTimestamp)
+		}
+	}
+
+	return lastL1BlockRead, nil
+}
+
+func (w InputterWorker) FindAllInputsByBlockAndTimestampLT(
+	ctx context.Context,
+	client *ethclient.Client,
+	inputBox *contracts.InputBox,
+	startBlockNumber uint64,
+	endTimestamp uint64,
+) ([]cModel.AdvanceInput, error) {
+	slog.Debug("ReadInputsByBlockAndTimestamp",
+		"startBlockNumber", startBlockNumber,
+		"dappAddress", w.ApplicationAddress,
+		"endTimestamp", endTimestamp,
+	)
+
+	opts := bind.FilterOpts{
+		Context: ctx,
+		Start:   startBlockNumber,
+	}
+	filter := []common.Address{w.ApplicationAddress}
+	it, err := inputBox.FilterInputAdded(&opts, filter, nil)
+	result := []cModel.AdvanceInput{}
+	if err != nil {
+		return result, fmt.Errorf("inputter: filter input added: %v", err)
+	}
+	defer it.Close()
+
+	for it.Next() {
+		header, err := client.HeaderByHash(ctx, it.Event.Raw.BlockHash)
+
+		if err != nil {
+			return result, fmt.Errorf("inputter: failed to get tx header: %w", err)
+		}
+		timestamp := uint64(header.Time)
+		unixTimestamp := time.Unix(int64(header.Time), 0)
+		slog.Debug("InputAdded", "timestamp", timestamp, "endTimestamp", endTimestamp)
+		if timestamp < endTimestamp {
+			eventInput := it.Event.Input[4:]
+			abi, err := contracts.InputsMetaData.GetAbi()
+			if err != nil {
+				slog.Error("Error parsing abi", "err", err)
+				return result, err
+			}
+
+			values, err := abi.Methods["EvmAdvance"].Inputs.UnpackValues(eventInput)
+			if err != nil {
+				slog.Error("Error parsing abi", "err", err)
+				return result, err
+			}
+
+			msgSender := values[2].(common.Address)
+			payload := values[7].([]uint8)
+			inputIndex := int(it.Event.Index.Int64())
+			input := cModel.AdvanceInput{
+				Index:                  -1,
+				Status:                 cModel.CompletionStatusUnprocessed,
+				MsgSender:              msgSender,
+				Payload:                payload,
+				BlockTimestamp:         unixTimestamp,
+				BlockNumber:            header.Number.Uint64(),
+				EspressoBlockNumber:    -1,
+				EspressoBlockTimestamp: time.Unix(-1, 0),
+				InputBoxIndex:          inputIndex,
+			}
+			result = append(result, input)
+		}
+	}
+
+	return result, nil
 }

@@ -22,9 +22,11 @@ import (
 	"github.com/calindra/nonodo/internal/health"
 	"github.com/calindra/nonodo/internal/inspect"
 	"github.com/calindra/nonodo/internal/model"
+	"github.com/calindra/nonodo/internal/paio"
 	"github.com/calindra/nonodo/internal/reader"
 	"github.com/calindra/nonodo/internal/rollup"
 	"github.com/calindra/nonodo/internal/salsa"
+	"github.com/calindra/nonodo/internal/sequencers/avail"
 	"github.com/calindra/nonodo/internal/sequencers/espresso"
 	"github.com/calindra/nonodo/internal/sequencers/inputter"
 	"github.com/calindra/nonodo/internal/supervisor"
@@ -78,7 +80,8 @@ type NonodoOpts struct {
 	GraphileDisableSync bool
 	Salsa               bool
 	SalsaUrl            string
-	InputPayload        string
+	AvailFromBlock      uint64
+	AvailEnabled        bool
 }
 
 // Create the options struct with default values.
@@ -129,33 +132,15 @@ func NewNonodoOpts() NonodoOpts {
 		GraphileDisableSync: false,
 		Salsa:               false,
 		SalsaUrl:            "127.0.0.1:5005",
-		InputPayload:        "",
+		AvailFromBlock:      0,
+		AvailEnabled:        false,
 	}
 }
 
 func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 	var w supervisor.SupervisorWorker
 	w.Timeout = opts.TimeoutWorker
-	var db *sqlx.DB
-
-	if opts.DbImplementation == "postgres" {
-		slog.Info("Using PostGres DB ...")
-		postgresHost := os.Getenv("POSTGRES_HOST")
-		postgresPort := os.Getenv("POSTGRES_PORT")
-		postgresDataBase := os.Getenv("POSTGRES_DB")
-		postgresUser := os.Getenv("POSTGRES_USER")
-		postgresPassword := os.Getenv("POSTGRES_PASSWORD")
-
-		connectionString := fmt.Sprintf("host=%s port=%s user=%s "+
-			"dbname=%s password=%s sslmode=disable",
-			postgresHost, postgresPort, postgresUser,
-			postgresDataBase, postgresPassword)
-
-		db = sqlx.MustConnect("postgres", connectionString)
-	} else {
-		db = handleSQLite(opts)
-	}
-
+	db := CreateDBInstance(opts)
 	container := convenience.NewContainer(*db)
 	decoder := container.GetOutputDecoder()
 	convenienceService := container.GetConvenienceService()
@@ -255,6 +240,28 @@ func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 	return w
 }
 
+func CreateDBInstance(opts NonodoOpts) *sqlx.DB {
+	var db *sqlx.DB
+	if opts.DbImplementation == "postgres" {
+		slog.Info("Using PostGres DB ...")
+		postgresHost := os.Getenv("POSTGRES_HOST")
+		postgresPort := os.Getenv("POSTGRES_PORT")
+		postgresDataBase := os.Getenv("POSTGRES_DB")
+		postgresUser := os.Getenv("POSTGRES_USER")
+		postgresPassword := os.Getenv("POSTGRES_PASSWORD")
+
+		connectionString := fmt.Sprintf("host=%s port=%s user=%s "+
+			"dbname=%s password=%s sslmode=disable",
+			postgresHost, postgresPort, postgresUser,
+			postgresDataBase, postgresPassword)
+
+		db = sqlx.MustConnect("postgres", connectionString)
+	} else {
+		db = handleSQLite(opts)
+	}
+	return db
+}
+
 func handleSQLite(opts NonodoOpts) *sqlx.DB {
 	slog.Info("Using SQLite ...")
 	sqliteFile := opts.SqliteFile
@@ -291,7 +298,7 @@ func handleAnvilInstallation() (string, error) {
 func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	var w supervisor.SupervisorWorker
 	w.Timeout = opts.TimeoutWorker
-	db := handleSQLite(opts)
+	db := CreateDBInstance(opts)
 	container := convenience.NewContainer(*db)
 	decoder := container.GetOutputDecoder()
 	convenienceService := container.GetConvenienceService()
@@ -310,6 +317,16 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	inspect.Register(e, modelInstance)
 	reader.Register(e, modelInstance, convenienceService, adapter)
 	health.Register(e)
+
+	availClient, err := avail.NewAvailClient(
+		fmt.Sprintf("http://%s:%d", opts.HttpAddress, opts.HttpPort),
+		avail.DEFAULT_CHAINID_HARDHAT,
+		avail.DEFAULT_APP_ID,
+	)
+	if err != nil {
+		panic(err)
+	}
+	paio.Register(e, availClient, container.GetInputRepository())
 
 	// Start the "internal" http rollup server
 	re := echo.New()
@@ -335,7 +352,15 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		opts.RpcUrl = fmt.Sprintf("ws://%s:%v", opts.AnvilAddress, opts.AnvilPort)
 	}
 	var sequencer model.Sequencer = nil
-	if !opts.DisableAdvance {
+	var inputterWorker = &inputter.InputterWorker{
+		Model:              modelInstance,
+		Provider:           opts.RpcUrl,
+		InputBoxAddress:    common.HexToAddress(opts.InputBoxAddress),
+		InputBoxBlock:      0,
+		ApplicationAddress: common.HexToAddress(opts.ApplicationAddress),
+	}
+
+	if !opts.DisableAdvance && !opts.AvailEnabled {
 		if opts.Sequencer == "inputbox" {
 			sequencer = model.NewInputBoxSequencer(modelInstance)
 			w.Workers = append(w.Workers, inputter.InputterWorker{
@@ -352,17 +377,21 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 				opts.Namespace,
 				modelInstance.GetInputRepository(),
 				opts.FromBlock,
-				&inputter.InputterWorker{
-					Model:              modelInstance,
-					Provider:           opts.RpcUrl,
-					InputBoxAddress:    common.HexToAddress(opts.InputBoxAddress),
-					InputBoxBlock:      0,
-					ApplicationAddress: common.HexToAddress(opts.ApplicationAddress),
-				},
+				inputterWorker,
 			))
+		} else if opts.Sequencer == "paio" {
+			panic("sequencer not supported yet")
 		} else {
 			panic("sequencer not supported")
 		}
+	}
+
+	if opts.AvailEnabled {
+		w.Workers = append(w.Workers, avail.NewAvailListener(
+			opts.AvailFromBlock,
+			modelInstance.GetInputRepository(),
+			inputterWorker))
+		sequencer = model.NewInputBoxSequencer(modelInstance)
 	}
 
 	rollup.Register(re, modelInstance, sequencer)

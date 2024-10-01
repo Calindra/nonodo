@@ -1,0 +1,163 @@
+openapi: 3.0.0
+
+info:
+  title: Paio HTTP API
+  version: '0.9.0'
+  license:
+    name: Apache-2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+
+  description: |
+    Some good description
+
+paths:
+  /transaction:
+    post:
+      operationId: saveTransaction
+      summary: Save transaction
+      description: |
+        A good description
+
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveTransactionRequest"
+        required: true
+
+      responses:
+        "201":
+          description: Transaction created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionResponse"
+
+        default:
+          description: Error response.
+          content:
+            text/plain:
+              schema:
+                $ref: "#/components/schemas/Error"
+  /nonce:
+    post:
+      operationId: getNonce
+      summary: Get Nonce
+      desctiption:
+        A good description
+      
+      responses:
+        "200":
+          description: Nonce
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NonceResponse"
+
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GetNonce"
+        required: true
+
+  /transactions:
+    post:
+      operationId: sendTransaction
+      summary: Send Paio's transaction
+      description: |
+        A good description
+
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PaioTransaction"
+        required: true
+
+      responses:
+        "200":
+          description: PaioTransaction accepted
+          content:
+            application/json:
+              schema:
+                type: string
+                example: "no rollup request available"
+
+        "202":
+          description: Finish accepted but try again to obtain the next request.
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "no rollup request available"
+
+        default:
+          description: Error response.
+          content:
+            text/plain:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+components:
+  schemas:
+    PaioTransaction:
+      type: object
+      properties:
+        signature:
+          type: string
+          example: "0x0"
+        typedData:
+          type: string
+          description: Base 64
+          example: "AA"
+      required:
+        - signature
+        - typedData
+    SaveTransactionRequest:
+      type: object
+      properties:
+        signature:
+          type: string
+          example: "0x0"
+        message:
+          type: string
+          description: Base 64
+          example: "AA"
+      required:
+        - signature
+        - message
+    GetNonce:
+      type: object
+      properties:
+        msg_sender:
+          type: string
+          description: Message sender address
+          example: "0x0"
+        app_contract:
+          type: string
+          description: App contract address
+          example: "Ox24545"
+      required:
+        - msg_sender
+        - app_contract
+    NonceResponse:
+      type: object
+      properties:
+        nonce:
+          type: integer
+          description: Nonce number
+          example: 1
+    TransactionResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: tx number
+          example: "1"
+        
+
+    Error:
+      type: string
+      description: Detailed error message.
+      example: "The request could not be understood by the server due to malformed syntax"
