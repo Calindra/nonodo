@@ -194,20 +194,20 @@ func (s *AdapterV2TestSuite) TestGetInputFound() {
 	ctx := context.Background()
 
 	_, err := s.inputRepository.Create(ctx, model.AdvanceInput{
-		Index: 1,
+		ID: "1",
 	})
 
 	s.NoError(err)
 
-	index := 1
-	input, err := s.adapter.GetInput(index)
+	id := "1"
+	input, err := s.adapter.GetInput(id)
 	s.NoError(err)
-	s.Equal(index, input.Index)
+	s.Equal(id, input.ID)
 }
 
 func (s *AdapterV2TestSuite) TestGetInputNotFound() {
-	index := 100
-	_, err := s.adapter.GetInput(index)
+	id := "100"
+	_, err := s.adapter.GetInput(id)
 	s.Error(err, "input not found")
 }
 
@@ -308,12 +308,14 @@ func (s *AdapterV2TestSuite) TestGetInputsFound() {
 	ctx := context.Background()
 
 	_, err := s.inputRepository.Create(ctx, model.AdvanceInput{
+		ID:    "1",
 		Index: 1,
 	})
 
 	s.NoError(err)
 
 	_, error := s.inputRepository.Create(ctx, model.AdvanceInput{
+		ID:    "2",
 		Index: 2,
 	})
 

@@ -19,7 +19,7 @@ type Adapter interface {
 		first *int, last *int, after *string, before *string, where *graphql.InputFilter,
 	) (*graphql.InputConnection, error)
 
-	GetInput(index int) (*graphql.Input, error)
+	GetInput(id string) (*graphql.Input, error)
 
 	GetNotice(noticeIndex int, inputIndex int) (*graphql.Notice, error)
 

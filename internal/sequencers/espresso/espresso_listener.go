@@ -111,7 +111,7 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 				//		 	signature,
 				//		 	typedData: btoa(JSON.stringify(typedData)),
 				//		 })
-				msgSender, typedData, err := ExtractSigAndData(string(transaction))
+				msgSender, typedData, hashString, err := ExtractSigAndData(string(transaction))
 				if err != nil {
 					return err
 				}
@@ -147,6 +147,7 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 				}
 
 				_, err = e.InputRepository.Create(ctx, cModel.AdvanceInput{
+					ID:                     hashString,
 					Index:                  int(index),
 					MsgSender:              msgSender,
 					Payload:                payloadBytes,
@@ -183,7 +184,7 @@ func (e EspressoListener) readEspressoHeader(espressoBlockHeight uint64) string 
 
 func (e EspressoListener) getL1FinalizedTimestamp(espressoBlockHeight uint64) time.Time {
 	espressoHeader := e.readEspressoHeader(espressoBlockHeight)
-	value := gjson.Get(espressoHeader, "l1_finalized.timestamp")
+	value := gjson.Get(espressoHeader, "fields.l1_finalized.timestamp")
 	timestampStr := value.Str
 	timestampInt, err := strconv.ParseInt(timestampStr[2:], 16, 64)
 	if err != nil {
@@ -195,7 +196,7 @@ func (e EspressoListener) getL1FinalizedTimestamp(espressoBlockHeight uint64) ti
 
 func (e EspressoListener) getL1FinalizedHeight(espressoBlockHeight uint64) uint64 {
 	espressoHeader := e.readEspressoHeader(espressoBlockHeight)
-	value := gjson.Get(espressoHeader, "l1_finalized.number")
+	value := gjson.Get(espressoHeader, "fields.l1_finalized.number")
 	return value.Uint()
 }
 

@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strconv"
 	"sync"
 	"time"
 
@@ -67,6 +68,7 @@ func (m *NonodoModel) AddAdvanceInput(
 		return err
 	}
 	input := cModel.AdvanceInput{
+		ID:                     strconv.Itoa(inputBoxIndex),
 		Index:                  int(index),
 		Status:                 cModel.CompletionStatusUnprocessed,
 		MsgSender:              sender,

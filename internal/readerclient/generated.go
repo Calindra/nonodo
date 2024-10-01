@@ -21,63 +21,6 @@ const (
 	CompletionStatusPayloadLengthLimitExceeded CompletionStatus = "PAYLOAD_LENGTH_LIMIT_EXCEEDED"
 )
 
-// GetNoticeNotice includes the requested fields of the GraphQL type Notice.
-// The GraphQL type's documentation follows.
-//
-// Informational statement that can be validated in the base layer blockchain
-type GetNoticeNotice struct {
-	// Notice index within the context of the input that produced it
-	Index int `json:"index"`
-	// Notice data as a payload in Ethereum hex binary format, starting with '0x'
-	Payload string `json:"payload"`
-}
-
-// GetIndex returns GetNoticeNotice.Index, and is useful for accessing the field via an interface.
-func (v *GetNoticeNotice) GetIndex() int { return v.Index }
-
-// GetPayload returns GetNoticeNotice.Payload, and is useful for accessing the field via an interface.
-func (v *GetNoticeNotice) GetPayload() string { return v.Payload }
-
-// GetNoticeResponse is returned by GetNotice on success.
-type GetNoticeResponse struct {
-	// Get a notice based on its index
-	Notice GetNoticeNotice `json:"notice"`
-}
-
-// GetNotice returns GetNoticeResponse.Notice, and is useful for accessing the field via an interface.
-func (v *GetNoticeResponse) GetNotice() GetNoticeNotice { return v.Notice }
-
-// GetVoucherResponse is returned by GetVoucher on success.
-type GetVoucherResponse struct {
-	// Get a voucher based on its index
-	Voucher GetVoucherVoucher `json:"voucher"`
-}
-
-// GetVoucher returns GetVoucherResponse.Voucher, and is useful for accessing the field via an interface.
-func (v *GetVoucherResponse) GetVoucher() GetVoucherVoucher { return v.Voucher }
-
-// GetVoucherVoucher includes the requested fields of the GraphQL type Voucher.
-// The GraphQL type's documentation follows.
-//
-// Representation of a transaction that can be carried out on the base layer blockchain, such as a transfer of assets
-type GetVoucherVoucher struct {
-	// Voucher index within the context of the input that produced it
-	Index int `json:"index"`
-	// Transaction payload in Ethereum hex binary format, starting with '0x'
-	Payload string `json:"payload"`
-	// Transaction destination address in Ethereum hex binary format (20 bytes), starting with '0x'
-	Destination string `json:"destination"`
-}
-
-// GetIndex returns GetVoucherVoucher.Index, and is useful for accessing the field via an interface.
-func (v *GetVoucherVoucher) GetIndex() int { return v.Index }
-
-// GetPayload returns GetVoucherVoucher.Payload, and is useful for accessing the field via an interface.
-func (v *GetVoucherVoucher) GetPayload() string { return v.Payload }
-
-// GetDestination returns GetVoucherVoucher.Destination, and is useful for accessing the field via an interface.
-func (v *GetVoucherVoucher) GetDestination() string { return v.Destination }
-
 // InputStatusInput includes the requested fields of the GraphQL type Input.
 // The GraphQL type's documentation follows.
 //
@@ -352,119 +295,18 @@ type StateResponse struct {
 // GetInputs returns StateResponse.Inputs, and is useful for accessing the field via an interface.
 func (v *StateResponse) GetInputs() StateInputsInputConnection { return v.Inputs }
 
-// __GetNoticeInput is used internally by genqlient
-type __GetNoticeInput struct {
-	NoticeIndex int `json:"noticeIndex"`
-	InputIndex  int `json:"inputIndex"`
-}
-
-// GetNoticeIndex returns __GetNoticeInput.NoticeIndex, and is useful for accessing the field via an interface.
-func (v *__GetNoticeInput) GetNoticeIndex() int { return v.NoticeIndex }
-
-// GetInputIndex returns __GetNoticeInput.InputIndex, and is useful for accessing the field via an interface.
-func (v *__GetNoticeInput) GetInputIndex() int { return v.InputIndex }
-
-// __GetVoucherInput is used internally by genqlient
-type __GetVoucherInput struct {
-	VoucherIndex int `json:"voucherIndex"`
-	InputIndex   int `json:"inputIndex"`
-}
-
-// GetVoucherIndex returns __GetVoucherInput.VoucherIndex, and is useful for accessing the field via an interface.
-func (v *__GetVoucherInput) GetVoucherIndex() int { return v.VoucherIndex }
-
-// GetInputIndex returns __GetVoucherInput.InputIndex, and is useful for accessing the field via an interface.
-func (v *__GetVoucherInput) GetInputIndex() int { return v.InputIndex }
-
 // __InputStatusInput is used internally by genqlient
 type __InputStatusInput struct {
-	Index int `json:"index"`
+	Id string `json:"id"`
 }
 
-// GetIndex returns __InputStatusInput.Index, and is useful for accessing the field via an interface.
-func (v *__InputStatusInput) GetIndex() int { return v.Index }
-
-// The query or mutation executed by GetNotice.
-const GetNotice_Operation = `
-query GetNotice ($noticeIndex: Int!, $inputIndex: Int!) {
-	notice(noticeIndex: $noticeIndex, inputIndex: $inputIndex) {
-		index
-		payload
-	}
-}
-`
-
-func GetNotice(
-	ctx context.Context,
-	client graphql.Client,
-	noticeIndex int,
-	inputIndex int,
-) (*GetNoticeResponse, error) {
-	req := &graphql.Request{
-		OpName: "GetNotice",
-		Query:  GetNotice_Operation,
-		Variables: &__GetNoticeInput{
-			NoticeIndex: noticeIndex,
-			InputIndex:  inputIndex,
-		},
-	}
-	var err error
-
-	var data GetNoticeResponse
-	resp := &graphql.Response{Data: &data}
-
-	err = client.MakeRequest(
-		ctx,
-		req,
-		resp,
-	)
-
-	return &data, err
-}
-
-// The query or mutation executed by GetVoucher.
-const GetVoucher_Operation = `
-query GetVoucher ($voucherIndex: Int!, $inputIndex: Int!) {
-	voucher(voucherIndex: $voucherIndex, inputIndex: $inputIndex) {
-		index
-		payload
-		destination
-	}
-}
-`
-
-func GetVoucher(
-	ctx context.Context,
-	client graphql.Client,
-	voucherIndex int,
-	inputIndex int,
-) (*GetVoucherResponse, error) {
-	req := &graphql.Request{
-		OpName: "GetVoucher",
-		Query:  GetVoucher_Operation,
-		Variables: &__GetVoucherInput{
-			VoucherIndex: voucherIndex,
-			InputIndex:   inputIndex,
-		},
-	}
-	var err error
-
-	var data GetVoucherResponse
-	resp := &graphql.Response{Data: &data}
-
-	err = client.MakeRequest(
-		ctx,
-		req,
-		resp,
-	)
-
-	return &data, err
-}
+// GetId returns __InputStatusInput.Id, and is useful for accessing the field via an interface.
+func (v *__InputStatusInput) GetId() string { return v.Id }
 
 // The query or mutation executed by InputStatus.
 const InputStatus_Operation = `
-query InputStatus ($index: Int!) {
-	input(index: $index) {
+query InputStatus ($id: String!) {
+	input(id: $id) {
 		status
 	}
 }
@@ -474,13 +316,13 @@ query InputStatus ($index: Int!) {
 func InputStatus(
 	ctx context.Context,
 	client graphql.Client,
-	index int,
+	id string,
 ) (*InputStatusResponse, error) {
 	req := &graphql.Request{
 		OpName: "InputStatus",
 		Query:  InputStatus_Operation,
 		Variables: &__InputStatusInput{
-			Index: index,
+			Id: id,
 		},
 	}
 	var err error
