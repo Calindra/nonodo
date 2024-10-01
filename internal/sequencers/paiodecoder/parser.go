@@ -28,7 +28,7 @@ func CreateTypedData(
 
 	var typedData apitypes.TypedData
 	typedData.Domain = apitypes.TypedDataDomain{
-		Name:              "CartesiPaio",
+		Name:              "CartesiDomain",
 		Version:           "0.0.1",
 		ChainId:           math.NewHexOrDecimal256(int64(chainId)),
 		VerifyingContract: verifyingContract.String(),
