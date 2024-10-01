@@ -29,6 +29,16 @@ const (
 	COIN_TYPE_INDEX = 60
 )
 
+func NewCartesiDomain(chainId *math.HexOrDecimal256) apitypes.TypedDataDomain {
+	verifyingContract := common.HexToAddress("0x0")
+	return apitypes.TypedDataDomain{
+		Name:              "Cartesi",
+		Version:           "0.1.0",
+		ChainId:           chainId,
+		VerifyingContract: verifyingContract.String(),
+	}
+}
+
 // Implement the hashing function based on EIP-712 requirements
 func HashEIP712Message(data apitypes.TypedData) ([]byte, error) {
 	hash, _, err := apitypes.TypedDataAndHash(data)
@@ -95,12 +105,7 @@ func Main() []byte {
 	espressoMessage["payload"] = "0xdeadbeef"
 
 	chainId := math.NewHexOrDecimal256(HARDHAT)
-	domain := apitypes.TypedDataDomain{
-		Name:              "EspressoM",
-		Version:           "1",
-		ChainId:           chainId,
-		VerifyingContract: "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC",
-	}
+	domain := NewCartesiDomain(chainId)
 
 	types := apitypes.Types{
 		"EIP712Domain": {
@@ -109,7 +114,7 @@ func Main() []byte {
 			{Name: "chainId", Type: "uint256"}, // chainId should be uint256, not uint32
 			{Name: "verifyingContract", Type: "address"},
 		},
-		"EspressoMessage": {
+		"CartesiMessage": {
 			{Name: "nonce", Type: "uint64"},
 			{Name: "payload", Type: "string"},
 		},
@@ -119,7 +124,7 @@ func Main() []byte {
 	data := apitypes.TypedData{
 		Message:     espressoMessage,
 		Domain:      domain,
-		PrimaryType: "EspressoMessage",
+		PrimaryType: "CartesiMessage",
 		Types:       types,
 	}
 

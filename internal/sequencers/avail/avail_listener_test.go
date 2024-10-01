@@ -111,9 +111,9 @@ func (s *AvailListenerSuite) TestParsePaioBatchToInputs() {
 	s.NoError(err)
 	s.Equal(1, len(inputs))
 
-	// changed to new msg_sender because domain name changed from CartesiPaio to CartesiDomain,
+	// changed to new msg_sender because domain name changed from CartesiPaio to Cartesi,
 	// so hash changed and then public key also changed
-	s.Equal("0xa4ff575c2576fF9B9c12A5aF8Deed752bf6DAaE7", inputs[0].MsgSender.Hex())
+	s.Equal("0x631e372a9Ed7808Cbf55117f3263d3e1c9Bc3710", inputs[0].MsgSender.Hex())
 	s.Equal("0xab7528bb862fB57E8A2BCd567a2e929a0Be56a5e", inputs[0].AppContract.Hex())
 	s.Equal("Hello, World?", string(inputs[0].Payload))
 }

@@ -8,13 +8,16 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/big"
 	"net/http"
+	"strconv"
 
 	"github.com/btcsuite/btcd/btcutil/hdkeychain"
 	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/calindra/nonodo/internal/commons"
+	"github.com/calindra/nonodo/internal/devnet"
+	"github.com/calindra/nonodo/internal/sequencers/paiodecoder"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 	"github.com/tyler-smith/go-bip39"
@@ -74,7 +77,7 @@ const (
 )
 
 // Implement the hashing function based on EIP-712 requirements
-func HashEIP712Message(domain apitypes.TypedDataDomain, data apitypes.TypedData) ([]byte, error) {
+func HashEIP712Message(data apitypes.TypedData) ([]byte, error) {
 	hash, _, err := apitypes.TypedDataAndHash(data)
 	if err != nil {
 		return []byte(""), err
@@ -112,39 +115,18 @@ func (e *EspressoClient) SendInput(payload string, namespace int) (string, error
 		log.Fatalf("Error getting nonce: %v", err)
 	}
 
-	espressoMessage := apitypes.TypedDataMessage{}
-	espressoMessage["nonce"] = nonce
-	espressoMessage["payload"] = fmt.Sprintf("0x%s", payload)
-
-	chainId := math.NewHexOrDecimal256(HARDHAT)
-
-	domain := apitypes.TypedDataDomain{
-		Name:              "EspressoM",
-		Version:           "1",
-		ChainId:           chainId,
-		VerifyingContract: "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC",
-	}
-
-	types := apitypes.Types{
-		"EIP712Domain": {
-			{Name: "name", Type: "string"},
-			{Name: "version", Type: "string"},
-			{Name: "chainId", Type: "uint256"}, // chainId should be uint256, not uint32
-			{Name: "verifyingContract", Type: "address"},
-		},
-		"EspressoMessage": {
-			{Name: "nonce", Type: "uint64"},
-			{Name: "payload", Type: "string"},
-		},
-	}
-
 	// Build Message
-	data := apitypes.TypedData{
-		Message:     espressoMessage,
-		Domain:      domain,
-		PrimaryType: "EspressoMessage",
-		Types:       types,
+	n, err := strconv.Atoi(nonce)
+	if err != nil {
+		panic(err)
 	}
+	maxGasPrice := 10
+	data := paiodecoder.CreateTypedData(
+		common.HexToAddress(devnet.ApplicationAddress),
+		uint64(n), big.NewInt(int64(maxGasPrice)),
+		common.Hex2Bytes(payload),
+		big.NewInt(HARDHAT),
+	)
 
 	typedDataJSON, err := json.Marshal(data)
 	if err != nil {
@@ -153,7 +135,7 @@ func (e *EspressoClient) SendInput(payload string, namespace int) (string, error
 	log.Printf("data %s", typedDataJSON)
 
 	// Hash the message
-	messageHash, err := HashEIP712Message(domain, data)
+	messageHash, err := HashEIP712Message(data)
 	if err != nil {
 		log.Fatal("Error hashing message:", err)
 	}

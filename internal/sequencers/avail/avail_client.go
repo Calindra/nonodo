@@ -8,17 +8,17 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/big"
 	"net/http"
 	"os"
 	"strconv"
 
 	"github.com/calindra/nonodo/internal/commons"
+	"github.com/calindra/nonodo/internal/sequencers/paiodecoder"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/signature"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 )
 
 const (
@@ -55,43 +55,15 @@ func (av *AvailClient) Submit712(ctx context.Context, payload string, dappAddres
 	if err != nil {
 		log.Fatalf("Error getting nonce: %v", err)
 	}
-
-	cartesiMessage := apitypes.TypedDataMessage{}
-	cartesiMessage["app"] = dappAddress
-	cartesiMessage["nonce"] = nonce
-	cartesiMessage["max_gas_price"] = strconv.FormatUint(maxGasPrice, 10)
-	cartesiMessage["data"] = payload
-
-	chainId := math.NewHexOrDecimal256(int64(av.chainId))
-	domain := apitypes.TypedDataDomain{
-		Name:              "AvailM",
-		Version:           "1",
-		ChainId:           chainId,
-		VerifyingContract: "0xCcCCccccCCCCcCCCCCCcCcCccCcCCCcCcccccccC",
+	n, err := strconv.Atoi(nonce)
+	if err != nil {
+		return nil, err
 	}
-
-	types := apitypes.Types{
-		"EIP712Domain": {
-			{Name: "name", Type: "string"},
-			{Name: "version", Type: "string"},
-			{Name: "chainId", Type: "uint256"},
-			{Name: "verifyingContract", Type: "address"},
-		},
-		"CartesiMessage": {
-			{Name: "app", Type: "address"},
-			{Name: "nonce", Type: "uint64"},
-			{Name: "max_gas_price", Type: "uint128"},
-			{Name: "data", Type: "string"},
-		},
-	}
-
-	// Build Message
-	typedData := apitypes.TypedData{
-		Message:     cartesiMessage,
-		Domain:      domain,
-		PrimaryType: "CartesiMessage",
-		Types:       types,
-	}
+	typedData := paiodecoder.CreateTypedData(
+		common.HexToAddress(dappAddress),
+		uint64(n),
+		big.NewInt(int64(maxGasPrice)), []byte(payload), big.NewInt(int64(av.chainId)),
+	)
 
 	// Hash the message
 	messageHash, err := commons.HashEIP712Message(typedData)

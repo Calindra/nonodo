@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/calindra/nonodo/internal/commons"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/signer/core/apitypes"
@@ -24,15 +25,9 @@ func CreateTypedData(
 	dataBytes []byte,
 	chainId *big.Int,
 ) apitypes.TypedData {
-	verifyingContract := common.HexToAddress("0x0")
-
 	var typedData apitypes.TypedData
-	typedData.Domain = apitypes.TypedDataDomain{
-		Name:              "CartesiDomain",
-		Version:           "0.0.1",
-		ChainId:           math.NewHexOrDecimal256(chainId.Int64()),
-		VerifyingContract: verifyingContract.String(),
-	}
+	cid := math.NewHexOrDecimal256(chainId.Int64())
+	typedData.Domain = commons.NewCartesiDomain(cid)
 	typedData.Types = apitypes.Types{
 		"EIP712Domain": {
 			{Name: "name", Type: "string"},
