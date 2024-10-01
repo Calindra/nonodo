@@ -207,7 +207,7 @@ func (p *PaioAPI) SaveTransaction(ctx echo.Context) error {
 	dappAddress := app.String()
 	payload := string(dataBytes)
 
-	slog.Debug("Save input",
+	slog.Info("Input saved",
 		"dappAddress", dappAddress,
 		"msgSender", msgSender,
 		"nonce", nonce,
