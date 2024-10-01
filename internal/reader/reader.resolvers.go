@@ -43,16 +43,6 @@ func (r *inputResolver) Reports(ctx context.Context, obj *model.Input, first *in
 	return r.adapter.GetReports(ctx, first, last, after, before, &obj.Index)
 }
 
-// Type is the resolver for the type field.
-func (r *inputResolver) Type(ctx context.Context, obj *model.Input) (*string, error) {
-	panic(fmt.Errorf("not implemented: Type - type"))
-}
-
-// CartesiTransactionID is the resolver for the cartesiTransactionId field.
-func (r *inputResolver) CartesiTransactionID(ctx context.Context, obj *model.Input) (*string, error) {
-	panic(fmt.Errorf("not implemented: CartesiTransactionID - cartesiTransactionId"))
-}
-
 // Input is the resolver for the input field.
 func (r *noticeResolver) Input(ctx context.Context, obj *model.Notice) (*model.Input, error) {
 	return r.adapter.GetInput(obj.InputIndex)
@@ -149,3 +139,16 @@ type noticeResolver struct{ *Resolver }
 type queryResolver struct{ *Resolver }
 type reportResolver struct{ *Resolver }
 type voucherResolver struct{ *Resolver }
+
+// !!! WARNING !!!
+// The code below was going to be deleted when updating resolvers. It has been copied here so you have
+// one last chance to move it out of harms way if you want. There are two reasons this happens:
+//   - When renaming or deleting a resolver the old code will be put in here. You can safely delete
+//     it when you're done.
+//   - You have helper methods in this file. Move them out to keep these resolver files clean.
+func (r *inputResolver) Type(ctx context.Context, obj *model.Input) (*string, error) {
+	panic(fmt.Errorf("not implemented: Type - type"))
+}
+func (r *inputResolver) CartesiTransactionID(ctx context.Context, obj *model.Input) (*string, error) {
+	panic(fmt.Errorf("not implemented: CartesiTransactionID - cartesiTransactionId"))
+}
