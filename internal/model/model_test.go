@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"strconv"
 	"testing"
 	"time"
 
@@ -224,9 +225,9 @@ func (s *ModelSuite) TestItFinishesAdvanceWithAccept() {
 
 	// check input
 	ctx := context.Background()
-	input, err := s.inputRepository.FindByIndex(ctx, 0)
+	input, err := s.inputRepository.FindByID(ctx, "0")
 	s.NoError(err)
-	s.Equal(0, input.Index)
+	s.Equal("0", input.ID)
 	s.Equal(cModel.CompletionStatusAccepted, input.Status)
 
 	// check vouchers
@@ -262,9 +263,9 @@ func (s *ModelSuite) TestItFinishesAdvanceWithReject() {
 
 	// check input
 	ctx := context.Background()
-	input, err := s.inputRepository.FindByIndex(ctx, 0)
+	input, err := s.inputRepository.FindByID(ctx, "0")
 	s.NoError(err)
-	s.Equal(0, input.Index)
+	s.Equal("0", input.ID)
 	s.Equal(cModel.CompletionStatusRejected, input.Status)
 	s.Empty(input.Exception)
 	s.Empty(input.Notices)  // deprecated
@@ -557,9 +558,9 @@ func (s *ModelSuite) TestItRegistersExceptionWhenAdvancing() {
 	s.Nil(err)
 
 	// check input
-	input, err := s.inputRepository.FindByIndex(ctx, 0)
+	input, err := s.inputRepository.FindByID(ctx, "0")
 	s.NoError(err)
-	s.Equal(0, input.Index)
+	s.Equal("0", input.ID)
 	s.Equal(cModel.CompletionStatusException, input.Status)
 	s.Empty(input.Vouchers)
 	s.Empty(input.Notices)
@@ -606,9 +607,9 @@ func (s *ModelSuite) TestItGetsAdvanceInputs() {
 	for i := 0; i < s.n; i++ {
 		err := s.m.AddAdvanceInput(s.senders[i], s.payloads[i], s.blockNumbers[i], s.timestamps[i], i)
 		s.NoError(err)
-		input, err := s.inputRepository.FindByIndex(ctx, i)
+		input, err := s.inputRepository.FindByID(ctx, strconv.Itoa(i))
 		s.NoError(err)
-		s.Equal(i, input.Index)
+		s.Equal(strconv.Itoa(i), input.ID)
 		s.Equal(cModel.CompletionStatusUnprocessed, input.Status)
 		s.Equal(s.senders[i], input.MsgSender)
 		s.Equal(s.payloads[i], input.Payload)
@@ -619,7 +620,7 @@ func (s *ModelSuite) TestItGetsAdvanceInputs() {
 
 func (s *ModelSuite) TestItFailsToGetAdvanceInput() {
 	ctx := context.Background()
-	input, err := s.inputRepository.FindByIndex(ctx, 0)
+	input, err := s.inputRepository.FindByID(ctx, "0")
 	s.NoError(err)
 	s.Nil(input)
 }

@@ -20,6 +20,7 @@ type InputRepository struct {
 }
 
 type inputRow struct {
+	ID                     string `db:"id"`
 	Index                  int    `db:"input_index"`
 	Status                 int    `db:"status"`
 	MsgSender              string `db:"msg_sender"`
@@ -35,14 +36,9 @@ type inputRow struct {
 }
 
 func (r *InputRepository) CreateTables() error {
-	autoIncrement := "INTEGER"
-
-	if r.Db.DriverName() == "postgres" {
-		autoIncrement = "SERIAL"
-	}
 
 	schema := `CREATE TABLE IF NOT EXISTS convenience_inputs (
-		id 				%s NOT NULL PRIMARY KEY,
+		id 				text NOT NULL PRIMARY KEY,
 		input_index		integer,
 		app_contract    text,
 		status	 		text,
@@ -57,7 +53,6 @@ func (r *InputRepository) CreateTables() error {
 		input_box_index integer);
 	CREATE INDEX IF NOT EXISTS idx_input_index ON convenience_inputs(input_index);
 	CREATE INDEX IF NOT EXISTS idx_status ON convenience_inputs(status);`
-	schema = fmt.Sprintf(schema, autoIncrement)
 	_, err := r.Db.Exec(schema)
 	if err == nil {
 		slog.Debug("Inputs table created")
@@ -68,7 +63,7 @@ func (r *InputRepository) CreateTables() error {
 }
 
 func (r *InputRepository) Create(ctx context.Context, input model.AdvanceInput) (*model.AdvanceInput, error) {
-	exist, err := r.FindByIndex(ctx, input.Index)
+	exist, err := r.FindByID(ctx, input.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -80,6 +75,7 @@ func (r *InputRepository) Create(ctx context.Context, input model.AdvanceInput) 
 
 func (r *InputRepository) rawCreate(ctx context.Context, input model.AdvanceInput) (*model.AdvanceInput, error) {
 	insertSql := `INSERT INTO convenience_inputs (
+		id,
 		input_index,
 		status,
 		msg_sender,
@@ -104,13 +100,15 @@ func (r *InputRepository) rawCreate(ctx context.Context, input model.AdvanceInpu
 		$9,
 		$10,
 		$11,
-		$12
+		$12,
+		$13
 	);`
 
 	exec := DBExecutor{&r.Db}
 	_, err := exec.ExecContext(
 		ctx,
 		insertSql,
+		input.ID,
 		input.Index,
 		input.Status,
 		input.MsgSender.Hex(),
@@ -153,6 +151,7 @@ func (r *InputRepository) Update(ctx context.Context, input model.AdvanceInput) 
 
 func (r *InputRepository) FindByStatusNeDesc(ctx context.Context, status model.CompletionStatus) (*model.AdvanceInput, error) {
 	sql := `SELECT
+		id,
 		input_index,
 		status,
 		msg_sender,
@@ -186,6 +185,7 @@ func (r *InputRepository) FindByStatusNeDesc(ctx context.Context, status model.C
 
 func (r *InputRepository) FindByStatus(ctx context.Context, status model.CompletionStatus) (*model.AdvanceInput, error) {
 	sql := `SELECT
+		id,
 		input_index,
 		status,
 		msg_sender,
@@ -218,8 +218,9 @@ func (r *InputRepository) FindByStatus(ctx context.Context, status model.Complet
 	return nil, nil
 }
 
-func (r *InputRepository) FindByIndex(ctx context.Context, index int) (*model.AdvanceInput, error) {
+func (r *InputRepository) FindByID(ctx context.Context, id string) (*model.AdvanceInput, error) {
 	sql := `SELECT
+		id,
 		input_index,
 		status,
 		msg_sender,
@@ -231,11 +232,11 @@ func (r *InputRepository) FindByIndex(ctx context.Context, index int) (*model.Ad
 		app_contract,
 		espresso_block_number,
 		espresso_block_timestamp,
-		input_box_index FROM convenience_inputs WHERE input_index = $1`
+		input_box_index FROM convenience_inputs WHERE id = $1`
 	res, err := r.Db.QueryxContext(
 		ctx,
 		sql,
-		index,
+		id,
 	)
 	if err != nil {
 		return nil, err
@@ -292,6 +293,7 @@ func (c *InputRepository) FindAll(
 		return nil, err
 	}
 	query := `SELECT
+		id,
 		input_index,
 		status,
 		msg_sender,
@@ -416,6 +418,7 @@ func transformToInputQuery(
 
 func parseRowInput(row inputRow) model.AdvanceInput {
 	return model.AdvanceInput{
+		ID:                     row.ID,
 		Index:                  row.Index,
 		Status:                 model.CompletionStatus(row.Status),
 		MsgSender:              common.HexToAddress(row.MsgSender),
@@ -443,6 +446,7 @@ func parseInput(res *sqlx.Rows) (*model.AdvanceInput, error) {
 		appContract            string
 	)
 	err := res.Scan(
+		&input.ID,
 		&input.Index,
 		&input.Status,
 		&msgSender,

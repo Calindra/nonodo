@@ -93,6 +93,7 @@ type Report struct {
 
 // Rollups advance input type.
 type AdvanceInput struct {
+	ID                     string           `db:"id"`
 	Index                  int              `db:"input_index"`
 	Status                 CompletionStatus `db:"status"`
 	MsgSender              common.Address   `db:"msg_sender"`

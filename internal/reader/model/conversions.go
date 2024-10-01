@@ -56,6 +56,7 @@ func ConvertInput(input cModel.AdvanceInput) (*Input, error) {
 	}
 
 	return &Input{
+		ID:                  input.ID,
 		Index:               input.Index,
 		Status:              convertedStatus,
 		MsgSender:           input.MsgSender.String(),

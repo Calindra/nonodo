@@ -1,6 +1,6 @@
 # Get the input status.
-query InputStatus($index: Int!) {
-  input(index: $index) {
+query InputStatus($id: String!) {
+  input(id: $id) {
     status
   }
 }

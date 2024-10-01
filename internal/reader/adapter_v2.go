@@ -220,9 +220,9 @@ func (a AdapterV2) GetInputs(
 
 }
 
-func (a AdapterV2) GetInput(index int) (*graphql.Input, error) {
+func (a AdapterV2) GetInput(id string) (*graphql.Input, error) {
 	ctx := context.Background()
-	input, err := a.convenienceService.FindInputByIndex(ctx, index)
+	input, err := a.convenienceService.FindInputByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -245,6 +245,7 @@ func (a AdapterV2) GetInput(index int) (*graphql.Input, error) {
 	}
 
 	return &graphql.Input{
+		ID:                  input.ID,
 		Index:               int(input.Index),
 		MsgSender:           input.MsgSender.String(),
 		Payload:             string(input.Payload),
