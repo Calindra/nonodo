@@ -104,11 +104,14 @@ func (s *AvailListenerSuite) XTestReadInputsFromBlockPaio() {
 
 func (s *AvailListenerSuite) TestParsePaioBatchToInputs() {
 	fd := FakeDecoder{}
-	jsonStr, err := fd.DecodePaioBatch("doest matter")
+	jsonStr, err := fd.DecodePaioBatch("it doesn't matter")
 	s.NoError(err)
 	inputs, err := ParsePaioBatchToInputs(jsonStr)
 	s.NoError(err)
 	s.Equal(1, len(inputs))
+	s.Equal("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", inputs[0].MsgSender.Hex())
+	s.Equal("0xab7528bb862fB57E8A2BCd567a2e929a0Be56a5e", inputs[0].AppContract.Hex())
+	s.Equal("Hello, World?", string(inputs[0].Payload))
 }
 
 type FakeDecoder struct {

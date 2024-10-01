@@ -2,10 +2,12 @@ package avail
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"math/big"
 	"os"
 	"strings"
 	"time"
@@ -15,6 +17,7 @@ import (
 	cModel "github.com/calindra/nonodo/internal/convenience/model"
 	cRepos "github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/calindra/nonodo/internal/sequencers/inputter"
+	"github.com/calindra/nonodo/internal/sequencers/paiodecoder"
 	"github.com/calindra/nonodo/internal/supervisor"
 	gsrpc "github.com/centrifuge/go-substrate-rpc-client/v4"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
@@ -409,10 +412,36 @@ func ParsePaioBatchToInputs(jsonStr string) ([]cModel.AdvanceInput, error) {
 			"app", tx.App,
 			"signature", tx.Signature.Hex(),
 		)
+		typedData := paiodecoder.CreateTypedData(
+			common.HexToAddress(tx.App),
+			tx.Nonce,
+			big.NewInt(int64(tx.MaxGasPrice)),
+			tx.Data,
+		)
+		typeJSON, err := json.Marshal(typedData)
+		if err != nil {
+			return inputs, fmt.Errorf("error marshalling typed data: %w", err)
+		}
+		// set the typedData as string json below
+		sigAndData := commons.SigAndData{
+			Signature: tx.Signature.Hex(),
+			TypedData: base64.StdEncoding.EncodeToString(typeJSON),
+		}
+		jsonPayload, err := json.Marshal(sigAndData)
+		if err != nil {
+			slog.Error("Error json.Marshal message:", "err", err)
+			return inputs, err
+		}
+		slog.Debug("SaveTransaction", "jsonPayload", string(jsonPayload))
+		msgSender, _, _, err := commons.ExtractSigAndData(string(jsonPayload))
+		if err != nil {
+			slog.Error("Error ExtractSigAndData message:", "err", err)
+			return inputs, err
+		}
 		inputs = append(inputs, cModel.AdvanceInput{
 			Index: int(0),
 			// CartesiTransactionId: common.Bytes2Hex(crypto.Keccak256(signature)),
-			MsgSender:           common.Address{},
+			MsgSender:           msgSender,
 			Payload:             tx.Data,
 			AppContract:         common.HexToAddress(tx.App),
 			AvailBlockNumber:    0,

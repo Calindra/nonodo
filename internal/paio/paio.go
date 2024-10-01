@@ -16,9 +16,9 @@ import (
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/calindra/nonodo/internal/sequencers/avail"
+	"github.com/calindra/nonodo/internal/sequencers/paiodecoder"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 	"github.com/labstack/echo/v4"
@@ -177,37 +177,9 @@ func (p *PaioAPI) SaveTransaction(ctx echo.Context) error {
 
 	// fill the typedData
 	// https://github.com/fabiooshiro/frontend-web-cartesi/blob/16913e945ef687bd07b6c3900d63cb23d69390b1/src/Input.tsx#L65
-	chainId := 11155111 // Paio's fixed value for Anvil and Hardhat
-	verifyingContract := common.HexToAddress("0x0")
-
-	var typedData PaioTypedData
-	typedData.Account = common.Address{}
-	typedData.Domain = apitypes.TypedDataDomain{
-		Name:              "CartesiPaio",
-		Version:           "0.0.1",
-		ChainId:           math.NewHexOrDecimal256(int64(chainId)),
-		VerifyingContract: verifyingContract.String(),
-	}
-	typedData.Types = apitypes.Types{
-		"EIP712Domain": {
-			{Name: "name", Type: "string"},
-			{Name: "version", Type: "string"},
-			{Name: "chainId", Type: "uint256"},
-			{Name: "verifyingContract", Type: "address"},
-		},
-		"CartesiMessage": {
-			{Name: "app", Type: "address"},
-			{Name: "nonce", Type: "uint64"},
-			{Name: "max_gas_price", Type: "uint128"},
-			{Name: "data", Type: "bytes"},
-		}}
-	typedData.PrimaryType = "CartesiMessage"
-	typedData.Message = apitypes.TypedDataMessage{
-		"app":           app.String(),
-		"nonce":         nonce,
-		"max_gas_price": maxGasPrice.String(),
-		"data":          fmt.Sprintf("0x%s", common.Bytes2Hex(dataBytes)),
-	}
+	typedData := paiodecoder.CreateTypedData(
+		app, nonce, maxGasPrice, dataBytes,
+	)
 
 	typeJSON, err := json.Marshal(typedData)
 	if err != nil {
