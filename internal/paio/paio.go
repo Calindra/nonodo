@@ -349,11 +349,13 @@ func (p *PaioAPI) SendCartesiTransaction(ctx echo.Context) error {
 		slog.Error("Error saving input:", "err", err)
 		return err
 	}
+	msg, _ := json.Marshal(request.TypedData.Message)
 	slog.Info("transaction saved",
 		"txId", txId,
 		"msgSender", msgSender,
 		"appContract", appContract.Hex(),
 		"data", common.Bytes2Hex(payload),
+		"message", string(msg),
 	)
 	response := TransactionResponse{
 		Id: &txId,

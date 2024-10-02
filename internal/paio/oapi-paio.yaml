@@ -195,13 +195,21 @@ components:
                   type: string
                   example: "0x0"
                 nonce:
-                  type: string
-                  format: uint64
-                  example: "0"
+                  oneOf:
+                    - type: string
+                      format: uint64
+                      example: "0"
+                    - type: integer
+                      format: uint64
+                      example: 0
                 max_gas_price:
-                  type: string
-                  format: uint128
-                  example: "0x0"
+                  oneOf:
+                    - type: string
+                      format: uint128
+                      example: "0"
+                    - type: integer
+                      format: uint128
+                      example: 0
                 data:
                   type: string
                   example: "0x"

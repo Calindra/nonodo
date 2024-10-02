@@ -14,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/labstack/echo/v4"
+	"github.com/oapi-codegen/runtime"
 )
 
 // Cartesi712 defines model for Cartesi712.
@@ -29,10 +30,10 @@ type Cartesi712 struct {
 			Version           *string `json:"version,omitempty"`
 		} `json:"domain"`
 		Message struct {
-			App         string `json:"app"`
-			Data        string `json:"data"`
-			MaxGasPrice string `json:"max_gas_price"`
-			Nonce       string `json:"nonce"`
+			App         string                                   `json:"app"`
+			Data        string                                   `json:"data"`
+			MaxGasPrice Cartesi712_TypedData_Message_MaxGasPrice `json:"max_gas_price"`
+			Nonce       Cartesi712_TypedData_Message_Nonce       `json:"nonce"`
 		} `json:"message"`
 		PrimaryType string `json:"primaryType"`
 		Types       struct {
@@ -46,6 +47,28 @@ type Cartesi712 struct {
 			} `json:"EIP712Domain,omitempty"`
 		} `json:"types"`
 	} `json:"typedData,omitempty"`
+}
+
+// Cartesi712TypedDataMessageMaxGasPrice0 defines model for .
+type Cartesi712TypedDataMessageMaxGasPrice0 = string
+
+// Cartesi712TypedDataMessageMaxGasPrice1 defines model for .
+type Cartesi712TypedDataMessageMaxGasPrice1 = int
+
+// Cartesi712_TypedData_Message_MaxGasPrice defines model for Cartesi712.TypedData.Message.MaxGasPrice.
+type Cartesi712_TypedData_Message_MaxGasPrice struct {
+	union json.RawMessage
+}
+
+// Cartesi712TypedDataMessageNonce0 defines model for .
+type Cartesi712TypedDataMessageNonce0 = string
+
+// Cartesi712TypedDataMessageNonce1 defines model for .
+type Cartesi712TypedDataMessageNonce1 = uint64
+
+// Cartesi712_TypedData_Message_Nonce defines model for Cartesi712.TypedData.Message.Nonce.
+type Cartesi712_TypedData_Message_Nonce struct {
+	union json.RawMessage
 }
 
 // Error Detailed error message.
@@ -107,6 +130,130 @@ type SaveTransactionJSONRequestBody = SaveTransactionRequest
 
 // SendTransactionJSONRequestBody defines body for SendTransaction for application/json ContentType.
 type SendTransactionJSONRequestBody = PaioTransaction
+
+// AsCartesi712TypedDataMessageMaxGasPrice0 returns the union data inside the Cartesi712_TypedData_Message_MaxGasPrice as a Cartesi712TypedDataMessageMaxGasPrice0
+func (t Cartesi712_TypedData_Message_MaxGasPrice) AsCartesi712TypedDataMessageMaxGasPrice0() (Cartesi712TypedDataMessageMaxGasPrice0, error) {
+	var body Cartesi712TypedDataMessageMaxGasPrice0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromCartesi712TypedDataMessageMaxGasPrice0 overwrites any union data inside the Cartesi712_TypedData_Message_MaxGasPrice as the provided Cartesi712TypedDataMessageMaxGasPrice0
+func (t *Cartesi712_TypedData_Message_MaxGasPrice) FromCartesi712TypedDataMessageMaxGasPrice0(v Cartesi712TypedDataMessageMaxGasPrice0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeCartesi712TypedDataMessageMaxGasPrice0 performs a merge with any union data inside the Cartesi712_TypedData_Message_MaxGasPrice, using the provided Cartesi712TypedDataMessageMaxGasPrice0
+func (t *Cartesi712_TypedData_Message_MaxGasPrice) MergeCartesi712TypedDataMessageMaxGasPrice0(v Cartesi712TypedDataMessageMaxGasPrice0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JsonMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsCartesi712TypedDataMessageMaxGasPrice1 returns the union data inside the Cartesi712_TypedData_Message_MaxGasPrice as a Cartesi712TypedDataMessageMaxGasPrice1
+func (t Cartesi712_TypedData_Message_MaxGasPrice) AsCartesi712TypedDataMessageMaxGasPrice1() (Cartesi712TypedDataMessageMaxGasPrice1, error) {
+	var body Cartesi712TypedDataMessageMaxGasPrice1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromCartesi712TypedDataMessageMaxGasPrice1 overwrites any union data inside the Cartesi712_TypedData_Message_MaxGasPrice as the provided Cartesi712TypedDataMessageMaxGasPrice1
+func (t *Cartesi712_TypedData_Message_MaxGasPrice) FromCartesi712TypedDataMessageMaxGasPrice1(v Cartesi712TypedDataMessageMaxGasPrice1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeCartesi712TypedDataMessageMaxGasPrice1 performs a merge with any union data inside the Cartesi712_TypedData_Message_MaxGasPrice, using the provided Cartesi712TypedDataMessageMaxGasPrice1
+func (t *Cartesi712_TypedData_Message_MaxGasPrice) MergeCartesi712TypedDataMessageMaxGasPrice1(v Cartesi712TypedDataMessageMaxGasPrice1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JsonMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t Cartesi712_TypedData_Message_MaxGasPrice) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *Cartesi712_TypedData_Message_MaxGasPrice) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
+
+// AsCartesi712TypedDataMessageNonce0 returns the union data inside the Cartesi712_TypedData_Message_Nonce as a Cartesi712TypedDataMessageNonce0
+func (t Cartesi712_TypedData_Message_Nonce) AsCartesi712TypedDataMessageNonce0() (Cartesi712TypedDataMessageNonce0, error) {
+	var body Cartesi712TypedDataMessageNonce0
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromCartesi712TypedDataMessageNonce0 overwrites any union data inside the Cartesi712_TypedData_Message_Nonce as the provided Cartesi712TypedDataMessageNonce0
+func (t *Cartesi712_TypedData_Message_Nonce) FromCartesi712TypedDataMessageNonce0(v Cartesi712TypedDataMessageNonce0) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeCartesi712TypedDataMessageNonce0 performs a merge with any union data inside the Cartesi712_TypedData_Message_Nonce, using the provided Cartesi712TypedDataMessageNonce0
+func (t *Cartesi712_TypedData_Message_Nonce) MergeCartesi712TypedDataMessageNonce0(v Cartesi712TypedDataMessageNonce0) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JsonMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+// AsCartesi712TypedDataMessageNonce1 returns the union data inside the Cartesi712_TypedData_Message_Nonce as a Cartesi712TypedDataMessageNonce1
+func (t Cartesi712_TypedData_Message_Nonce) AsCartesi712TypedDataMessageNonce1() (Cartesi712TypedDataMessageNonce1, error) {
+	var body Cartesi712TypedDataMessageNonce1
+	err := json.Unmarshal(t.union, &body)
+	return body, err
+}
+
+// FromCartesi712TypedDataMessageNonce1 overwrites any union data inside the Cartesi712_TypedData_Message_Nonce as the provided Cartesi712TypedDataMessageNonce1
+func (t *Cartesi712_TypedData_Message_Nonce) FromCartesi712TypedDataMessageNonce1(v Cartesi712TypedDataMessageNonce1) error {
+	b, err := json.Marshal(v)
+	t.union = b
+	return err
+}
+
+// MergeCartesi712TypedDataMessageNonce1 performs a merge with any union data inside the Cartesi712_TypedData_Message_Nonce, using the provided Cartesi712TypedDataMessageNonce1
+func (t *Cartesi712_TypedData_Message_Nonce) MergeCartesi712TypedDataMessageNonce1(v Cartesi712TypedDataMessageNonce1) error {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return err
+	}
+
+	merged, err := runtime.JsonMerge(t.union, b)
+	t.union = merged
+	return err
+}
+
+func (t Cartesi712_TypedData_Message_Nonce) MarshalJSON() ([]byte, error) {
+	b, err := t.union.MarshalJSON()
+	return b, err
+}
+
+func (t *Cartesi712_TypedData_Message_Nonce) UnmarshalJSON(b []byte) error {
+	err := t.union.UnmarshalJSON(b)
+	return err
+}
 
 // RequestEditorFn  is the function signature for the RequestEditor callback function
 type RequestEditorFn func(ctx context.Context, req *http.Request) error
