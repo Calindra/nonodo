@@ -157,7 +157,10 @@ func (e *EspressoClient) SendInput(payload string, namespace int) (string, error
 		Signature: "0x" + common.Bytes2Hex(signature),
 		TypedData: typedDataBase64,
 	}
+	return e.SubmitSigAndData(namespace, sigAndData)
+}
 
+func (e EspressoClient) SubmitSigAndData(namespace int, sigAndData commons.SigAndData) (string, error) {
 	jsonPayload, err := json.Marshal(sigAndData)
 
 	if err != nil {
@@ -200,7 +203,6 @@ func (e *EspressoClient) SendInput(payload string, namespace int) (string, error
 	bodyString := string(bodyBytes)
 
 	return bodyString, nil
-
 }
 
 func fetchNonce(sender string, graphqlURL string) (string, error) {

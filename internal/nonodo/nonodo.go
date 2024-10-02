@@ -112,7 +112,7 @@ func NewNonodoOpts() NonodoOpts {
 		InputBoxBlock:       0,
 		ApplicationAddress:  devnet.ApplicationAddress,
 		RpcUrl:              "",
-		EspressoUrl:         "https://query.cappuccino.testnet.espresso.network",
+		EspressoUrl:         "https://query.decaf.testnet.espresso.network",
 		EnableEcho:          false,
 		DisableDevnet:       false,
 		DisableAdvance:      false,
@@ -350,7 +350,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		})
 		opts.RpcUrl = fmt.Sprintf("ws://%s:%v", opts.AnvilAddress, opts.AnvilPort)
 	}
-	paio.Register(e, availClient, container.GetInputRepository(), opts.RpcUrl)
+
 	var sequencer model.Sequencer = nil
 	var inputterWorker = &inputter.InputterWorker{
 		Model:              modelInstance,
@@ -384,6 +384,12 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		} else {
 			panic("sequencer not supported")
 		}
+	}
+
+	if opts.Sequencer == "espresso" {
+		paio.Register(e, availClient, container.GetInputRepository(), opts.RpcUrl, &opts.EspressoUrl)
+	} else {
+		paio.Register(e, availClient, container.GetInputRepository(), opts.RpcUrl, nil)
 	}
 
 	if opts.AvailEnabled {

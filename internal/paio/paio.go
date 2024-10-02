@@ -16,6 +16,7 @@ import (
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/calindra/nonodo/internal/sequencers/avail"
+	"github.com/calindra/nonodo/internal/sequencers/espresso"
 	"github.com/calindra/nonodo/internal/sequencers/paiodecoder"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -40,6 +41,11 @@ type PaioAPI struct {
 	inputRepository *repository.InputRepository
 	EvmRpcUrl       string
 	chainID         *big.Int
+	EspressoClient  EspressoSender
+}
+
+type EspressoSender interface {
+	SubmitSigAndData(namespace int, sigAndData commons.SigAndData) (string, error)
 }
 
 func (p *PaioAPI) getChainID() (*big.Int, error) {
@@ -329,12 +335,24 @@ func (p *PaioAPI) SendCartesiTransaction(ctx echo.Context) error {
 		"appContract", appContract.Hex(),
 		"message", request.TypedData.Message,
 	)
+	txId := fmt.Sprintf("0x%s", common.Bytes2Hex(crypto.Keccak256(signature)))
+	if p.EspressoClient != nil {
+		namespace := 10008
+		esTxId, err := p.EspressoClient.SubmitSigAndData(namespace, sigAndData)
+		if err != nil {
+			return err
+		}
+		slog.Info("Espresso", "txId", esTxId)
+		response := TransactionResponse{
+			Id: &txId,
+		}
+		return ctx.JSON(http.StatusCreated, response)
+	}
 	inputCount, err := p.inputRepository.Count(stdCtx, nil)
 	if err != nil {
 		slog.Error("Error counting inputs:", "err", err)
 		return err
 	}
-	txId := fmt.Sprintf("0x%s", common.Bytes2Hex(crypto.Keccak256(signature)))
 	payload := common.Hex2Bytes(request.TypedData.Message.Data[2:])
 	_, err = p.inputRepository.Create(stdCtx, model.AdvanceInput{
 		ID:            txId,
@@ -364,7 +382,13 @@ func (p *PaioAPI) SendCartesiTransaction(ctx echo.Context) error {
 }
 
 // Register the Paio API to echo
-func Register(e *echo.Echo, availClient *avail.AvailClient, inputRepository *repository.InputRepository, rpcUrl string) {
-	var paioAPI ServerInterface = &PaioAPI{availClient, inputRepository, rpcUrl, nil}
-	RegisterHandlers(e, paioAPI)
+func Register(e *echo.Echo, availClient *avail.AvailClient, inputRepository *repository.InputRepository, rpcUrl string, espressoUrl *string) {
+	paioAPI := &PaioAPI{availClient, inputRepository, rpcUrl, nil, nil}
+	if espressoUrl != nil {
+		paioAPI.EspressoClient = espresso.EspressoClient{
+			EspressoUrl: *espressoUrl,
+		}
+	}
+	var paioServerAPI ServerInterface = paioAPI
+	RegisterHandlers(e, paioServerAPI)
 }

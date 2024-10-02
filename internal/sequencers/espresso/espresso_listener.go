@@ -71,7 +71,7 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 		}
 		slog.Debug("Espresso:", "lastEspressoBlockHeight", lastEspressoBlockHeight)
 		if lastEspressoBlockHeight == currentBlockHeight {
-			var delay time.Duration = 500
+			var delay time.Duration = 800
 			time.Sleep(delay * time.Millisecond)
 			continue
 		}
@@ -99,7 +99,7 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 			slog.Debug("Espresso:", "transactionsLen", tot)
 			for i := 0; i < tot; i++ {
 				transaction := transactions.Transactions[i]
-				slog.Debug("transaction", "currentBlockHeight", currentBlockHeight, "transaction", transaction)
+				slog.Debug("Espresso:", "currentBlockHeight", currentBlockHeight, "transaction", transaction)
 
 				ctx := context.Background()
 				// transform and add to InputRepository
@@ -140,9 +140,9 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 					return fmt.Errorf("error converting nonce: %T", nonceField)
 				}
 
-				payload, ok := typedData.Message["payload"].(string)
+				payload, ok := typedData.Message["data"].(string)
 				if !ok {
-					return fmt.Errorf("type assertion error")
+					return fmt.Errorf("message data type assertion error")
 				}
 				slog.Debug("Espresso input", "msgSender", msgSender, "nonce", nonce, "payload", payload)
 
