@@ -231,6 +231,11 @@ func (p *PaioAPI) SaveTransaction(ctx echo.Context) error {
 		return err
 	}
 
+	if request.MsgSender != nil && common.HexToAddress(*request.MsgSender) != msgSender {
+		msg := "wrong signature"
+		return ctx.JSON(http.StatusBadRequest, TransactionError{Message: &msg})
+	}
+
 	dappAddress := app.String()
 	payload := string(dataBytes)
 
@@ -280,6 +285,72 @@ func (p *PaioAPI) SaveTransaction(ctx echo.Context) error {
 		Id: &txId,
 	}
 
+	return ctx.JSON(http.StatusOK, response)
+}
+
+// SendCartesiTransaction implements ServerInterface.
+func (p *PaioAPI) SendCartesiTransaction(ctx echo.Context) error {
+	var request SendCartesiTransactionJSONRequestBody
+	stdCtx, cancel := context.WithCancel(ctx.Request().Context())
+	defer cancel()
+	if err := ctx.Bind(&request); err != nil {
+		return err
+	}
+	slog.Debug("SendCartesiTransaction", "x", stdCtx)
+
+	typeJSON, err := json.Marshal(request.TypedData)
+	if err != nil {
+		return fmt.Errorf("error marshalling typed data: %w", err)
+	}
+
+	// set the typedData as string json below
+	sigAndData := commons.SigAndData{
+		Signature: *request.Signature,
+		TypedData: base64.StdEncoding.EncodeToString(typeJSON),
+	}
+	jsonPayload, err := json.Marshal(sigAndData)
+	if err != nil {
+		slog.Error("Error json.Marshal message:", "err", err)
+		return err
+	}
+	slog.Debug("SaveTransaction", "jsonPayload", string(jsonPayload))
+	msgSender, _, signature, err := commons.ExtractSigAndData(string(jsonPayload))
+	if err != nil {
+		slog.Error("Error ExtractSigAndData message:", "err", err)
+		return err
+	}
+	if common.HexToAddress(request.TypedData.Account) != msgSender {
+		errorMessage := "wrong signature"
+		return ctx.JSON(http.StatusBadRequest, TransactionError{Message: &errorMessage})
+	}
+	appContract := common.HexToAddress(request.TypedData.Message.App[2:])
+	slog.Debug("SaveTransaction",
+		"msgSender", msgSender,
+		"appContract", appContract.Hex(),
+		"message", request.TypedData.Message,
+	)
+	inputCount, err := p.inputRepository.Count(stdCtx, nil)
+	if err != nil {
+		slog.Error("Error counting inputs:", "err", err)
+		return err
+	}
+	txId := fmt.Sprintf("0x%s", common.Bytes2Hex(crypto.Keccak256(signature)))
+	_, err = p.inputRepository.Create(stdCtx, model.AdvanceInput{
+		ID:            txId,
+		Index:         int(inputCount + 1),
+		MsgSender:     msgSender,
+		Payload:       common.Hex2Bytes(request.TypedData.Message.Data[2:]),
+		AppContract:   appContract,
+		InputBoxIndex: -2,
+		Type:          "L2",
+	})
+	if err != nil {
+		slog.Error("Error saving input:", "err", err)
+		return err
+	}
+	response := TransactionResponse{
+		Id: &txId,
+	}
 	return ctx.JSON(http.StatusOK, response)
 }
 

@@ -16,6 +16,37 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+// Cartesi712 defines model for Cartesi712.
+type Cartesi712 struct {
+	Signature *string `json:"signature,omitempty"`
+	TypedData *struct {
+		Account string `json:"account"`
+		Domain  struct {
+			ChainId           *int    `json:"chainId,omitempty"`
+			Name              *string `json:"name,omitempty"`
+			VerifyingContract *string `json:"verifyingContract,omitempty"`
+			Version           *string `json:"version,omitempty"`
+		} `json:"domain"`
+		Message struct {
+			App         string `json:"app"`
+			Data        string `json:"data"`
+			MaxGasPrice string `json:"max_gas_price"`
+			Nonce       string `json:"nonce"`
+		} `json:"message"`
+		PrimaryType string `json:"primaryType"`
+		Types       struct {
+			CartesiMessage *[]struct {
+				Name *string `json:"name,omitempty"`
+				Type *string `json:"type,omitempty"`
+			} `json:"CartesiMessage,omitempty"`
+			EIP712Domain *[]struct {
+				Name *string `json:"name,omitempty"`
+				Type *string `json:"type,omitempty"`
+			} `json:"EIP712Domain,omitempty"`
+		} `json:"types"`
+	} `json:"typedData,omitempty"`
+}
+
 // Error Detailed error message.
 type Error = string
 
@@ -44,9 +75,18 @@ type PaioTransaction struct {
 
 // SaveTransactionRequest defines model for SaveTransactionRequest.
 type SaveTransactionRequest struct {
-	// Message Base 64
-	Message   string `json:"message"`
-	Signature string `json:"signature"`
+	// Message ABI encoded
+	Message string `json:"message"`
+
+	// MsgSender (optional) sender address to check the signature
+	MsgSender *string `json:"msg_sender,omitempty"`
+	Signature string  `json:"signature"`
+}
+
+// TransactionError defines model for TransactionError.
+type TransactionError struct {
+	// Message Detailed error message
+	Message *string `json:"message,omitempty"`
 }
 
 // TransactionResponse defines model for TransactionResponse.
@@ -57,6 +97,9 @@ type TransactionResponse struct {
 
 // GetNonceJSONRequestBody defines body for GetNonce for application/json ContentType.
 type GetNonceJSONRequestBody = GetNonce
+
+// SendCartesiTransactionJSONRequestBody defines body for SendCartesiTransaction for application/json ContentType.
+type SendCartesiTransactionJSONRequestBody = Cartesi712
 
 // SaveTransactionJSONRequestBody defines body for SaveTransaction for application/json ContentType.
 type SaveTransactionJSONRequestBody = SaveTransactionRequest
@@ -142,6 +185,11 @@ type ClientInterface interface {
 
 	GetNonce(ctx context.Context, body GetNonceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
 
+	// SendCartesiTransactionWithBody request with any body
+	SendCartesiTransactionWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	SendCartesiTransaction(ctx context.Context, body SendCartesiTransactionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// SaveTransactionWithBody request with any body
 	SaveTransactionWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -167,6 +215,30 @@ func (c *Client) GetNonceWithBody(ctx context.Context, contentType string, body 
 
 func (c *Client) GetNonce(ctx context.Context, body GetNonceJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
 	req, err := NewGetNonceRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SendCartesiTransactionWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSendCartesiTransactionRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) SendCartesiTransaction(ctx context.Context, body SendCartesiTransactionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSendCartesiTransactionRequest(c.Server, body)
 	if err != nil {
 		return nil, err
 	}
@@ -246,6 +318,46 @@ func NewGetNonceRequestWithBody(server string, contentType string, body io.Reade
 	}
 
 	operationPath := fmt.Sprintf("/nonce")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
+}
+
+// NewSendCartesiTransactionRequest calls the generic SendCartesiTransaction builder with application/json body
+func NewSendCartesiTransactionRequest(server string, body SendCartesiTransactionJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewSendCartesiTransactionRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewSendCartesiTransactionRequestWithBody generates requests for SendCartesiTransaction with any type of body
+func NewSendCartesiTransactionRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/submit")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -393,6 +505,11 @@ type ClientWithResponsesInterface interface {
 
 	GetNonceWithResponse(ctx context.Context, body GetNonceJSONRequestBody, reqEditors ...RequestEditorFn) (*GetNonceResponse, error)
 
+	// SendCartesiTransactionWithBodyWithResponse request with any body
+	SendCartesiTransactionWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendCartesiTransactionResponse, error)
+
+	SendCartesiTransactionWithResponse(ctx context.Context, body SendCartesiTransactionJSONRequestBody, reqEditors ...RequestEditorFn) (*SendCartesiTransactionResponse, error)
+
 	// SaveTransactionWithBodyWithResponse request with any body
 	SaveTransactionWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SaveTransactionResponse, error)
 
@@ -426,10 +543,34 @@ func (r GetNonceResponse) StatusCode() int {
 	return 0
 }
 
+type SendCartesiTransactionResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON201      *TransactionResponse
+	JSON400      *TransactionError
+}
+
+// Status returns HTTPResponse.Status
+func (r SendCartesiTransactionResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SendCartesiTransactionResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
+
 type SaveTransactionResponse struct {
 	Body         []byte
 	HTTPResponse *http.Response
 	JSON201      *TransactionResponse
+	JSON400      *TransactionError
 }
 
 // Status returns HTTPResponse.Status
@@ -485,6 +626,23 @@ func (c *ClientWithResponses) GetNonceWithResponse(ctx context.Context, body Get
 		return nil, err
 	}
 	return ParseGetNonceResponse(rsp)
+}
+
+// SendCartesiTransactionWithBodyWithResponse request with arbitrary body returning *SendCartesiTransactionResponse
+func (c *ClientWithResponses) SendCartesiTransactionWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendCartesiTransactionResponse, error) {
+	rsp, err := c.SendCartesiTransactionWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSendCartesiTransactionResponse(rsp)
+}
+
+func (c *ClientWithResponses) SendCartesiTransactionWithResponse(ctx context.Context, body SendCartesiTransactionJSONRequestBody, reqEditors ...RequestEditorFn) (*SendCartesiTransactionResponse, error) {
+	rsp, err := c.SendCartesiTransaction(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseSendCartesiTransactionResponse(rsp)
 }
 
 // SaveTransactionWithBodyWithResponse request with arbitrary body returning *SaveTransactionResponse
@@ -547,6 +705,39 @@ func ParseGetNonceResponse(rsp *http.Response) (*GetNonceResponse, error) {
 	return response, nil
 }
 
+// ParseSendCartesiTransactionResponse parses an HTTP response from a SendCartesiTransactionWithResponse call
+func ParseSendCartesiTransactionResponse(rsp *http.Response) (*SendCartesiTransactionResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &SendCartesiTransactionResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest TransactionResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest TransactionError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
+	}
+
+	return response, nil
+}
+
 // ParseSaveTransactionResponse parses an HTTP response from a SaveTransactionWithResponse call
 func ParseSaveTransactionResponse(rsp *http.Response) (*SaveTransactionResponse, error) {
 	bodyBytes, err := io.ReadAll(rsp.Body)
@@ -567,6 +758,13 @@ func ParseSaveTransactionResponse(rsp *http.Response) (*SaveTransactionResponse,
 			return nil, err
 		}
 		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest TransactionError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
 
 	}
 
@@ -604,6 +802,9 @@ type ServerInterface interface {
 	// Get Nonce
 	// (POST /nonce)
 	GetNonce(ctx echo.Context) error
+
+	// (POST /submit)
+	SendCartesiTransaction(ctx echo.Context) error
 	// Save transaction
 	// (POST /transaction)
 	SaveTransaction(ctx echo.Context) error
@@ -623,6 +824,15 @@ func (w *ServerInterfaceWrapper) GetNonce(ctx echo.Context) error {
 
 	// Invoke the callback with all the unmarshaled arguments
 	err = w.Handler.GetNonce(ctx)
+	return err
+}
+
+// SendCartesiTransaction converts echo context to params.
+func (w *ServerInterfaceWrapper) SendCartesiTransaction(ctx echo.Context) error {
+	var err error
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.SendCartesiTransaction(ctx)
 	return err
 }
 
@@ -673,6 +883,7 @@ func RegisterHandlersWithBaseURL(router EchoRouter, si ServerInterface, baseURL 
 	}
 
 	router.POST(baseURL+"/nonce", wrapper.GetNonce)
+	router.POST(baseURL+"/submit", wrapper.SendCartesiTransaction)
 	router.POST(baseURL+"/transaction", wrapper.SaveTransaction)
 	router.POST(baseURL+"/transactions", wrapper.SendTransaction)
 

@@ -11,6 +11,28 @@ info:
     Some good description
 
 paths:
+  /submit:
+    post:
+      operationId: sendCartesiTransaction
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Cartesi712"
+        required: true
+      responses:
+        "201":
+          description: Transaction created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionError"
   /transaction:
     post:
       operationId: saveTransaction
@@ -32,6 +54,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/TransactionResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionError"
 
         default:
           description: Error response.
@@ -101,6 +129,90 @@ paths:
 
 components:
   schemas:
+    Cartesi712:
+      type: object
+      properties:
+        signature:
+          type: string
+          example: "0x0"
+        typedData:
+          type: object
+          properties:
+            account:
+              type: string
+              example: "0x0000000000000000000000000000000000000000"
+            domain:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: "Cartesi"
+                version:
+                  type: string
+                  example: "0.1.0"
+                chainId:
+                  type: integer
+                  format: uint256
+                  example: 80001
+                verifyingContract:
+                  type: string
+                  example: "0x0000000000000000000000000000000000000000"
+            types:
+              type: object
+              properties:
+                EIP712Domain:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        example: "name"
+                      type:
+                        type: string
+                        example: "string"
+                CartesiMessage:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        example: "app"
+                      type:
+                        type: string
+                        example: "address"
+            primaryType:
+              type: string
+              example: "CartesiMessage"
+            message:
+              type: object
+              properties:
+                app:
+                  type: string
+                  example: "0x0"
+                nonce:
+                  type: string
+                  format: uint64
+                  example: "0"
+                max_gas_price:
+                  type: string
+                  format: uint128
+                  example: "0x0"
+                data:
+                  type: string
+                  example: "0x"
+              required:
+                - app
+                - nonce
+                - max_gas_price
+                - data
+          required:
+            - account
+            - domain
+            - types
+            - primaryType
+            - message
     PaioTransaction:
       type: object
       properties:
@@ -122,8 +234,12 @@ components:
           example: "0x0"
         message:
           type: string
-          description: Base 64
-          example: "AA"
+          description: ABI encoded
+          example: "0x0"
+        msg_sender:
+          type: string
+          description: (optional) sender address to check the signature
+          example: "0x0"
       required:
         - signature
         - message
@@ -155,7 +271,12 @@ components:
           type: string
           description: tx number
           example: "1"
-        
+    TransactionError:
+      type: object
+      properties:
+        message: 
+          type: string
+          description: Detailed error message
 
     Error:
       type: string

@@ -254,6 +254,7 @@ func convertInput(input cModel.Input) (RollupRequest, error) {
 	case cModel.AdvanceInput:
 		advance := Advance{
 			Metadata: Metadata{
+				AppContract:    input.AppContract.Hex(),
 				BlockNumber:    input.BlockNumber,
 				InputIndex:     uint64(input.Index),
 				MsgSender:      hexutil.Encode(input.MsgSender[:]),

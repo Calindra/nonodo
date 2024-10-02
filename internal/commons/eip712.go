@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"log/slog"
 	"unicode"
 
 	"github.com/btcsuite/btcd/btcutil/hdkeychain"
@@ -213,12 +214,13 @@ func ExtractSigAndData(raw string) (common.Address, apitypes.TypedData, []byte, 
 	if err != nil {
 		return common.HexToAddress("0x"), apitypes.TypedData{}, []byte{}, fmt.Errorf("decode typed data: %w", err)
 	}
-
+	slog.Debug("ExtractSigAndData", "typedDataBytes", string(typedDataBytes))
 	typedData := apitypes.TypedData{}
 	if err := json.Unmarshal(typedDataBytes, &typedData); err != nil {
 		return common.HexToAddress("0x"), apitypes.TypedData{}, []byte{}, fmt.Errorf("unmarshal typed data: %w", err)
 	}
 
+	slog.Debug("ExtractSigAndData", "typedData", typedData.Message["app"])
 	dataHash, _, err := apitypes.TypedDataAndHash(typedData)
 	if err != nil {
 		return common.HexToAddress("0x"), apitypes.TypedData{}, []byte{}, fmt.Errorf("typed data hash: %w", err)
