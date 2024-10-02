@@ -68,7 +68,8 @@ func SubmitBlob(ctx context.Context, url string, token string, namespaceHex stri
 	// }
 	// client.State.SubmitPayForBlob(ctx, math.Int, 1, []*blob.Blob{helloWorldBlob})
 	// submit the blob to the network
-	height, err = client.Blob.Submit(ctx, []*blob.Blob{helloWorldBlob}, blob.DefaultGasPrice())
+	submitOptions := blob.NewSubmitOptions()
+	height, err = client.Blob.Submit(ctx, []*blob.Blob{helloWorldBlob}, submitOptions)
 	if err != nil {
 		slog.Error("Submit", "error", err)
 		return 0, 0, 0, err

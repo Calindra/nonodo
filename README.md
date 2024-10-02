@@ -177,14 +177,6 @@ nonodo \
     --rpc-url wss://eth-sepolia.g.alchemy.com/v2/$ALCHEMY_API_KEY
 ```
 
-### Espresso Integration
-
-To send an input to Espresso
-
-```sh
-nonodo espresso send --payload aabbcc
-```
-
 ### Connecting to PostGresDB and Graphile locally
 
 Start a PostGres instance locally, "cd" to db folder and use docker-compose.yml example.
@@ -230,6 +222,20 @@ NoNodo is compatible with the following version of the Cartesi Rollups.
 | ------------------------- | -------------------------------------------------------------------------- |
 | Cartesi Rollups Contracts | [v1.1.0](https://github.com/cartesi/rollups-contracts/releases/tag/v1.1.0) |
 | Cartesi Rollups Node      | [v1.2.0](https://github.com/cartesi/rollups-node/releases/tag/v1.2.0)      |
+
+## Avail Integration
+
+Learn how to use Nonodo with the Avail.
+
+[Avail + Cartesi](./docs/avail.md)
+
+## Espresso Integration
+
+To send an input to Espresso
+
+```sh
+nonodo espresso send --payload aabbcc
+```
 
 ## Caveats
 

@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # Use uma imagem base que tenha o Go instalado
-FROM golang:1.22.4-bookworm
+FROM golang:1.23.1-bookworm
 
 # Instale Clang
 RUN apt-get update && apt-get install -y clang

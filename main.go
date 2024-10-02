@@ -20,6 +20,7 @@ import (
 	"github.com/calindra/nonodo/internal/dataavailability"
 	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/calindra/nonodo/internal/nonodo"
+	"github.com/calindra/nonodo/internal/sequencers/avail"
 	"github.com/calindra/nonodo/internal/sequencers/espresso"
 	"github.com/carlmjohnson/versioninfo"
 	"github.com/ethereum/go-ethereum/common"
@@ -116,6 +117,20 @@ var espressoCmd = &cobra.Command{
 	Use:   "espresso",
 	Short: "Handles Espresso transactions",
 	Long:  "Submit and get a transaction from Espresso using Cappuccino APIs",
+}
+
+type AvailOpts struct {
+	Payload     string
+	ChainId     int
+	AppId       int
+	Address     string
+	MaxGasPrice uint64
+}
+
+var availCmd = &cobra.Command{
+	Use:   "avail",
+	Short: "Handles Avail transactions",
+	Long:  "Submit a transaction to Avail",
 }
 
 var (
@@ -358,7 +373,10 @@ func addEspressoSubcommands(espressoCmd *cobra.Command) {
 				EspressoUrl: opts.EspressoUrl,
 				GraphQLUrl:  fmt.Sprintf("http://%s:%d", opts.HttpAddress, opts.HttpPort),
 			}
-			espressoClient.SendInput(opts.InputPayload, espressoOpts.Namespace)
+			_, err := espressoClient.SendInput(espressoOpts.Payload, espressoOpts.Namespace)
+			if err != nil {
+				panic(err)
+			}
 			return nil
 		},
 	}
@@ -367,6 +385,42 @@ func addEspressoSubcommands(espressoCmd *cobra.Command) {
 	markFlagRequired(espressoSendCmd, "payload")
 	espressoCmd.AddCommand(espressoSendCmd)
 
+}
+
+func addAvailSubcommands(availCmd *cobra.Command) {
+
+	availOpts := &AvailOpts{}
+
+	availSendCmd := &cobra.Command{
+		Use:   "send",
+		Short: "Send a payload to Avail",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx, cancel := context.WithCancel(cmd.Context())
+			defer cancel()
+			availClient, err := avail.NewAvailClient(
+				fmt.Sprintf("http://%s:%d", opts.HttpAddress, opts.HttpPort),
+				availOpts.ChainId,
+				availOpts.AppId,
+			)
+			if err != nil {
+				panic(err)
+			}
+			_, err = availClient.Submit712(ctx, availOpts.Payload, availOpts.Address, availOpts.MaxGasPrice)
+			if err != nil {
+				panic(err)
+			}
+			return nil
+
+		},
+	}
+	availSendCmd.Flags().StringVar(&availOpts.Payload, "payload", "", "Payload to send to Avail")
+	availSendCmd.Flags().IntVar(&availOpts.ChainId, "chainId", avail.DEFAULT_CHAINID_HARDHAT, "ChainId used signing EIP-712 messages")
+	availSendCmd.Flags().IntVar(&availOpts.AppId, "appId", avail.DEFAULT_APP_ID, "Avail AppId")
+	defaultMaxGasPrice := 10
+	availSendCmd.Flags().StringVar(&availOpts.Address, "address", devnet.ApplicationAddress, "Address of the dapp")
+	availSendCmd.Flags().Uint64Var(&availOpts.MaxGasPrice, "max-gas-price", uint64(defaultMaxGasPrice), "Max gas price")
+	markFlagRequired(availSendCmd, "payload")
+	availCmd.AddCommand(availSendCmd)
 }
 
 func readFile(_ context.Context, path string) ([]byte, error) {
@@ -479,8 +533,8 @@ func init() {
 	cmd.Flags().BoolVar(&opts.Salsa, "salsa", opts.Salsa, "If set, starts salsa")
 
 	cmd.Flags().StringVar(&opts.SalsaUrl, "salsa-url", opts.SalsaUrl, "Url used to start Salsa")
-
-	espressoCmd.Flags().StringVar(&opts.InputPayload, "input-payload", opts.InputPayload, "Payload to be sent to Espresso")
+	cmd.Flags().BoolVar(&opts.AvailEnabled, "avail-enabled", opts.AvailEnabled, "If set, enables Avail")
+	cmd.Flags().Uint64Var(&opts.AvailFromBlock, "avail-from-block", opts.AvailFromBlock, "The beginning of the queried range for events")
 }
 
 func run(cmd *cobra.Command, args []string) {
@@ -588,7 +642,8 @@ func LoadEnv() {
 func main() {
 	addCelestiaSubcommands(celestiaCmd)
 	addEspressoSubcommands(espressoCmd)
-	cmd.AddCommand(addressBookCmd, celestiaCmd, CompletionCmd, espressoCmd)
+	addAvailSubcommands(availCmd)
+	cmd.AddCommand(addressBookCmd, celestiaCmd, CompletionCmd, espressoCmd, availCmd)
 	cobra.CheckErr(cmd.Execute())
 }
 

@@ -12,12 +12,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/contracts"
 	cModel "github.com/calindra/nonodo/internal/convenience/model"
 	cRepos "github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/calindra/nonodo/internal/dataavailability"
 	"github.com/calindra/nonodo/internal/sequencers/inputter"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/tidwall/gjson"
 )
@@ -111,7 +113,7 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 				//		 	signature,
 				//		 	typedData: btoa(JSON.stringify(typedData)),
 				//		 })
-				msgSender, typedData, hashString, err := ExtractSigAndData(string(transaction))
+				msgSender, typedData, signature, err := commons.ExtractSigAndData(string(transaction))
 				if err != nil {
 					return err
 				}
@@ -119,7 +121,25 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 				// 	nonce   uint32 `json:"nonce"`
 				// 	payload string `json:"payload"`
 				// }
-				nonce := int64(typedData.Message["nonce"].(float64)) // by default, JSON number is float64
+				nonceField := typedData.Message["nonce"]
+
+				var nonce int64
+				// Request tx is coming from nonodo, the nonce at this point returns as string always
+				if _, ok := nonceField.(string); ok {
+					strNonce := nonceField.(string)
+					parsedNonce, err := strconv.ParseInt(strNonce, 10, 64)
+					if err != nil {
+						return fmt.Errorf("error converting nonce from string to int64: %v", err)
+					}
+					nonce = parsedNonce
+				} else if _, ok := nonceField.(float64); ok {
+					// When coming from other sources, the nonce at this point is a float
+					nonce = int64(nonceField.(float64))
+				} else {
+					//
+					return fmt.Errorf("error converting nonce: %T", nonceField)
+				}
+
 				payload, ok := typedData.Message["payload"].(string)
 				if !ok {
 					return fmt.Errorf("type assertion error")
@@ -147,7 +167,7 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 				}
 
 				_, err = e.InputRepository.Create(ctx, cModel.AdvanceInput{
-					ID:                     hashString,
+					ID:                     common.Bytes2Hex(crypto.Keccak256(signature)),
 					Index:                  int(index),
 					MsgSender:              msgSender,
 					Payload:                payloadBytes,
@@ -157,6 +177,7 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 					EspressoBlockNumber:    int(currentBlockHeight),
 					EspressoBlockTimestamp: e.getEspressoTimestamp(currentBlockHeight),
 					InputBoxIndex:          -1,
+					Type:                   "Espresso",
 				})
 				if err != nil {
 					return err
