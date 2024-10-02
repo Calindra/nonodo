@@ -18,9 +18,10 @@ import (
 
 // Cartesi712 defines model for Cartesi712.
 type Cartesi712 struct {
+	Address   *string `json:"address,omitempty"`
 	Signature *string `json:"signature,omitempty"`
 	TypedData *struct {
-		Account string `json:"account"`
+		Account *string `json:"account,omitempty"`
 		Domain  struct {
 			ChainId           *int    `json:"chainId,omitempty"`
 			Name              *string `json:"name,omitempty"`

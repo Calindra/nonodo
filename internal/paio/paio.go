@@ -319,7 +319,7 @@ func (p *PaioAPI) SendCartesiTransaction(ctx echo.Context) error {
 		slog.Error("Error ExtractSigAndData message:", "err", err)
 		return err
 	}
-	if common.HexToAddress(request.TypedData.Account) != msgSender {
+	if request.Address != nil && common.HexToAddress(*request.Address) != msgSender {
 		errorMessage := "wrong signature"
 		return ctx.JSON(http.StatusBadRequest, TransactionError{Message: &errorMessage})
 	}
@@ -335,11 +335,12 @@ func (p *PaioAPI) SendCartesiTransaction(ctx echo.Context) error {
 		return err
 	}
 	txId := fmt.Sprintf("0x%s", common.Bytes2Hex(crypto.Keccak256(signature)))
+	payload := common.Hex2Bytes(request.TypedData.Message.Data[2:])
 	_, err = p.inputRepository.Create(stdCtx, model.AdvanceInput{
 		ID:            txId,
 		Index:         int(inputCount + 1),
 		MsgSender:     msgSender,
-		Payload:       common.Hex2Bytes(request.TypedData.Message.Data[2:]),
+		Payload:       payload,
 		AppContract:   appContract,
 		InputBoxIndex: -2,
 		Type:          "L2",
@@ -348,6 +349,12 @@ func (p *PaioAPI) SendCartesiTransaction(ctx echo.Context) error {
 		slog.Error("Error saving input:", "err", err)
 		return err
 	}
+	slog.Info("transaction saved",
+		"txId", txId,
+		"msgSender", msgSender,
+		"appContract", appContract.Hex(),
+		"data", common.Bytes2Hex(payload),
+	)
 	response := TransactionResponse{
 		Id: &txId,
 	}

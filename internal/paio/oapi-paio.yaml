@@ -132,6 +132,9 @@ components:
     Cartesi712:
       type: object
       properties:
+        address:
+          type: string
+          example: "0x0"
         signature:
           type: string
           example: "0x0"
@@ -208,7 +211,6 @@ components:
                 - max_gas_price
                 - data
           required:
-            - account
             - domain
             - types
             - primaryType
