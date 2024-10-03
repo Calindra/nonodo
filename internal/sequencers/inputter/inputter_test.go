@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"os/exec"
 	"testing"
 	"time"
 
@@ -148,8 +147,6 @@ func (s *InputterTestSuite) TestZeroResultsFindAllInputsByBlockAndTimestampLT() 
 }
 
 func (s *InputterTestSuite) TearDownTest() {
-	err := exec.Command("pkill", "anvil").Run()
-	s.NoError(err)
 	s.workerCancel()
 	select {
 	case <-s.ctx.Done():
