@@ -252,15 +252,15 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 							}
 
 							_, err = a.InputRepository.Create(ctx, cModel.AdvanceInput{
-								Index:                int(inputCount),
-								CartesiTransactionId: common.Bytes2Hex(crypto.Keccak256(signature)),
-								MsgSender:            msgSender,
-								Payload:              payloadBytes,
-								AppContract:          common.HexToAddress(dappAddress),
-								AvailBlockNumber:     int(i.Number),
-								AvailBlockTimestamp:  time.Unix(int64(timestamp)/ONE_SECOND_IN_MS, 0),
-								InputBoxIndex:        -2,
-								Type:                 "Avail",
+								ID:                  common.Bytes2Hex(crypto.Keccak256(signature)),
+								Index:               int(inputCount),
+								MsgSender:           msgSender,
+								Payload:             payloadBytes,
+								AppContract:         common.HexToAddress(dappAddress),
+								AvailBlockNumber:    int(i.Number),
+								AvailBlockTimestamp: time.Unix(int64(timestamp)/ONE_SECOND_IN_MS, 0),
+								InputBoxIndex:       -2,
+								Type:                "Avail",
 							})
 							if err != nil {
 								errCh <- err
@@ -292,12 +292,41 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 	}
 }
 
-func (a AvailListener) WatchNewTransactionsV2(ctx context.Context, client *gsrpc.SubstrateAPI) error {
-	// latestBlock := a.FromBlock
-	// l1CurrentBlock := a.FromBlock
-	// l1PreviousBlock := a.FromBlock
-	// var index uint = 0
-	defer client.Client.Close()
+func (a AvailListener) TableTennis(ctx context.Context, block *types.SignedBlock, ethClient *ethclient.Client, inputBox *contracts.InputBox, startBlockNumber uint64) error {
+	availInputs, err := a.ReadInputsFromPaioBlock(block)
+	if err != nil {
+		return err
+	}
+	var availBlockTimestamp uint64
+	if len(availInputs) == 0 {
+		availBlockTimestamp, err = ReadTimestampFromBlock(block)
+		if err != nil {
+			return err
+		}
+	} else {
+		availBlockTimestamp = uint64(availInputs[0].BlockTimestamp.Unix())
+	}
+
+	// nolint
+	inputsL1, err := a.InputterWorker.FindAllInputsByBlockAndTimestampLT(ctx,
+		ethClient, inputBox, startBlockNumber,
+		(availBlockTimestamp/ONE_SECOND_IN_MS)-FIVE_MINUTES,
+	)
+	if err != nil {
+		return err
+	}
+	inputCount, err := a.InputRepository.Count(ctx, nil)
+	if err != nil {
+		return err
+	}
+	inputs := append(availInputs, inputsL1...)
+	for i := range inputs {
+		inputs[i].Index = i + int(inputCount)
+		_, err = a.InputRepository.Create(ctx, inputs[i])
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

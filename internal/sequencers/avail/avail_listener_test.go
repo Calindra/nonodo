@@ -11,6 +11,7 @@ import (
 
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/contracts"
+	"github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/calindra/nonodo/internal/sequencers/inputter"
 	"github.com/calindra/nonodo/internal/supervisor"
@@ -19,6 +20,9 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 	"github.com/stretchr/testify/suite"
+
+	_ "github.com/ncruces/go-sqlite3/driver"
+	_ "github.com/ncruces/go-sqlite3/embed"
 )
 
 type AvailListenerSuite struct {
@@ -138,11 +142,11 @@ func (s *AvailListenerSuite) TestParsePaioBatchToInputs() {
 }
 
 func (s *AvailListenerSuite) TestTableTennis() {
-	client, err := ethclient.DialContext(s.ctx, s.rpcUrl)
+	ethClient, err := ethclient.DialContext(s.ctx, s.rpcUrl)
 	s.NoError(err)
 	appAddress := common.HexToAddress("0xab7528bb862fb57e8a2bcd567a2e929a0be56a5e")
 	inputBoxAddress := common.HexToAddress("0x58Df21fE097d4bE5dCf61e01d9ea3f6B81c2E1dB")
-	inputBox, err := contracts.NewInputBox(inputBoxAddress, client)
+	inputBox, err := contracts.NewInputBox(inputBoxAddress, ethClient)
 	s.NoError(err)
 	ctx := context.Background()
 	err = devnet.AddInput(ctx, s.rpcUrl, common.Hex2Bytes("deadbeef"))
@@ -168,20 +172,38 @@ func (s *AvailListenerSuite) TestTableTennis() {
 	fromPaio := "0x1463f9725f107358c9115bc9d86c72dd5823e9b1e60114ab7528bb862fb57e8a2bcd567a2e929a0be56a5e000a0d48656c6c6f2c20576f726c643f2076a270f52ade97cd95ef7be45e08ea956bfdaf14b7fc4f8816207fa9eb3a5c17207ccdd94ac1bd86a749b66526fff6579e2b6bf1698e831955332ad9d5ed44da7208000000000000001c"
 	extrinsicPaioBlock := CreatePaioExtrinsic(common.Hex2Bytes(fromPaio))
 	block.Block.Extrinsics = append(block.Block.Extrinsics, extrinsicPaioBlock)
+
+	dbFactory := commons.NewDbFactory()
+	db := dbFactory.CreateDb("input.sqlite3")
+	inputRepository := &repository.InputRepository{
+		Db: *db,
+	}
+	err = inputRepository.CreateTables()
+	s.NoError(err)
 	fd := FakeDecoder{}
 	availListener := AvailListener{
-		PaioDecoder:    &fd,
-		InputterWorker: &inputterWorker,
+		PaioDecoder:     &fd,
+		InputterWorker:  &inputterWorker,
+		InputRepository: inputRepository,
 	}
 	inputs, err := availListener.ReadInputsFromPaioBlock(&block)
 	s.NoError(err)
 	s.Equal(1, len(inputs))
 	s.Equal(int64(timestamp)+int64(delta), inputs[0].BlockTimestamp.Unix())
 	availBlockTimestamp := uint64(inputs[0].BlockTimestamp.Unix())
-	inputs, err = inputterWorker.FindAllInputsByBlockAndTimestampLT(ctx, client, inputBox, l1FinalizedPrevHeight, (availBlockTimestamp/1000)-300)
+	inputs, err = inputterWorker.FindAllInputsByBlockAndTimestampLT(ctx, ethClient, inputBox, l1FinalizedPrevHeight, (availBlockTimestamp/1000)-300)
 	s.NoError(err)
 	s.NotNil(inputs)
 	s.Equal(1, len(inputs))
+
+	startBlock := 0
+	err = availListener.TableTennis(s.ctx, &block, ethClient, inputBox, uint64(startBlock))
+	s.NoError(err)
+
+	// check if TableTennis has saved the data.
+	savedInputs, err := inputRepository.FindAll(ctx, nil, nil, nil, nil, nil)
+	s.NoError(err)
+	s.Equal(2, int(savedInputs.Total))
 }
 
 type FakeDecoder struct {
