@@ -10,8 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 )
 
-type PaioDecoder struct {
-}
+type PaioDecoder struct{}
 
 func (t *PaioDecoder) DecodePaioBatch(bytes string) (string, error) {
 	// call the paio decoder binary
