@@ -149,7 +149,7 @@ func (s *AvailListenerSuite) TestTableTennis() {
 	inputBox, err := contracts.NewInputBox(inputBoxAddress, ethClient)
 	s.NoError(err)
 	ctx := context.Background()
-	err = devnet.AddInput(ctx, s.rpcUrl, common.Hex2Bytes("deadbeef"))
+	err = devnet.AddInput(ctx, s.rpcUrl, common.Hex2Bytes("deadbeef11"))
 	s.NoError(err)
 
 	l1FinalizedPrevHeight := uint64(1)
@@ -197,13 +197,23 @@ func (s *AvailListenerSuite) TestTableTennis() {
 	s.Equal(1, len(inputs))
 
 	startBlock := 0
-	err = availListener.TableTennis(s.ctx, &block, ethClient, inputBox, uint64(startBlock))
+	currentL1Block, err := availListener.TableTennis(s.ctx, &block, ethClient, inputBox, uint64(startBlock))
 	s.NoError(err)
+	s.NotNil(currentL1Block)
 
 	// check if TableTennis has saved the data.
 	savedInputs, err := inputRepository.FindAll(ctx, nil, nil, nil, nil, nil)
 	s.NoError(err)
 	s.Equal(2, int(savedInputs.Total))
+
+	// check the input from InputBox
+	s.Equal("0", savedInputs.Rows[0].ID)
+	s.Equal("deadbeef11", common.Bytes2Hex(savedInputs.Rows[0].Payload))
+
+	// check the input from Avail
+	s.Equal("0x4adf75e71bb8831739bfccd25958f03ca057d5df8b93a50e3fb7dae1e540faa7",
+		savedInputs.Rows[1].ID)
+	s.Equal("Hello, World?", string(savedInputs.Rows[1].Payload))
 }
 
 type FakeDecoder struct {

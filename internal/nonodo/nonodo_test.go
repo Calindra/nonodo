@@ -139,6 +139,7 @@ func (s *NonodoSuite) setupTest(opts NonodoOpts) {
 	s.nonce += 1
 	opts.AnvilPort += s.nonce
 	opts.HttpPort += s.nonce + 100
+	opts.AnvilCommand = "anvil"
 	s.T().Log("ports", "http", opts.HttpPort, "anvil", opts.AnvilPort)
 	commons.ConfigureLog(slog.LevelDebug)
 	s.ctx, s.timeoutCancel = context.WithTimeout(context.Background(), testTimeout)

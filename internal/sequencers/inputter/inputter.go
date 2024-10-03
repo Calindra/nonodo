@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math/big"
+	"strconv"
 	"time"
 
 	"github.com/calindra/nonodo/internal/contracts"
@@ -340,7 +341,6 @@ func (w InputterWorker) FindAllInputsByBlockAndTimestampLT(
 		}
 		timestamp := uint64(header.Time)
 		unixTimestamp := time.Unix(int64(header.Time), 0)
-		slog.Debug("InputAdded", "timestamp", timestamp, "endTimestamp", endTimestamp)
 		if timestamp < endTimestamp {
 			eventInput := it.Event.Input[4:]
 			abi, err := contracts.InputsMetaData.GetAbi()
@@ -359,6 +359,7 @@ func (w InputterWorker) FindAllInputsByBlockAndTimestampLT(
 			payload := values[7].([]uint8)
 			inputIndex := int(it.Event.Index.Int64())
 			input := cModel.AdvanceInput{
+				ID:                     strconv.Itoa(inputIndex),
 				Index:                  -1,
 				Status:                 cModel.CompletionStatusUnprocessed,
 				MsgSender:              msgSender,
@@ -369,7 +370,14 @@ func (w InputterWorker) FindAllInputsByBlockAndTimestampLT(
 				EspressoBlockTimestamp: time.Unix(-1, 0),
 				InputBoxIndex:          inputIndex,
 			}
+			slog.Debug("append InputAdded", "timestamp", timestamp, "endTimestamp", endTimestamp)
 			result = append(result, input)
+		} else {
+			slog.Debug("skip event InputAdded",
+				"timestamp", timestamp,
+				"endTimestamp", endTimestamp,
+				"timeDiff", timestamp-endTimestamp,
+			)
 		}
 	}
 
