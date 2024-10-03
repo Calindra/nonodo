@@ -22,6 +22,7 @@ type ServerWorker struct {
 
 func (w ServerWorker) Start(ctx context.Context, ready chan<- struct{}) error {
 	commandReady := make(chan struct{})
+	var d net.Dialer
 	go func() {
 		// Poll the TCP once the command is ready
 		select {
@@ -30,7 +31,7 @@ func (w ServerWorker) Start(ctx context.Context, ready chan<- struct{}) error {
 		case <-commandReady:
 		}
 		for {
-			conn, err := net.Dial("tcp", fmt.Sprintf("0.0.0.0:%v", w.Port))
+			conn, err := d.DialContext(ctx, "tcp", fmt.Sprintf("0.0.0.0:%v", w.Port))
 			if err == nil {
 				conn.Close()
 				ready <- struct{}{}
