@@ -27,7 +27,6 @@ type InputterTestSuite struct {
 	workerCancel  context.CancelFunc
 	workerResult  chan error
 	rpcUrl        string
-	// nonce         int
 }
 
 func (s *InputterTestSuite) SetupTest() {
@@ -48,7 +47,6 @@ func (s *InputterTestSuite) SetupTest() {
 		Verbose:  true,
 		AnvilCmd: anvilLocation,
 	})
-	// var workerCtx context.Context
 
 	s.rpcUrl = fmt.Sprintf("ws://%s:%v", devnet.AnvilDefaultAddress, devnet.AnvilDefaultPort)
 	ready := make(chan struct{})
