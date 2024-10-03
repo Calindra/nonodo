@@ -1,19 +1,35 @@
 package avail
 
 import (
+	"context"
+	"fmt"
 	"log/slog"
 	"math/big"
+	"os/exec"
 	"testing"
+	"time"
 
 	"github.com/calindra/nonodo/internal/commons"
+	"github.com/calindra/nonodo/internal/contracts"
+	"github.com/calindra/nonodo/internal/devnet"
+	"github.com/calindra/nonodo/internal/sequencers/inputter"
+	"github.com/calindra/nonodo/internal/supervisor"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 	"github.com/stretchr/testify/suite"
 )
 
 type AvailListenerSuite struct {
 	suite.Suite
+	ctx           context.Context
+	workerCtx     context.Context
+	timeoutCancel context.CancelFunc
+	workerCancel  context.CancelFunc
+	workerResult  chan error
+	rpcUrl        string
+	portCounter   int
 }
 
 func TestAvailListenerSuite(t *testing.T) {
@@ -84,7 +100,7 @@ func (s *AvailListenerSuite) TestReadInputsFromBlockZzzHui() {
 	s.Equal(common.HexToAddress("0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"), inputs[0].MsgSender)
 }
 
-func (s *AvailListenerSuite) XTestReadInputsFromBlockPaio() {
+func (s *AvailListenerSuite) TestReadInputsFromBlockPaio() {
 	block := types.SignedBlock{}
 	block.Block = types.Block{}
 	timestampExtrinsic := CreateTimestampExtrinsic()
@@ -96,6 +112,9 @@ func (s *AvailListenerSuite) XTestReadInputsFromBlockPaio() {
 	fd := FakeDecoder{}
 	availListener := AvailListener{
 		PaioDecoder: &fd,
+		InputterWorker: &inputter.InputterWorker{
+			Provider: s.rpcUrl,
+		},
 	}
 	inputs, err := availListener.ReadInputsFromPaioBlock(&block)
 	s.NoError(err)
@@ -116,6 +135,53 @@ func (s *AvailListenerSuite) TestParsePaioBatchToInputs() {
 	s.Equal("0x631e372a9Ed7808Cbf55117f3263d3e1c9Bc3710", inputs[0].MsgSender.Hex())
 	s.Equal("0xab7528bb862fB57E8A2BCd567a2e929a0Be56a5e", inputs[0].AppContract.Hex())
 	s.Equal("Hello, World?", string(inputs[0].Payload))
+}
+
+func (s *AvailListenerSuite) TestTableTennis() {
+	client, err := ethclient.DialContext(s.ctx, s.rpcUrl)
+	s.NoError(err)
+	appAddress := common.HexToAddress("0xab7528bb862fb57e8a2bcd567a2e929a0be56a5e")
+	inputBoxAddress := common.HexToAddress("0x58Df21fE097d4bE5dCf61e01d9ea3f6B81c2E1dB")
+	inputBox, err := contracts.NewInputBox(inputBoxAddress, client)
+	s.NoError(err)
+	ctx := context.Background()
+	err = devnet.AddInput(ctx, s.rpcUrl, common.Hex2Bytes("deadbeef"))
+	s.NoError(err)
+
+	l1FinalizedPrevHeight := uint64(1)
+	timestamp := uint64(time.Now().UnixMilli())
+	inputterWorker := inputter.InputterWorker{
+		Model:              nil,
+		Provider:           s.rpcUrl,
+		InputBoxAddress:    inputBoxAddress,
+		InputBoxBlock:      1,
+		ApplicationAddress: appAddress,
+	}
+	// Avail's block
+	block := types.SignedBlock{}
+	block.Block = types.Block{}
+	timestampExtrinsic := CreateTimestampExtrinsic()
+	delta := 350 * 1000
+	timestampExtrinsic.Method.Args = encodeCompactU64(timestamp + uint64(delta))
+	block.Block.Extrinsics = append([]types.Extrinsic{}, timestampExtrinsic)
+	// nolint
+	fromPaio := "0x1463f9725f107358c9115bc9d86c72dd5823e9b1e60114ab7528bb862fb57e8a2bcd567a2e929a0be56a5e000a0d48656c6c6f2c20576f726c643f2076a270f52ade97cd95ef7be45e08ea956bfdaf14b7fc4f8816207fa9eb3a5c17207ccdd94ac1bd86a749b66526fff6579e2b6bf1698e831955332ad9d5ed44da7208000000000000001c"
+	extrinsicPaioBlock := CreatePaioExtrinsic(common.Hex2Bytes(fromPaio))
+	block.Block.Extrinsics = append(block.Block.Extrinsics, extrinsicPaioBlock)
+	fd := FakeDecoder{}
+	availListener := AvailListener{
+		PaioDecoder:    &fd,
+		InputterWorker: &inputterWorker,
+	}
+	inputs, err := availListener.ReadInputsFromPaioBlock(&block)
+	s.NoError(err)
+	s.Equal(1, len(inputs))
+	s.Equal(int64(timestamp)+int64(delta), inputs[0].BlockTimestamp.Unix())
+	availBlockTimestamp := uint64(inputs[0].BlockTimestamp.Unix())
+	inputs, err = inputterWorker.FindAllInputsByBlockAndTimestampLT(ctx, client, inputBox, l1FinalizedPrevHeight, (availBlockTimestamp/1000)-300)
+	s.NoError(err)
+	s.NotNil(inputs)
+	s.Equal(1, len(inputs))
 }
 
 type FakeDecoder struct {
@@ -151,4 +217,49 @@ func CreateTimestampExtrinsic() types.Extrinsic {
 			},
 		},
 	}
+}
+
+func (s *AvailListenerSuite) SetupTest() {
+	commons.ConfigureLog(slog.LevelDebug)
+	var w supervisor.SupervisorWorker
+	w.Name = "SupervisorWorker"
+	const testTimeout = 5 * time.Second
+	s.portCounter += 1
+	s.ctx, s.timeoutCancel = context.WithTimeout(context.Background(), testTimeout)
+	s.workerResult = make(chan error)
+
+	s.workerCtx, s.workerCancel = context.WithCancel(s.ctx)
+	w.Workers = append(w.Workers, devnet.AnvilWorker{
+		Address:  devnet.AnvilDefaultAddress,
+		Port:     devnet.AnvilDefaultPort + s.portCounter,
+		Verbose:  true,
+		AnvilCmd: "anvil",
+	})
+	s.rpcUrl = fmt.Sprintf("ws://%s:%v", devnet.AnvilDefaultAddress, devnet.AnvilDefaultPort+s.portCounter)
+	ready := make(chan struct{})
+	go func() {
+		s.workerResult <- w.Start(s.workerCtx, ready)
+	}()
+	select {
+	case <-s.ctx.Done():
+		s.Fail("context error", s.ctx.Err())
+	case err := <-s.workerResult:
+		s.Fail("worker exited before being ready", err)
+	case <-ready:
+		s.T().Log("nonodo ready")
+	}
+}
+
+func (s *AvailListenerSuite) TearDownTest() {
+	err := exec.Command("pkill", "anvil").Run()
+	s.NoError(err)
+	s.workerCancel()
+	select {
+	case <-s.ctx.Done():
+		s.Fail("context error", s.ctx.Err())
+	case err := <-s.workerResult:
+		s.NoError(err)
+	}
+	s.timeoutCancel()
+	s.T().Log("teardown ok.")
 }
