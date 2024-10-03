@@ -57,20 +57,12 @@ func (w AnvilWorker) String() string {
 	return anvilCommand
 }
 
+// Try to install anvil
 func InstallAnvil(ctx context.Context) (string, error) {
-	// Try to install anvil
 	anvilClient := commons.NewAnvilRelease()
-	latest, err := anvilClient.GetLatestReleaseCompatible(ctx)
+	anvilExec, err := commons.HandleReleaseExecution(ctx, anvilClient)
 	if err != nil {
-		return "", fmt.Errorf("anvil: failed to get latest release: %w", err)
-	}
-	err = anvilClient.Prerequisites(ctx)
-	if err != nil {
-		return "", fmt.Errorf("anvil: failed to install prerequisites: %w", err)
-	}
-	anvilExec, err := anvilClient.DownloadAsset(ctx, latest)
-	if err != nil {
-		return "", fmt.Errorf("anvil: failed to download asset: %w", err)
+		return "", fmt.Errorf("anvil: %w", err)
 	}
 	return anvilExec, nil
 }

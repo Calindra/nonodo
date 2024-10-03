@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -55,6 +56,42 @@ type AnvilRelease struct {
 type AnvilConfig struct {
 	AssetAnvil  ReleaseAsset `json:"asset_anvil"`
 	LatestCheck string       `json:"latest_check"`
+}
+
+func RunCommandOnce(stdCtx context.Context, cmd *exec.Cmd) ([]byte, error) {
+	err := cmd.Start()
+	if err != nil {
+		return nil, fmt.Errorf("Don't start the command: %w", err)
+	}
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("Don't get the output: %w", err)
+	}
+	err = cmd.Wait()
+	if err != nil {
+		return nil, fmt.Errorf("Don't wait the command: %w", err)
+	}
+	return output, nil
+}
+
+// Install release
+func HandleReleaseExecution(stdCtx context.Context, release HandleRelease) (string, error) {
+	ctx, cancel := context.WithCancel(stdCtx)
+	defer cancel()
+
+	latest, err := release.GetLatestReleaseCompatible(ctx)
+	if err != nil {
+		return "", fmt.Errorf("failed to get latest release: %w", err)
+	}
+	err = release.Prerequisites(ctx)
+	if err != nil {
+		return "", fmt.Errorf("failed to install prerequisites: %w", err)
+	}
+	location, err := release.DownloadAsset(ctx, latest)
+	if err != nil {
+		return "", fmt.Errorf("failed to download asset: %w", err)
+	}
+	return location, err
 }
 
 const WINDOWS = "windows"

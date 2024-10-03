@@ -35,10 +35,10 @@ const (
 )
 
 type AvailListener struct {
-	FromBlock       uint64
+	PaioDecoder     paiodecoder.DecoderPaio
 	InputRepository *cRepos.InputRepository
 	InputterWorker  *inputter.InputterWorker
-	PaioDecoder     PaioDecoder
+	FromBlock       uint64
 }
 
 type PaioDecoder interface {
@@ -50,6 +50,7 @@ func NewAvailListener(fromBlock uint64, repository *cRepos.InputRepository, w *i
 		FromBlock:       fromBlock,
 		InputRepository: repository,
 		InputterWorker:  w,
+		PaioDecoder:     paiodecoder.NewPaioDecoder(),
 	}
 }
 
@@ -68,14 +69,6 @@ func (a AvailListener) Start(ctx context.Context, ready chan<- struct{}) error {
 }
 
 func (a AvailListener) connect(ctx context.Context) (*gsrpc.SubstrateAPI, error) {
-	// uses env RPC_URL for connecting
-	// cfg := config.Default()
-
-	// cfg := config.Config{}
-	// err := cfg.GetConfig("config.json")
-	// if err != nil {
-	// 	return nil, err
-	// }
 	rpcURL, haveURL := os.LookupEnv("AVAIL_RPC_URL")
 	if !haveURL {
 		rpcURL = DEFAULT_AVAIL_RPC_URL
@@ -214,7 +207,6 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 							args := string(ext.Method.Args)
 
 							msgSender, typedData, signature, err := commons.ExtractSigAndData(args)
-
 							if err != nil {
 								slog.Error("avail: error extracting signature and typed data", "err", err)
 								continue
@@ -245,7 +237,6 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 								}
 							}
 							inputCount, err := a.InputRepository.Count(ctx, nil)
-
 							if err != nil {
 								errCh <- err
 								return
@@ -338,18 +329,16 @@ func readInputBoxByBlockAndTimestamp(ctx context.Context, l1FinalizedPrevHeight 
 	if err != nil {
 		return 0, fmt.Errorf("avail inputter: bind input box: %w", err)
 	}
-	//Avail timestamps are in milliseconds and event timestamps are in seconds
+	// Avail timestamps are in milliseconds and event timestamps are in seconds
 	lastL1BlockRead, err := w.ReadInputsByBlockAndTimestamp(ctx, client, inputBox, l1FinalizedPrevHeight, (timestamp/ONE_SECOND_IN_MS)-FIVE_MINUTES)
-
 	if err != nil {
 		return 0, fmt.Errorf("avail inputter: read past inputs: %w", err)
 	}
 
 	return lastL1BlockRead, nil
-
 }
 
-func (av *AvailListener) ReadInputsFromPaioBlock(block *types.SignedBlock) ([]cModel.AdvanceInput, error) {
+func (av *AvailListener) ReadInputsFromPaioBlock(ctx context.Context, block *types.SignedBlock) ([]cModel.AdvanceInput, error) {
 	inputs := []cModel.AdvanceInput{}
 	timestamp, err := ReadTimestampFromBlock(block)
 	if err != nil {
@@ -367,7 +356,7 @@ func (av *AvailListener) ReadInputsFromPaioBlock(block *types.SignedBlock) ([]cM
 			continue
 		}
 		args := string(ext.Method.Args)
-		jsonStr, err := av.PaioDecoder.DecodePaioBatch(args)
+		jsonStr, err := av.PaioDecoder.DecodePaioBatch(ctx, args)
 		if err != nil {
 			return inputs, err
 		}

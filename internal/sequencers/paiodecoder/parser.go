@@ -1,8 +1,11 @@
 package paiodecoder
 
 import (
+	"context"
 	"fmt"
+	"log/slog"
 	"math/big"
+	"os/exec"
 
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/ethereum/go-ethereum/common"
@@ -10,12 +13,29 @@ import (
 	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 )
 
-type PaioDecoder struct {
+type DecoderPaio interface {
+	DecodePaioBatch(ctx context.Context, bytes string) (string, error)
 }
 
-func (t *PaioDecoder) DecodePaioBatch(bytes string) (string, error) {
-	// call the paio decoder binary
-	return "", nil
+type PaioDecoder struct {
+	location string
+}
+
+func NewPaioDecoder() *PaioDecoder {
+	var location string
+	return &PaioDecoder{location}
+}
+
+// call the paio decoder binary
+func (t *PaioDecoder) DecodePaioBatch(ctx context.Context, bytes string) (string, error) {
+	cmd := exec.CommandContext(ctx, t.location, bytes)
+	output, err := commons.RunCommandOnce(ctx, cmd)
+	if err != nil {
+		return "", fmt.Errorf("failed to run command: %w", err)
+	}
+	slog.Debug("Output decoded", "output", string(output))
+
+	return string(output), nil
 }
 
 func CreateTypedData(
@@ -40,7 +60,8 @@ func CreateTypedData(
 			{Name: "nonce", Type: "uint64"},
 			{Name: "max_gas_price", Type: "uint128"},
 			{Name: "data", Type: "bytes"},
-		}}
+		},
+	}
 	typedData.PrimaryType = "CartesiMessage"
 	typedData.Message = apitypes.TypedDataMessage{
 		"app":           app.String(),

@@ -1,11 +1,13 @@
 package avail
 
 import (
+	"context"
 	"log/slog"
 	"math/big"
 	"testing"
 
 	"github.com/calindra/nonodo/internal/commons"
+	"github.com/calindra/nonodo/internal/sequencers/paiodecoder"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/signer/core/apitypes"
@@ -14,11 +16,30 @@ import (
 
 type AvailListenerSuite struct {
 	suite.Suite
+	fd        paiodecoder.DecoderPaio
+	ctx       context.Context
+	cancelCtx context.CancelFunc
+}
+
+type FakeDecoder struct{}
+
+func (fd *FakeDecoder) DecodePaioBatch(ctx context.Context, bytes string) (string, error) {
+	// nolint
+	return `{"sequencer_payment_address":"0x63F9725f107358c9115BC9d86c72dD5823E9B1E6","txs":[{"app":"0xab7528bb862fB57E8A2BCd567a2e929a0Be56a5e","nonce":0,"max_gas_price":10,"data":[72,101,108,108,111,44,32,87,111,114,108,100,63],"signature":{"r":"0x76a270f52ade97cd95ef7be45e08ea956bfdaf14b7fc4f8816207fa9eb3a5c17","s":"0x7ccdd94ac1bd86a749b66526fff6579e2b6bf1698e831955332ad9d5ed44da72","v":"0x1c"}}]}`, nil
 }
 
 func TestAvailListenerSuite(t *testing.T) {
 	commons.ConfigureLog(slog.LevelDebug)
 	suite.Run(t, &AvailListenerSuite{})
+}
+
+func (s *AvailListenerSuite) SetupTest() {
+	s.ctx, s.cancelCtx = context.WithCancel(context.Background())
+	s.fd = &FakeDecoder{}
+}
+
+func (s *AvailListenerSuite) TearDownTest() {
+	s.cancelCtx()
 }
 
 func (s *AvailListenerSuite) TestDecodeTimestamp() {
@@ -93,18 +114,16 @@ func (s *AvailListenerSuite) XTestReadInputsFromBlockPaio() {
 	fromPaio := "0x1463f9725f107358c9115bc9d86c72dd5823e9b1e60114ab7528bb862fb57e8a2bcd567a2e929a0be56a5e000a0d48656c6c6f2c20576f726c643f2076a270f52ade97cd95ef7be45e08ea956bfdaf14b7fc4f8816207fa9eb3a5c17207ccdd94ac1bd86a749b66526fff6579e2b6bf1698e831955332ad9d5ed44da7208000000000000001c"
 	extrinsicPaioBlock := CreatePaioExtrinsic(common.Hex2Bytes(fromPaio))
 	block.Block.Extrinsics = append(block.Block.Extrinsics, extrinsicPaioBlock)
-	fd := FakeDecoder{}
 	availListener := AvailListener{
-		PaioDecoder: &fd,
+		PaioDecoder: s.fd,
 	}
-	inputs, err := availListener.ReadInputsFromPaioBlock(&block)
+	inputs, err := availListener.ReadInputsFromPaioBlock(s.ctx, &block)
 	s.NoError(err)
 	s.Equal(1, len(inputs))
 }
 
 func (s *AvailListenerSuite) TestParsePaioBatchToInputs() {
-	fd := FakeDecoder{}
-	jsonStr, err := fd.DecodePaioBatch("it doesn't matter")
+	jsonStr, err := s.fd.DecodePaioBatch(s.ctx, "it doesn't matter")
 	s.NoError(err)
 	chainId := big.NewInt(11155111)
 	inputs, err := ParsePaioBatchToInputs(jsonStr, chainId)
@@ -116,14 +135,6 @@ func (s *AvailListenerSuite) TestParsePaioBatchToInputs() {
 	s.Equal("0x631e372a9Ed7808Cbf55117f3263d3e1c9Bc3710", inputs[0].MsgSender.Hex())
 	s.Equal("0xab7528bb862fB57E8A2BCd567a2e929a0Be56a5e", inputs[0].AppContract.Hex())
 	s.Equal("Hello, World?", string(inputs[0].Payload))
-}
-
-type FakeDecoder struct {
-}
-
-func (fd *FakeDecoder) DecodePaioBatch(bytes string) (string, error) {
-	// nolint
-	return `{"sequencer_payment_address":"0x63F9725f107358c9115BC9d86c72dD5823E9B1E6","txs":[{"app":"0xab7528bb862fB57E8A2BCd567a2e929a0Be56a5e","nonce":0,"max_gas_price":10,"data":[72,101,108,108,111,44,32,87,111,114,108,100,63],"signature":{"r":"0x76a270f52ade97cd95ef7be45e08ea956bfdaf14b7fc4f8816207fa9eb3a5c17","s":"0x7ccdd94ac1bd86a749b66526fff6579e2b6bf1698e831955332ad9d5ed44da72","v":"0x1c"}}]}`, nil
 }
 
 func CreatePaioExtrinsic(args []byte) types.Extrinsic {
