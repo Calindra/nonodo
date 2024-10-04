@@ -25,6 +25,9 @@ type Model interface {
 		blockNumber uint64,
 		timestamp time.Time,
 		index int,
+		prevRandao string,
+		appContract common.Address,
+		chainId string,
 	) error
 }
 
@@ -219,7 +222,9 @@ func (w InputterWorker) addInput(
 		return err
 	}
 
+	chainId := values[0].(*big.Int).String()
 	msgSender := values[2].(common.Address)
+	prevRandao := fmt.Sprintf("0x%s", common.Bytes2Hex(values[5].(*big.Int).Bytes()))
 	payload := values[7].([]uint8)
 	inputIndex := int(event.Index.Int64())
 
@@ -227,11 +232,12 @@ func (w InputterWorker) addInput(
 		"dapp", event.AppContract,
 		"input.index", event.Index,
 		"sender", msgSender,
-		"input", event.Input,
+		"input", common.Bytes2Hex(event.Input),
 		"payload", payload,
 		slog.Group("block",
 			"number", header.Number,
 			"timestamp", timestamp,
+			"prevRandao", prevRandao,
 		),
 	)
 
@@ -250,6 +256,9 @@ func (w InputterWorker) addInput(
 		event.Raw.BlockNumber,
 		timestamp,
 		inputIndex,
+		prevRandao,
+		event.AppContract,
+		chainId,
 	)
 
 	if err != nil {
@@ -355,9 +364,13 @@ func (w InputterWorker) FindAllInputsByBlockAndTimestampLT(
 				return result, err
 			}
 
+			chainId := values[0].(*big.Int).String()
+			appContract := values[1].(common.Address)
 			msgSender := values[2].(common.Address)
+			prevRandao := fmt.Sprintf("0x%s", common.Bytes2Hex(values[5].(*big.Int).Bytes()))
 			payload := values[7].([]uint8)
 			inputIndex := int(it.Event.Index.Int64())
+
 			input := cModel.AdvanceInput{
 				Index:                  -1,
 				Status:                 cModel.CompletionStatusUnprocessed,
@@ -368,6 +381,9 @@ func (w InputterWorker) FindAllInputsByBlockAndTimestampLT(
 				EspressoBlockNumber:    -1,
 				EspressoBlockTimestamp: time.Unix(-1, 0),
 				InputBoxIndex:          inputIndex,
+				PrevRandao:             prevRandao,
+				AppContract:            appContract,
+				ChainId:                chainId,
 			}
 			result = append(result, input)
 		}

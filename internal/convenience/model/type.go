@@ -101,6 +101,7 @@ type AdvanceInput struct {
 	BlockNumber            uint64           `db:"block_number"`
 	BlockTimestamp         time.Time        `db:"block_timestamp"`
 	PrevRandao             string           `db:"prev_randao"`
+	ChainId                string           `db:"chain_id"`
 	AppContract            common.Address   `db:"app_contract"`
 	Vouchers               []ConvenienceVoucher
 	Notices                []ConvenienceNotice

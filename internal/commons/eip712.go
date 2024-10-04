@@ -235,7 +235,7 @@ func ExtractSigAndData(raw string) (common.Address, apitypes.TypedData, []byte, 
 	if err != nil {
 		return common.HexToAddress("0x"), apitypes.TypedData{}, []byte{}, fmt.Errorf("ecrecover: %w", err)
 	}
-	fmt.Printf("SigPubkey: %s\n", common.Bytes2Hex(sigPubkey))
+	// fmt.Printf("SigPubkey: %s\n", common.Bytes2Hex(sigPubkey))
 	pubkey, err := crypto.UnmarshalPubkey(sigPubkey)
 	if err != nil {
 		return common.HexToAddress("0x"), apitypes.TypedData{}, []byte{}, fmt.Errorf("unmarshal: %w", err)

@@ -53,7 +53,7 @@ func (av *AvailClient) Submit712(ctx context.Context, payload string, dappAddres
 	nonce, err := fetchNonce(DEFAULT_USER_ADDRESS, av.GraphQLUrl)
 
 	if err != nil {
-		log.Fatalf("Error getting nonce: %v", err)
+		log.Fatalf("Avail error getting nonce: %v", err)
 	}
 	n, err := strconv.Atoi(nonce)
 	if err != nil {

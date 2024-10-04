@@ -51,6 +51,7 @@ type DirectiveRoot struct {
 type ComplexityRoot struct {
 	Input struct {
 		BlockNumber         func(childComplexity int) int
+		BlockTimestamp      func(childComplexity int) int
 		EspressoBlockNumber func(childComplexity int) int
 		EspressoTimestamp   func(childComplexity int) int
 		ID                  func(childComplexity int) int
@@ -60,6 +61,7 @@ type ComplexityRoot struct {
 		Notice              func(childComplexity int, index int) int
 		Notices             func(childComplexity int, first *int, last *int, after *string, before *string) int
 		Payload             func(childComplexity int) int
+		PrevRandao          func(childComplexity int) int
 		Report              func(childComplexity int, index int) int
 		Reports             func(childComplexity int, first *int, last *int, after *string, before *string) int
 		Status              func(childComplexity int) int
@@ -221,6 +223,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Input.BlockNumber(childComplexity), true
 
+	case "Input.blockTimestamp":
+		if e.complexity.Input.BlockTimestamp == nil {
+			break
+		}
+
+		return e.complexity.Input.BlockTimestamp(childComplexity), true
+
 	case "Input.espressoBlockNumber":
 		if e.complexity.Input.EspressoBlockNumber == nil {
 			break
@@ -293,6 +302,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Input.Payload(childComplexity), true
+
+	case "Input.prevRandao":
+		if e.complexity.Input.PrevRandao == nil {
+			break
+		}
+
+		return e.complexity.Input.PrevRandao(childComplexity), true
 
 	case "Input.report":
 		if e.complexity.Input.Report == nil {
@@ -906,7 +922,7 @@ type Input {
   "Address responsible for submitting the input"
   msgSender: String!
   "Timestamp associated with the input submission, as defined by the base layer's block in which it was recorded"
-  timestamp: BigInt!
+  timestamp: BigInt! @deprecated(reason: "Use ` + "`" + `blockTimestamp` + "`" + ` instead")
   "Number of the base layer block in which the input was recorded"
   blockNumber: BigInt!
   "Input payload in Ethereum hex binary format, starting with '0x'"
@@ -924,11 +940,15 @@ type Input {
   "Get reports from this particular input with support for pagination"
   reports(first: Int, last: Int, after: String, before: String): ReportConnection!
   "Timestamp associated with the Espresso input submission"
-  espressoTimestamp: String
+  espressoTimestamp: String @deprecated(reason: "Will be removed")
   "Number of the Espresso block in which the input was recorded"
-  espressoBlockNumber: String
-  "Input index in the Inpux Box"
+  espressoBlockNumber: String @deprecated(reason: "Will be removed")
+  "Input index in the Input Box"
   inputBoxIndex: String
+
+  blockTimestamp: BigInt
+
+  prevRandao: String
 }
 
 "Representation of a transaction that can be carried out on the base layer blockchain, such as a transfer of assets"
@@ -2388,6 +2408,88 @@ func (ec *executionContext) fieldContext_Input_inputBoxIndex(ctx context.Context
 	return fc, nil
 }
 
+func (ec *executionContext) _Input_blockTimestamp(ctx context.Context, field graphql.CollectedField, obj *model.Input) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Input_blockTimestamp(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.BlockTimestamp, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalOBigInt2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Input_blockTimestamp(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Input",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type BigInt does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Input_prevRandao(ctx context.Context, field graphql.CollectedField, obj *model.Input) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Input_prevRandao(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.PrevRandao, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalOString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Input_prevRandao(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Input",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _InputConnection_totalCount(ctx context.Context, field graphql.CollectedField, obj *model.Connection[*model.Input]) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_InputConnection_totalCount(ctx, field)
 	if err != nil {
@@ -2607,6 +2709,10 @@ func (ec *executionContext) fieldContext_InputEdge_node(ctx context.Context, fie
 				return ec.fieldContext_Input_espressoBlockNumber(ctx, field)
 			case "inputBoxIndex":
 				return ec.fieldContext_Input_inputBoxIndex(ctx, field)
+			case "blockTimestamp":
+				return ec.fieldContext_Input_blockTimestamp(ctx, field)
+			case "prevRandao":
+				return ec.fieldContext_Input_prevRandao(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Input", field.Name)
 		},
@@ -2773,6 +2879,10 @@ func (ec *executionContext) fieldContext_Notice_input(ctx context.Context, field
 				return ec.fieldContext_Input_espressoBlockNumber(ctx, field)
 			case "inputBoxIndex":
 				return ec.fieldContext_Input_inputBoxIndex(ctx, field)
+			case "blockTimestamp":
+				return ec.fieldContext_Input_blockTimestamp(ctx, field)
+			case "prevRandao":
+				return ec.fieldContext_Input_prevRandao(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Input", field.Name)
 		},
@@ -3421,6 +3531,10 @@ func (ec *executionContext) fieldContext_Proof_inputByInputIndex(ctx context.Con
 				return ec.fieldContext_Input_espressoBlockNumber(ctx, field)
 			case "inputBoxIndex":
 				return ec.fieldContext_Input_inputBoxIndex(ctx, field)
+			case "blockTimestamp":
+				return ec.fieldContext_Input_blockTimestamp(ctx, field)
+			case "prevRandao":
+				return ec.fieldContext_Input_prevRandao(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Input", field.Name)
 		},
@@ -3983,6 +4097,10 @@ func (ec *executionContext) fieldContext_Query_input(ctx context.Context, field 
 				return ec.fieldContext_Input_espressoBlockNumber(ctx, field)
 			case "inputBoxIndex":
 				return ec.fieldContext_Input_inputBoxIndex(ctx, field)
+			case "blockTimestamp":
+				return ec.fieldContext_Input_blockTimestamp(ctx, field)
+			case "prevRandao":
+				return ec.fieldContext_Input_prevRandao(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Input", field.Name)
 		},
@@ -4497,6 +4615,10 @@ func (ec *executionContext) fieldContext_Report_input(ctx context.Context, field
 				return ec.fieldContext_Input_espressoBlockNumber(ctx, field)
 			case "inputBoxIndex":
 				return ec.fieldContext_Input_inputBoxIndex(ctx, field)
+			case "blockTimestamp":
+				return ec.fieldContext_Input_blockTimestamp(ctx, field)
+			case "prevRandao":
+				return ec.fieldContext_Input_prevRandao(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Input", field.Name)
 		},
@@ -4907,6 +5029,10 @@ func (ec *executionContext) fieldContext_Voucher_input(ctx context.Context, fiel
 				return ec.fieldContext_Input_espressoBlockNumber(ctx, field)
 			case "inputBoxIndex":
 				return ec.fieldContext_Input_inputBoxIndex(ctx, field)
+			case "blockTimestamp":
+				return ec.fieldContext_Input_blockTimestamp(ctx, field)
+			case "prevRandao":
+				return ec.fieldContext_Input_prevRandao(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Input", field.Name)
 		},
@@ -7617,6 +7743,10 @@ func (ec *executionContext) _Input(ctx context.Context, sel ast.SelectionSet, ob
 			out.Values[i] = ec._Input_espressoBlockNumber(ctx, field, obj)
 		case "inputBoxIndex":
 			out.Values[i] = ec._Input_inputBoxIndex(ctx, field, obj)
+		case "blockTimestamp":
+			out.Values[i] = ec._Input_blockTimestamp(ctx, field, obj)
+		case "prevRandao":
+			out.Values[i] = ec._Input_prevRandao(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -9663,6 +9793,16 @@ func (ec *executionContext) unmarshalOAddressFilterInput2ᚖgithubᚗcomᚋcalin
 	}
 	res, err := ec.unmarshalInputAddressFilterInput(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalOBigInt2string(ctx context.Context, v interface{}) (string, error) {
+	res, err := graphql.UnmarshalID(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOBigInt2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
+	res := graphql.MarshalID(v)
+	return res
 }
 
 func (ec *executionContext) unmarshalOBoolean2bool(ctx context.Context, v interface{}) (bool, error) {
