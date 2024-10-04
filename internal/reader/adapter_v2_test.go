@@ -45,8 +45,9 @@ func (s *AdapterV2TestSuite) SetupTest() {
 	commons.ConfigureLog(slog.LevelDebug)
 	db := sqlx.MustConnect("sqlite3", ":memory:")
 
-	voucherRepository := &repository.VoucherRepository{Db: *db}
-	noticeRepository := &repository.NoticeRepository{Db: *db}
+	outputRepository := repository.OutputRepository{Db: *db}
+	voucherRepository := &repository.VoucherRepository{Db: *db, OutputRepository: outputRepository}
+	noticeRepository := &repository.NoticeRepository{Db: *db, OutputRepository: outputRepository}
 	inputRepository := &repository.InputRepository{Db: *db}
 	reportRepository := &repository.ReportRepository{Db: db}
 
@@ -90,25 +91,24 @@ func TestAdapterV2Suite(t *testing.T) {
 
 func (s *AdapterV2TestSuite) TestGetVoucherNotFound() {
 	voucherIndex := 2
-	inputIndex := 1
-	_, err := s.adapter.GetVoucher(voucherIndex, inputIndex)
+	_, err := s.adapter.GetVoucher(voucherIndex)
 	s.Error(err, "voucher not found")
 }
 
 func (s *AdapterV2TestSuite) TestGetVoucherFound() {
-	_, err := s.voucherRepository.CreateVoucher(context.TODO(), &model.ConvenienceVoucher{
+	savedVoucher, err := s.voucherRepository.CreateVoucher(context.TODO(), &model.ConvenienceVoucher{
 		Destination: common.Address{},
 		Payload:     "0x1rtyuio",
 		InputIndex:  1,
-		OutputIndex: 2,
+		OutputIndex: 0,
 		Executed:    false,
 	})
 
 	s.NoError(err)
 
-	voucherIndex := 2
+	voucherIndex := int(savedVoucher.OutputIndex)
 	inputIndex := 1
-	voucher, err := s.adapter.GetVoucher(voucherIndex, inputIndex)
+	voucher, err := s.adapter.GetVoucher(voucherIndex)
 	s.NoError(err)
 	s.Equal(inputIndex, voucher.InputIndex)
 	s.Equal(voucherIndex, voucher.Index)
@@ -145,13 +145,12 @@ func (s *AdapterV2TestSuite) TestGetAllVouchers() {
 
 func (s *AdapterV2TestSuite) TestGetNoticeNotFound() {
 	noticeIndex := 2
-	inputIndex := 1
-	_, err := s.adapter.GetNotice(noticeIndex, inputIndex)
+	_, err := s.adapter.GetNotice(noticeIndex)
 	s.Error(err, "notice not found")
 }
 
 func (s *AdapterV2TestSuite) TestGetNoticeFound() {
-	_, err := s.noticeRepository.Create(context.TODO(), &model.ConvenienceNotice{
+	savedNotice, err := s.noticeRepository.Create(context.TODO(), &model.ConvenienceNotice{
 		Payload:     "0x1rtyuio",
 		InputIndex:  1,
 		OutputIndex: 2,
@@ -159,9 +158,9 @@ func (s *AdapterV2TestSuite) TestGetNoticeFound() {
 
 	s.NoError(err)
 
-	noticeIndex := 2
+	noticeIndex := int(savedNotice.OutputIndex)
 	inputIndex := 1
-	notice, err := s.adapter.GetNotice(noticeIndex, inputIndex)
+	notice, err := s.adapter.GetNotice(noticeIndex)
 	s.NoError(err)
 	s.Equal(inputIndex, notice.InputIndex)
 	s.Equal(noticeIndex, notice.Index)
@@ -231,9 +230,8 @@ func (s *AdapterV2TestSuite) TestGetReportFound() {
 	}
 
 	reportIndex := 1
-	inputIndex := 2
 
-	report, err := s.adapter.GetReport(reportIndex, inputIndex)
+	report, err := s.adapter.GetReport(reportIndex)
 
 	s.NoError(err)
 	s.NotNil(report)
@@ -252,9 +250,8 @@ func (s *AdapterV2TestSuite) TestGetReportNotFound() {
 	}
 
 	reportIndex := 1
-	inputIndex := 2
 
-	report, err := s.adapter.GetReport(reportIndex, inputIndex)
+	report, err := s.adapter.GetReport(reportIndex)
 
 	s.NoError(err)
 	s.Nil(report)
@@ -280,7 +277,7 @@ func (s *AdapterV2TestSuite) TestGetReportsNotFound() {
 
 func (s *AdapterV2TestSuite) TestGetReportsFound() {
 	ctx := context.Background()
-	_, err := s.reportRepository.Create(ctx, model.Report{
+	_, err := s.reportRepository.CreateReport(ctx, model.Report{
 		Index:      0,
 		InputIndex: 0,
 		Payload:    common.Hex2Bytes("deadbeef"),

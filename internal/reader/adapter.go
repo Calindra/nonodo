@@ -7,7 +7,7 @@ import (
 )
 
 type Adapter interface {
-	GetReport(reportIndex int, inputIndex int) (*graphql.Report, error)
+	GetReport(reportIndex int) (*graphql.Report, error)
 
 	GetReports(
 		ctx context.Context,
@@ -22,13 +22,13 @@ type Adapter interface {
 	GetInput(id string) (*graphql.Input, error)
 	GetInputByIndex(inputIndex int) (*graphql.Input, error)
 
-	GetNotice(noticeIndex int, inputIndex int) (*graphql.Notice, error)
+	GetNotice(outputIndex int) (*graphql.Notice, error)
 
 	GetNotices(
 		first *int, last *int, after *string, before *string, inputIndex *int,
 	) (*graphql.NoticeConnection, error)
 
-	GetVoucher(voucherIndex int, inputIndex int) (*graphql.Voucher, error)
+	GetVoucher(outputIndex int) (*graphql.Voucher, error)
 
 	GetVouchers(
 		first *int, last *int, after *string, before *string, inputIndex *int,

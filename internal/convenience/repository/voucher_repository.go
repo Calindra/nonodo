@@ -18,7 +18,9 @@ import (
 const FALSE = "false"
 
 type VoucherRepository struct {
-	Db sqlx.DB
+	Db               sqlx.DB
+	OutputRepository OutputRepository
+	AutoCount        bool
 }
 
 type voucherRow struct {
@@ -46,6 +48,14 @@ func (c *VoucherRepository) CreateTables() error {
 func (c *VoucherRepository) CreateVoucher(
 	ctx context.Context, voucher *model.ConvenienceVoucher,
 ) (*model.ConvenienceVoucher, error) {
+	slog.Debug("CreateVoucher", "payload", voucher.Payload)
+	if c.AutoCount {
+		count, err := c.OutputRepository.CountAllOutputs(ctx)
+		if err != nil {
+			return nil, err
+		}
+		voucher.OutputIndex = count
+	}
 	insertVoucher := `INSERT INTO vouchers (
 		destination,
 		payload,
@@ -107,6 +117,31 @@ func (c *VoucherRepository) VoucherCount(
 		return 0, nil
 	}
 	return uint64(count), nil
+}
+
+func (c *VoucherRepository) FindVoucherByOutputIndex(
+	ctx context.Context, outputIndex uint64,
+) (*model.ConvenienceVoucher, error) {
+
+	query := `SELECT * FROM vouchers WHERE output_index = $1 LIMIT 1`
+
+	stmt, err := c.Db.Preparex(query)
+	if err != nil {
+		return nil, err
+	}
+	var row voucherRow
+	err = stmt.GetContext(ctx, &row, outputIndex)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	defer stmt.Close()
+
+	p := convertToConvenienceVoucher(row)
+
+	return &p, nil
 }
 
 func (c *VoucherRepository) FindVoucherByInputAndOutputIndex(

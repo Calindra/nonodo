@@ -19,6 +19,7 @@ type Container struct {
 	db                   *sqlx.DB
 	outputDecoder        *decoder.OutputDecoder
 	convenienceService   *services.ConvenienceService
+	outputRepository     *repository.OutputRepository
 	repository           *repository.VoucherRepository
 	syncRepository       *repository.SynchronizerRepository
 	graphQLSynchronizer  *synchronizer.Synchronizer
@@ -29,11 +30,13 @@ type Container struct {
 	graphileClient       graphile.GraphileClient
 	inputRepository      *repository.InputRepository
 	reportRepository     *repository.ReportRepository
+	AutoCount            bool
 }
 
-func NewContainer(db sqlx.DB) *Container {
+func NewContainer(db sqlx.DB, autoCount bool) *Container {
 	return &Container{
-		db: &db,
+		db:        &db,
+		AutoCount: autoCount,
 	}
 }
 
@@ -45,12 +48,28 @@ func (c *Container) GetOutputDecoder() *decoder.OutputDecoder {
 	return c.outputDecoder
 }
 
-func (c *Container) GetRepository() *repository.VoucherRepository {
+func (c *Container) GetOutputRepository() *repository.OutputRepository {
+	if c.outputRepository != nil {
+		return c.outputRepository
+	}
+	c.outputRepository = &repository.OutputRepository{
+		Db: *c.db,
+	}
+	// err := c.outputRepository.CreateTables()
+	// if err != nil {
+	// 	panic(err)
+	// }
+	return c.outputRepository
+}
+
+func (c *Container) GetVoucherRepository() *repository.VoucherRepository {
 	if c.repository != nil {
 		return c.repository
 	}
 	c.repository = &repository.VoucherRepository{
-		Db: *c.db,
+		Db:               *c.db,
+		OutputRepository: *c.GetOutputRepository(),
+		AutoCount:        c.AutoCount,
 	}
 	err := c.repository.CreateTables()
 	if err != nil {
@@ -78,7 +97,9 @@ func (c *Container) GetNoticeRepository() *repository.NoticeRepository {
 		return c.noticeRepository
 	}
 	c.noticeRepository = &repository.NoticeRepository{
-		Db: *c.db,
+		Db:               *c.db,
+		OutputRepository: *c.GetOutputRepository(),
+		AutoCount:        c.AutoCount,
 	}
 	err := c.noticeRepository.CreateTables()
 	if err != nil {
@@ -106,7 +127,8 @@ func (c *Container) GetReportRepository() *repository.ReportRepository {
 		return c.reportRepository
 	}
 	c.reportRepository = &repository.ReportRepository{
-		Db: c.db,
+		Db:        c.db,
+		AutoCount: c.AutoCount,
 	}
 	err := c.reportRepository.CreateTables()
 	if err != nil {
@@ -120,7 +142,7 @@ func (c *Container) GetConvenienceService() *services.ConvenienceService {
 		return c.convenienceService
 	}
 	c.convenienceService = services.NewConvenienceService(
-		c.GetRepository(),
+		c.GetVoucherRepository(),
 		c.GetNoticeRepository(),
 		c.GetInputRepository(),
 		c.GetReportRepository(),

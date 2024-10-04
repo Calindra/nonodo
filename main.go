@@ -606,6 +606,7 @@ func run(cmd *cobra.Command, args []string) {
 		err := nonodo.NewSupervisorHLGraphQL(opts).Start(ctx, ready)
 		cobra.CheckErr(err)
 	} else {
+		opts.AutoCount = true // not check the Idempotency
 		err := nonodo.NewSupervisor(opts).Start(ctx, ready)
 		cobra.CheckErr(err)
 	}
