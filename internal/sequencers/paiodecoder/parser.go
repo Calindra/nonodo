@@ -6,12 +6,15 @@ import (
 	"log/slog"
 	"math/big"
 	"os/exec"
+	"time"
 
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 )
+
+const TimeoutExecutionPaioDecoder = 1 * time.Minute
 
 type DecoderPaio interface {
 	DecodePaioBatch(ctx context.Context, bytes string) (string, error)
@@ -27,7 +30,10 @@ func NewPaioDecoder() *PaioDecoder {
 }
 
 // call the paio decoder binary
-func (t *PaioDecoder) DecodePaioBatch(ctx context.Context, bytes string) (string, error) {
+func (t *PaioDecoder) DecodePaioBatch(stdCtx context.Context, bytes string) (string, error) {
+	ctx, cancel := context.WithTimeout(stdCtx, TimeoutExecutionPaioDecoder)
+	defer cancel()
+
 	cmd := exec.CommandContext(ctx, t.location, bytes)
 	output, err := commons.RunCommandOnce(ctx, cmd)
 	if err != nil {
