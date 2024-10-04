@@ -255,6 +255,44 @@ func (r *InputRepository) FindByStatus(ctx context.Context, status model.Complet
 	}
 	return nil, nil
 }
+func (r *InputRepository) FindByIndex(ctx context.Context, inputIndex int) (*model.AdvanceInput, error) {
+	sql := `SELECT
+		id,
+		input_index,
+		status,
+		msg_sender,
+		payload,
+		block_number,
+		block_timestamp,
+		prev_randao,
+		exception,
+		app_contract,
+		espresso_block_number,
+		espresso_block_timestamp,
+		input_box_index, 
+		avail_block_number,
+		avail_block_timestamp,
+		type,
+		chain_id
+	FROM convenience_inputs WHERE input_index = $1`
+	res, err := r.Db.QueryxContext(
+		ctx,
+		sql,
+		inputIndex,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Close()
+	if res.Next() {
+		input, err := parseInput(res)
+		if err != nil {
+			return nil, err
+		}
+		return input, nil
+	}
+	return nil, nil
+}
 
 func (r *InputRepository) FindByID(ctx context.Context, id string) (*model.AdvanceInput, error) {
 	sql := `SELECT

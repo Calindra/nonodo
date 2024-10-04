@@ -217,6 +217,26 @@ func (a AdapterV1) convertToReport(
 	}
 }
 
+// GetInputByIndex implements Adapter.
+func (a AdapterV1) GetInputByIndex(inputIndex int) (*graphql.Input, error) {
+	ctx := context.Background()
+	input, err := a.inputRepository.FindByIndex(ctx, inputIndex)
+	if err != nil {
+		return nil, err
+	}
+	if input == nil {
+		return nil, fmt.Errorf("input not found")
+	}
+
+	convertedInput, err := graphql.ConvertInput(*input)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return convertedInput, nil
+}
+
 func (a AdapterV1) GetInput(id string) (*graphql.Input, error) {
 	ctx := context.Background()
 	input, err := a.inputRepository.FindByID(ctx, id)

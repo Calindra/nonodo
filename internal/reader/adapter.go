@@ -20,6 +20,7 @@ type Adapter interface {
 	) (*graphql.InputConnection, error)
 
 	GetInput(id string) (*graphql.Input, error)
+	GetInputByIndex(inputIndex int) (*graphql.Input, error)
 
 	GetNotice(noticeIndex int, inputIndex int) (*graphql.Notice, error)
 

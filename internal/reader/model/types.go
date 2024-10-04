@@ -66,6 +66,7 @@ type Notice struct {
 	InputIndex int
 	// Notice data as a payload in Ethereum hex binary format, starting with '0x'
 	Payload string `json:"payload"`
+	// InputId string
 }
 
 //

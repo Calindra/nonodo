@@ -7,7 +7,6 @@ package reader
 import (
 	"context"
 	"log/slog"
-	"strconv"
 
 	"github.com/calindra/nonodo/internal/reader/graph"
 	"github.com/calindra/nonodo/internal/reader/model"
@@ -45,7 +44,13 @@ func (r *inputResolver) Reports(ctx context.Context, obj *model.Input, first *in
 
 // Input is the resolver for the input field.
 func (r *noticeResolver) Input(ctx context.Context, obj *model.Notice) (*model.Input, error) {
-	return r.adapter.GetInput(strconv.Itoa(obj.InputIndex))
+	slog.Info("Find input by index", "inputIndex", obj.InputIndex)
+	input, err := r.adapter.GetInputByIndex(obj.InputIndex)
+	if err != nil {
+		slog.Error("Input not found")
+		return nil, err
+	}
+	return input, nil
 }
 
 // Proof is the resolver for the proof field.
@@ -89,12 +94,12 @@ func (r *queryResolver) Reports(ctx context.Context, first *int, last *int, afte
 
 // Input is the resolver for the input field.
 func (r *reportResolver) Input(ctx context.Context, obj *model.Report) (*model.Input, error) {
-	return r.adapter.GetInput(strconv.Itoa(obj.InputIndex))
+	return r.adapter.GetInputByIndex(obj.InputIndex)
 }
 
 // Input is the resolver for the input field.
 func (r *voucherResolver) Input(ctx context.Context, obj *model.Voucher) (*model.Input, error) {
-	return r.adapter.GetInput(strconv.Itoa(obj.InputIndex))
+	return r.adapter.GetInputByIndex(obj.InputIndex)
 }
 
 // Proof is the resolver for the proof field.

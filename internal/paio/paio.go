@@ -11,6 +11,7 @@ import (
 	"math/big"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/convenience/model"
@@ -355,13 +356,17 @@ func (p *PaioAPI) SendCartesiTransaction(ctx echo.Context) error {
 	}
 	payload := common.Hex2Bytes(request.TypedData.Message.Data[2:])
 	_, err = p.inputRepository.Create(stdCtx, model.AdvanceInput{
-		ID:            txId,
-		Index:         int(inputCount + 1),
-		MsgSender:     msgSender,
-		Payload:       payload,
-		AppContract:   appContract,
-		InputBoxIndex: -2,
-		Type:          "L2",
+		ID:             txId,
+		Index:          int(inputCount + 1),
+		MsgSender:      msgSender,
+		Payload:        payload,
+		AppContract:    appContract,
+		BlockNumber:    1,
+		BlockTimestamp: time.Now(),
+		InputBoxIndex:  -2,
+		Type:           "L2",
+		ChainId:        "31337",
+		PrevRandao:     "0xaabb",
 	})
 	if err != nil {
 		slog.Error("Error saving input:", "err", err)

@@ -220,6 +220,45 @@ func (a AdapterV2) GetInputs(
 
 }
 
+// GetInputByIndex implements Adapter.
+func (a AdapterV2) GetInputByIndex(inputIndex int) (*graphql.Input, error) {
+	ctx := context.Background()
+	input, err := a.convenienceService.FindByIndex(ctx, inputIndex)
+	if err != nil {
+		return nil, err
+	}
+	if input == nil {
+		return nil, fmt.Errorf("input not found")
+	}
+
+	espressoBlockTimestampStr := strconv.FormatInt(input.EspressoBlockTimestamp.Unix(), 10)
+	if espressoBlockTimestampStr == "-1" {
+		espressoBlockTimestampStr = ""
+	}
+	espressoBlockNumberStr := strconv.FormatInt(int64(input.EspressoBlockNumber), 10)
+	if espressoBlockNumberStr == "-1" {
+		espressoBlockNumberStr = ""
+	}
+
+	var inputBoxIndexStr string
+	if input.InputBoxIndex != -1 {
+		inputBoxIndexStr = strconv.FormatInt(int64(input.InputBoxIndex), 10)
+	}
+
+	return &graphql.Input{
+		ID:                  input.ID,
+		Index:               int(input.Index),
+		MsgSender:           input.MsgSender.String(),
+		Payload:             string(input.Payload),
+		Status:              a.convertCompletionStatus(*input),
+		Timestamp:           fmt.Sprintf("%d", input.BlockTimestamp.Unix()),
+		BlockNumber:         fmt.Sprintf("%d", input.BlockNumber),
+		EspressoTimestamp:   espressoBlockTimestampStr,
+		EspressoBlockNumber: espressoBlockNumberStr,
+		InputBoxIndex:       inputBoxIndexStr,
+	}, nil
+}
+
 func (a AdapterV2) GetInput(id string) (*graphql.Input, error) {
 	ctx := context.Background()
 	input, err := a.convenienceService.FindInputByID(ctx, id)
