@@ -44,7 +44,7 @@ type Input {
   "Address responsible for submitting the input"
   msgSender: String!
   "Timestamp associated with the input submission, as defined by the base layer's block in which it was recorded"
-  timestamp: BigInt!
+  timestamp: BigInt! @deprecated(reason: "Use `blockTimestamp` instead")
   "Number of the base layer block in which the input was recorded"
   blockNumber: BigInt!
   "Input payload in Ethereum hex binary format, starting with '0x'"
@@ -62,11 +62,15 @@ type Input {
   "Get reports from this particular input with support for pagination"
   reports(first: Int, last: Int, after: String, before: String): ReportConnection!
   "Timestamp associated with the Espresso input submission"
-  espressoTimestamp: String
+  espressoTimestamp: String @deprecated(reason: "Will be removed")
   "Number of the Espresso block in which the input was recorded"
-  espressoBlockNumber: String
-  "Input index in the Inpux Box"
+  espressoBlockNumber: String @deprecated(reason: "Will be removed")
+  "Input index in the Input Box"
   inputBoxIndex: String
+
+  blockTimestamp: BigInt
+
+  prevRandao: String
 }
 
 "Representation of a transaction that can be carried out on the base layer blockchain, such as a transfer of assets"

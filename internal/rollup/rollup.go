@@ -259,6 +259,7 @@ func convertInput(input cModel.Input) (RollupRequest, error) {
 				InputIndex:     uint64(input.Index),
 				MsgSender:      hexutil.Encode(input.MsgSender[:]),
 				BlockTimestamp: uint64(input.BlockTimestamp.Unix()),
+				PrevRandao:     input.PrevRandao,
 			},
 			Payload: hexutil.Encode(input.Payload),
 		}

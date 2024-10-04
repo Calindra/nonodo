@@ -25,6 +25,7 @@ type Model interface {
 		blockNumber uint64,
 		timestamp time.Time,
 		index int,
+		prevRandao string,
 	) error
 }
 
@@ -220,6 +221,7 @@ func (w InputterWorker) addInput(
 	}
 
 	msgSender := values[2].(common.Address)
+	prevRandao := common.Bytes2Hex(values[5].(*big.Int).Bytes())
 	payload := values[7].([]uint8)
 	inputIndex := int(event.Index.Int64())
 
@@ -227,11 +229,12 @@ func (w InputterWorker) addInput(
 		"dapp", event.AppContract,
 		"input.index", event.Index,
 		"sender", msgSender,
-		"input", event.Input,
+		"input", common.Bytes2Hex(event.Input),
 		"payload", payload,
 		slog.Group("block",
 			"number", header.Number,
 			"timestamp", timestamp,
+			"prevRandao", prevRandao,
 		),
 	)
 
@@ -250,6 +253,7 @@ func (w InputterWorker) addInput(
 		event.Raw.BlockNumber,
 		timestamp,
 		inputIndex,
+		prevRandao,
 	)
 
 	if err != nil {
@@ -356,8 +360,10 @@ func (w InputterWorker) FindAllInputsByBlockAndTimestampLT(
 			}
 
 			msgSender := values[2].(common.Address)
+			prevRandao := common.Bytes2Hex(values[5].(*big.Int).Bytes())
 			payload := values[7].([]uint8)
 			inputIndex := int(it.Event.Index.Int64())
+
 			input := cModel.AdvanceInput{
 				Index:                  -1,
 				Status:                 cModel.CompletionStatusUnprocessed,
@@ -368,6 +374,7 @@ func (w InputterWorker) FindAllInputsByBlockAndTimestampLT(
 				EspressoBlockNumber:    -1,
 				EspressoBlockTimestamp: time.Unix(-1, 0),
 				InputBoxIndex:          inputIndex,
+				PrevRandao:             prevRandao,
 			}
 			result = append(result, input)
 		}

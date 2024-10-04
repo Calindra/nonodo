@@ -59,6 +59,7 @@ func (m *NonodoModel) AddAdvanceInput(
 	blockNumber uint64,
 	timestamp time.Time,
 	inputBoxIndex int,
+	prevRandao string,
 ) error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
@@ -78,6 +79,7 @@ func (m *NonodoModel) AddAdvanceInput(
 		EspressoBlockNumber:    -1,
 		EspressoBlockTimestamp: time.Unix(-1, 0),
 		InputBoxIndex:          inputBoxIndex,
+		PrevRandao:             prevRandao,
 	}
 
 	_, err = m.inputRepository.Create(ctx, input)

@@ -76,7 +76,7 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 			continue
 		}
 		for ; currentBlockHeight < lastEspressoBlockHeight; currentBlockHeight++ {
-			slog.Debug("Espresso:", "currentBlockHeight", currentBlockHeight)
+			slog.Debug("Espresso:", "currentBlockHeight", currentBlockHeight, "namespace", e.namespace)
 			transactions, err := e.espressoAPI.FetchTransactionsInBlock(ctx, currentBlockHeight, e.namespace)
 			if err != nil {
 				return err
