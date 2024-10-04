@@ -112,7 +112,7 @@ func (e *EspressoClient) SendInput(payload string, namespace int) (string, error
 	nonce, err := fetchNonce(fromAddress.Hex(), e.GraphQLUrl)
 
 	if err != nil {
-		log.Fatalf("Error getting nonce: %v", err)
+		log.Fatalf("espresso error getting nonce: %v", err)
 	}
 
 	// Build Message

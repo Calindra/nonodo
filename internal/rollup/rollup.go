@@ -253,7 +253,7 @@ func convertInput(input cModel.Input) (RollupRequest, error) {
 	var resp RollupRequest
 	switch input := input.(type) {
 	case cModel.AdvanceInput:
-		chainId, ok := new(big.Int).SetString(input.ChainId, 10)
+		chainId, ok := new(big.Int).SetString(input.ChainId, 10) // nolint
 		if !ok {
 			return RollupRequest{}, errors.New("failed to convert chain id")
 		}
