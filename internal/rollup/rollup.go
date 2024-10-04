@@ -9,6 +9,7 @@ package rollup
 import (
 	"errors"
 	"log/slog"
+	"math/big"
 	"net/http"
 
 	"strings"
@@ -252,6 +253,10 @@ func convertInput(input cModel.Input) (RollupRequest, error) {
 	var resp RollupRequest
 	switch input := input.(type) {
 	case cModel.AdvanceInput:
+		chainId, ok := new(big.Int).SetString(input.ChainId, 10)
+		if !ok {
+			return RollupRequest{}, errors.New("failed to convert chain id")
+		}
 		advance := Advance{
 			Metadata: Metadata{
 				AppContract:    input.AppContract.Hex(),
@@ -260,6 +265,7 @@ func convertInput(input cModel.Input) (RollupRequest, error) {
 				MsgSender:      hexutil.Encode(input.MsgSender[:]),
 				BlockTimestamp: uint64(input.BlockTimestamp.Unix()),
 				PrevRandao:     input.PrevRandao,
+				ChainId:        chainId.Uint64(),
 			},
 			Payload: hexutil.Encode(input.Payload),
 		}

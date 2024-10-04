@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"math/big"
 	"net/http"
 	"os"
 	"strconv"
@@ -56,6 +57,14 @@ func (e EspressoListener) Start(ctx context.Context, ready chan<- struct{}) erro
 func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 	slog.Debug("Espresso: watchNewTransactions", "fromBlock", e.fromBlock)
 	currentBlockHeight := e.fromBlock
+	if currentBlockHeight == 0 {
+		lastEspressoBlockHeight, err := e.espressoAPI.FetchLatestBlockHeight(ctx)
+		if err != nil {
+			return err
+		}
+		currentBlockHeight = lastEspressoBlockHeight
+		slog.Info("Espresso: starting from latest block height", "lastEspressoBlockHeight", lastEspressoBlockHeight)
+	}
 	previousBlockHeight := currentBlockHeight
 	l1FinalizedPrevHeight := e.getL1FinalizedHeight(previousBlockHeight)
 
@@ -99,7 +108,7 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 			slog.Debug("Espresso:", "transactionsLen", tot)
 			for i := 0; i < tot; i++ {
 				transaction := transactions.Transactions[i]
-				slog.Debug("Espresso:", "currentBlockHeight", currentBlockHeight, "transaction", transaction)
+				slog.Debug("Espresso:", "currentBlockHeight", currentBlockHeight)
 
 				ctx := context.Background()
 				// transform and add to InputRepository
@@ -166,6 +175,11 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 					}
 				}
 
+				chainId := (*big.Int)(typedData.Domain.ChainId).String()
+				slog.Debug("TypedData", "typedData.Domain", typedData.Domain,
+					"chainId", chainId,
+				)
+
 				_, err = e.InputRepository.Create(ctx, cModel.AdvanceInput{
 					ID:                     common.Bytes2Hex(crypto.Keccak256(signature)),
 					Index:                  int(index),
@@ -178,6 +192,7 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 					EspressoBlockTimestamp: e.getEspressoTimestamp(currentBlockHeight),
 					InputBoxIndex:          -1,
 					Type:                   "Espresso",
+					ChainId:                chainId,
 				})
 				if err != nil {
 					return err
