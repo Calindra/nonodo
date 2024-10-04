@@ -398,7 +398,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		paioSequencerBuilder = paioSequencerBuilder.WithEspressoUrl(opts.EspressoUrl)
 	}
 	paioSequencer := paioSequencerBuilder.Build()
-	paio.Register(re, paioSequencer)
+	paio.Register(e, paioSequencer)
 
 	if opts.AvailEnabled {
 		w.Workers = append(w.Workers, avail.NewAvailListener(
