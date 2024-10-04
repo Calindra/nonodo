@@ -111,14 +111,15 @@ func NewPaio() commons.HandleRelease {
 		// Change for Cartesi when available
 		Namespace:      "Calindra",
 		Repository:     "paio",
-		ConfigFilename: "decode-batch.nonodo.json",
+		ConfigFilename: "paio.nonodo.json",
 		Client:         github.NewClient(nil),
 	}
 }
 
 // DownloadAsset implements commons.HandleRelease.
 func (d Paio) DownloadAsset(ctx context.Context, release *commons.ReleaseAsset) (string, error) {
-	root := filepath.Join(os.TempDir(), release.Tag)
+	folder := d.Repository + "-" + release.Tag
+	root := filepath.Join(os.TempDir(), folder)
 	var perm os.FileMode = 0755 | os.ModeDir
 	err := os.MkdirAll(root, perm)
 	if err != nil {
@@ -171,18 +172,19 @@ func (d Paio) DownloadAsset(ctx context.Context, release *commons.ReleaseAsset) 
 	release.Path = root
 
 	// Save path on config
-	// cfg := NewpaioConfig(*release)
-	// err = d.SaveConfigOnDefaultLocation(cfg)
-	// if err != nil {
-	// 	return "", err
-	// }
+	cfg := NewPaioConfig(*release)
+	err = d.SaveConfigOnDefaultLocation(cfg)
+	if err != nil {
+		return "", err
+	}
 
 	return decodeExec, nil
 }
 
 // ExtractAsset implements commons.HandleRelease.
 func (d Paio) ExtractAsset(archive []byte, filename string, destDir string) error {
-	return fmt.Errorf("paio: not need to extract asset")
+	var permission fs.FileMode = 0755
+	return os.WriteFile(filepath.Join(destDir, filename), archive, permission)
 }
 
 // FormatNameRelease implements commons.HandleRelease.
@@ -255,7 +257,6 @@ func (p Paio) GetLatestReleaseCompatible(ctx context.Context) (*commons.ReleaseA
 		return nil, err
 	}
 
-	// Add hash here if need
 	for _, paioAssets := range assets {
 		if paioAssets.Filename == platform {
 			target = &paioAssets
