@@ -5,12 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"log/slog"
 	"net/http"
 	"os"
 	"path"
 	"path/filepath"
 	"runtime"
+	"time"
 
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/google/go-github/github"
@@ -20,18 +22,48 @@ const (
 	DEFAULT_NAME_PROGRAM = "decode-batch"
 )
 
-func (d *DecodeBatchPaio) IsDecodeBatchInstalled() bool {
+func (d *Paio) IsDecodeBatchInstalled() bool {
 	location := path.Join(os.TempDir(), d.NameProgram)
 	_, err := os.Stat(location)
 	return err == nil
 }
 
-type DecodePaioConfig struct {
+type PaioConfig struct {
 	AssetPaio   commons.ReleaseAsset `json:"asset_paio"`
 	LatestCheck string               `json:"latest_check"`
 }
 
-func (a DecodeBatchPaio) TryLoadConfig() (*DecodePaioConfig, error) {
+func NewPaioConfig(ra commons.ReleaseAsset) *PaioConfig {
+	return &PaioConfig{
+		AssetPaio:   ra,
+		LatestCheck: time.Now().Format(time.RFC3339),
+	}
+}
+
+func (a *PaioConfig) SavePaioConfig(path string) error {
+	data, err := json.Marshal(a)
+	if err != nil {
+		return fmt.Errorf("failed to marshal config %s", err.Error())
+	}
+
+	var permission fs.FileMode = 0644
+	err = os.WriteFile(path, data, permission)
+	if err != nil {
+		return fmt.Errorf("failed to write config %s", err.Error())
+	}
+
+	return nil
+}
+
+func (p Paio) SaveConfigOnDefaultLocation(config *PaioConfig) error {
+	root := filepath.Join(os.TempDir())
+	file := filepath.Join(root, p.ConfigFilename)
+	c := NewPaioConfig(config.AssetPaio)
+	err := c.SavePaioConfig(file)
+	return err
+}
+
+func (a Paio) TryLoadConfig() (*PaioConfig, error) {
 	root := filepath.Join(os.TempDir())
 	file := filepath.Join(root, a.ConfigFilename)
 	if _, err := os.Stat(file); err == nil {
@@ -48,13 +80,13 @@ func (a DecodeBatchPaio) TryLoadConfig() (*DecodePaioConfig, error) {
 	return nil, nil
 }
 
-func LoadPaioConfig(path string) (*DecodePaioConfig, error) {
+func LoadPaioConfig(path string) (*PaioConfig, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, fmt.Errorf("paio: failed to read config %s", err.Error())
 	}
 
-	var config DecodePaioConfig
+	var config PaioConfig
 	err = json.Unmarshal(data, &config)
 	if err != nil {
 		return nil, fmt.Errorf("paio: failed to unmarshal config %s", err.Error())
@@ -63,7 +95,7 @@ func LoadPaioConfig(path string) (*DecodePaioConfig, error) {
 	return &config, nil
 }
 
-type DecodeBatchPaio struct {
+type Paio struct {
 	NameProgram    string
 	Namespace      string
 	Repository     string
@@ -71,8 +103,8 @@ type DecodeBatchPaio struct {
 	Client         *github.Client
 }
 
-func NewDecodeBatchPaio() commons.HandleRelease {
-	return DecodeBatchPaio{
+func NewPaio() commons.HandleRelease {
+	return Paio{
 		NameProgram: DEFAULT_NAME_PROGRAM,
 		// Change for Cartesi when available
 		Namespace:      "Calindra",
@@ -83,7 +115,7 @@ func NewDecodeBatchPaio() commons.HandleRelease {
 }
 
 // DownloadAsset implements commons.HandleRelease.
-func (d DecodeBatchPaio) DownloadAsset(ctx context.Context, release *commons.ReleaseAsset) (string, error) {
+func (d Paio) DownloadAsset(ctx context.Context, release *commons.ReleaseAsset) (string, error) {
 	root := filepath.Join(os.TempDir(), release.Tag)
 	var perm os.FileMode = 0755 | os.ModeDir
 	err := os.MkdirAll(root, perm)
@@ -127,7 +159,7 @@ func (d DecodeBatchPaio) DownloadAsset(ctx context.Context, release *commons.Rel
 		return "", fmt.Errorf("failed to read asset %s", err.Error())
 	}
 
-	slog.Debug("downloaded compacted file")
+	slog.Debug("downloaded binaryfile")
 
 	err = d.ExtractAsset(data, release.Filename, root)
 	if err != nil {
@@ -147,24 +179,45 @@ func (d DecodeBatchPaio) DownloadAsset(ctx context.Context, release *commons.Rel
 }
 
 // ExtractAsset implements commons.HandleRelease.
-func (d DecodeBatchPaio) ExtractAsset(archive []byte, filename string, destDir string) error {
-	panic("unimplemented")
+func (d Paio) ExtractAsset(archive []byte, filename string, destDir string) error {
+	return fmt.Errorf("paio: not need to extract asset")
 }
 
 // FormatNameRelease implements commons.HandleRelease.
-func (d DecodeBatchPaio) FormatNameRelease(prefix string, goos string, goarch string, version string) string {
-	panic("unimplemented")
+func (d Paio) FormatNameRelease(prefix string, goos string, goarch string, version string) string {
+	ext := ""
+	myos := goos
+	myarch := goarch
+
+	if goos == commons.WINDOWS {
+		ext = ".exe"
+		myos = "windows-msvc"
+	}
+
+	if goos == "darwin" {
+		myos = "apple-darwin"
+	}
+
+	if goarch == "arm64" {
+		myarch = "aarch64"
+	}
+
+	if goarch == commons.X86_64 {
+		myarch = "x86_64"
+	}
+
+	return "decode-batch-" + myarch + "-" + myos + ext
 }
 
 // GetLatestReleaseCompatible implements commons.HandleRelease.
-func (d DecodeBatchPaio) GetLatestReleaseCompatible(ctx context.Context) (*commons.ReleaseAsset, error) {
-	platform, err := d.PlatformCompatible()
+func (p Paio) GetLatestReleaseCompatible(ctx context.Context) (*commons.ReleaseAsset, error) {
+	platform, err := p.PlatformCompatible()
 	if err != nil {
 		return nil, err
 	}
 	slog.Debug("paio:", "platform", platform)
 
-	config, err := d.TryLoadConfig()
+	config, err := p.TryLoadConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -191,11 +244,12 @@ func (d DecodeBatchPaio) GetLatestReleaseCompatible(ctx context.Context) (*commo
 		}
 	}
 
-	assets, err := commons.GetAssetsFromLastReleaseGitHub(ctx, d.Client, d.Namespace, d.Repository, paioTag)
+	assets, err := commons.GetAssetsFromLastReleaseGitHub(ctx, p.Client, p.Namespace, p.Repository, paioTag)
 	if err != nil {
 		return nil, err
 	}
 
+	// Add hash here if need
 	for _, paioAssets := range assets {
 		if paioAssets.Filename == platform {
 			target = &paioAssets
@@ -211,11 +265,11 @@ func (d DecodeBatchPaio) GetLatestReleaseCompatible(ctx context.Context) (*commo
 	}
 
 	if target != nil {
-		// c := NewpaioConfig(*target)
-		// err := d.SaveConfigOnDefaultLocation(c)
-		// if err != nil {
-		// return nil, err
-		// }
+		c := NewPaioConfig(*target)
+		err := p.SaveConfigOnDefaultLocation(c)
+		if err != nil {
+			return nil, err
+		}
 
 		return target, nil
 	}
@@ -224,19 +278,19 @@ func (d DecodeBatchPaio) GetLatestReleaseCompatible(ctx context.Context) (*commo
 }
 
 // ListRelease implements commons.HandleRelease.
-func (d DecodeBatchPaio) ListRelease(ctx context.Context) ([]commons.ReleaseAsset, error) {
+func (d Paio) ListRelease(ctx context.Context) ([]commons.ReleaseAsset, error) {
 	return commons.GetAssetsFromLastReleaseGitHub(ctx, d.Client, d.Namespace, d.Repository, "")
 }
 
 // PlatformCompatible implements commons.HandleRelease.
-func (d DecodeBatchPaio) PlatformCompatible() (string, error) {
+func (d Paio) PlatformCompatible() (string, error) {
 	// Check if the platform is compatible
 	slog.Debug("paio: System", "GOARCH:", runtime.GOARCH, "GOOS:", runtime.GOOS)
 	goarch := runtime.GOARCH
 	goos := runtime.GOOS
 
-	if ((goarch == "amd64") && (goos == commons.WINDOWS || goos == "linux")) ||
-		((goarch == "amd64" || goarch == "arm64") && goos == "darwin") {
+	if ((goarch == commons.X86_64) && (goos == commons.WINDOWS || goos == "linux")) ||
+		((goarch == commons.X86_64 || goarch == "arm64") && goos == "darwin") {
 		return d.FormatNameRelease("", goos, goarch, ""), nil
 	}
 
@@ -244,6 +298,6 @@ func (d DecodeBatchPaio) PlatformCompatible() (string, error) {
 }
 
 // Prerequisites implements commons.HandleRelease.
-func (d DecodeBatchPaio) Prerequisites(ctx context.Context) error {
+func (d Paio) Prerequisites(ctx context.Context) error {
 	return nil
 }

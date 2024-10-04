@@ -95,6 +95,7 @@ func HandleReleaseExecution(stdCtx context.Context, release HandleRelease) (stri
 }
 
 const WINDOWS = "windows"
+const X86_64 = "amd64"
 const LATEST_TAG = "nightly"
 
 func NewAnvilRelease() HandleRelease {
