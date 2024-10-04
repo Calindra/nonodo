@@ -37,7 +37,7 @@ func (s *GraphileFetcherTestSuite) SetupTest() {
 	s.graphileFetcher = GraphileFetcher{GraphileClient: s.graphileClient}
 }
 
-func TestAdapterV2Suite(t *testing.T) {
+func TestGraphileV2Suite(t *testing.T) {
 	suite.Run(t, new(GraphileFetcherTestSuite))
 }
 

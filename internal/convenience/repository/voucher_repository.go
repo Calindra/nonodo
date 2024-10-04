@@ -18,7 +18,8 @@ import (
 const FALSE = "false"
 
 type VoucherRepository struct {
-	Db sqlx.DB
+	Db               sqlx.DB
+	OutputRepository OutputRepository
 }
 
 type voucherRow struct {
@@ -46,6 +47,11 @@ func (c *VoucherRepository) CreateTables() error {
 func (c *VoucherRepository) CreateVoucher(
 	ctx context.Context, voucher *model.ConvenienceVoucher,
 ) (*model.ConvenienceVoucher, error) {
+	slog.Debug("CreateVoucher", "payload", voucher.Payload)
+	count, err := c.OutputRepository.CountAllOutputs(ctx)
+	if err != nil {
+		return nil, err
+	}
 	insertVoucher := `INSERT INTO vouchers (
 		destination,
 		payload,
@@ -55,14 +61,15 @@ func (c *VoucherRepository) CreateVoucher(
 
 	exec := DBExecutor{&c.Db}
 
-	_, err := exec.ExecContext(
+	_, err = exec.ExecContext(
 		ctx,
 		insertVoucher,
 		voucher.Destination.Hex(),
 		voucher.Payload,
 		voucher.Executed,
 		voucher.InputIndex,
-		voucher.OutputIndex,
+		// voucher.OutputIndex,
+		count,
 	)
 	if err != nil {
 		slog.Error("Error creating vouchers", "Error", err)
@@ -107,6 +114,31 @@ func (c *VoucherRepository) VoucherCount(
 		return 0, nil
 	}
 	return uint64(count), nil
+}
+
+func (c *VoucherRepository) FindVoucherByOutputIndex(
+	ctx context.Context, outputIndex uint64,
+) (*model.ConvenienceVoucher, error) {
+
+	query := `SELECT * FROM vouchers WHERE output_index = $1 LIMIT 1`
+
+	stmt, err := c.Db.Preparex(query)
+	if err != nil {
+		return nil, err
+	}
+	var row voucherRow
+	err = stmt.GetContext(ctx, &row, outputIndex)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	defer stmt.Close()
+
+	p := convertToConvenienceVoucher(row)
+
+	return &p, nil
 }
 
 func (c *VoucherRepository) FindVoucherByInputAndOutputIndex(

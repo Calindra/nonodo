@@ -44,7 +44,7 @@ func (s *ReportRepositorySuite) TestCreateTables() {
 
 func (s *ReportRepositorySuite) TestCreateReport() {
 	ctx := context.Background()
-	_, err := s.reportRepository.Create(ctx, cModel.Report{
+	_, err := s.reportRepository.CreateReport(ctx, cModel.Report{
 		Index:      1,
 		InputIndex: 2,
 		Payload:    common.Hex2Bytes("1122"),
@@ -54,7 +54,7 @@ func (s *ReportRepositorySuite) TestCreateReport() {
 
 func (s *ReportRepositorySuite) TestCreateReportAndFind() {
 	ctx := context.Background()
-	_, err := s.reportRepository.Create(ctx, cModel.Report{
+	_, err := s.reportRepository.CreateReport(ctx, cModel.Report{
 		InputIndex: 1,
 		Index:      2,
 		Payload:    common.Hex2Bytes("1122"),
@@ -84,7 +84,7 @@ func (s *ReportRepositorySuite) TestCreateReportAndFindAll() {
 	ctx := context.Background()
 	for i := 0; i < 3; i++ {
 		for j := 0; j < 4; j++ {
-			_, err := s.reportRepository.Create(
+			_, err := s.reportRepository.CreateReport(
 				ctx,
 				cModel.Report{
 					InputIndex: i,

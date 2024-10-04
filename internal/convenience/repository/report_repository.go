@@ -33,14 +33,21 @@ func (r *ReportRepository) CreateTables() error {
 	return err
 }
 
-func (r *ReportRepository) Create(ctx context.Context, report cModel.Report) (cModel.Report, error) {
+func (r *ReportRepository) CreateReport(ctx context.Context, report cModel.Report) (cModel.Report, error) {
+	slog.Debug("CreateReport", "payload", report.Payload)
+	count, err := r.Count(ctx, nil)
+	if err != nil {
+		slog.Error("database error", "err", err)
+		return cModel.Report{}, err
+	}
+	report.Index = int(count)
 	insertSql := `INSERT INTO convenience_reports (
 		output_index,
 		payload,
 		input_index) VALUES ($1, $2, $3)`
 
 	exec := DBExecutor{r.Db}
-	_, err := exec.ExecContext(
+	_, err = exec.ExecContext(
 		ctx,
 		insertSql,
 		report.Index,
@@ -76,6 +83,43 @@ func (r *ReportRepository) Update(ctx context.Context, report cModel.Report) (*c
 		return nil, err
 	}
 	return &report, nil
+}
+
+func (r *ReportRepository) FindByOutputIndex(
+	ctx context.Context,
+	outputIndex uint64,
+) (*cModel.Report, error) {
+	rows, err := r.Db.QueryxContext(ctx, `
+		SELECT payload, input_index FROM convenience_reports
+		WHERE output_index = $1
+		LIMIT 1`,
+		outputIndex,
+	)
+	if err != nil {
+		slog.Error("database error", "err", err)
+		return nil, err
+	}
+	defer rows.Close()
+
+	if rows.Next() {
+		var payload string
+		var inputIndex int
+		if err := rows.Scan(&payload, &inputIndex); err != nil {
+			return nil, err
+		}
+		report := &cModel.Report{
+			InputIndex: inputIndex,
+			Index:      int(outputIndex),
+			Payload:    common.Hex2Bytes(payload),
+		}
+		return report, nil
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return nil, nil
 }
 
 func (r *ReportRepository) FindByInputAndOutputIndex(

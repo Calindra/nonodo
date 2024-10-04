@@ -165,7 +165,7 @@ func saveAllReports(reportRepository *cRepos.ReportRepository, reports []cModel.
 	}
 	ctx := context.Background()
 	for _, r := range reports {
-		_, err := reportRepository.Create(ctx, r)
+		_, err := reportRepository.CreateReport(ctx, r)
 		if err != nil {
 			return err
 		}

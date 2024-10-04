@@ -116,12 +116,12 @@ func (a AdapterV2) GetProof(ctx context.Context, inputIndex int, outputIndex int
 	return &theProof.Data.Proof, nil
 }
 
-func (a AdapterV2) GetReport(reportIndex int, inputIndex int) (*graphql.Report, error) {
+func (a AdapterV2) GetReport(reportIndex int) (*graphql.Report, error) {
 	requestBody := []byte(fmt.Sprintf(`
     {
-		"query": "query { reports(condition: {index: %d, inputIndex: %d}) { edges { node { index blob inputIndex}}}}"
+		"query": "query { reports(condition: {index: %d}) { edges { node { index blob inputIndex}}}}"
 		
-	}`, reportIndex, inputIndex))
+	}`, reportIndex))
 
 	response, err := a.graphileClient.Post(requestBody)
 
@@ -297,12 +297,11 @@ func (a AdapterV2) GetInput(id string) (*graphql.Input, error) {
 	}, nil
 }
 
-func (a AdapterV2) GetNotice(noticeIndex int, inputIndex int) (*graphql.Notice, error) {
+func (a AdapterV2) GetNotice(outputIndex int) (*graphql.Notice, error) {
 	ctx := context.Background()
-	notice, err := a.convenienceService.FindNoticeByInputAndOutputIndex(
+	notice, err := a.convenienceService.FindNoticeByOutputIndex(
 		ctx,
-		uint64(inputIndex),
-		uint64(noticeIndex),
+		uint64(outputIndex),
 	)
 	if err != nil {
 		return nil, err
@@ -311,8 +310,8 @@ func (a AdapterV2) GetNotice(noticeIndex int, inputIndex int) (*graphql.Notice, 
 		return nil, fmt.Errorf("notice not found")
 	}
 	return &graphql.Notice{
-		Index:      noticeIndex,
-		InputIndex: inputIndex,
+		Index:      outputIndex,
+		InputIndex: int(notice.InputIndex),
 		Payload:    notice.Payload,
 	}, nil
 }
@@ -351,10 +350,10 @@ func (a AdapterV2) GetNotices(
 	)
 }
 
-func (a AdapterV2) GetVoucher(voucherIndex int, inputIndex int) (*graphql.Voucher, error) {
+func (a AdapterV2) GetVoucher(voucherIndex int) (*graphql.Voucher, error) {
 	ctx := context.Background()
-	voucher, err := a.convenienceService.FindVoucherByInputAndOutputIndex(
-		ctx, uint64(inputIndex), uint64(voucherIndex))
+	voucher, err := a.convenienceService.FindVoucherByOutputIndex(
+		ctx, uint64(voucherIndex))
 	if err != nil {
 		return nil, err
 	}

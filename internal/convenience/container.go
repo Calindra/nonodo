@@ -19,6 +19,7 @@ type Container struct {
 	db                   *sqlx.DB
 	outputDecoder        *decoder.OutputDecoder
 	convenienceService   *services.ConvenienceService
+	outputRepository     *repository.OutputRepository
 	repository           *repository.VoucherRepository
 	syncRepository       *repository.SynchronizerRepository
 	graphQLSynchronizer  *synchronizer.Synchronizer
@@ -45,12 +46,27 @@ func (c *Container) GetOutputDecoder() *decoder.OutputDecoder {
 	return c.outputDecoder
 }
 
-func (c *Container) GetRepository() *repository.VoucherRepository {
+func (c *Container) GetOutputRepository() *repository.OutputRepository {
+	if c.outputRepository != nil {
+		return c.outputRepository
+	}
+	c.outputRepository = &repository.OutputRepository{
+		Db: *c.db,
+	}
+	// err := c.outputRepository.CreateTables()
+	// if err != nil {
+	// 	panic(err)
+	// }
+	return c.outputRepository
+}
+
+func (c *Container) GetVoucherRepository() *repository.VoucherRepository {
 	if c.repository != nil {
 		return c.repository
 	}
 	c.repository = &repository.VoucherRepository{
-		Db: *c.db,
+		Db:               *c.db,
+		OutputRepository: *c.GetOutputRepository(),
 	}
 	err := c.repository.CreateTables()
 	if err != nil {
@@ -78,7 +94,8 @@ func (c *Container) GetNoticeRepository() *repository.NoticeRepository {
 		return c.noticeRepository
 	}
 	c.noticeRepository = &repository.NoticeRepository{
-		Db: *c.db,
+		Db:               *c.db,
+		OutputRepository: *c.GetOutputRepository(),
 	}
 	err := c.noticeRepository.CreateTables()
 	if err != nil {
@@ -120,7 +137,7 @@ func (c *Container) GetConvenienceService() *services.ConvenienceService {
 		return c.convenienceService
 	}
 	c.convenienceService = services.NewConvenienceService(
-		c.GetRepository(),
+		c.GetVoucherRepository(),
 		c.GetNoticeRepository(),
 		c.GetInputRepository(),
 		c.GetReportRepository(),
