@@ -2,6 +2,7 @@
 
 ![CI](https://github.com/Calindra/nonodo/actions/workflows/ci.yaml/badge.svg)
 [![Go Report Card](https://goreportcard.com/badge/github.com/Calindra/nonodo)](https://goreportcard.com/report/github.com/Calindra/nonodo)
+![GitHub Release](https://img.shields.io/github/v/release/calindra/nonodo?include_prereleases&sort=semver&filter=v2*)
 
 NoNodo is a development node for [Cartesi Rollups](https://docs.cartesi.io/cartesi-rollups/) that was designed to work with applications running in the host machine instead of the Cartesi machine.
 So, the application developer doesn't need to be concerned with compiling their application to RISC-V.
@@ -205,7 +206,7 @@ Salsa/Lambada Support
 You can start a Lambda server using Salsa
 
 ```sh
-nonodo --salsa 
+nonodo --salsa
 ```
 
 Optionally, you can ser server's host and port
