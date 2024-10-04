@@ -179,13 +179,17 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 				slog.Debug("TypedData", "typedData.Domain", typedData.Domain,
 					"chainId", chainId,
 				)
-
+				blockNumber := e.getL1FinalizedHeight(currentBlockHeight)
+				prevRandao, err := readPrevRandao(ctx, currentBlockHeight, e.InputterWorker)
+				if err != nil {
+					return err
+				}
 				_, err = e.InputRepository.Create(ctx, cModel.AdvanceInput{
 					ID:                     common.Bytes2Hex(crypto.Keccak256(signature)),
 					Index:                  int(index),
 					MsgSender:              msgSender,
 					Payload:                payloadBytes,
-					BlockNumber:            e.getL1FinalizedHeight(currentBlockHeight),
+					BlockNumber:            blockNumber,
 					BlockTimestamp:         e.getL1FinalizedTimestamp(currentBlockHeight),
 					AppContract:            e.InputterWorker.ApplicationAddress,
 					EspressoBlockNumber:    int(currentBlockHeight),
@@ -193,7 +197,9 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 					InputBoxIndex:          -1,
 					Type:                   "Espresso",
 					ChainId:                chainId,
+					PrevRandao:             prevRandao,
 				})
+				slog.Info("Espresso: input added", "payload", payload)
 				if err != nil {
 					return err
 				}
@@ -258,4 +264,18 @@ func readInputBox(ctx context.Context, l1FinalizedPrevHeight uint64, l1Finalized
 	}
 
 	return nil
+}
+
+func readPrevRandao(ctx context.Context, l1FinalizedCurrentHeight uint64, w *inputter.InputterWorker) (string, error) {
+	client, err := w.GetEthClient()
+	if err != nil {
+		return "", fmt.Errorf("espresso eth client error: %w", err)
+	}
+	header, err := client.HeaderByNumber(ctx, big.NewInt(int64(l1FinalizedCurrentHeight)))
+	if err != nil {
+		return "", fmt.Errorf("espresso read block header error: %w", err)
+	}
+	prevRandao := header.MixDigest.Hex()
+	slog.Debug("readPrevRandao", "prevRandao", prevRandao, "blockNumber", l1FinalizedCurrentHeight)
+	return prevRandao, nil
 }
