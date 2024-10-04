@@ -5,6 +5,8 @@ package model
 
 // Request submitted to the application to advance its state
 type Input struct {
+	// ID of the input
+	ID string `json:"id"`
 	// Input index starting from genesis
 	Index int `json:"index"`
 	// Status of the input
@@ -22,7 +24,12 @@ type Input struct {
 	EspressoTimestamp string `json:"espressoTimestamp"`
 	// Number of the Espresso block in which the input was recorded
 	EspressoBlockNumber string `json:"espressoBlockNumber"`
-	// Input payload in Ethereum hex binary format, starting with '0x'
+	// Input index in the Inpux Box
+	InputBoxIndex string `json:"inputBoxIndex"`
+
+	BlockTimestamp string `json:"blockTimestamp"`
+
+	PrevRandao string `json:"prevRandao"`
 }
 
 // Representation of a transaction that can be carried out on the base layer blockchain, such as a

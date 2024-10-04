@@ -10,7 +10,6 @@ import (
 	"strconv"
 
 	cModel "github.com/calindra/nonodo/internal/convenience/model"
-	convenience "github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
@@ -41,19 +40,38 @@ func ConvertInput(input cModel.AdvanceInput) (*Input, error) {
 		return nil, err
 	}
 
+	espressoBlockTimestampStr := strconv.FormatInt(input.EspressoBlockTimestamp.Unix(), 10)
+	if espressoBlockTimestampStr == "-1" {
+		espressoBlockTimestampStr = ""
+	}
+	espressoBlockNumberStr := strconv.FormatInt(int64(input.EspressoBlockNumber), 10)
+	if espressoBlockNumberStr == "-1" {
+		espressoBlockNumberStr = ""
+	}
+
+	var inputBoxIndexStr string
+	if input.InputBoxIndex != -1 {
+		inputBoxIndexStr = strconv.FormatInt(int64(input.InputBoxIndex), 10)
+	}
+
+	timestamp := fmt.Sprint(input.BlockTimestamp.Unix())
 	return &Input{
+		ID:                  input.ID,
 		Index:               input.Index,
 		Status:              convertedStatus,
 		MsgSender:           input.MsgSender.String(),
-		Timestamp:           fmt.Sprint(input.BlockTimestamp.Unix()),
+		Timestamp:           timestamp,
 		BlockNumber:         fmt.Sprint(input.BlockNumber),
 		Payload:             hexutil.Encode(input.Payload),
-		EspressoTimestamp:   fmt.Sprint(input.EspressoBlockTimestamp.Unix()),
-		EspressoBlockNumber: fmt.Sprint(input.EspressoBlockNumber),
+		EspressoTimestamp:   espressoBlockTimestampStr,
+		EspressoBlockNumber: espressoBlockNumberStr,
+		InputBoxIndex:       inputBoxIndexStr,
+		BlockTimestamp:      timestamp,
+		PrevRandao:          input.PrevRandao,
 	}, nil
 }
 
-func convertConvenientVoucherV1(cVoucher convenience.ConvenienceVoucher) *Voucher {
+func convertConvenientVoucherV1(cVoucher cModel.ConvenienceVoucher) *Voucher {
 	return &Voucher{
 		Index:       int(cVoucher.OutputIndex),
 		InputIndex:  int(cVoucher.InputIndex),
@@ -65,8 +83,8 @@ func convertConvenientVoucherV1(cVoucher convenience.ConvenienceVoucher) *Vouche
 
 func ConvertToConvenienceFilter(
 	filter []*ConvenientFilter,
-) ([]*convenience.ConvenienceFilter, error) {
-	filters := []*convenience.ConvenienceFilter{}
+) ([]*cModel.ConvenienceFilter, error) {
+	filters := []*cModel.ConvenienceFilter{}
 	for _, f := range filter {
 		and, err := ConvertToConvenienceFilter(f.And)
 		if err != nil {
@@ -91,7 +109,7 @@ func ConvertToConvenienceFilter(
 			or = append(_or, or...)
 
 			filter := "Destination"
-			filters = append(filters, &convenience.ConvenienceFilter{
+			filters = append(filters, &cModel.ConvenienceFilter{
 				Field: &filter,
 				Eq:    f.Destination.Eq,
 				Ne:    f.Destination.Ne,
@@ -131,7 +149,7 @@ func ConvertToConvenienceFilter(
 			}
 
 			filter := "Executed"
-			filters = append(filters, &convenience.ConvenienceFilter{
+			filters = append(filters, &cModel.ConvenienceFilter{
 				Field: &filter,
 				Eq:    &eq,
 				Ne:    &ne,
@@ -164,7 +182,7 @@ func ConvertToConvenienceFilter(
 }
 
 func ConvertToVoucherConnectionV1(
-	vouchers []convenience.ConvenienceVoucher,
+	vouchers []cModel.ConvenienceVoucher,
 	offset int, total int,
 ) (*VoucherConnection, error) {
 	convNodes := make([]*Voucher, len(vouchers))
@@ -174,7 +192,7 @@ func ConvertToVoucherConnectionV1(
 	return NewConnection(offset, total, convNodes), nil
 }
 
-func convertConvenientNoticeV1(cNotice convenience.ConvenienceNotice) *Notice {
+func convertConvenientNoticeV1(cNotice cModel.ConvenienceNotice) *Notice {
 	return &Notice{
 		Index:      int(cNotice.OutputIndex),
 		InputIndex: int(cNotice.InputIndex),
@@ -183,7 +201,7 @@ func convertConvenientNoticeV1(cNotice convenience.ConvenienceNotice) *Notice {
 }
 
 func ConvertToNoticeConnectionV1(
-	notices []convenience.ConvenienceNotice,
+	notices []cModel.ConvenienceNotice,
 	offset int, total int,
 ) (*NoticeConnection, error) {
 	convNodes := make([]*Notice, len(notices))

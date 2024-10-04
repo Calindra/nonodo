@@ -217,9 +217,9 @@ func (a AdapterV1) convertToReport(
 	}
 }
 
-func (a AdapterV1) GetInput(index int) (*graphql.Input, error) {
+func (a AdapterV1) GetInput(id string) (*graphql.Input, error) {
 	ctx := context.Background()
-	input, err := a.inputRepository.FindByIndex(ctx, index)
+	input, err := a.inputRepository.FindByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
@@ -262,6 +262,13 @@ func (a AdapterV1) GetInputs(
 			filters = append(filters, &cModel.ConvenienceFilter{
 				Field: &msgSenderField,
 				Eq:    where.MsgSender,
+			})
+		}
+		if where.Type != nil {
+			typeField := "Type"
+			filters = append(filters, &cModel.ConvenienceFilter{
+				Field: &typeField,
+				Eq:    where.Type,
 			})
 		}
 	}

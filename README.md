@@ -10,10 +10,15 @@ NoNodo is a valuable development workflow help, but there are some [caveats](#ca
 
 ## Installation
 
-### Pre-requisites
+### Battery-included
 
 NoNodo uses the Anvil as the underlying Ethereum node.
-To install Anvil, read the instructions on the [Foundry book](https://book.getfoundry.sh/getting-started/installation).
+For the current version, NoNodo provides a built-in anvil (from Foundry), *we don't use the system foundry*.
+You can change the version by setting the `ANVIL_TAG` environment variable to a specific tag before executing NoNodo:
+
+```bash
+export ANVIL_TAG=nightly-2cdbfaca634b284084d0f86357623aef7a0d2ce3
+```
 
 ### Installing from npm
 
@@ -114,7 +119,7 @@ You can increase the default timeout by passing a flag.
 nonodo --sm-deadline-advance-state 30s --sm-deadline-inspect-state 30s
 ```
 
-### Sending inputs
+### Sending inputs to Inputbox
 
 To send an input to the Cartesi application, you may use cast, a command-line tool from the foundry
 package. For instance, the invocation below sends an input with contents `0xdeadbeef` to the running
@@ -217,6 +222,20 @@ NoNodo is compatible with the following version of the Cartesi Rollups.
 | ------------------------- | -------------------------------------------------------------------------- |
 | Cartesi Rollups Contracts | [v1.1.0](https://github.com/cartesi/rollups-contracts/releases/tag/v1.1.0) |
 | Cartesi Rollups Node      | [v1.2.0](https://github.com/cartesi/rollups-node/releases/tag/v1.2.0)      |
+
+## Avail Integration
+
+Learn how to use Nonodo with the Avail.
+
+[Avail + Cartesi](./docs/avail.md)
+
+## Espresso Integration
+
+To send an input to Espresso
+
+```sh
+nonodo espresso send --payload aabbcc
+```
 
 ## Caveats
 

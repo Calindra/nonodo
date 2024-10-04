@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1
 # Use uma imagem base que tenha o Go instalado
-FROM golang:1.22.4-bookworm
+FROM golang:1.23.1-bookworm
 
 # Instale Clang
 RUN apt-get update && apt-get install -y clang
@@ -16,8 +16,10 @@ ENV POSTGRES_DB=mydatabase
 ENV POSTGRES_USER=myuser
 ENV POSTGRES_PASSWORD=mypassword
 
+ARG ANVIL_TAG=nightly-2cdbfaca634b284084d0f86357623aef7a0d2ce3
+
 # Verifique se o Foundry e anvil estão instalados corretamente
-RUN foundryup && which anvil
+RUN foundryup --version ${ANVIL_TAG} && which anvil
 
 # Crie um diretório de trabalho fora do GOPATH
 WORKDIR /app

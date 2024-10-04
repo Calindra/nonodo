@@ -7,6 +7,7 @@ package reader
 import (
 	"context"
 	"log/slog"
+	"strconv"
 
 	"github.com/calindra/nonodo/internal/reader/graph"
 	"github.com/calindra/nonodo/internal/reader/model"
@@ -44,7 +45,7 @@ func (r *inputResolver) Reports(ctx context.Context, obj *model.Input, first *in
 
 // Input is the resolver for the input field.
 func (r *noticeResolver) Input(ctx context.Context, obj *model.Notice) (*model.Input, error) {
-	return r.adapter.GetInput(obj.InputIndex)
+	return r.adapter.GetInput(strconv.Itoa(obj.InputIndex))
 }
 
 // Proof is the resolver for the proof field.
@@ -53,26 +54,9 @@ func (r *noticeResolver) Proof(ctx context.Context, obj *model.Notice) (*model.P
 }
 
 // Input is the resolver for the input field.
-func (r *queryResolver) Input(ctx context.Context, index int) (*model.Input, error) {
-	slog.Debug("queryResolver.Input", "index", index)
-	return r.adapter.GetInput(index)
-}
-
-// Voucher is the resolver for the voucher field.
-func (r *queryResolver) Voucher(ctx context.Context, voucherIndex int, inputIndex int) (*model.Voucher, error) {
-	slog.Debug("queryResolver.Voucher", "voucherIndex", voucherIndex, "inputIndex", inputIndex)
-	return r.adapter.GetVoucher(voucherIndex, inputIndex)
-}
-
-// Notice is the resolver for the notice field.
-func (r *queryResolver) Notice(ctx context.Context, noticeIndex int, inputIndex int) (*model.Notice, error) {
-	slog.Debug("queryResolver.Notice", "noticeIndex", noticeIndex, "inputIndex", inputIndex)
-	return r.adapter.GetNotice(noticeIndex, inputIndex)
-}
-
-// Report is the resolver for the report field.
-func (r *queryResolver) Report(ctx context.Context, reportIndex int, inputIndex int) (*model.Report, error) {
-	return r.adapter.GetReport(reportIndex, inputIndex)
+func (r *queryResolver) Input(ctx context.Context, id string) (*model.Input, error) {
+	slog.Debug("queryResolver.Input", "id", id)
+	return r.adapter.GetInput(id)
 }
 
 // Inputs is the resolver for the inputs field.
@@ -105,12 +89,12 @@ func (r *queryResolver) Reports(ctx context.Context, first *int, last *int, afte
 
 // Input is the resolver for the input field.
 func (r *reportResolver) Input(ctx context.Context, obj *model.Report) (*model.Input, error) {
-	return r.adapter.GetInput(obj.InputIndex)
+	return r.adapter.GetInput(strconv.Itoa(obj.InputIndex))
 }
 
 // Input is the resolver for the input field.
 func (r *voucherResolver) Input(ctx context.Context, obj *model.Voucher) (*model.Input, error) {
-	return r.adapter.GetInput(obj.InputIndex)
+	return r.adapter.GetInput(strconv.Itoa(obj.InputIndex))
 }
 
 // Proof is the resolver for the proof field.

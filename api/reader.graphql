@@ -35,6 +35,8 @@ enum CompletionStatus {
 
 "Request submitted to the application to advance its state"
 type Input {
+  "id of the input"
+  id: String!
   "Input index starting from genesis"
   index: Int!
   "Status of the input"
@@ -42,7 +44,7 @@ type Input {
   "Address responsible for submitting the input"
   msgSender: String!
   "Timestamp associated with the input submission, as defined by the base layer's block in which it was recorded"
-  timestamp: BigInt!
+  timestamp: BigInt! @deprecated(reason: "Use `blockTimestamp` instead")
   "Number of the base layer block in which the input was recorded"
   blockNumber: BigInt!
   "Input payload in Ethereum hex binary format, starting with '0x'"
@@ -60,9 +62,15 @@ type Input {
   "Get reports from this particular input with support for pagination"
   reports(first: Int, last: Int, after: String, before: String): ReportConnection!
   "Timestamp associated with the Espresso input submission"
-  espressoTimestamp: BigInt!
+  espressoTimestamp: String @deprecated(reason: "Will be removed")
   "Number of the Espresso block in which the input was recorded"
-  espressoBlockNumber: BigInt!
+  espressoBlockNumber: String @deprecated(reason: "Will be removed")
+  "Input index in the Input Box"
+  inputBoxIndex: String
+
+  blockTimestamp: BigInt
+
+  prevRandao: String
 }
 
 "Representation of a transaction that can be carried out on the base layer blockchain, such as a transfer of assets"
@@ -85,13 +93,7 @@ type Voucher {
 "Top level queries"
 type Query {
   "Get input based on its identifier"
-  input(index: Int!): Input!
-  "Get a voucher based on its index"
-  voucher(voucherIndex: Int!, inputIndex: Int!): Voucher!
-  "Get a notice based on its index"
-  notice(noticeIndex: Int!, inputIndex: Int!): Notice!
-  "Get a report based on its index"
-  report(reportIndex: Int!, inputIndex: Int!): Report!
+  input(id: String!): Input!
   "Get inputs with support for pagination"
   inputs(first: Int, last: Int, after: String, before: String, where: InputFilter): InputConnection!
   "Get vouchers with support for pagination"
@@ -169,6 +171,9 @@ input InputFilter {
 
   "Filter only inputs with the message sender"
   msgSender: String
+
+  "Filter only inputs from 'inputbox' or 'espresso'"
+  type: String
 }
 
 scalar BigInt

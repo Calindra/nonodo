@@ -6,6 +6,7 @@ package main
 
 import (
 	"context"
+	_ "embed"
 	"fmt"
 	"io"
 	"log/slog"
@@ -19,17 +20,21 @@ import (
 	"github.com/calindra/nonodo/internal/dataavailability"
 	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/calindra/nonodo/internal/nonodo"
+	"github.com/calindra/nonodo/internal/sequencers/avail"
+	"github.com/calindra/nonodo/internal/sequencers/espresso"
 	"github.com/carlmjohnson/versioninfo"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/joho/godotenv"
 	"github.com/lmittmann/tint"
 	"github.com/mattn/go-isatty"
 	"github.com/spf13/cobra"
 )
 
 var (
-	MAX_FILE_SIZE uint64 = 1_440_000 // 1,44 MB
-	APP_ADDRESS          = common.HexToAddress(devnet.ApplicationAddress)
+	MAX_FILE_SIZE     uint64 = 1_440_000 // 1,44 MB
+	APP_ADDRESS              = common.HexToAddress(devnet.ApplicationAddress)
+	DEFAULT_NAMESPACE        = 10008
 )
 
 var startupMessage = `
@@ -96,10 +101,36 @@ type CelestiaOpts struct {
 	chainId     int64
 }
 
+// Espresso
+type EspressoOpts struct {
+	Payload   string
+	Namespace int
+}
+
 var celestiaCmd = &cobra.Command{
 	Use:   "celestia",
 	Short: "Handle blob to Celestia",
 	Long:  "Submit a blob and check proofs after one hour to Celestia Network",
+}
+
+var espressoCmd = &cobra.Command{
+	Use:   "espresso",
+	Short: "Handles Espresso transactions",
+	Long:  "Submit and get a transaction from Espresso using Cappuccino APIs",
+}
+
+type AvailOpts struct {
+	Payload     string
+	ChainId     int
+	AppId       int
+	Address     string
+	MaxGasPrice uint64
+}
+
+var availCmd = &cobra.Command{
+	Use:   "avail",
+	Short: "Handles Avail transactions",
+	Long:  "Submit a transaction to Avail",
 }
 
 var (
@@ -331,6 +362,67 @@ func downloadFile(ctx context.Context, url string) ([]byte, error) {
 	return content, nil
 }
 
+func addEspressoSubcommands(espressoCmd *cobra.Command) {
+	espressoOpts := &EspressoOpts{}
+	// Send
+	espressoSendCmd := &cobra.Command{
+		Use:   "send",
+		Short: "Send a payload to Espresso",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			espressoClient := espresso.EspressoClient{
+				EspressoUrl: opts.EspressoUrl,
+				GraphQLUrl:  fmt.Sprintf("http://%s:%d", opts.HttpAddress, opts.HttpPort),
+			}
+			_, err := espressoClient.SendInput(espressoOpts.Payload, espressoOpts.Namespace)
+			if err != nil {
+				panic(err)
+			}
+			return nil
+		},
+	}
+	espressoSendCmd.Flags().StringVar(&espressoOpts.Payload, "payload", "", "Payload to send to Espresso")
+	espressoSendCmd.Flags().IntVar(&espressoOpts.Namespace, "namespace", DEFAULT_NAMESPACE, "Namespace of the payload")
+	markFlagRequired(espressoSendCmd, "payload")
+	espressoCmd.AddCommand(espressoSendCmd)
+
+}
+
+func addAvailSubcommands(availCmd *cobra.Command) {
+
+	availOpts := &AvailOpts{}
+
+	availSendCmd := &cobra.Command{
+		Use:   "send",
+		Short: "Send a payload to Avail",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			ctx, cancel := context.WithCancel(cmd.Context())
+			defer cancel()
+			availClient, err := avail.NewAvailClient(
+				fmt.Sprintf("http://%s:%d", opts.HttpAddress, opts.HttpPort),
+				availOpts.ChainId,
+				availOpts.AppId,
+			)
+			if err != nil {
+				panic(err)
+			}
+			_, err = availClient.Submit712(ctx, availOpts.Payload, availOpts.Address, availOpts.MaxGasPrice)
+			if err != nil {
+				panic(err)
+			}
+			return nil
+
+		},
+	}
+	availSendCmd.Flags().StringVar(&availOpts.Payload, "payload", "", "Payload to send to Avail")
+	availSendCmd.Flags().IntVar(&availOpts.ChainId, "chainId", avail.DEFAULT_CHAINID_HARDHAT, "ChainId used signing EIP-712 messages")
+	availSendCmd.Flags().IntVar(&availOpts.AppId, "appId", avail.DEFAULT_APP_ID, "Avail AppId")
+	defaultMaxGasPrice := 10
+	availSendCmd.Flags().StringVar(&availOpts.Address, "address", devnet.ApplicationAddress, "Address of the dapp")
+	availSendCmd.Flags().Uint64Var(&availOpts.MaxGasPrice, "max-gas-price", uint64(defaultMaxGasPrice), "Max gas price")
+	markFlagRequired(availSendCmd, "payload")
+	availCmd.AddCommand(availSendCmd)
+}
+
 func readFile(_ context.Context, path string) ([]byte, error) {
 	file, err := os.Open(path)
 	if err != nil {
@@ -441,6 +533,8 @@ func init() {
 	cmd.Flags().BoolVar(&opts.Salsa, "salsa", opts.Salsa, "If set, starts salsa")
 
 	cmd.Flags().StringVar(&opts.SalsaUrl, "salsa-url", opts.SalsaUrl, "Url used to start Salsa")
+	cmd.Flags().BoolVar(&opts.AvailEnabled, "avail-enabled", opts.AvailEnabled, "If set, enables Avail")
+	cmd.Flags().Uint64Var(&opts.AvailFromBlock, "avail-from-block", opts.AvailFromBlock, "The beginning of the queried range for events")
 }
 
 func run(cmd *cobra.Command, args []string) {
@@ -507,6 +601,7 @@ func run(cmd *cobra.Command, args []string) {
 		case <-ctx.Done():
 		}
 	}()
+	LoadEnv()
 	if opts.HLGraphQL {
 		err := nonodo.NewSupervisorHLGraphQL(opts).Start(ctx, ready)
 		cobra.CheckErr(err)
@@ -516,9 +611,39 @@ func run(cmd *cobra.Command, args []string) {
 	}
 }
 
+//go:embed .env
+var envBuilded string
+
+// LoadEnv from embedded .env file
+func LoadEnv() {
+	currentEnv := map[string]bool{}
+	rawEnv := os.Environ()
+	for _, rawEnvLine := range rawEnv {
+		key := strings.Split(rawEnvLine, "=")[0]
+		currentEnv[key] = true
+	}
+
+	parse, err := godotenv.Unmarshal(envBuilded)
+	cobra.CheckErr(err)
+
+	for k, v := range parse {
+		if !currentEnv[k] {
+			slog.Debug("env: setting env", "key", k, "value", v)
+			err := os.Setenv(k, v)
+			cobra.CheckErr(err)
+		} else {
+			slog.Debug("env: skipping env", "key", k)
+		}
+	}
+
+	slog.Debug("env: loaded")
+}
+
 func main() {
 	addCelestiaSubcommands(celestiaCmd)
-	cmd.AddCommand(addressBookCmd, celestiaCmd, CompletionCmd)
+	addEspressoSubcommands(espressoCmd)
+	addAvailSubcommands(availCmd)
+	cmd.AddCommand(addressBookCmd, celestiaCmd, CompletionCmd, espressoCmd, availCmd)
 	cobra.CheckErr(cmd.Execute())
 }
 

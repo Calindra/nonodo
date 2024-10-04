@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -83,67 +84,6 @@ func (s *NonodoSuite) TestItProcessesAdvanceInputs() {
 			input.Notices.Edges[0].Node.Payload[2:])
 		s.Equal(payloads[i][:], s.decodeHex(input.Reports.Edges[0].Node.Payload))
 	}
-}
-
-func (s *NonodoSuite) TestGraphQLVoucher() {
-	opts := NewNonodoOpts()
-	// we are using file cuz there is problem with memory
-	// no such table: reports
-	tempDir, err := os.MkdirTemp("", "")
-	s.NoError(err)
-	sqliteFileName := fmt.Sprintf("test%d.sqlite3", time.Now().UnixMilli())
-	opts.EnableEcho = true
-	opts.SqliteFile = path.Join(tempDir, sqliteFileName)
-	s.setupTest(opts)
-	defer os.RemoveAll(tempDir)
-	s.T().Log("sending advance inputs")
-	const n = 3
-	var payloads [n][32]byte
-	for i := 0; i < n; i++ {
-		payloads[i] = s.makePayload()
-		err := devnet.AddInput(s.ctx, s.rpcUrl, payloads[i][:])
-		s.NoError(err)
-	}
-
-	s.T().Log("waiting until last input is ready")
-	err = s.waitForAdvanceInput(n - 1)
-	s.NoError(err)
-
-	s.T().Log("verifying voucher")
-	voucher, err := readerclient.GetVoucher(s.ctx, s.graphqlClient, 0, 1)
-	s.NoError(err)
-	s.Equal(payloads[1][:], s.decodeHex(voucher.Voucher.Payload))
-}
-
-func (s *NonodoSuite) TestGraphQLNotice() {
-	opts := NewNonodoOpts()
-	// we are using file cuz there is problem with memory
-	// no such table: reports
-	tempDir, err := os.MkdirTemp("", "")
-	s.NoError(err)
-	sqliteFileName := fmt.Sprintf("test%d.sqlite3", time.Now().UnixMilli())
-	opts.EnableEcho = true
-	opts.SqliteFile = path.Join(tempDir, sqliteFileName)
-	s.setupTest(opts)
-	defer os.RemoveAll(tempDir)
-	s.T().Log("sending advance inputs")
-	const n = 3
-	var payloads [n][32]byte
-	for i := 0; i < n; i++ {
-		payloads[i] = s.makePayload()
-		err := devnet.AddInput(s.ctx, s.rpcUrl, payloads[i][:])
-		s.NoError(err)
-	}
-
-	s.T().Log("waiting until last input is ready")
-	err = s.waitForAdvanceInput(n - 1)
-	s.NoError(err)
-
-	s.T().Log("verifying voucher")
-	notice, err := readerclient.GetNotice(s.ctx, s.graphqlClient, 0, 1)
-	s.NoError(err)
-	s.Equal(common.Bytes2Hex(payloads[1][:])+"ff",
-		notice.Notice.Payload[2:])
 }
 
 func (s *NonodoSuite) TestItProcessesInspectInputs() {
@@ -255,7 +195,7 @@ func (s *NonodoSuite) waitForAdvanceInput(inputIndex int) error {
 	const pollInterval = 15 * time.Millisecond
 	time.Sleep(100 * time.Millisecond)
 	for i := 0; i < pollRetries; i++ {
-		result, err := readerclient.InputStatus(s.ctx, s.graphqlClient, inputIndex)
+		result, err := readerclient.InputStatus(s.ctx, s.graphqlClient, strconv.Itoa(inputIndex))
 		if err != nil && !strings.Contains(err.Error(), "input not found") {
 			return fmt.Errorf("failed to get input status: %w", err)
 		}

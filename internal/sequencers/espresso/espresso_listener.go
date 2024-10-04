@@ -12,12 +12,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/contracts"
 	cModel "github.com/calindra/nonodo/internal/convenience/model"
 	cRepos "github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/calindra/nonodo/internal/dataavailability"
 	"github.com/calindra/nonodo/internal/sequencers/inputter"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/tidwall/gjson"
 )
@@ -55,6 +57,7 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 	slog.Debug("Espresso: watchNewTransactions", "fromBlock", e.fromBlock)
 	currentBlockHeight := e.fromBlock
 	previousBlockHeight := currentBlockHeight
+	l1FinalizedPrevHeight := e.getL1FinalizedHeight(previousBlockHeight)
 
 	// keep track of msgSender -> nonce
 	nonceMap := make(map[common.Address]int64)
@@ -68,38 +71,35 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 		}
 		slog.Debug("Espresso:", "lastEspressoBlockHeight", lastEspressoBlockHeight)
 		if lastEspressoBlockHeight == currentBlockHeight {
-			var delay time.Duration = 500
+			var delay time.Duration = 800
 			time.Sleep(delay * time.Millisecond)
 			continue
 		}
 		for ; currentBlockHeight < lastEspressoBlockHeight; currentBlockHeight++ {
-			slog.Debug("Espresso:", "currentBlockHeight", currentBlockHeight)
+			slog.Debug("Espresso:", "currentBlockHeight", currentBlockHeight, "namespace", e.namespace)
 			transactions, err := e.espressoAPI.FetchTransactionsInBlock(ctx, currentBlockHeight, e.namespace)
 			if err != nil {
 				return err
 			}
 			tot := len(transactions.Transactions)
 
-			if tot > 0 {
-				l1FinalizedPrevHeight := e.getL1FinalizedHeight(previousBlockHeight)
-				l1FinalizedCurrentHeight := e.getL1FinalizedHeight(currentBlockHeight)
+			// read inputbox
+			l1FinalizedCurrentHeight := e.getL1FinalizedHeight(currentBlockHeight)
+			// read L1 if there might be update
+			if l1FinalizedCurrentHeight > l1FinalizedPrevHeight || currentBlockHeight == e.fromBlock {
 				slog.Debug("L1 finalized", "from", l1FinalizedPrevHeight, "to", l1FinalizedCurrentHeight)
-
-				// read L1 if there might be update
-				if l1FinalizedCurrentHeight > l1FinalizedPrevHeight || previousBlockHeight == e.fromBlock {
-					slog.Debug("Fetching InputBox between Espresso blocks", "from", previousBlockHeight, "to", currentBlockHeight)
-					err = readInputBox(ctx, l1FinalizedPrevHeight, l1FinalizedCurrentHeight, e.InputterWorker)
-					if err != nil {
-						return err
-					}
+				slog.Debug("Fetching InputBox between Espresso blocks", "from", previousBlockHeight, "to", currentBlockHeight)
+				err = readInputBox(ctx, l1FinalizedPrevHeight, l1FinalizedCurrentHeight, e.InputterWorker)
+				if err != nil {
+					return err
 				}
-				previousBlockHeight = currentBlockHeight + 1
+				l1FinalizedPrevHeight = l1FinalizedCurrentHeight
 			}
 
 			slog.Debug("Espresso:", "transactionsLen", tot)
 			for i := 0; i < tot; i++ {
 				transaction := transactions.Transactions[i]
-				slog.Debug("transaction", "currentBlockHeight", currentBlockHeight, "transaction", transaction)
+				slog.Debug("Espresso:", "currentBlockHeight", currentBlockHeight, "transaction", transaction)
 
 				ctx := context.Background()
 				// transform and add to InputRepository
@@ -113,7 +113,7 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 				//		 	signature,
 				//		 	typedData: btoa(JSON.stringify(typedData)),
 				//		 })
-				msgSender, typedData, err := ExtractSigAndData(string(transaction))
+				msgSender, typedData, signature, err := commons.ExtractSigAndData(string(transaction))
 				if err != nil {
 					return err
 				}
@@ -121,10 +121,28 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 				// 	nonce   uint32 `json:"nonce"`
 				// 	payload string `json:"payload"`
 				// }
-				nonce := int64(typedData.Message["nonce"].(float64)) // by default, JSON number is float64
-				payload, ok := typedData.Message["payload"].(string)
+				nonceField := typedData.Message["nonce"]
+
+				var nonce int64
+				// Request tx is coming from nonodo, the nonce at this point returns as string always
+				if _, ok := nonceField.(string); ok {
+					strNonce := nonceField.(string)
+					parsedNonce, err := strconv.ParseInt(strNonce, 10, 64)
+					if err != nil {
+						return fmt.Errorf("error converting nonce from string to int64: %v", err)
+					}
+					nonce = parsedNonce
+				} else if _, ok := nonceField.(float64); ok {
+					// When coming from other sources, the nonce at this point is a float
+					nonce = int64(nonceField.(float64))
+				} else {
+					//
+					return fmt.Errorf("error converting nonce: %T", nonceField)
+				}
+
+				payload, ok := typedData.Message["data"].(string)
 				if !ok {
-					return fmt.Errorf("type assertion error")
+					return fmt.Errorf("message data type assertion error")
 				}
 				slog.Debug("Espresso input", "msgSender", msgSender, "nonce", nonce, "payload", payload)
 
@@ -149,14 +167,17 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 				}
 
 				_, err = e.InputRepository.Create(ctx, cModel.AdvanceInput{
+					ID:                     common.Bytes2Hex(crypto.Keccak256(signature)),
 					Index:                  int(index),
 					MsgSender:              msgSender,
 					Payload:                payloadBytes,
 					BlockNumber:            e.getL1FinalizedHeight(currentBlockHeight),
 					BlockTimestamp:         e.getL1FinalizedTimestamp(currentBlockHeight),
 					AppContract:            e.InputterWorker.ApplicationAddress,
-					EspressoBlockNumber:    currentBlockHeight,
+					EspressoBlockNumber:    int(currentBlockHeight),
 					EspressoBlockTimestamp: e.getEspressoTimestamp(currentBlockHeight),
+					InputBoxIndex:          -1,
+					Type:                   "Espresso",
 				})
 				if err != nil {
 					return err
@@ -184,7 +205,7 @@ func (e EspressoListener) readEspressoHeader(espressoBlockHeight uint64) string 
 
 func (e EspressoListener) getL1FinalizedTimestamp(espressoBlockHeight uint64) time.Time {
 	espressoHeader := e.readEspressoHeader(espressoBlockHeight)
-	value := gjson.Get(espressoHeader, "l1_finalized.timestamp")
+	value := gjson.Get(espressoHeader, "fields.l1_finalized.timestamp")
 	timestampStr := value.Str
 	timestampInt, err := strconv.ParseInt(timestampStr[2:], 16, 64)
 	if err != nil {
@@ -196,7 +217,7 @@ func (e EspressoListener) getL1FinalizedTimestamp(espressoBlockHeight uint64) ti
 
 func (e EspressoListener) getL1FinalizedHeight(espressoBlockHeight uint64) uint64 {
 	espressoHeader := e.readEspressoHeader(espressoBlockHeight)
-	value := gjson.Get(espressoHeader, "l1_finalized.number")
+	value := gjson.Get(espressoHeader, "fields.l1_finalized.number")
 	return value.Uint()
 }
 

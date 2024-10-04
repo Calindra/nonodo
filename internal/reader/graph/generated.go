@@ -51,13 +51,17 @@ type DirectiveRoot struct {
 type ComplexityRoot struct {
 	Input struct {
 		BlockNumber         func(childComplexity int) int
+		BlockTimestamp      func(childComplexity int) int
 		EspressoBlockNumber func(childComplexity int) int
 		EspressoTimestamp   func(childComplexity int) int
+		ID                  func(childComplexity int) int
 		Index               func(childComplexity int) int
+		InputBoxIndex       func(childComplexity int) int
 		MsgSender           func(childComplexity int) int
 		Notice              func(childComplexity int, index int) int
 		Notices             func(childComplexity int, first *int, last *int, after *string, before *string) int
 		Payload             func(childComplexity int) int
+		PrevRandao          func(childComplexity int) int
 		Report              func(childComplexity int, index int) int
 		Reports             func(childComplexity int, first *int, last *int, after *string, before *string) int
 		Status              func(childComplexity int) int
@@ -119,13 +123,10 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		Input    func(childComplexity int, index int) int
+		Input    func(childComplexity int, id string) int
 		Inputs   func(childComplexity int, first *int, last *int, after *string, before *string, where *model.InputFilter) int
-		Notice   func(childComplexity int, noticeIndex int, inputIndex int) int
 		Notices  func(childComplexity int, first *int, last *int, after *string, before *string) int
-		Report   func(childComplexity int, reportIndex int, inputIndex int) int
 		Reports  func(childComplexity int, first *int, last *int, after *string, before *string) int
-		Voucher  func(childComplexity int, voucherIndex int, inputIndex int) int
 		Vouchers func(childComplexity int, first *int, last *int, after *string, before *string, filter []*model.ConvenientFilter) int
 	}
 
@@ -181,10 +182,7 @@ type NoticeResolver interface {
 	Proof(ctx context.Context, obj *model.Notice) (*model.Proof, error)
 }
 type QueryResolver interface {
-	Input(ctx context.Context, index int) (*model.Input, error)
-	Voucher(ctx context.Context, voucherIndex int, inputIndex int) (*model.Voucher, error)
-	Notice(ctx context.Context, noticeIndex int, inputIndex int) (*model.Notice, error)
-	Report(ctx context.Context, reportIndex int, inputIndex int) (*model.Report, error)
+	Input(ctx context.Context, id string) (*model.Input, error)
 	Inputs(ctx context.Context, first *int, last *int, after *string, before *string, where *model.InputFilter) (*model.Connection[*model.Input], error)
 	Vouchers(ctx context.Context, first *int, last *int, after *string, before *string, filter []*model.ConvenientFilter) (*model.Connection[*model.Voucher], error)
 	Notices(ctx context.Context, first *int, last *int, after *string, before *string) (*model.Connection[*model.Notice], error)
@@ -225,6 +223,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Input.BlockNumber(childComplexity), true
 
+	case "Input.blockTimestamp":
+		if e.complexity.Input.BlockTimestamp == nil {
+			break
+		}
+
+		return e.complexity.Input.BlockTimestamp(childComplexity), true
+
 	case "Input.espressoBlockNumber":
 		if e.complexity.Input.EspressoBlockNumber == nil {
 			break
@@ -239,12 +244,26 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Input.EspressoTimestamp(childComplexity), true
 
+	case "Input.id":
+		if e.complexity.Input.ID == nil {
+			break
+		}
+
+		return e.complexity.Input.ID(childComplexity), true
+
 	case "Input.index":
 		if e.complexity.Input.Index == nil {
 			break
 		}
 
 		return e.complexity.Input.Index(childComplexity), true
+
+	case "Input.inputBoxIndex":
+		if e.complexity.Input.InputBoxIndex == nil {
+			break
+		}
+
+		return e.complexity.Input.InputBoxIndex(childComplexity), true
 
 	case "Input.msgSender":
 		if e.complexity.Input.MsgSender == nil {
@@ -283,6 +302,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Input.Payload(childComplexity), true
+
+	case "Input.prevRandao":
+		if e.complexity.Input.PrevRandao == nil {
+			break
+		}
+
+		return e.complexity.Input.PrevRandao(childComplexity), true
 
 	case "Input.report":
 		if e.complexity.Input.Report == nil {
@@ -573,7 +599,7 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 			return 0, false
 		}
 
-		return e.complexity.Query.Input(childComplexity, args["index"].(int)), true
+		return e.complexity.Query.Input(childComplexity, args["id"].(string)), true
 
 	case "Query.inputs":
 		if e.complexity.Query.Inputs == nil {
@@ -587,18 +613,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.Inputs(childComplexity, args["first"].(*int), args["last"].(*int), args["after"].(*string), args["before"].(*string), args["where"].(*model.InputFilter)), true
 
-	case "Query.notice":
-		if e.complexity.Query.Notice == nil {
-			break
-		}
-
-		args, err := ec.field_Query_notice_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Query.Notice(childComplexity, args["noticeIndex"].(int), args["inputIndex"].(int)), true
-
 	case "Query.notices":
 		if e.complexity.Query.Notices == nil {
 			break
@@ -611,18 +625,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.Notices(childComplexity, args["first"].(*int), args["last"].(*int), args["after"].(*string), args["before"].(*string)), true
 
-	case "Query.report":
-		if e.complexity.Query.Report == nil {
-			break
-		}
-
-		args, err := ec.field_Query_report_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Query.Report(childComplexity, args["reportIndex"].(int), args["inputIndex"].(int)), true
-
 	case "Query.reports":
 		if e.complexity.Query.Reports == nil {
 			break
@@ -634,18 +636,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Query.Reports(childComplexity, args["first"].(*int), args["last"].(*int), args["after"].(*string), args["before"].(*string)), true
-
-	case "Query.voucher":
-		if e.complexity.Query.Voucher == nil {
-			break
-		}
-
-		args, err := ec.field_Query_voucher_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Query.Voucher(childComplexity, args["voucherIndex"].(int), args["inputIndex"].(int)), true
 
 	case "Query.vouchers":
 		if e.complexity.Query.Vouchers == nil {
@@ -923,6 +913,8 @@ enum CompletionStatus {
 
 "Request submitted to the application to advance its state"
 type Input {
+  "id of the input"
+  id: String!
   "Input index starting from genesis"
   index: Int!
   "Status of the input"
@@ -930,7 +922,7 @@ type Input {
   "Address responsible for submitting the input"
   msgSender: String!
   "Timestamp associated with the input submission, as defined by the base layer's block in which it was recorded"
-  timestamp: BigInt!
+  timestamp: BigInt! @deprecated(reason: "Use ` + "`" + `blockTimestamp` + "`" + ` instead")
   "Number of the base layer block in which the input was recorded"
   blockNumber: BigInt!
   "Input payload in Ethereum hex binary format, starting with '0x'"
@@ -948,9 +940,15 @@ type Input {
   "Get reports from this particular input with support for pagination"
   reports(first: Int, last: Int, after: String, before: String): ReportConnection!
   "Timestamp associated with the Espresso input submission"
-  espressoTimestamp: BigInt!
+  espressoTimestamp: String @deprecated(reason: "Will be removed")
   "Number of the Espresso block in which the input was recorded"
-  espressoBlockNumber: BigInt!
+  espressoBlockNumber: String @deprecated(reason: "Will be removed")
+  "Input index in the Input Box"
+  inputBoxIndex: String
+
+  blockTimestamp: BigInt
+
+  prevRandao: String
 }
 
 "Representation of a transaction that can be carried out on the base layer blockchain, such as a transfer of assets"
@@ -973,13 +971,7 @@ type Voucher {
 "Top level queries"
 type Query {
   "Get input based on its identifier"
-  input(index: Int!): Input!
-  "Get a voucher based on its index"
-  voucher(voucherIndex: Int!, inputIndex: Int!): Voucher!
-  "Get a notice based on its index"
-  notice(noticeIndex: Int!, inputIndex: Int!): Notice!
-  "Get a report based on its index"
-  report(reportIndex: Int!, inputIndex: Int!): Report!
+  input(id: String!): Input!
   "Get inputs with support for pagination"
   inputs(first: Int, last: Int, after: String, before: String, where: InputFilter): InputConnection!
   "Get vouchers with support for pagination"
@@ -1057,6 +1049,9 @@ input InputFilter {
 
   "Filter only inputs with the message sender"
   msgSender: String
+
+  "Filter only inputs from 'inputbox' or 'espresso'"
+  type: String
 }
 
 scalar BigInt
@@ -1360,15 +1355,15 @@ func (ec *executionContext) field_Query___type_args(ctx context.Context, rawArgs
 func (ec *executionContext) field_Query_input_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
-	var arg0 int
-	if tmp, ok := rawArgs["index"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("index"))
-		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
+	var arg0 string
+	if tmp, ok := rawArgs["id"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("id"))
+		arg0, err = ec.unmarshalNString2string(ctx, tmp)
 		if err != nil {
 			return nil, err
 		}
 	}
-	args["index"] = arg0
+	args["id"] = arg0
 	return args, nil
 }
 
@@ -1423,30 +1418,6 @@ func (ec *executionContext) field_Query_inputs_args(ctx context.Context, rawArgs
 	return args, nil
 }
 
-func (ec *executionContext) field_Query_notice_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 int
-	if tmp, ok := rawArgs["noticeIndex"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("noticeIndex"))
-		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["noticeIndex"] = arg0
-	var arg1 int
-	if tmp, ok := rawArgs["inputIndex"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("inputIndex"))
-		arg1, err = ec.unmarshalNInt2int(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["inputIndex"] = arg1
-	return args, nil
-}
-
 func (ec *executionContext) field_Query_notices_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
@@ -1489,30 +1460,6 @@ func (ec *executionContext) field_Query_notices_args(ctx context.Context, rawArg
 	return args, nil
 }
 
-func (ec *executionContext) field_Query_report_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 int
-	if tmp, ok := rawArgs["reportIndex"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("reportIndex"))
-		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["reportIndex"] = arg0
-	var arg1 int
-	if tmp, ok := rawArgs["inputIndex"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("inputIndex"))
-		arg1, err = ec.unmarshalNInt2int(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["inputIndex"] = arg1
-	return args, nil
-}
-
 func (ec *executionContext) field_Query_reports_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
@@ -1552,30 +1499,6 @@ func (ec *executionContext) field_Query_reports_args(ctx context.Context, rawArg
 		}
 	}
 	args["before"] = arg3
-	return args, nil
-}
-
-func (ec *executionContext) field_Query_voucher_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 int
-	if tmp, ok := rawArgs["voucherIndex"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("voucherIndex"))
-		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["voucherIndex"] = arg0
-	var arg1 int
-	if tmp, ok := rawArgs["inputIndex"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("inputIndex"))
-		arg1, err = ec.unmarshalNInt2int(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["inputIndex"] = arg1
 	return args, nil
 }
 
@@ -1667,6 +1590,50 @@ func (ec *executionContext) field___Type_fields_args(ctx context.Context, rawArg
 // endregion ************************** directives.gotpl **************************
 
 // region    **************************** field.gotpl *****************************
+
+func (ec *executionContext) _Input_id(ctx context.Context, field graphql.CollectedField, obj *model.Input) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Input_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Input_id(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Input",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
 
 func (ec *executionContext) _Input_index(ctx context.Context, field graphql.CollectedField, obj *model.Input) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Input_index(ctx, field)
@@ -2339,14 +2306,11 @@ func (ec *executionContext) _Input_espressoTimestamp(ctx context.Context, field 
 		return graphql.Null
 	}
 	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
 		return graphql.Null
 	}
 	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalNBigInt2string(ctx, field.Selections, res)
+	return ec.marshalOString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Input_espressoTimestamp(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -2356,7 +2320,7 @@ func (ec *executionContext) fieldContext_Input_espressoTimestamp(ctx context.Con
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type BigInt does not have child fields")
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -2383,14 +2347,11 @@ func (ec *executionContext) _Input_espressoBlockNumber(ctx context.Context, fiel
 		return graphql.Null
 	}
 	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
 		return graphql.Null
 	}
 	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalNBigInt2string(ctx, field.Selections, res)
+	return ec.marshalOString2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Input_espressoBlockNumber(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -2400,7 +2361,130 @@ func (ec *executionContext) fieldContext_Input_espressoBlockNumber(ctx context.C
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Input_inputBoxIndex(ctx context.Context, field graphql.CollectedField, obj *model.Input) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Input_inputBoxIndex(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.InputBoxIndex, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalOString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Input_inputBoxIndex(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Input",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Input_blockTimestamp(ctx context.Context, field graphql.CollectedField, obj *model.Input) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Input_blockTimestamp(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.BlockTimestamp, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalOBigInt2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Input_blockTimestamp(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Input",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type BigInt does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Input_prevRandao(ctx context.Context, field graphql.CollectedField, obj *model.Input) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Input_prevRandao(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.PrevRandao, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalOString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Input_prevRandao(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Input",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
 		},
 	}
 	return fc, nil
@@ -2593,6 +2677,8 @@ func (ec *executionContext) fieldContext_InputEdge_node(ctx context.Context, fie
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "id":
+				return ec.fieldContext_Input_id(ctx, field)
 			case "index":
 				return ec.fieldContext_Input_index(ctx, field)
 			case "status":
@@ -2621,6 +2707,12 @@ func (ec *executionContext) fieldContext_InputEdge_node(ctx context.Context, fie
 				return ec.fieldContext_Input_espressoTimestamp(ctx, field)
 			case "espressoBlockNumber":
 				return ec.fieldContext_Input_espressoBlockNumber(ctx, field)
+			case "inputBoxIndex":
+				return ec.fieldContext_Input_inputBoxIndex(ctx, field)
+			case "blockTimestamp":
+				return ec.fieldContext_Input_blockTimestamp(ctx, field)
+			case "prevRandao":
+				return ec.fieldContext_Input_prevRandao(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Input", field.Name)
 		},
@@ -2755,6 +2847,8 @@ func (ec *executionContext) fieldContext_Notice_input(ctx context.Context, field
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "id":
+				return ec.fieldContext_Input_id(ctx, field)
 			case "index":
 				return ec.fieldContext_Input_index(ctx, field)
 			case "status":
@@ -2783,6 +2877,12 @@ func (ec *executionContext) fieldContext_Notice_input(ctx context.Context, field
 				return ec.fieldContext_Input_espressoTimestamp(ctx, field)
 			case "espressoBlockNumber":
 				return ec.fieldContext_Input_espressoBlockNumber(ctx, field)
+			case "inputBoxIndex":
+				return ec.fieldContext_Input_inputBoxIndex(ctx, field)
+			case "blockTimestamp":
+				return ec.fieldContext_Input_blockTimestamp(ctx, field)
+			case "prevRandao":
+				return ec.fieldContext_Input_prevRandao(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Input", field.Name)
 		},
@@ -3399,6 +3499,8 @@ func (ec *executionContext) fieldContext_Proof_inputByInputIndex(ctx context.Con
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "id":
+				return ec.fieldContext_Input_id(ctx, field)
 			case "index":
 				return ec.fieldContext_Input_index(ctx, field)
 			case "status":
@@ -3427,6 +3529,12 @@ func (ec *executionContext) fieldContext_Proof_inputByInputIndex(ctx context.Con
 				return ec.fieldContext_Input_espressoTimestamp(ctx, field)
 			case "espressoBlockNumber":
 				return ec.fieldContext_Input_espressoBlockNumber(ctx, field)
+			case "inputBoxIndex":
+				return ec.fieldContext_Input_inputBoxIndex(ctx, field)
+			case "blockTimestamp":
+				return ec.fieldContext_Input_blockTimestamp(ctx, field)
+			case "prevRandao":
+				return ec.fieldContext_Input_prevRandao(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Input", field.Name)
 		},
@@ -3932,7 +4040,7 @@ func (ec *executionContext) _Query_input(ctx context.Context, field graphql.Coll
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Input(rctx, fc.Args["index"].(int))
+		return ec.resolvers.Query().Input(rctx, fc.Args["id"].(string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3957,6 +4065,8 @@ func (ec *executionContext) fieldContext_Query_input(ctx context.Context, field 
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "id":
+				return ec.fieldContext_Input_id(ctx, field)
 			case "index":
 				return ec.fieldContext_Input_index(ctx, field)
 			case "status":
@@ -3985,6 +4095,12 @@ func (ec *executionContext) fieldContext_Query_input(ctx context.Context, field 
 				return ec.fieldContext_Input_espressoTimestamp(ctx, field)
 			case "espressoBlockNumber":
 				return ec.fieldContext_Input_espressoBlockNumber(ctx, field)
+			case "inputBoxIndex":
+				return ec.fieldContext_Input_inputBoxIndex(ctx, field)
+			case "blockTimestamp":
+				return ec.fieldContext_Input_blockTimestamp(ctx, field)
+			case "prevRandao":
+				return ec.fieldContext_Input_prevRandao(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Input", field.Name)
 		},
@@ -3997,203 +4113,6 @@ func (ec *executionContext) fieldContext_Query_input(ctx context.Context, field 
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_input_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Query_voucher(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Query_voucher(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Voucher(rctx, fc.Args["voucherIndex"].(int), fc.Args["inputIndex"].(int))
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.Voucher)
-	fc.Result = res
-	return ec.marshalNVoucher2ᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐVoucher(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Query_voucher(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Query",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "index":
-				return ec.fieldContext_Voucher_index(ctx, field)
-			case "input":
-				return ec.fieldContext_Voucher_input(ctx, field)
-			case "destination":
-				return ec.fieldContext_Voucher_destination(ctx, field)
-			case "payload":
-				return ec.fieldContext_Voucher_payload(ctx, field)
-			case "proof":
-				return ec.fieldContext_Voucher_proof(ctx, field)
-			case "executed":
-				return ec.fieldContext_Voucher_executed(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Voucher", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Query_voucher_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Query_notice(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Query_notice(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Notice(rctx, fc.Args["noticeIndex"].(int), fc.Args["inputIndex"].(int))
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.Notice)
-	fc.Result = res
-	return ec.marshalNNotice2ᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐNotice(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Query_notice(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Query",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "index":
-				return ec.fieldContext_Notice_index(ctx, field)
-			case "input":
-				return ec.fieldContext_Notice_input(ctx, field)
-			case "payload":
-				return ec.fieldContext_Notice_payload(ctx, field)
-			case "proof":
-				return ec.fieldContext_Notice_proof(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Notice", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Query_notice_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Query_report(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Query_report(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().Report(rctx, fc.Args["reportIndex"].(int), fc.Args["inputIndex"].(int))
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.Report)
-	fc.Result = res
-	return ec.marshalNReport2ᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐReport(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Query_report(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Query",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "index":
-				return ec.fieldContext_Report_index(ctx, field)
-			case "input":
-				return ec.fieldContext_Report_input(ctx, field)
-			case "payload":
-				return ec.fieldContext_Report_payload(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Report", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Query_report_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -4664,6 +4583,8 @@ func (ec *executionContext) fieldContext_Report_input(ctx context.Context, field
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "id":
+				return ec.fieldContext_Input_id(ctx, field)
 			case "index":
 				return ec.fieldContext_Input_index(ctx, field)
 			case "status":
@@ -4692,6 +4613,12 @@ func (ec *executionContext) fieldContext_Report_input(ctx context.Context, field
 				return ec.fieldContext_Input_espressoTimestamp(ctx, field)
 			case "espressoBlockNumber":
 				return ec.fieldContext_Input_espressoBlockNumber(ctx, field)
+			case "inputBoxIndex":
+				return ec.fieldContext_Input_inputBoxIndex(ctx, field)
+			case "blockTimestamp":
+				return ec.fieldContext_Input_blockTimestamp(ctx, field)
+			case "prevRandao":
+				return ec.fieldContext_Input_prevRandao(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Input", field.Name)
 		},
@@ -5070,6 +4997,8 @@ func (ec *executionContext) fieldContext_Voucher_input(ctx context.Context, fiel
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "id":
+				return ec.fieldContext_Input_id(ctx, field)
 			case "index":
 				return ec.fieldContext_Input_index(ctx, field)
 			case "status":
@@ -5098,6 +5027,12 @@ func (ec *executionContext) fieldContext_Voucher_input(ctx context.Context, fiel
 				return ec.fieldContext_Input_espressoTimestamp(ctx, field)
 			case "espressoBlockNumber":
 				return ec.fieldContext_Input_espressoBlockNumber(ctx, field)
+			case "inputBoxIndex":
+				return ec.fieldContext_Input_inputBoxIndex(ctx, field)
+			case "blockTimestamp":
+				return ec.fieldContext_Input_blockTimestamp(ctx, field)
+			case "prevRandao":
+				return ec.fieldContext_Input_prevRandao(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Input", field.Name)
 		},
@@ -7491,7 +7426,7 @@ func (ec *executionContext) unmarshalInputInputFilter(ctx context.Context, obj i
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"indexLowerThan", "indexGreaterThan", "msgSender"}
+	fieldsInOrder := [...]string{"indexLowerThan", "indexGreaterThan", "msgSender", "type"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -7519,6 +7454,13 @@ func (ec *executionContext) unmarshalInputInputFilter(ctx context.Context, obj i
 				return it, err
 			}
 			it.MsgSender = data
+		case "type":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("type"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Type = data
 		}
 	}
 
@@ -7544,6 +7486,11 @@ func (ec *executionContext) _Input(ctx context.Context, sel ast.SelectionSet, ob
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Input")
+		case "id":
+			out.Values[i] = ec._Input_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
 		case "index":
 			out.Values[i] = ec._Input_index(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -7792,14 +7739,14 @@ func (ec *executionContext) _Input(ctx context.Context, sel ast.SelectionSet, ob
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "espressoTimestamp":
 			out.Values[i] = ec._Input_espressoTimestamp(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
 		case "espressoBlockNumber":
 			out.Values[i] = ec._Input_espressoBlockNumber(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
-			}
+		case "inputBoxIndex":
+			out.Values[i] = ec._Input_inputBoxIndex(ctx, field, obj)
+		case "blockTimestamp":
+			out.Values[i] = ec._Input_blockTimestamp(ctx, field, obj)
+		case "prevRandao":
+			out.Values[i] = ec._Input_prevRandao(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -8295,72 +8242,6 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_input(ctx, field)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			rrm := func(ctx context.Context) graphql.Marshaler {
-				return ec.OperationContext.RootResolverMiddleware(ctx,
-					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
-		case "voucher":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Query_voucher(ctx, field)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			rrm := func(ctx context.Context) graphql.Marshaler {
-				return ec.OperationContext.RootResolverMiddleware(ctx,
-					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
-		case "notice":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Query_notice(ctx, field)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			rrm := func(ctx context.Context) graphql.Marshaler {
-				return ec.OperationContext.RootResolverMiddleware(ctx,
-					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
-		case "report":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Query_report(ctx, field)
 				if res == graphql.Null {
 					atomic.AddUint32(&fs.Invalids, 1)
 				}
@@ -9914,6 +9795,16 @@ func (ec *executionContext) unmarshalOAddressFilterInput2ᚖgithubᚗcomᚋcalin
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
+func (ec *executionContext) unmarshalOBigInt2string(ctx context.Context, v interface{}) (string, error) {
+	res, err := graphql.UnmarshalID(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOBigInt2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
+	res := graphql.MarshalID(v)
+	return res
+}
+
 func (ec *executionContext) unmarshalOBoolean2bool(ctx context.Context, v interface{}) (bool, error) {
 	res, err := graphql.UnmarshalBoolean(v)
 	return res, graphql.ErrorOnPath(ctx, err)
@@ -10012,6 +9903,16 @@ func (ec *executionContext) marshalOProof2ᚖgithubᚗcomᚋcalindraᚋnonodoᚋ
 		return graphql.Null
 	}
 	return ec._Proof(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalOString2string(ctx context.Context, v interface{}) (string, error) {
+	res, err := graphql.UnmarshalString(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOString2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
+	res := graphql.MarshalString(v)
+	return res
 }
 
 func (ec *executionContext) unmarshalOString2ᚕᚖstring(ctx context.Context, v interface{}) ([]*string, error) {

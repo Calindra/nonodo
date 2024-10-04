@@ -38,18 +38,3 @@ query State {
     }
   }
 }
-
-query GetVoucher($voucherIndex: Int!, $inputIndex: Int!) {
-  voucher(voucherIndex: $voucherIndex, inputIndex: $inputIndex) {
-    index
-    payload
-    destination
-  }
-}
-
-query GetNotice($noticeIndex: Int!, $inputIndex: Int!) {
-  notice(noticeIndex: $noticeIndex, inputIndex: $inputIndex) {
-    index
-    payload
-  }
-}

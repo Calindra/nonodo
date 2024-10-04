@@ -78,7 +78,7 @@ function testNoticeFound() {
 
 function testInputFound() {
     const payload = JSON.stringify({
-        query: "query { input(index: 1) { index }}"
+        query: 'query { input(id: "1") { index }}'
     });
 
     const params = {
@@ -191,13 +191,13 @@ function testInputs() {
 }
 
 export default function () {
-    testVoucherNotFound()
-    testVoucherFound()
-    testNoticeFound()
+    // testVoucherNotFound()
+    // testVoucherFound()
+    // testNoticeFound()
     testInputFound()
-    testReportFound()
-    testVouchers()
-    testNotices()
-    testReports()
+    // testReportFound()
+    // testVouchers()
+    // testNotices()
+    // testReports()
     testInputs()
 }

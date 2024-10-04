@@ -79,7 +79,7 @@ func (s *ConvenienceService) CreateInput(
 	ctx context.Context,
 	input *model.AdvanceInput,
 ) (*model.AdvanceInput, error) {
-	inputInDb, err := s.inputRepository.FindByIndex(ctx, input.Index)
+	inputInDb, err := s.inputRepository.FindByID(ctx, input.ID)
 
 	if err != nil {
 		return nil, err
@@ -219,8 +219,8 @@ func (c *ConvenienceService) FindNoticeByInputAndOutputIndex(
 	)
 }
 
-func (c *ConvenienceService) FindInputByIndex(
-	ctx context.Context, index int,
+func (c *ConvenienceService) FindInputByID(
+	ctx context.Context, id string,
 ) (*model.AdvanceInput, error) {
-	return c.inputRepository.FindByIndex(ctx, index)
+	return c.inputRepository.FindByID(ctx, id)
 }

@@ -93,6 +93,7 @@ type Report struct {
 
 // Rollups advance input type.
 type AdvanceInput struct {
+	ID                     string           `db:"id"`
 	Index                  int              `db:"input_index"`
 	Status                 CompletionStatus `db:"status"`
 	MsgSender              common.Address   `db:"msg_sender"`
@@ -105,8 +106,13 @@ type AdvanceInput struct {
 	Notices                []ConvenienceNotice
 	Reports                []Report
 	Exception              []byte
-	EspressoBlockNumber    uint64    `db:"espresso_block_number"`
+	EspressoBlockNumber    int       `db:"espresso_block_number"`
 	EspressoBlockTimestamp time.Time `db:"espresso_block_timestamp"`
+	InputBoxIndex          int       `db:"input_box_index"`
+	AvailBlockNumber       int       `db:"avail_block_number"`
+	AvailBlockTimestamp    time.Time `db:"avail_block_timestamp"`
+	Type                   string    `db:"type"`
+	CartesiTransactionId   string    `db:"cartesi_transaction_id"`
 }
 
 type ConvertedInput struct {
@@ -116,6 +122,7 @@ type ConvertedInput struct {
 	BlockTimestamp int64          `json:"blockTimestamp"`
 	PrevRandao     string         `json:"prevRandao"`
 	Payload        string         `json:"payload"`
+	InputBoxIndex  int64          `json:"input_box_index"`
 }
 
 type InputEdge struct {
