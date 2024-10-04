@@ -24,17 +24,16 @@ type PaioDecoder struct {
 	location string
 }
 
-func NewPaioDecoder() *PaioDecoder {
-	var location string
+func NewPaioDecoder(location string) *PaioDecoder {
 	return &PaioDecoder{location}
 }
 
 // call the paio decoder binary
-func (t *PaioDecoder) DecodePaioBatch(stdCtx context.Context, bytes string) (string, error) {
+func (pd *PaioDecoder) DecodePaioBatch(stdCtx context.Context, bytes string) (string, error) {
 	ctx, cancel := context.WithTimeout(stdCtx, TimeoutExecutionPaioDecoder)
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, t.location, bytes)
+	cmd := exec.CommandContext(ctx, pd.location, bytes)
 	output, err := commons.RunCommandOnce(ctx, cmd)
 	if err != nil {
 		return "", fmt.Errorf("failed to run command: %w", err)

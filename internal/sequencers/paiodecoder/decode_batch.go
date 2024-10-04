@@ -22,8 +22,12 @@ const (
 	DEFAULT_NAME_PROGRAM = "decode-batch"
 )
 
-func (d *Paio) IsDecodeBatchInstalled() bool {
-	location := path.Join(os.TempDir(), d.NameProgram)
+func IsDecodeBatchInstalled() bool {
+	filename := DEFAULT_NAME_PROGRAM
+	if runtime.GOOS == commons.WINDOWS {
+		filename = filename + ".exe"
+	}
+	location := path.Join(os.TempDir(), filename)
 	_, err := os.Stat(location)
 	return err == nil
 }
@@ -96,7 +100,6 @@ func LoadPaioConfig(path string) (*PaioConfig, error) {
 }
 
 type Paio struct {
-	NameProgram    string
 	Namespace      string
 	Repository     string
 	ConfigFilename string
@@ -105,7 +108,6 @@ type Paio struct {
 
 func NewPaio() commons.HandleRelease {
 	return Paio{
-		NameProgram: DEFAULT_NAME_PROGRAM,
 		// Change for Cartesi when available
 		Namespace:      "Calindra",
 		Repository:     "paio",
@@ -192,6 +194,10 @@ func (d Paio) FormatNameRelease(prefix string, goos string, goarch string, versi
 	if goos == commons.WINDOWS {
 		ext = ".exe"
 		myos = "windows-msvc"
+	}
+
+	if goos == "linux" {
+		myos = "unknown-linux-gnu"
 	}
 
 	if goos == "darwin" {

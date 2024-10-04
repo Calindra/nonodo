@@ -45,12 +45,12 @@ type PaioDecoder interface {
 	DecodePaioBatch(bytes string) (string, error)
 }
 
-func NewAvailListener(fromBlock uint64, repository *cRepos.InputRepository, w *inputter.InputterWorker) supervisor.Worker {
+func NewAvailListener(fromBlock uint64, repository *cRepos.InputRepository, w *inputter.InputterWorker, decoder string) supervisor.Worker {
 	return AvailListener{
 		FromBlock:       fromBlock,
 		InputRepository: repository,
 		InputterWorker:  w,
-		PaioDecoder:     paiodecoder.NewPaioDecoder(),
+		PaioDecoder:     paiodecoder.NewPaioDecoder(decoder),
 	}
 }
 

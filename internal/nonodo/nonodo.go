@@ -15,6 +15,7 @@ import (
 	"path"
 	"time"
 
+	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/convenience"
 	"github.com/calindra/nonodo/internal/convenience/synchronizer"
 	"github.com/calindra/nonodo/internal/devnet"
@@ -29,6 +30,7 @@ import (
 	"github.com/calindra/nonodo/internal/sequencers/avail"
 	"github.com/calindra/nonodo/internal/sequencers/espresso"
 	"github.com/calindra/nonodo/internal/sequencers/inputter"
+	"github.com/calindra/nonodo/internal/sequencers/paiodecoder"
 	"github.com/calindra/nonodo/internal/supervisor"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
@@ -393,10 +395,27 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	}
 
 	if opts.AvailEnabled {
+		paioLocation := ""
+
+		// Check if paio decoder is installed
+		if !paiodecoder.IsDecodeBatchInstalled() {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			paioDecoder := paiodecoder.NewPaio()
+			location, err := commons.HandleReleaseExecution(ctx, paioDecoder)
+
+			if err != nil {
+				panic(err)
+			}
+
+			paioLocation = location
+		}
+
 		w.Workers = append(w.Workers, avail.NewAvailListener(
 			opts.AvailFromBlock,
 			modelInstance.GetInputRepository(),
-			inputterWorker))
+			inputterWorker, paioLocation))
 		sequencer = model.NewInputBoxSequencer(modelInstance)
 	}
 
