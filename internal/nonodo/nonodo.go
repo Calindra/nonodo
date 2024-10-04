@@ -45,6 +45,7 @@ const (
 
 // Options to nonodo.
 type NonodoOpts struct {
+	AutoCount          bool
 	AnvilAddress       string
 	AnvilPort          int
 	AnvilVerbose       bool
@@ -134,6 +135,7 @@ func NewNonodoOpts() NonodoOpts {
 		SalsaUrl:            "127.0.0.1:5005",
 		AvailFromBlock:      0,
 		AvailEnabled:        false,
+		AutoCount:           false,
 	}
 }
 
@@ -141,7 +143,7 @@ func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 	var w supervisor.SupervisorWorker
 	w.Timeout = opts.TimeoutWorker
 	db := CreateDBInstance(opts)
-	container := convenience.NewContainer(*db)
+	container := convenience.NewContainer(*db, opts.AutoCount)
 	decoder := container.GetOutputDecoder()
 	convenienceService := container.GetConvenienceService()
 
@@ -299,7 +301,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	var w supervisor.SupervisorWorker
 	w.Timeout = opts.TimeoutWorker
 	db := CreateDBInstance(opts)
-	container := convenience.NewContainer(*db)
+	container := convenience.NewContainer(*db, opts.AutoCount)
 	decoder := container.GetOutputDecoder()
 	convenienceService := container.GetConvenienceService()
 	adapter := reader.NewAdapterV1(db, convenienceService)

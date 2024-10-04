@@ -35,7 +35,7 @@ func (s *VoucherRepositorySuite) SetupTest() {
 	s.voucherRepository = &VoucherRepository{
 		Db: *db, OutputRepository: outputRepository,
 	}
-	noticeRepository := NoticeRepository{*db, outputRepository}
+	noticeRepository := NoticeRepository{*db, outputRepository, false}
 	err = noticeRepository.CreateTables()
 	s.NoError(err)
 	err = s.voucherRepository.CreateTables()
@@ -64,15 +64,12 @@ func (s *VoucherRepositorySuite) TestFindVoucher() {
 		Destination: common.HexToAddress("0x26A61aF89053c847B4bd5084E2caFe7211874a29"),
 		Payload:     "0x0011",
 		InputIndex:  1,
-		OutputIndex: 999,
+		OutputIndex: 2,
 		Executed:    false,
 	})
 	s.NoError(err)
 	voucher, err := s.voucherRepository.FindVoucherByInputAndOutputIndex(ctx, voucherSaved.InputIndex, voucherSaved.OutputIndex)
 	s.NoError(err)
-	if err != nil {
-		return
-	}
 	fmt.Println(voucher.Destination)
 	s.Equal("0x26A61aF89053c847B4bd5084E2caFe7211874a29", voucher.Destination.String())
 	s.Equal("0x0011", voucher.Payload)

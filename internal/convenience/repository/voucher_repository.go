@@ -20,6 +20,7 @@ const FALSE = "false"
 type VoucherRepository struct {
 	Db               sqlx.DB
 	OutputRepository OutputRepository
+	AutoCount        bool
 }
 
 type voucherRow struct {
@@ -48,9 +49,12 @@ func (c *VoucherRepository) CreateVoucher(
 	ctx context.Context, voucher *model.ConvenienceVoucher,
 ) (*model.ConvenienceVoucher, error) {
 	slog.Debug("CreateVoucher", "payload", voucher.Payload)
-	count, err := c.OutputRepository.CountAllOutputs(ctx)
-	if err != nil {
-		return nil, err
+	if c.AutoCount {
+		count, err := c.OutputRepository.CountAllOutputs(ctx)
+		if err != nil {
+			return nil, err
+		}
+		voucher.OutputIndex = count
 	}
 	insertVoucher := `INSERT INTO vouchers (
 		destination,
@@ -61,15 +65,14 @@ func (c *VoucherRepository) CreateVoucher(
 
 	exec := DBExecutor{&c.Db}
 
-	_, err = exec.ExecContext(
+	_, err := exec.ExecContext(
 		ctx,
 		insertVoucher,
 		voucher.Destination.Hex(),
 		voucher.Payload,
 		voucher.Executed,
 		voucher.InputIndex,
-		// voucher.OutputIndex,
-		count,
+		voucher.OutputIndex,
 	)
 	if err != nil {
 		slog.Error("Error creating vouchers", "Error", err)

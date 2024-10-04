@@ -69,11 +69,11 @@ func TestDecoderSuite(t *testing.T) {
 
 func (s *OutputDecoderSuite) TestHandleOutput() {
 	ctx := context.Background()
-	err := s.decoder.HandleOutput(ctx, Token, "0xef615e2f11", 1, 999)
+	err := s.decoder.HandleOutput(ctx, Token, "0xef615e2f11", 1, 3)
 	if err != nil {
 		panic(err)
 	}
-	voucher, err := s.voucherRepository.FindVoucherByInputAndOutputIndex(ctx, 1, 0)
+	voucher, err := s.voucherRepository.FindVoucherByInputAndOutputIndex(ctx, 1, 3)
 	if err != nil {
 		panic(err)
 	}

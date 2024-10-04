@@ -30,11 +30,13 @@ type Container struct {
 	graphileClient       graphile.GraphileClient
 	inputRepository      *repository.InputRepository
 	reportRepository     *repository.ReportRepository
+	AutoCount            bool
 }
 
-func NewContainer(db sqlx.DB) *Container {
+func NewContainer(db sqlx.DB, autoCount bool) *Container {
 	return &Container{
-		db: &db,
+		db:        &db,
+		AutoCount: autoCount,
 	}
 }
 
@@ -67,6 +69,7 @@ func (c *Container) GetVoucherRepository() *repository.VoucherRepository {
 	c.repository = &repository.VoucherRepository{
 		Db:               *c.db,
 		OutputRepository: *c.GetOutputRepository(),
+		AutoCount:        c.AutoCount,
 	}
 	err := c.repository.CreateTables()
 	if err != nil {
@@ -96,6 +99,7 @@ func (c *Container) GetNoticeRepository() *repository.NoticeRepository {
 	c.noticeRepository = &repository.NoticeRepository{
 		Db:               *c.db,
 		OutputRepository: *c.GetOutputRepository(),
+		AutoCount:        c.AutoCount,
 	}
 	err := c.noticeRepository.CreateTables()
 	if err != nil {
@@ -123,7 +127,8 @@ func (c *Container) GetReportRepository() *repository.ReportRepository {
 		return c.reportRepository
 	}
 	c.reportRepository = &repository.ReportRepository{
-		Db: c.db,
+		Db:        c.db,
+		AutoCount: c.AutoCount,
 	}
 	err := c.reportRepository.CreateTables()
 	if err != nil {

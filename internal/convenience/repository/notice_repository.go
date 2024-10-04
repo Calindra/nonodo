@@ -16,6 +16,7 @@ import (
 type NoticeRepository struct {
 	Db               sqlx.DB
 	OutputRepository OutputRepository
+	AutoCount        bool
 }
 
 func (c *NoticeRepository) CreateTables() error {
@@ -34,18 +35,20 @@ func (c *NoticeRepository) Create(
 	ctx context.Context, data *model.ConvenienceNotice,
 ) (*model.ConvenienceNotice, error) {
 	slog.Debug("CreateNotice", "payload", data.Payload)
-	count, err := c.OutputRepository.CountAllOutputs(ctx)
-	if err != nil {
-		return nil, err
+	if c.AutoCount {
+		count, err := c.OutputRepository.CountAllOutputs(ctx)
+		if err != nil {
+			return nil, err
+		}
+		data.OutputIndex = count
 	}
-	data.OutputIndex = count
 	insertSql := `INSERT INTO notices (
 		payload,
 		input_index,
 		output_index) VALUES ($1, $2, $3)`
 
 	exec := DBExecutor{&c.Db}
-	_, err = exec.ExecContext(ctx,
+	_, err := exec.ExecContext(ctx,
 		insertSql,
 		data.Payload,
 		data.InputIndex,

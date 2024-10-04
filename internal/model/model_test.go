@@ -52,7 +52,7 @@ func (s *ModelSuite) SetupTest() {
 	sqliteFileName := fmt.Sprintf("test%d.sqlite3", time.Now().UnixMilli())
 	sqliteFileName = path.Join(tempDir, sqliteFileName)
 	db := sqlx.MustConnect("sqlite3", sqliteFileName)
-	container := convenience.NewContainer(*db)
+	container := convenience.NewContainer(*db, false)
 	decoder := container.GetOutputDecoder()
 	s.reportRepository = container.GetReportRepository()
 	s.inputRepository = container.GetInputRepository()

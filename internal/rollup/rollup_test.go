@@ -67,7 +67,7 @@ func (s *RollupSuite) SetupTest() {
 
 	// NoNodoModel
 	db := sqlx.MustConnect("sqlite3", sqliteFileName)
-	container := convenience.NewContainer(*db)
+	container := convenience.NewContainer(*db, false)
 	decoder := container.GetOutputDecoder()
 	nonodoModel := model.NewNonodoModel(decoder,
 		container.GetReportRepository(),

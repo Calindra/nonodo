@@ -15,7 +15,8 @@ import (
 const INPUT_INDEX = "InputIndex"
 
 type ReportRepository struct {
-	Db *sqlx.DB
+	Db        *sqlx.DB
+	AutoCount bool
 }
 
 func (r *ReportRepository) CreateTables() error {
@@ -35,19 +36,21 @@ func (r *ReportRepository) CreateTables() error {
 
 func (r *ReportRepository) CreateReport(ctx context.Context, report cModel.Report) (cModel.Report, error) {
 	slog.Debug("CreateReport", "payload", report.Payload)
-	count, err := r.Count(ctx, nil)
-	if err != nil {
-		slog.Error("database error", "err", err)
-		return cModel.Report{}, err
+	if r.AutoCount {
+		count, err := r.Count(ctx, nil)
+		if err != nil {
+			slog.Error("database error", "err", err)
+			return cModel.Report{}, err
+		}
+		report.Index = int(count)
 	}
-	report.Index = int(count)
 	insertSql := `INSERT INTO convenience_reports (
 		output_index,
 		payload,
 		input_index) VALUES ($1, $2, $3)`
 
 	exec := DBExecutor{r.Db}
-	_, err = exec.ExecContext(
+	_, err := exec.ExecContext(
 		ctx,
 		insertSql,
 		report.Index,

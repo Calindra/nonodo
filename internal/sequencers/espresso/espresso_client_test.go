@@ -14,7 +14,7 @@ func (s *EspressoClientSuite) SetupTest() {
 
 }
 
-func TestDecoderSuite(t *testing.T) {
+func TestEspressoClientSuite(t *testing.T) {
 	suite.Run(t, new(EspressoClientSuite))
 }
 
