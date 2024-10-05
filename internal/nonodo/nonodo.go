@@ -212,6 +212,7 @@ func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 		decoder,
 		container.GetReportRepository(),
 		container.GetInputRepository(),
+		container.GetVoucherRepository(),
 	)
 
 	e := echo.New()
@@ -308,6 +309,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	modelInstance := model.NewNonodoModel(decoder,
 		container.GetReportRepository(),
 		container.GetInputRepository(),
+		container.GetVoucherRepository(),
 	)
 	e := echo.New()
 	e.Use(middleware.CORS())

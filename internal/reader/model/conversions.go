@@ -77,6 +77,7 @@ func convertConvenientVoucherV1(cVoucher cModel.ConvenienceVoucher) *Voucher {
 		InputIndex:  int(cVoucher.InputIndex),
 		Destination: cVoucher.Destination.String(),
 		Payload:     cVoucher.Payload,
+		Value:       cVoucher.Value,
 		// Executed:    &cVoucher.Executed,
 	}
 }

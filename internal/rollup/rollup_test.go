@@ -72,6 +72,7 @@ func (s *RollupSuite) SetupTest() {
 	nonodoModel := model.NewNonodoModel(decoder,
 		container.GetReportRepository(),
 		container.GetInputRepository(),
+		container.GetVoucherRepository(),
 	)
 
 	// Sequencer

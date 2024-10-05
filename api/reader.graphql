@@ -86,6 +86,8 @@ type Voucher {
   "Proof object that allows this voucher to be validated and executed on the base layer blockchain"
   proof: Proof
 
+  value: BigInt
+
   "Indicates whether the voucher has been executed on the base layer blockchain"
   executed: Boolean
 }

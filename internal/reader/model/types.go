@@ -45,6 +45,8 @@ type Voucher struct {
 	// Transaction payload in Ethereum hex binary format, starting with '0x'
 	Payload string `json:"payload"`
 
+	Value string `json:"value"`
+
 	Executed bool `json:"executed"`
 }
 

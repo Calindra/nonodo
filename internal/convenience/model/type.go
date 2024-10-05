@@ -39,6 +39,7 @@ type ConvenienceVoucher struct {
 	InputIndex  uint64         `db:"input_index"`
 	OutputIndex uint64         `db:"output_index"`
 	Executed    bool           `db:"executed"`
+	Value       string         `db:"value"`
 
 	// Proof we can fetch from the original GraphQL
 

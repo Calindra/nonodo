@@ -101,6 +101,7 @@ func (a AdapterV1) GetVoucher(outputIndex int) (*graphql.Voucher, error) {
 		InputIndex:  int(voucher.InputIndex),
 		Destination: voucher.Destination.Hex(),
 		Payload:     voucher.Payload,
+		Value:       voucher.Value,
 	}, nil
 }
 

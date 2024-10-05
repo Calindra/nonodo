@@ -41,6 +41,7 @@ type ModelSuite struct {
 	timestamps         []time.Time
 	reportRepository   *cRepos.ReportRepository
 	inputRepository    *cRepos.InputRepository
+	voucherRepository  *cRepos.VoucherRepository
 	tempDir            string
 	convenienceService *services.ConvenienceService
 }
@@ -56,10 +57,12 @@ func (s *ModelSuite) SetupTest() {
 	decoder := container.GetOutputDecoder()
 	s.reportRepository = container.GetReportRepository()
 	s.inputRepository = container.GetInputRepository()
+	s.voucherRepository = container.GetVoucherRepository()
 	s.m = NewNonodoModel(
 		decoder,
 		s.reportRepository,
 		s.inputRepository,
+		s.voucherRepository,
 	)
 	s.convenienceService = container.GetConvenienceService()
 	s.n = 3
@@ -214,7 +217,7 @@ func (s *ModelSuite) TestItFinishesAdvanceWithAccept() {
 	s.NoError(err)
 	_, err = s.m.FinishAndGetNext(true) // get
 	s.NoError(err)
-	_, err = s.m.AddVoucher(s.senders[0], s.payloads[0])
+	_, err = s.m.AddVoucher(s.senders[0], "0", s.payloads[0])
 	s.NoError(err)
 	_, err = s.m.AddNotice(s.payloads[0])
 	s.NoError(err)
@@ -252,7 +255,7 @@ func (s *ModelSuite) TestItFinishesAdvanceWithReject() {
 	s.NoError(err)
 	_, err = s.m.FinishAndGetNext(true) // get
 	s.Nil(err)
-	_, err = s.m.AddVoucher(s.senders[0], s.payloads[0])
+	_, err = s.m.AddVoucher(s.senders[0], "0", s.payloads[0])
 	s.Nil(err)
 	_, err = s.m.AddNotice(s.payloads[0])
 	s.Nil(err)
@@ -365,7 +368,7 @@ func (s *ModelSuite) TestItAddsVoucher() {
 
 	// add vouchers
 	for i := 0; i < s.n; i++ {
-		index, err := s.m.AddVoucher(s.senders[i], s.payloads[i])
+		index, err := s.m.AddVoucher(s.senders[i], "0", s.payloads[i])
 		s.Nil(err)
 		s.Equal(i, index)
 	}
@@ -396,12 +399,12 @@ func (s *ModelSuite) TestItFailsToAddVoucherWhenInspect() {
 	s.m.AddInspectInput(s.payloads[0])
 	_, err := s.m.FinishAndGetNext(true)
 	s.NoError(err)
-	_, err = s.m.AddVoucher(s.senders[0], s.payloads[0])
+	_, err = s.m.AddVoucher(s.senders[0], "0", s.payloads[0])
 	s.Error(err)
 }
 
 func (s *ModelSuite) TestItFailsToAddVoucherWhenIdle() {
-	_, err := s.m.AddVoucher(s.senders[0], s.payloads[0])
+	_, err := s.m.AddVoucher(s.senders[0], "0", s.payloads[0])
 	s.Error(err)
 	s.Equal(errors.New("cannot add voucher in idle state"), err)
 }
@@ -548,7 +551,7 @@ func (s *ModelSuite) TestItRegistersExceptionWhenAdvancing() {
 	s.NoError(err)
 	_, err = s.m.FinishAndGetNext(true) // get
 	s.Nil(err)
-	_, err = s.m.AddVoucher(s.senders[0], s.payloads[0])
+	_, err = s.m.AddVoucher(s.senders[0], "0", s.payloads[0])
 	s.Nil(err)
 	_, err = s.m.AddNotice(s.payloads[0])
 	s.Nil(err)
@@ -637,7 +640,7 @@ func (s *ModelSuite) TestItGetsVoucher() {
 		_, err = s.m.FinishAndGetNext(true) // get
 		s.NoError(err)
 		for j := 0; j < s.n; j++ {
-			_, err := s.m.AddVoucher(s.senders[j], s.payloads[j])
+			_, err := s.m.AddVoucher(s.senders[j], "0", s.payloads[j])
 			s.Nil(err)
 		}
 		_, err = s.m.FinishAndGetNext(true) // finish
@@ -823,7 +826,7 @@ func (s *ModelSuite) TestItGetsNumVouchers() {
 		s.NoError(err)
 		_, err = s.m.FinishAndGetNext(true) // get
 		s.NoError(err)
-		_, err = s.m.AddVoucher(s.senders[i], s.payloads[i])
+		_, err = s.m.AddVoucher(s.senders[i], "0", s.payloads[i])
 		s.Nil(err)
 		_, err = s.m.FinishAndGetNext(true) // finish
 		s.Nil(err)
@@ -997,7 +1000,7 @@ func (s *ModelSuite) TestItGetsVouchers() {
 		_, err = s.m.FinishAndGetNext(true) // get
 		s.NoError(err)
 		for j := 0; j < s.n; j++ {
-			_, err := s.m.AddVoucher(s.senders[j], s.payloads[j])
+			_, err := s.m.AddVoucher(s.senders[j], "0", s.payloads[j])
 			s.Nil(err)
 		}
 		_, err = s.m.FinishAndGetNext(true) // finish
@@ -1023,7 +1026,7 @@ func (s *ModelSuite) TestItGetsVouchersWithFilter() {
 		_, err = s.m.FinishAndGetNext(true) // get
 		s.NoError(err)
 		for j := 0; j < s.n; j++ {
-			_, err := s.m.AddVoucher(s.senders[j], s.payloads[j])
+			_, err := s.m.AddVoucher(s.senders[j], "0", s.payloads[j])
 			s.Nil(err)
 		}
 		_, err = s.m.FinishAndGetNext(true) // finish
@@ -1056,7 +1059,7 @@ func (s *ModelSuite) TestItGetsVouchersWithOffset() {
 	_, err = s.m.FinishAndGetNext(true) // get
 	s.NoError(err)
 	for i := 0; i < s.n; i++ {
-		_, err := s.m.AddVoucher(s.senders[i], s.payloads[i])
+		_, err := s.m.AddVoucher(s.senders[i], "0", s.payloads[i])
 		s.Nil(err)
 	}
 	_, err = s.m.FinishAndGetNext(true) // finish
@@ -1074,7 +1077,7 @@ func (s *ModelSuite) TestItGetsVouchersWithLimit() {
 	_, err = s.m.FinishAndGetNext(true) // get
 	s.NoError(err)
 	for i := 0; i < s.n; i++ {
-		_, err := s.m.AddVoucher(s.senders[i], s.payloads[i])
+		_, err := s.m.AddVoucher(s.senders[i], "0", s.payloads[i])
 		s.Nil(err)
 	}
 	_, err = s.m.FinishAndGetNext(true) // finish
@@ -1092,7 +1095,7 @@ func (s *ModelSuite) TestItGetsNoVouchersWithZeroLimit() {
 	_, err = s.m.FinishAndGetNext(true) // get
 	s.NoError(err)
 	for i := 0; i < s.n; i++ {
-		_, err := s.m.AddVoucher(s.senders[i], s.payloads[i])
+		_, err := s.m.AddVoucher(s.senders[i], "0", s.payloads[i])
 		s.Nil(err)
 	}
 	_, err = s.m.FinishAndGetNext(true) // finish
@@ -1108,7 +1111,7 @@ func (s *ModelSuite) TestItGetsNoVouchersWhenOffsetIsGreaterThanInputs() {
 	_, err = s.m.FinishAndGetNext(true) // get
 	s.NoError(err)
 	for i := 0; i < s.n; i++ {
-		_, err := s.m.AddVoucher(s.senders[i], s.payloads[i])
+		_, err := s.m.AddVoucher(s.senders[i], "0", s.payloads[i])
 		s.Nil(err)
 	}
 	_, err = s.m.FinishAndGetNext(true) // finish

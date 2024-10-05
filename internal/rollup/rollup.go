@@ -147,7 +147,7 @@ func (r *RollupAPI) AddVoucher(c echo.Context) error {
 	}
 
 	// talk to model
-	index, err := r.model.AddVoucher(common.Address(destination), payload)
+	index, err := r.model.AddVoucher(common.Address(destination), request.Value, payload)
 	if err != nil {
 		return c.String(http.StatusForbidden, err.Error())
 	}

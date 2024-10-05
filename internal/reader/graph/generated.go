@@ -154,6 +154,7 @@ type ComplexityRoot struct {
 		Input       func(childComplexity int) int
 		Payload     func(childComplexity int) int
 		Proof       func(childComplexity int) int
+		Value       func(childComplexity int) int
 	}
 
 	VoucherConnection struct {
@@ -747,6 +748,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Voucher.Proof(childComplexity), true
 
+	case "Voucher.value":
+		if e.complexity.Voucher.Value == nil {
+			break
+		}
+
+		return e.complexity.Voucher.Value(childComplexity), true
+
 	case "VoucherConnection.edges":
 		if e.complexity.VoucherConnection.Edges == nil {
 			break
@@ -963,6 +971,8 @@ type Voucher {
   payload: String!
   "Proof object that allows this voucher to be validated and executed on the base layer blockchain"
   proof: Proof
+
+  value: BigInt
 
   "Indicates whether the voucher has been executed on the base layer blockchain"
   executed: Boolean
@@ -3953,6 +3963,8 @@ func (ec *executionContext) fieldContext_Query_voucher(ctx context.Context, fiel
 				return ec.fieldContext_Voucher_payload(ctx, field)
 			case "proof":
 				return ec.fieldContext_Voucher_proof(ctx, field)
+			case "value":
+				return ec.fieldContext_Voucher_value(ctx, field)
 			case "executed":
 				return ec.fieldContext_Voucher_executed(ctx, field)
 			}
@@ -5167,6 +5179,47 @@ func (ec *executionContext) fieldContext_Voucher_proof(ctx context.Context, fiel
 	return fc, nil
 }
 
+func (ec *executionContext) _Voucher_value(ctx context.Context, field graphql.CollectedField, obj *model.Voucher) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Voucher_value(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Value, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalOBigInt2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Voucher_value(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Voucher",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type BigInt does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Voucher_executed(ctx context.Context, field graphql.CollectedField, obj *model.Voucher) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Voucher_executed(ctx, field)
 	if err != nil {
@@ -5405,6 +5458,8 @@ func (ec *executionContext) fieldContext_VoucherEdge_node(ctx context.Context, f
 				return ec.fieldContext_Voucher_payload(ctx, field)
 			case "proof":
 				return ec.fieldContext_Voucher_proof(ctx, field)
+			case "value":
+				return ec.fieldContext_Voucher_value(ctx, field)
 			case "executed":
 				return ec.fieldContext_Voucher_executed(ctx, field)
 			}
@@ -8569,6 +8624,8 @@ func (ec *executionContext) _Voucher(ctx context.Context, sel ast.SelectionSet, 
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "value":
+			out.Values[i] = ec._Voucher_value(ctx, field, obj)
 		case "executed":
 			out.Values[i] = ec._Voucher_executed(ctx, field, obj)
 		default:

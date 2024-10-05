@@ -22,12 +22,13 @@ import (
 // Nonodo model shared among the internal workers.
 // The model store inputs as pointers because these pointers are shared with the rollup state.
 type NonodoModel struct {
-	mutex            sync.Mutex
-	inspects         []*InspectInput
-	state            rollupsState
-	decoder          Decoder
-	reportRepository *cRepos.ReportRepository
-	inputRepository  *cRepos.InputRepository
+	mutex             sync.Mutex
+	inspects          []*InspectInput
+	state             rollupsState
+	decoder           Decoder
+	reportRepository  *cRepos.ReportRepository
+	inputRepository   *cRepos.InputRepository
+	voucherRepository *cRepos.VoucherRepository
 }
 
 func (m *NonodoModel) GetInputRepository() *cRepos.InputRepository {
@@ -39,12 +40,14 @@ func NewNonodoModel(
 	decoder Decoder,
 	reportRepository *cRepos.ReportRepository,
 	inputRepository *cRepos.InputRepository,
+	voucherRepository *cRepos.VoucherRepository,
 ) *NonodoModel {
 	return &NonodoModel{
-		state:            &rollupsStateIdle{},
-		decoder:          decoder,
-		reportRepository: reportRepository,
-		inputRepository:  inputRepository,
+		state:             &rollupsStateIdle{},
+		decoder:           decoder,
+		reportRepository:  reportRepository,
+		inputRepository:   inputRepository,
+		voucherRepository: voucherRepository,
 	}
 }
 
@@ -176,6 +179,7 @@ func (m *NonodoModel) FinishAndGetNext(accepted bool) (cModel.Input, error) {
 			m.decoder,
 			m.reportRepository,
 			m.inputRepository,
+			m.voucherRepository,
 		)
 		return *input, nil
 	}
@@ -188,11 +192,11 @@ func (m *NonodoModel) FinishAndGetNext(accepted bool) (cModel.Input, error) {
 // Add a voucher to the model.
 // Return the voucher index within the input.
 // Return an error if the state isn't advance.
-func (m *NonodoModel) AddVoucher(destination common.Address, payload []byte) (int, error) {
+func (m *NonodoModel) AddVoucher(destination common.Address, value string, payload []byte) (int, error) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
-	return m.state.addVoucher(destination, payload)
+	return m.state.addVoucher(destination, value, payload)
 }
 
 // Add a notice to the model.

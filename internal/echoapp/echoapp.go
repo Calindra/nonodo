@@ -84,6 +84,7 @@ func handleAdvance(
 	voucherReq := rollup.Voucher{
 		Destination: advance.Metadata.MsgSender,
 		Payload:     advance.Payload,
+		Value:       "12345",
 	}
 	voucherResp, err := client.AddVoucher(ctx, voucherReq)
 	if err != nil {
