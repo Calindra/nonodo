@@ -31,7 +31,6 @@ const (
 	DELAY                   = 500
 	ONE_SECOND_IN_MS        = 1000
 	FIVE_MINUTES            = 300
-	// FIVE_MINUTES = 30
 )
 
 type AvailListener struct {
