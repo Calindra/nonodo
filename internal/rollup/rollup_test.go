@@ -5,12 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
-	"os"
-	"path"
 	"testing"
 	"time"
 
@@ -18,7 +15,6 @@ import (
 	"github.com/calindra/nonodo/internal/convenience"
 	cModel "github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/model"
-	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/stretchr/testify/mock"
@@ -36,8 +32,8 @@ type RollupSuite struct {
 	ctx        context.Context
 	cancel     context.CancelFunc
 	rollupsAPI ServerInterface
-	tempDir    string
 	server     *echo.Echo
+	dbFactory  *commons.DbFactory
 }
 
 type SequencerMock struct {
@@ -56,19 +52,11 @@ func (s *RollupSuite) SetupTest() {
 	// Context
 	s.ctx, s.cancel = context.WithTimeout(context.Background(), TestTimeout)
 
-	// Temp
-	tempDir, err := os.MkdirTemp("", "")
-	s.NoError(err)
-	s.tempDir = tempDir
-
-	// Database
-	sqliteFileName := fmt.Sprintf("test_rollup%d.sqlite3", time.Now().UnixMilli())
-	sqliteFileName = path.Join(tempDir, sqliteFileName)
-
-	// NoNodoModel
-	db := sqlx.MustConnect("sqlite3", sqliteFileName)
+	s.dbFactory = commons.NewDbFactory()
+	db := s.dbFactory.CreateTempDb()
 	container := convenience.NewContainer(*db, false)
 	decoder := container.GetOutputDecoder()
+	// NoNodoModel
 	nonodoModel := model.NewNonodoModel(decoder,
 		container.GetReportRepository(),
 		container.GetInputRepository(),
@@ -91,7 +79,7 @@ func TestRollupSuite(t *testing.T) {
 }
 
 func (s *RollupSuite) TearDownTest() {
-	defer os.RemoveAll(s.tempDir)
+	defer s.dbFactory.Cleanup()
 
 	// nothing to do
 	s.server.Close()

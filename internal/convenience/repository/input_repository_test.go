@@ -24,7 +24,7 @@ type InputRepositorySuite struct {
 func (s *InputRepositorySuite) SetupTest() {
 	commons.ConfigureLog(slog.LevelDebug)
 	s.dbFactory = commons.NewDbFactory()
-	db := s.dbFactory.CreateDb("input.sqlite3")
+	db := s.dbFactory.CreateTempDb()
 	s.inputRepository = &InputRepository{
 		Db: *db,
 	}

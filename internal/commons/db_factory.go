@@ -1,6 +1,7 @@
 package commons
 
 import (
+	"fmt"
 	"log/slog"
 	"os"
 	"path"
@@ -27,6 +28,13 @@ func NewDbFactory() *DbFactory {
 		TempDir: tempDir,
 		Timeout: TimeoutInSeconds * time.Second,
 	}
+}
+
+func (d *DbFactory) CreateTempDb() *sqlx.DB {
+	sqliteFileName := fmt.Sprintf("test%d.sqlite3", time.Now().UnixMilli())
+	sqlitePath := path.Join(d.TempDir, sqliteFileName)
+	slog.Info("Creating db attempting", "sqlitePath", sqlitePath)
+	return sqlx.MustConnect("sqlite3", sqlitePath)
 }
 
 func (d *DbFactory) CreateDb(sqliteFileName string) *sqlx.DB {

@@ -269,7 +269,6 @@ func (c *VoucherRepository) FindAllVouchers(
 
 func convertToConvenienceVoucher(row voucherRow) model.ConvenienceVoucher {
 	destinationAddress := common.HexToAddress(row.Destination)
-
 	voucher := model.ConvenienceVoucher{
 		Destination: destinationAddress,
 		Payload:     row.Payload,
@@ -278,7 +277,6 @@ func convertToConvenienceVoucher(row voucherRow) model.ConvenienceVoucher {
 		Executed:    row.Executed,
 		Value:       row.Value,
 	}
-	slog.Debug("Voucher", "value", row.Value)
 	return voucher
 }
 

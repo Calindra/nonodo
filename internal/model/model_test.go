@@ -7,8 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
-	"path"
 	"strconv"
 	"testing"
 	"time"
@@ -20,7 +18,6 @@ import (
 	"github.com/calindra/nonodo/internal/convenience"
 	"github.com/calindra/nonodo/internal/convenience/services"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/jmoiron/sqlx"
 	_ "github.com/ncruces/go-sqlite3/driver"
 	_ "github.com/ncruces/go-sqlite3/embed"
 
@@ -42,17 +39,13 @@ type ModelSuite struct {
 	reportRepository   *cRepos.ReportRepository
 	inputRepository    *cRepos.InputRepository
 	voucherRepository  *cRepos.VoucherRepository
-	tempDir            string
 	convenienceService *services.ConvenienceService
+	dbFactory          *commons.DbFactory
 }
 
 func (s *ModelSuite) SetupTest() {
-	tempDir, err := os.MkdirTemp("", "")
-	s.tempDir = tempDir
-	s.NoError(err)
-	sqliteFileName := fmt.Sprintf("test%d.sqlite3", time.Now().UnixMilli())
-	sqliteFileName = path.Join(tempDir, sqliteFileName)
-	db := sqlx.MustConnect("sqlite3", sqliteFileName)
+	s.dbFactory = commons.NewDbFactory()
+	db := s.dbFactory.CreateTempDb()
 	container := convenience.NewContainer(*db, false)
 	decoder := container.GetOutputDecoder()
 	s.reportRepository = container.GetReportRepository()
@@ -1424,7 +1417,7 @@ func (s *ModelSuite) TestItGetsNoReportsWhenOffsetIsGreaterThanInputs() {
 }
 
 func (s *ModelSuite) TearDownTest() {
-	defer os.RemoveAll(s.tempDir)
+	s.dbFactory.Cleanup()
 }
 
 func (s *ModelSuite) getAllInputs(offset int, limit int) []cModel.AdvanceInput {

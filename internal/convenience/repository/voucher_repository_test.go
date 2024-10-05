@@ -4,15 +4,11 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"os"
-	"path"
 	"testing"
-	"time"
 
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/jmoiron/sqlx"
 	_ "github.com/ncruces/go-sqlite3/driver"
 	_ "github.com/ncruces/go-sqlite3/embed"
 	"github.com/stretchr/testify/suite"
@@ -21,22 +17,20 @@ import (
 type VoucherRepositorySuite struct {
 	suite.Suite
 	voucherRepository *VoucherRepository
+	dbFactory         *commons.DbFactory
 }
 
 func (s *VoucherRepositorySuite) SetupTest() {
 	commons.ConfigureLog(slog.LevelDebug)
-	tempDir, err := os.MkdirTemp("", "")
-	s.NoError(err)
-	sqliteFileName := fmt.Sprintf("test%d.sqlite3", time.Now().UnixMilli())
-	sqliteFileName = path.Join(tempDir, sqliteFileName)
-	db := sqlx.MustConnect("sqlite3", sqliteFileName)
+	s.dbFactory = commons.NewDbFactory()
+	db := s.dbFactory.CreateTempDb()
 	// db := sqlx.MustConnect("sqlite3", ":memory:")
 	outputRepository := OutputRepository{*db}
 	s.voucherRepository = &VoucherRepository{
 		Db: *db, OutputRepository: outputRepository,
 	}
 	noticeRepository := NoticeRepository{*db, outputRepository, false}
-	err = noticeRepository.CreateTables()
+	err := noticeRepository.CreateTables()
 	s.NoError(err)
 	err = s.voucherRepository.CreateTables()
 	s.NoError(err)
