@@ -49,6 +49,7 @@ type NonodoOpts struct {
 	AnvilAddress       string
 	AnvilPort          int
 	AnvilVerbose       bool
+	AnvilCommand       string
 	HttpAddress        string
 	HttpPort           int
 	HttpRollupsPort    int
@@ -105,6 +106,7 @@ func NewNonodoOpts() NonodoOpts {
 	return NonodoOpts{
 		AnvilAddress:        devnet.AnvilDefaultAddress,
 		AnvilPort:           devnet.AnvilDefaultPort,
+		AnvilCommand:        "",
 		AnvilVerbose:        false,
 		HttpAddress:         "127.0.0.1",
 		HttpPort:            DefaultHttpPort,
@@ -341,9 +343,12 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	}))
 
 	if opts.RpcUrl == "" && !opts.DisableDevnet {
-		anvilLocation, err := handleAnvilInstallation()
-		if err != nil {
-			panic(err)
+		anvilLocation := opts.AnvilCommand
+		if anvilLocation == "" {
+			anvilLocation, err = handleAnvilInstallation()
+			if err != nil {
+				panic(err)
+			}
 		}
 
 		w.Workers = append(w.Workers, devnet.AnvilWorker{
@@ -400,7 +405,9 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		w.Workers = append(w.Workers, avail.NewAvailListener(
 			opts.AvailFromBlock,
 			modelInstance.GetInputRepository(),
-			inputterWorker))
+			inputterWorker,
+			opts.FromBlock,
+		))
 		sequencer = model.NewInputBoxSequencer(modelInstance)
 	}
 
