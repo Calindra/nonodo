@@ -69,7 +69,7 @@ func TestDecoderSuite(t *testing.T) {
 
 func (s *OutputDecoderSuite) TestHandleOutput() {
 	ctx := context.Background()
-	err := s.decoder.HandleOutput(ctx, Token, "0xef615e2f11", 1, 3)
+	err := s.decoder.HandleOutput(ctx, Token, "0x237a816f11", 1, 3)
 	if err != nil {
 		panic(err)
 	}
@@ -96,7 +96,7 @@ func (s *OutputDecoderSuite) TestGetAbiFromEtherscan() {
 func (s *OutputDecoderSuite) XTestCreateVoucherIdempotency() {
 	// we need a better way to check the Idempotency
 	ctx := context.Background()
-	err := s.decoder.HandleOutput(ctx, Token, "0xef615e2f1122", 3, 4)
+	err := s.decoder.HandleOutput(ctx, Token, "0x237a816f1122", 3, 4)
 	if err != nil {
 		panic(err)
 	}
@@ -108,7 +108,7 @@ func (s *OutputDecoderSuite) XTestCreateVoucherIdempotency() {
 
 	s.Equal(1, int(voucherCount))
 
-	err = s.decoder.HandleOutput(ctx, Token, "0xef615e2f1122", 3, 4)
+	err = s.decoder.HandleOutput(ctx, Token, "0x237a816f1122", 3, 4)
 
 	if err != nil {
 		panic(err)

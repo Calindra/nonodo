@@ -8,6 +8,7 @@ package rollup
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 	"math/big"
 	"net/http"
@@ -15,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/calindra/nonodo/internal/contracts"
 	cModel "github.com/calindra/nonodo/internal/convenience/model"
 	mdl "github.com/calindra/nonodo/internal/model"
 	"github.com/ethereum/go-ethereum/common"
@@ -146,10 +148,31 @@ func (r *RollupAPI) AddVoucher(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "invalid hex payload")
 	}
 
-	// talk to model
-	index, err := r.model.AddVoucher(common.Address(destination), request.Value, payload)
+	abiParsed, err := contracts.OutputsMetaData.GetAbi()
+
 	if err != nil {
-		return c.String(http.StatusForbidden, err.Error())
+		slog.Error("Error parsing abi", "err", err)
+		return err
+	}
+
+	if len(request.Value) != 66 { // nolint
+		return fmt.Errorf("the value must be a 32-byte hex string. eg: 0x0000000000000000000000000000000000000000000000000000000000000001")
+	}
+
+	value, ok := new(big.Int).SetString(request.Value[2:], 16) // nolint
+	if !ok {
+		return fmt.Errorf("wrong number format")
+	}
+	destinationContract := common.HexToAddress(request.Destination)
+	encodedPayload, err := abiParsed.Pack("Voucher", destinationContract, value, payload)
+	if err != nil {
+		return err
+	}
+
+	index, err := r.model.AddVoucher(common.Address(destination), request.Value, encodedPayload)
+	if err != nil {
+		slog.Error("AddVoucher", "err", err)
+		return c.String(http.StatusInternalServerError, err.Error())
 	}
 	resp := IndexResponse{
 		Index: uint64(index),
