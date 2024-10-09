@@ -324,15 +324,6 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	reader.Register(e, modelInstance, convenienceService, adapter)
 	health.Register(e)
 
-	availClient, err := avail.NewAvailClient(
-		fmt.Sprintf("http://%s:%d", opts.HttpAddress, opts.HttpPort),
-		avail.DEFAULT_CHAINID_HARDHAT,
-		avail.DEFAULT_APP_ID,
-	)
-	if err != nil {
-		panic(err)
-	}
-
 	// Start the "internal" http rollup server
 	re := echo.New()
 	re.Use(middleware.CORS())
@@ -395,11 +386,28 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		}
 	}
 
-	if opts.Sequencer == "espresso" {
-		paio.Register(e, availClient, container.GetInputRepository(), opts.RpcUrl, &opts.EspressoUrl)
-	} else {
-		paio.Register(e, availClient, container.GetInputRepository(), opts.RpcUrl, nil)
+	paioSequencerBuilder := paio.NewPaioBuilder()
+	paioSequencerBuilder.WithInputRepository(container.GetInputRepository())
+	paioSequencerBuilder.WithRpcUrl(opts.RpcUrl)
+
+	if opts.AvailEnabled {
+		availClient, err := avail.NewAvailClient(
+			fmt.Sprintf("http://%s:%d", opts.HttpAddress, opts.HttpPort),
+			avail.DEFAULT_CHAINID_HARDHAT,
+			avail.DEFAULT_APP_ID,
+		)
+
+		if err != nil {
+			panic(err)
+		}
+
+		paioSequencerBuilder.WithAvalClient(availClient)
 	}
+	if opts.Sequencer == "espresso" {
+		paioSequencerBuilder = paioSequencerBuilder.WithEspressoUrl(opts.EspressoUrl)
+	}
+	paioSequencer := paioSequencerBuilder.Build()
+	paio.Register(e, paioSequencer)
 
 	if opts.AvailEnabled {
 		w.Workers = append(w.Workers, avail.NewAvailListener(
