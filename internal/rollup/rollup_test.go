@@ -184,6 +184,42 @@ func (s *RollupSuite) TestEncodeVoucher() {
 	s.Equal(fmt.Sprintf("0x%s", common.Bytes2Hex(deb)), vouchersResp.Rows[0].Payload)
 }
 
+func (s *RollupSuite) TestEncodeNotice() {
+	abiParsed, err := contracts.OutputsMetaData.GetAbi()
+	s.NoError(err)
+	payloadHex := "0xdeadbeef"
+	payload := common.Hex2Bytes(payloadHex[2:])
+	s.addNewAdvanceInput(1)
+	s.addNewAdvanceInput(2)
+	s.hitFinish()
+	voucherJsonReqBody := AddNoticeJSONRequestBody{
+		Payload: payloadHex,
+	}
+	body, err := json.Marshal(voucherJsonReqBody)
+	s.NoError(err)
+	bodyReader := bytes.NewReader(body)
+	req := httptest.NewRequest(http.MethodPost, "/notice", bodyReader)
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	c := s.server.NewContext(req, rec)
+
+	res := s.rollupsAPI.AddNotice(c)
+	s.NoError(res, "AddNotice should not return an error")
+	s.Assert().Equal(http.StatusOK, rec.Result().StatusCode)
+
+	deb, err := abiParsed.Pack("Notice", payload)
+	s.NoError(err)
+	slog.Debug("encoded", "encoded", common.Bytes2Hex(deb))
+	s.hitFinish()
+
+	ctx := context.Background()
+	noticesResp, err := s.container.GetNoticeRepository().FindAllNotices(
+		ctx, nil, nil, nil, nil, nil,
+	)
+	s.NoError(err)
+	s.Equal(fmt.Sprintf("0x%s", common.Bytes2Hex(deb)), noticesResp.Rows[0].Payload)
+}
+
 func (s *RollupSuite) addNewAdvanceInput(inputBoxIndex int) {
 	destination := common.HexToAddress("0xab7528bb862fb57e8a2bcd567a2e929a0be56a5e")
 	payloadHex := "0xdeadbeef"

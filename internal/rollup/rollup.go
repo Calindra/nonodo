@@ -201,8 +201,20 @@ func (r *RollupAPI) AddNotice(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "invalid hex payload")
 	}
 
+	abiParsed, err := contracts.OutputsMetaData.GetAbi()
+
+	if err != nil {
+		slog.Error("Error parsing abi", "err", err)
+		return err
+	}
+
+	encodedPayload, err := abiParsed.Pack("Notice", payload)
+	if err != nil {
+		slog.Error("Error encoding notice as abi", "err", err)
+		return err
+	}
 	// talk to model
-	index, err := r.model.AddNotice(payload)
+	index, err := r.model.AddNotice(encodedPayload)
 	if err != nil {
 		slog.Error("add notice error", "err", err)
 		return c.String(http.StatusForbidden, err.Error())
