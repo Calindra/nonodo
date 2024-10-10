@@ -109,7 +109,7 @@ type Paio struct {
 func NewPaio() commons.HandleRelease {
 	return Paio{
 		// Change for Cartesi when available
-		Namespace:      "Calindra",
+		Namespace:      "cartesi",
 		Repository:     "paio",
 		ConfigFilename: "paio.nonodo.json",
 		Client:         github.NewClient(nil),
