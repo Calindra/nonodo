@@ -22,14 +22,14 @@ const (
 	DEFAULT_NAME_PROGRAM = "decode-batch"
 )
 
-func IsDecodeBatchInstalled() bool {
+func IsDecodeBatchInstalled() (string, bool) {
 	filename := DEFAULT_NAME_PROGRAM
 	if runtime.GOOS == commons.WINDOWS {
 		filename = filename + ".exe"
 	}
 	location := path.Join(os.TempDir(), filename)
 	_, err := os.Stat(location)
-	return err == nil
+	return location, err == nil
 }
 
 type PaioConfig struct {

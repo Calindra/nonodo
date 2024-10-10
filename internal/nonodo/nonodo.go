@@ -404,23 +404,19 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	}
 
 	if opts.AvailEnabled {
-		paioLocation := ""
-
 		// Check if paio decoder is installed
-		if !paiodecoder.IsDecodeBatchInstalled() {
+		paioLocation, installed := paiodecoder.IsDecodeBatchInstalled()
+		if !installed {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-
 			paioDecoder := paiodecoder.NewPaio()
 			location, err := commons.HandleReleaseExecution(ctx, paioDecoder)
-
 			if err != nil {
 				panic(err)
 			}
-
 			paioLocation = location
 		}
-
+		slog.Debug("AvailEnabled", "paioLocation", paioLocation)
 		w.Workers = append(w.Workers, avail.NewAvailListener(
 			opts.AvailFromBlock,
 			modelInstance.GetInputRepository(),
