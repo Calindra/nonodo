@@ -273,7 +273,7 @@ func (p *PaioAPI) SaveTransaction(ctx echo.Context) error {
 	txId := fmt.Sprintf("0x%s", common.Bytes2Hex(crypto.Keccak256(signature)))
 	createdInput, err := p.inputRepository.Create(stdCtx, model.AdvanceInput{
 		ID:            txId,
-		Index:         int(inputCount + 1),
+		Index:         int(inputCount),
 		MsgSender:     msgSender,
 		Payload:       payloadBytes,
 		AppContract:   common.HexToAddress(dappAddress),
@@ -357,7 +357,7 @@ func (p *PaioAPI) SendCartesiTransaction(ctx echo.Context) error {
 	payload := common.Hex2Bytes(request.TypedData.Message.Data[2:])
 	_, err = p.inputRepository.Create(stdCtx, model.AdvanceInput{
 		ID:             txId,
-		Index:          int(inputCount + 1),
+		Index:          int(inputCount),
 		MsgSender:      msgSender,
 		Payload:        payload,
 		AppContract:    appContract,
