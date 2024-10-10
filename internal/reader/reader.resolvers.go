@@ -7,26 +7,10 @@ package reader
 import (
 	"context"
 	"log/slog"
-	"strconv"
 
 	"github.com/calindra/nonodo/internal/reader/graph"
 	"github.com/calindra/nonodo/internal/reader/model"
 )
-
-// Voucher is the resolver for the voucher field.
-func (r *inputResolver) Voucher(ctx context.Context, obj *model.Input, index int) (*model.Voucher, error) {
-	return r.adapter.GetVoucher(index, obj.Index)
-}
-
-// Notice is the resolver for the notice field.
-func (r *inputResolver) Notice(ctx context.Context, obj *model.Input, index int) (*model.Notice, error) {
-	return r.adapter.GetNotice(index, obj.Index)
-}
-
-// Report is the resolver for the report field.
-func (r *inputResolver) Report(ctx context.Context, obj *model.Input, index int) (*model.Report, error) {
-	return r.adapter.GetReport(index, obj.Index)
-}
 
 // Vouchers is the resolver for the vouchers field.
 func (r *inputResolver) Vouchers(ctx context.Context, obj *model.Input, first *int, last *int, after *string, before *string) (*model.Connection[*model.Voucher], error) {
@@ -45,7 +29,13 @@ func (r *inputResolver) Reports(ctx context.Context, obj *model.Input, first *in
 
 // Input is the resolver for the input field.
 func (r *noticeResolver) Input(ctx context.Context, obj *model.Notice) (*model.Input, error) {
-	return r.adapter.GetInput(strconv.Itoa(obj.InputIndex))
+	slog.Debug("Find input by index", "inputIndex", obj.InputIndex)
+	input, err := r.adapter.GetInputByIndex(obj.InputIndex)
+	if err != nil {
+		slog.Error("Input not found")
+		return nil, err
+	}
+	return input, nil
 }
 
 // Proof is the resolver for the proof field.
@@ -57,6 +47,21 @@ func (r *noticeResolver) Proof(ctx context.Context, obj *model.Notice) (*model.P
 func (r *queryResolver) Input(ctx context.Context, id string) (*model.Input, error) {
 	slog.Debug("queryResolver.Input", "id", id)
 	return r.adapter.GetInput(id)
+}
+
+// Voucher is the resolver for the voucher field.
+func (r *queryResolver) Voucher(ctx context.Context, outputIndex int) (*model.Voucher, error) {
+	return r.adapter.GetVoucher(outputIndex)
+}
+
+// Notice is the resolver for the notice field.
+func (r *queryResolver) Notice(ctx context.Context, outputIndex int) (*model.Notice, error) {
+	return r.adapter.GetNotice(outputIndex)
+}
+
+// Report is the resolver for the report field.
+func (r *queryResolver) Report(ctx context.Context, reportIndex int) (*model.Report, error) {
+	return r.adapter.GetReport(reportIndex)
 }
 
 // Inputs is the resolver for the inputs field.
@@ -89,12 +94,12 @@ func (r *queryResolver) Reports(ctx context.Context, first *int, last *int, afte
 
 // Input is the resolver for the input field.
 func (r *reportResolver) Input(ctx context.Context, obj *model.Report) (*model.Input, error) {
-	return r.adapter.GetInput(strconv.Itoa(obj.InputIndex))
+	return r.adapter.GetInputByIndex(obj.InputIndex)
 }
 
 // Input is the resolver for the input field.
 func (r *voucherResolver) Input(ctx context.Context, obj *model.Voucher) (*model.Input, error) {
-	return r.adapter.GetInput(strconv.Itoa(obj.InputIndex))
+	return r.adapter.GetInputByIndex(obj.InputIndex)
 }
 
 // Proof is the resolver for the proof field.

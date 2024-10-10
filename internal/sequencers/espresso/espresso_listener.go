@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"math/big"
 	"net/http"
 	"os"
 	"strconv"
@@ -56,6 +57,14 @@ func (e EspressoListener) Start(ctx context.Context, ready chan<- struct{}) erro
 func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 	slog.Debug("Espresso: watchNewTransactions", "fromBlock", e.fromBlock)
 	currentBlockHeight := e.fromBlock
+	if currentBlockHeight == 0 {
+		lastEspressoBlockHeight, err := e.espressoAPI.FetchLatestBlockHeight(ctx)
+		if err != nil {
+			return err
+		}
+		currentBlockHeight = lastEspressoBlockHeight
+		slog.Info("Espresso: starting from latest block height", "lastEspressoBlockHeight", lastEspressoBlockHeight)
+	}
 	previousBlockHeight := currentBlockHeight
 	l1FinalizedPrevHeight := e.getL1FinalizedHeight(previousBlockHeight)
 
@@ -76,7 +85,7 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 			continue
 		}
 		for ; currentBlockHeight < lastEspressoBlockHeight; currentBlockHeight++ {
-			slog.Debug("Espresso:", "currentBlockHeight", currentBlockHeight)
+			slog.Debug("Espresso:", "currentBlockHeight", currentBlockHeight, "namespace", e.namespace)
 			transactions, err := e.espressoAPI.FetchTransactionsInBlock(ctx, currentBlockHeight, e.namespace)
 			if err != nil {
 				return err
@@ -99,7 +108,7 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 			slog.Debug("Espresso:", "transactionsLen", tot)
 			for i := 0; i < tot; i++ {
 				transaction := transactions.Transactions[i]
-				slog.Debug("Espresso:", "currentBlockHeight", currentBlockHeight, "transaction", transaction)
+				slog.Debug("Espresso:", "currentBlockHeight", currentBlockHeight)
 
 				ctx := context.Background()
 				// transform and add to InputRepository
@@ -166,19 +175,31 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 					}
 				}
 
+				chainId := (*big.Int)(typedData.Domain.ChainId).String()
+				slog.Debug("TypedData", "typedData.Domain", typedData.Domain,
+					"chainId", chainId,
+				)
+				blockNumber := e.getL1FinalizedHeight(currentBlockHeight)
+				prevRandao, err := readPrevRandao(ctx, currentBlockHeight, e.InputterWorker)
+				if err != nil {
+					return err
+				}
 				_, err = e.InputRepository.Create(ctx, cModel.AdvanceInput{
 					ID:                     common.Bytes2Hex(crypto.Keccak256(signature)),
 					Index:                  int(index),
 					MsgSender:              msgSender,
 					Payload:                payloadBytes,
-					BlockNumber:            e.getL1FinalizedHeight(currentBlockHeight),
+					BlockNumber:            blockNumber,
 					BlockTimestamp:         e.getL1FinalizedTimestamp(currentBlockHeight),
 					AppContract:            e.InputterWorker.ApplicationAddress,
 					EspressoBlockNumber:    int(currentBlockHeight),
 					EspressoBlockTimestamp: e.getEspressoTimestamp(currentBlockHeight),
 					InputBoxIndex:          -1,
 					Type:                   "Espresso",
+					ChainId:                chainId,
+					PrevRandao:             prevRandao,
 				})
+				slog.Info("Espresso: input added", "payload", payload)
 				if err != nil {
 					return err
 				}
@@ -243,4 +264,18 @@ func readInputBox(ctx context.Context, l1FinalizedPrevHeight uint64, l1Finalized
 	}
 
 	return nil
+}
+
+func readPrevRandao(ctx context.Context, l1FinalizedCurrentHeight uint64, w *inputter.InputterWorker) (string, error) {
+	client, err := w.GetEthClient()
+	if err != nil {
+		return "", fmt.Errorf("espresso eth client error: %w", err)
+	}
+	header, err := client.HeaderByNumber(ctx, big.NewInt(int64(l1FinalizedCurrentHeight)))
+	if err != nil {
+		return "", fmt.Errorf("espresso read block header error: %w", err)
+	}
+	prevRandao := header.MixDigest.Hex()
+	slog.Debug("readPrevRandao", "prevRandao", prevRandao, "blockNumber", l1FinalizedCurrentHeight)
+	return prevRandao, nil
 }

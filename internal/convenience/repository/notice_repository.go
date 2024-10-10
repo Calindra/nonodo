@@ -14,7 +14,9 @@ import (
 )
 
 type NoticeRepository struct {
-	Db sqlx.DB
+	Db               sqlx.DB
+	OutputRepository OutputRepository
+	AutoCount        bool
 }
 
 func (c *NoticeRepository) CreateTables() error {
@@ -32,6 +34,14 @@ func (c *NoticeRepository) CreateTables() error {
 func (c *NoticeRepository) Create(
 	ctx context.Context, data *model.ConvenienceNotice,
 ) (*model.ConvenienceNotice, error) {
+	slog.Debug("CreateNotice", "payload", data.Payload)
+	if c.AutoCount {
+		count, err := c.OutputRepository.CountAllOutputs(ctx)
+		if err != nil {
+			return nil, err
+		}
+		data.OutputIndex = count
+	}
 	insertSql := `INSERT INTO notices (
 		payload,
 		input_index,
@@ -142,6 +152,26 @@ func (c *NoticeRepository) FindAllNotices(
 		Offset: uint64(offset),
 	}
 	return pageResult, nil
+}
+
+func (c *NoticeRepository) FindNoticeByOutputIndex(
+	ctx context.Context, outputIndex uint64,
+) (*model.ConvenienceNotice, error) {
+	query := `SELECT * FROM notices WHERE output_index = $1 LIMIT 1`
+	stmt, err := c.Db.Preparex(query)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+	var p model.ConvenienceNotice
+	err = stmt.GetContext(ctx, &p, outputIndex)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &p, nil
 }
 
 func (c *NoticeRepository) FindByInputAndOutputIndex(

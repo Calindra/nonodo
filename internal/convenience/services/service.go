@@ -110,7 +110,7 @@ func (s *ConvenienceService) CreateReport(
 		)
 		return s.reportRepository.Update(ctx, *reportInDb)
 	}
-	reportCreated, err := s.reportRepository.Create(ctx, *report)
+	reportCreated, err := s.reportRepository.CreateReport(ctx, *report)
 	if err != nil {
 		return nil, err
 	}
@@ -203,11 +203,27 @@ func (c *ConvenienceService) FindAllByInputIndex(
 	)
 }
 
+func (c *ConvenienceService) FindVoucherByOutputIndex(
+	ctx context.Context, outputIndex uint64,
+) (*model.ConvenienceVoucher, error) {
+	return c.voucherRepository.FindVoucherByOutputIndex(
+		ctx, outputIndex,
+	)
+}
+
 func (c *ConvenienceService) FindVoucherByInputAndOutputIndex(
 	ctx context.Context, inputIndex uint64, outputIndex uint64,
 ) (*model.ConvenienceVoucher, error) {
 	return c.voucherRepository.FindVoucherByInputAndOutputIndex(
 		ctx, inputIndex, outputIndex,
+	)
+}
+
+func (c *ConvenienceService) FindNoticeByOutputIndex(
+	ctx context.Context, outputIndex uint64,
+) (*model.ConvenienceNotice, error) {
+	return c.noticeRepository.FindNoticeByOutputIndex(
+		ctx, outputIndex,
 	)
 }
 
@@ -223,4 +239,10 @@ func (c *ConvenienceService) FindInputByID(
 	ctx context.Context, id string,
 ) (*model.AdvanceInput, error) {
 	return c.inputRepository.FindByID(ctx, id)
+}
+
+func (c *ConvenienceService) FindByIndex(
+	ctx context.Context, inputIndex int,
+) (*model.AdvanceInput, error) {
+	return c.inputRepository.FindByIndex(ctx, inputIndex)
 }

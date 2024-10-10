@@ -37,6 +37,7 @@ type inputRow struct {
 	AvailBlockTimestamp    int    `db:"avail_block_timestamp"`
 	Type                   string `db:"type"`
 	CartesiTransactionId   string `db:"cartesi_transaction_id"`
+	ChainId                string `db:"chain_id"`
 }
 
 func (r *InputRepository) CreateTables() error {
@@ -58,7 +59,8 @@ func (r *InputRepository) CreateTables() error {
 		avail_block_number integer,
 		avail_block_timestamp integer,
 		type text,
-		cartesi_transaction_id text);
+		cartesi_transaction_id text,
+		chain_id text);
 	CREATE INDEX IF NOT EXISTS idx_input_index ON convenience_inputs(input_index);
 	CREATE INDEX IF NOT EXISTS idx_status ON convenience_inputs(status);`
 	_, err := r.Db.Exec(schema)
@@ -99,7 +101,8 @@ func (r *InputRepository) rawCreate(ctx context.Context, input model.AdvanceInpu
 		input_box_index,
 		avail_block_number,
 		avail_block_timestamp,
-		type
+		type,
+		chain_id
 	) VALUES (
 		$1,
 		$2,
@@ -116,7 +119,8 @@ func (r *InputRepository) rawCreate(ctx context.Context, input model.AdvanceInpu
 		$13,
 		$14,
 		$15,
-		$16
+		$16,
+		$17
 	);`
 
 	var typee string = "inputbox"
@@ -145,11 +149,12 @@ func (r *InputRepository) rawCreate(ctx context.Context, input model.AdvanceInpu
 		input.AvailBlockNumber,
 		input.AvailBlockTimestamp.UnixMilli(),
 		typee,
+		input.ChainId,
 	)
-
 	if err != nil {
 		return nil, err
 	}
+	slog.Debug("Input saved", "chainId", input.ChainId)
 	return &input, nil
 }
 
@@ -190,7 +195,7 @@ func (r *InputRepository) FindByStatusNeDesc(ctx context.Context, status model.C
 		avail_block_number,
 		avail_block_timestamp,
 		type,
-		cartesi_transaction_id FROM convenience_inputs WHERE status <> $1
+		chain_id FROM convenience_inputs WHERE status <> $1
 		ORDER BY input_index DESC`
 	res, err := r.Db.QueryxContext(
 		ctx,
@@ -228,13 +233,52 @@ func (r *InputRepository) FindByStatus(ctx context.Context, status model.Complet
 			input_box_index, 
 			avail_block_number,
 			avail_block_timestamp,
-			type
+			type,
+			chain_id
 		FROM convenience_inputs WHERE status = $1
 		ORDER BY input_index ASC`
 	res, err := r.Db.QueryxContext(
 		ctx,
 		sql,
 		status,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Close()
+	if res.Next() {
+		input, err := parseInput(res)
+		if err != nil {
+			return nil, err
+		}
+		return input, nil
+	}
+	return nil, nil
+}
+func (r *InputRepository) FindByIndex(ctx context.Context, inputIndex int) (*model.AdvanceInput, error) {
+	sql := `SELECT
+		id,
+		input_index,
+		status,
+		msg_sender,
+		payload,
+		block_number,
+		block_timestamp,
+		prev_randao,
+		exception,
+		app_contract,
+		espresso_block_number,
+		espresso_block_timestamp,
+		input_box_index, 
+		avail_block_number,
+		avail_block_timestamp,
+		type,
+		chain_id
+	FROM convenience_inputs WHERE input_index = $1`
+	res, err := r.Db.QueryxContext(
+		ctx,
+		sql,
+		inputIndex,
 	)
 	if err != nil {
 		return nil, err
@@ -267,7 +311,8 @@ func (r *InputRepository) FindByID(ctx context.Context, id string) (*model.Advan
 		input_box_index, 
 		avail_block_number,
 		avail_block_timestamp,
-		type
+		type,
+		chain_id
 	FROM convenience_inputs WHERE id = $1`
 	res, err := r.Db.QueryxContext(
 		ctx,
@@ -344,7 +389,8 @@ func (c *InputRepository) FindAll(
 			input_box_index, 
 			avail_block_number,
 			avail_block_timestamp,
-			type
+			type,
+			chain_id
 		FROM convenience_inputs `
 	where, args, argsCount, err := transformToInputQuery(filter)
 	if err != nil {
@@ -495,6 +541,7 @@ func parseRowInput(row inputRow) model.AdvanceInput {
 		AvailBlockTimestamp:    time.UnixMilli(int64(row.AvailBlockTimestamp)),
 		Type:                   row.Type,
 		CartesiTransactionId:   row.CartesiTransactionId,
+		ChainId:                row.ChainId,
 	}
 }
 
@@ -527,7 +574,7 @@ func parseInput(res *sqlx.Rows) (*model.AdvanceInput, error) {
 		&input.AvailBlockNumber,
 		&availBlockTimestamp,
 		&input.Type,
-		// &input.CartesiTransactionId,
+		&input.ChainId,
 	)
 	if err != nil {
 		return nil, err

@@ -86,10 +86,10 @@ func (a AdapterV1) GetNotices(
 	)
 }
 
-func (a AdapterV1) GetVoucher(voucherIndex int, inputIndex int) (*graphql.Voucher, error) {
+func (a AdapterV1) GetVoucher(outputIndex int) (*graphql.Voucher, error) {
 	ctx := context.Background()
-	voucher, err := a.convenienceService.FindVoucherByInputAndOutputIndex(
-		ctx, uint64(inputIndex), uint64(voucherIndex))
+	voucher, err := a.convenienceService.FindVoucherByOutputIndex(
+		ctx, uint64(outputIndex))
 	if err != nil {
 		return nil, err
 	}
@@ -97,10 +97,11 @@ func (a AdapterV1) GetVoucher(voucherIndex int, inputIndex int) (*graphql.Vouche
 		return nil, fmt.Errorf("voucher not found")
 	}
 	return &graphql.Voucher{
-		Index:       voucherIndex,
+		Index:       outputIndex,
 		InputIndex:  int(voucher.InputIndex),
 		Destination: voucher.Destination.Hex(),
 		Payload:     voucher.Payload,
+		Value:       voucher.Value,
 	}, nil
 }
 
@@ -139,12 +140,11 @@ func (a AdapterV1) GetVouchers(
 	)
 }
 
-func (a AdapterV1) GetNotice(noticeIndex int, inputIndex int) (*graphql.Notice, error) {
+func (a AdapterV1) GetNotice(outputIndex int) (*graphql.Notice, error) {
 	ctx := context.Background()
-	notice, err := a.convenienceService.FindNoticeByInputAndOutputIndex(
+	notice, err := a.convenienceService.FindNoticeByOutputIndex(
 		ctx,
-		uint64(inputIndex),
-		uint64(noticeIndex),
+		uint64(outputIndex),
 	)
 	if err != nil {
 		return nil, err
@@ -153,19 +153,18 @@ func (a AdapterV1) GetNotice(noticeIndex int, inputIndex int) (*graphql.Notice, 
 		return nil, fmt.Errorf("notice not found")
 	}
 	return &graphql.Notice{
-		Index:      noticeIndex,
-		InputIndex: inputIndex,
+		Index:      outputIndex,
+		InputIndex: int(notice.InputIndex),
 		Payload:    notice.Payload,
 	}, nil
 }
 
 func (a AdapterV1) GetReport(
-	reportIndex int, inputIndex int,
+	reportIndex int,
 ) (*graphql.Report, error) {
 	ctx := context.Background()
-	report, err := a.reportRepository.FindByInputAndOutputIndex(
+	report, err := a.reportRepository.FindByOutputIndex(
 		ctx,
-		uint64(inputIndex),
 		uint64(reportIndex),
 	)
 	if err != nil {
@@ -215,6 +214,26 @@ func (a AdapterV1) convertToReport(
 		InputIndex: report.InputIndex,
 		Payload:    fmt.Sprintf("0x%s", common.Bytes2Hex(report.Payload)),
 	}
+}
+
+// GetInputByIndex implements Adapter.
+func (a AdapterV1) GetInputByIndex(inputIndex int) (*graphql.Input, error) {
+	ctx := context.Background()
+	input, err := a.inputRepository.FindByIndex(ctx, inputIndex)
+	if err != nil {
+		return nil, err
+	}
+	if input == nil {
+		return nil, fmt.Errorf("input not found")
+	}
+
+	convertedInput, err := graphql.ConvertInput(*input)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return convertedInput, nil
 }
 
 func (a AdapterV1) GetInput(id string) (*graphql.Input, error) {

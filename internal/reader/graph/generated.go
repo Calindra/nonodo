@@ -51,20 +51,19 @@ type DirectiveRoot struct {
 type ComplexityRoot struct {
 	Input struct {
 		BlockNumber         func(childComplexity int) int
+		BlockTimestamp      func(childComplexity int) int
 		EspressoBlockNumber func(childComplexity int) int
 		EspressoTimestamp   func(childComplexity int) int
 		ID                  func(childComplexity int) int
 		Index               func(childComplexity int) int
 		InputBoxIndex       func(childComplexity int) int
 		MsgSender           func(childComplexity int) int
-		Notice              func(childComplexity int, index int) int
 		Notices             func(childComplexity int, first *int, last *int, after *string, before *string) int
 		Payload             func(childComplexity int) int
-		Report              func(childComplexity int, index int) int
+		PrevRandao          func(childComplexity int) int
 		Reports             func(childComplexity int, first *int, last *int, after *string, before *string) int
 		Status              func(childComplexity int) int
 		Timestamp           func(childComplexity int) int
-		Voucher             func(childComplexity int, index int) int
 		Vouchers            func(childComplexity int, first *int, last *int, after *string, before *string) int
 	}
 
@@ -123,8 +122,11 @@ type ComplexityRoot struct {
 	Query struct {
 		Input    func(childComplexity int, id string) int
 		Inputs   func(childComplexity int, first *int, last *int, after *string, before *string, where *model.InputFilter) int
+		Notice   func(childComplexity int, outputIndex int) int
 		Notices  func(childComplexity int, first *int, last *int, after *string, before *string) int
+		Report   func(childComplexity int, reportIndex int) int
 		Reports  func(childComplexity int, first *int, last *int, after *string, before *string) int
+		Voucher  func(childComplexity int, outputIndex int) int
 		Vouchers func(childComplexity int, first *int, last *int, after *string, before *string, filter []*model.ConvenientFilter) int
 	}
 
@@ -152,6 +154,7 @@ type ComplexityRoot struct {
 		Input       func(childComplexity int) int
 		Payload     func(childComplexity int) int
 		Proof       func(childComplexity int) int
+		Value       func(childComplexity int) int
 	}
 
 	VoucherConnection struct {
@@ -167,9 +170,6 @@ type ComplexityRoot struct {
 }
 
 type InputResolver interface {
-	Voucher(ctx context.Context, obj *model.Input, index int) (*model.Voucher, error)
-	Notice(ctx context.Context, obj *model.Input, index int) (*model.Notice, error)
-	Report(ctx context.Context, obj *model.Input, index int) (*model.Report, error)
 	Vouchers(ctx context.Context, obj *model.Input, first *int, last *int, after *string, before *string) (*model.Connection[*model.Voucher], error)
 	Notices(ctx context.Context, obj *model.Input, first *int, last *int, after *string, before *string) (*model.Connection[*model.Notice], error)
 	Reports(ctx context.Context, obj *model.Input, first *int, last *int, after *string, before *string) (*model.Connection[*model.Report], error)
@@ -181,6 +181,9 @@ type NoticeResolver interface {
 }
 type QueryResolver interface {
 	Input(ctx context.Context, id string) (*model.Input, error)
+	Voucher(ctx context.Context, outputIndex int) (*model.Voucher, error)
+	Notice(ctx context.Context, outputIndex int) (*model.Notice, error)
+	Report(ctx context.Context, reportIndex int) (*model.Report, error)
 	Inputs(ctx context.Context, first *int, last *int, after *string, before *string, where *model.InputFilter) (*model.Connection[*model.Input], error)
 	Vouchers(ctx context.Context, first *int, last *int, after *string, before *string, filter []*model.ConvenientFilter) (*model.Connection[*model.Voucher], error)
 	Notices(ctx context.Context, first *int, last *int, after *string, before *string) (*model.Connection[*model.Notice], error)
@@ -220,6 +223,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Input.BlockNumber(childComplexity), true
+
+	case "Input.blockTimestamp":
+		if e.complexity.Input.BlockTimestamp == nil {
+			break
+		}
+
+		return e.complexity.Input.BlockTimestamp(childComplexity), true
 
 	case "Input.espressoBlockNumber":
 		if e.complexity.Input.EspressoBlockNumber == nil {
@@ -263,18 +273,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Input.MsgSender(childComplexity), true
 
-	case "Input.notice":
-		if e.complexity.Input.Notice == nil {
-			break
-		}
-
-		args, err := ec.field_Input_notice_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Input.Notice(childComplexity, args["index"].(int)), true
-
 	case "Input.notices":
 		if e.complexity.Input.Notices == nil {
 			break
@@ -294,17 +292,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Input.Payload(childComplexity), true
 
-	case "Input.report":
-		if e.complexity.Input.Report == nil {
+	case "Input.prevRandao":
+		if e.complexity.Input.PrevRandao == nil {
 			break
 		}
 
-		args, err := ec.field_Input_report_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Input.Report(childComplexity, args["index"].(int)), true
+		return e.complexity.Input.PrevRandao(childComplexity), true
 
 	case "Input.reports":
 		if e.complexity.Input.Reports == nil {
@@ -331,18 +324,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Input.Timestamp(childComplexity), true
-
-	case "Input.voucher":
-		if e.complexity.Input.Voucher == nil {
-			break
-		}
-
-		args, err := ec.field_Input_voucher_args(context.TODO(), rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Input.Voucher(childComplexity, args["index"].(int)), true
 
 	case "Input.vouchers":
 		if e.complexity.Input.Vouchers == nil {
@@ -597,6 +578,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.Inputs(childComplexity, args["first"].(*int), args["last"].(*int), args["after"].(*string), args["before"].(*string), args["where"].(*model.InputFilter)), true
 
+	case "Query.notice":
+		if e.complexity.Query.Notice == nil {
+			break
+		}
+
+		args, err := ec.field_Query_notice_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.Notice(childComplexity, args["outputIndex"].(int)), true
+
 	case "Query.notices":
 		if e.complexity.Query.Notices == nil {
 			break
@@ -609,6 +602,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Query.Notices(childComplexity, args["first"].(*int), args["last"].(*int), args["after"].(*string), args["before"].(*string)), true
 
+	case "Query.report":
+		if e.complexity.Query.Report == nil {
+			break
+		}
+
+		args, err := ec.field_Query_report_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.Report(childComplexity, args["reportIndex"].(int)), true
+
 	case "Query.reports":
 		if e.complexity.Query.Reports == nil {
 			break
@@ -620,6 +625,18 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Query.Reports(childComplexity, args["first"].(*int), args["last"].(*int), args["after"].(*string), args["before"].(*string)), true
+
+	case "Query.voucher":
+		if e.complexity.Query.Voucher == nil {
+			break
+		}
+
+		args, err := ec.field_Query_voucher_args(context.TODO(), rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.Voucher(childComplexity, args["outputIndex"].(int)), true
 
 	case "Query.vouchers":
 		if e.complexity.Query.Vouchers == nil {
@@ -730,6 +747,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Voucher.Proof(childComplexity), true
+
+	case "Voucher.value":
+		if e.complexity.Voucher.Value == nil {
+			break
+		}
+
+		return e.complexity.Voucher.Value(childComplexity), true
 
 	case "VoucherConnection.edges":
 		if e.complexity.VoucherConnection.Edges == nil {
@@ -906,17 +930,17 @@ type Input {
   "Address responsible for submitting the input"
   msgSender: String!
   "Timestamp associated with the input submission, as defined by the base layer's block in which it was recorded"
-  timestamp: BigInt!
+  timestamp: BigInt! @deprecated(reason: "Use ` + "`" + `blockTimestamp` + "`" + ` instead")
   "Number of the base layer block in which the input was recorded"
   blockNumber: BigInt!
   "Input payload in Ethereum hex binary format, starting with '0x'"
   payload: String!
-  "Get a voucher from this particular input given the voucher's index"
-  voucher(index: Int!): Voucher!
-  "Get a notice from this particular input given the notice's index"
-  notice(index: Int!): Notice!
-  "Get a report from this particular input given the report's index"
-  report(index: Int!): Report!
+  # "Get a voucher from this particular input given the voucher's index"
+  # voucher(index: Int!): Voucher!
+  # "Get a notice from this particular input given the notice's index"
+  # notice(index: Int!): Notice!
+  # "Get a report from this particular input given the report's index"
+  # report(index: Int!): Report!
   "Get vouchers from this particular input with support for pagination"
   vouchers(first: Int, last: Int, after: String, before: String): VoucherConnection!
   "Get notices from this particular input with support for pagination"
@@ -924,11 +948,15 @@ type Input {
   "Get reports from this particular input with support for pagination"
   reports(first: Int, last: Int, after: String, before: String): ReportConnection!
   "Timestamp associated with the Espresso input submission"
-  espressoTimestamp: String
+  espressoTimestamp: String @deprecated(reason: "Will be removed")
   "Number of the Espresso block in which the input was recorded"
-  espressoBlockNumber: String
-  "Input index in the Inpux Box"
+  espressoBlockNumber: String @deprecated(reason: "Will be removed")
+  "Input index in the Input Box"
   inputBoxIndex: String
+
+  blockTimestamp: BigInt
+
+  prevRandao: String
 }
 
 "Representation of a transaction that can be carried out on the base layer blockchain, such as a transfer of assets"
@@ -944,6 +972,8 @@ type Voucher {
   "Proof object that allows this voucher to be validated and executed on the base layer blockchain"
   proof: Proof
 
+  value: BigInt
+
   "Indicates whether the voucher has been executed on the base layer blockchain"
   executed: Boolean
 }
@@ -952,6 +982,12 @@ type Voucher {
 type Query {
   "Get input based on its identifier"
   input(id: String!): Input!
+  "Get a voucher based on its index"
+  voucher(outputIndex: Int!): Voucher!
+  "Get a notice based on its index"
+  notice(outputIndex: Int!): Notice!
+  "Get a report based on its index"
+  report(reportIndex: Int!): Report!
   "Get inputs with support for pagination"
   inputs(first: Int, last: Int, after: String, before: String, where: InputFilter): InputConnection!
   "Get vouchers with support for pagination"
@@ -1146,21 +1182,6 @@ var parsedSchema = gqlparser.MustLoadSchema(sources...)
 
 // region    ***************************** args.gotpl *****************************
 
-func (ec *executionContext) field_Input_notice_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 int
-	if tmp, ok := rawArgs["index"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("index"))
-		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["index"] = arg0
-	return args, nil
-}
-
 func (ec *executionContext) field_Input_notices_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
@@ -1203,21 +1224,6 @@ func (ec *executionContext) field_Input_notices_args(ctx context.Context, rawArg
 	return args, nil
 }
 
-func (ec *executionContext) field_Input_report_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 int
-	if tmp, ok := rawArgs["index"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("index"))
-		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["index"] = arg0
-	return args, nil
-}
-
 func (ec *executionContext) field_Input_reports_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
@@ -1257,21 +1263,6 @@ func (ec *executionContext) field_Input_reports_args(ctx context.Context, rawArg
 		}
 	}
 	args["before"] = arg3
-	return args, nil
-}
-
-func (ec *executionContext) field_Input_voucher_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
-	var err error
-	args := map[string]interface{}{}
-	var arg0 int
-	if tmp, ok := rawArgs["index"]; ok {
-		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("index"))
-		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
-		if err != nil {
-			return nil, err
-		}
-	}
-	args["index"] = arg0
 	return args, nil
 }
 
@@ -1398,6 +1389,21 @@ func (ec *executionContext) field_Query_inputs_args(ctx context.Context, rawArgs
 	return args, nil
 }
 
+func (ec *executionContext) field_Query_notice_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 int
+	if tmp, ok := rawArgs["outputIndex"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("outputIndex"))
+		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["outputIndex"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Query_notices_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
@@ -1440,6 +1446,21 @@ func (ec *executionContext) field_Query_notices_args(ctx context.Context, rawArg
 	return args, nil
 }
 
+func (ec *executionContext) field_Query_report_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 int
+	if tmp, ok := rawArgs["reportIndex"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("reportIndex"))
+		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["reportIndex"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Query_reports_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
 	var err error
 	args := map[string]interface{}{}
@@ -1479,6 +1500,21 @@ func (ec *executionContext) field_Query_reports_args(ctx context.Context, rawArg
 		}
 	}
 	args["before"] = arg3
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_voucher_args(ctx context.Context, rawArgs map[string]interface{}) (map[string]interface{}, error) {
+	var err error
+	args := map[string]interface{}{}
+	var arg0 int
+	if tmp, ok := rawArgs["outputIndex"]; ok {
+		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("outputIndex"))
+		arg0, err = ec.unmarshalNInt2int(ctx, tmp)
+		if err != nil {
+			return nil, err
+		}
+	}
+	args["outputIndex"] = arg0
 	return args, nil
 }
 
@@ -1879,203 +1915,6 @@ func (ec *executionContext) fieldContext_Input_payload(ctx context.Context, fiel
 	return fc, nil
 }
 
-func (ec *executionContext) _Input_voucher(ctx context.Context, field graphql.CollectedField, obj *model.Input) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Input_voucher(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Input().Voucher(rctx, obj, fc.Args["index"].(int))
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.Voucher)
-	fc.Result = res
-	return ec.marshalNVoucher2ᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐVoucher(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Input_voucher(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Input",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "index":
-				return ec.fieldContext_Voucher_index(ctx, field)
-			case "input":
-				return ec.fieldContext_Voucher_input(ctx, field)
-			case "destination":
-				return ec.fieldContext_Voucher_destination(ctx, field)
-			case "payload":
-				return ec.fieldContext_Voucher_payload(ctx, field)
-			case "proof":
-				return ec.fieldContext_Voucher_proof(ctx, field)
-			case "executed":
-				return ec.fieldContext_Voucher_executed(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Voucher", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Input_voucher_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Input_notice(ctx context.Context, field graphql.CollectedField, obj *model.Input) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Input_notice(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Input().Notice(rctx, obj, fc.Args["index"].(int))
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.Notice)
-	fc.Result = res
-	return ec.marshalNNotice2ᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐNotice(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Input_notice(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Input",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "index":
-				return ec.fieldContext_Notice_index(ctx, field)
-			case "input":
-				return ec.fieldContext_Notice_input(ctx, field)
-			case "payload":
-				return ec.fieldContext_Notice_payload(ctx, field)
-			case "proof":
-				return ec.fieldContext_Notice_proof(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Notice", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Input_notice_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Input_report(ctx context.Context, field graphql.CollectedField, obj *model.Input) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Input_report(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Input().Report(rctx, obj, fc.Args["index"].(int))
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(*model.Report)
-	fc.Result = res
-	return ec.marshalNReport2ᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐReport(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Input_report(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Input",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "index":
-				return ec.fieldContext_Report_index(ctx, field)
-			case "input":
-				return ec.fieldContext_Report_input(ctx, field)
-			case "payload":
-				return ec.fieldContext_Report_payload(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Report", field.Name)
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Input_report_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Input_vouchers(ctx context.Context, field graphql.CollectedField, obj *model.Input) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Input_vouchers(ctx, field)
 	if err != nil {
@@ -2388,6 +2227,88 @@ func (ec *executionContext) fieldContext_Input_inputBoxIndex(ctx context.Context
 	return fc, nil
 }
 
+func (ec *executionContext) _Input_blockTimestamp(ctx context.Context, field graphql.CollectedField, obj *model.Input) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Input_blockTimestamp(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.BlockTimestamp, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalOBigInt2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Input_blockTimestamp(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Input",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type BigInt does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Input_prevRandao(ctx context.Context, field graphql.CollectedField, obj *model.Input) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Input_prevRandao(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.PrevRandao, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalOString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Input_prevRandao(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Input",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _InputConnection_totalCount(ctx context.Context, field graphql.CollectedField, obj *model.Connection[*model.Input]) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_InputConnection_totalCount(ctx, field)
 	if err != nil {
@@ -2589,12 +2510,6 @@ func (ec *executionContext) fieldContext_InputEdge_node(ctx context.Context, fie
 				return ec.fieldContext_Input_blockNumber(ctx, field)
 			case "payload":
 				return ec.fieldContext_Input_payload(ctx, field)
-			case "voucher":
-				return ec.fieldContext_Input_voucher(ctx, field)
-			case "notice":
-				return ec.fieldContext_Input_notice(ctx, field)
-			case "report":
-				return ec.fieldContext_Input_report(ctx, field)
 			case "vouchers":
 				return ec.fieldContext_Input_vouchers(ctx, field)
 			case "notices":
@@ -2607,6 +2522,10 @@ func (ec *executionContext) fieldContext_InputEdge_node(ctx context.Context, fie
 				return ec.fieldContext_Input_espressoBlockNumber(ctx, field)
 			case "inputBoxIndex":
 				return ec.fieldContext_Input_inputBoxIndex(ctx, field)
+			case "blockTimestamp":
+				return ec.fieldContext_Input_blockTimestamp(ctx, field)
+			case "prevRandao":
+				return ec.fieldContext_Input_prevRandao(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Input", field.Name)
 		},
@@ -2755,12 +2674,6 @@ func (ec *executionContext) fieldContext_Notice_input(ctx context.Context, field
 				return ec.fieldContext_Input_blockNumber(ctx, field)
 			case "payload":
 				return ec.fieldContext_Input_payload(ctx, field)
-			case "voucher":
-				return ec.fieldContext_Input_voucher(ctx, field)
-			case "notice":
-				return ec.fieldContext_Input_notice(ctx, field)
-			case "report":
-				return ec.fieldContext_Input_report(ctx, field)
 			case "vouchers":
 				return ec.fieldContext_Input_vouchers(ctx, field)
 			case "notices":
@@ -2773,6 +2686,10 @@ func (ec *executionContext) fieldContext_Notice_input(ctx context.Context, field
 				return ec.fieldContext_Input_espressoBlockNumber(ctx, field)
 			case "inputBoxIndex":
 				return ec.fieldContext_Input_inputBoxIndex(ctx, field)
+			case "blockTimestamp":
+				return ec.fieldContext_Input_blockTimestamp(ctx, field)
+			case "prevRandao":
+				return ec.fieldContext_Input_prevRandao(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Input", field.Name)
 		},
@@ -3403,12 +3320,6 @@ func (ec *executionContext) fieldContext_Proof_inputByInputIndex(ctx context.Con
 				return ec.fieldContext_Input_blockNumber(ctx, field)
 			case "payload":
 				return ec.fieldContext_Input_payload(ctx, field)
-			case "voucher":
-				return ec.fieldContext_Input_voucher(ctx, field)
-			case "notice":
-				return ec.fieldContext_Input_notice(ctx, field)
-			case "report":
-				return ec.fieldContext_Input_report(ctx, field)
 			case "vouchers":
 				return ec.fieldContext_Input_vouchers(ctx, field)
 			case "notices":
@@ -3421,6 +3332,10 @@ func (ec *executionContext) fieldContext_Proof_inputByInputIndex(ctx context.Con
 				return ec.fieldContext_Input_espressoBlockNumber(ctx, field)
 			case "inputBoxIndex":
 				return ec.fieldContext_Input_inputBoxIndex(ctx, field)
+			case "blockTimestamp":
+				return ec.fieldContext_Input_blockTimestamp(ctx, field)
+			case "prevRandao":
+				return ec.fieldContext_Input_prevRandao(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Input", field.Name)
 		},
@@ -3965,12 +3880,6 @@ func (ec *executionContext) fieldContext_Query_input(ctx context.Context, field 
 				return ec.fieldContext_Input_blockNumber(ctx, field)
 			case "payload":
 				return ec.fieldContext_Input_payload(ctx, field)
-			case "voucher":
-				return ec.fieldContext_Input_voucher(ctx, field)
-			case "notice":
-				return ec.fieldContext_Input_notice(ctx, field)
-			case "report":
-				return ec.fieldContext_Input_report(ctx, field)
 			case "vouchers":
 				return ec.fieldContext_Input_vouchers(ctx, field)
 			case "notices":
@@ -3983,6 +3892,10 @@ func (ec *executionContext) fieldContext_Query_input(ctx context.Context, field 
 				return ec.fieldContext_Input_espressoBlockNumber(ctx, field)
 			case "inputBoxIndex":
 				return ec.fieldContext_Input_inputBoxIndex(ctx, field)
+			case "blockTimestamp":
+				return ec.fieldContext_Input_blockTimestamp(ctx, field)
+			case "prevRandao":
+				return ec.fieldContext_Input_prevRandao(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Input", field.Name)
 		},
@@ -3995,6 +3908,205 @@ func (ec *executionContext) fieldContext_Query_input(ctx context.Context, field 
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_input_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_voucher(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_voucher(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().Voucher(rctx, fc.Args["outputIndex"].(int))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Voucher)
+	fc.Result = res
+	return ec.marshalNVoucher2ᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐVoucher(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_voucher(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "index":
+				return ec.fieldContext_Voucher_index(ctx, field)
+			case "input":
+				return ec.fieldContext_Voucher_input(ctx, field)
+			case "destination":
+				return ec.fieldContext_Voucher_destination(ctx, field)
+			case "payload":
+				return ec.fieldContext_Voucher_payload(ctx, field)
+			case "proof":
+				return ec.fieldContext_Voucher_proof(ctx, field)
+			case "value":
+				return ec.fieldContext_Voucher_value(ctx, field)
+			case "executed":
+				return ec.fieldContext_Voucher_executed(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Voucher", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_voucher_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_notice(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_notice(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().Notice(rctx, fc.Args["outputIndex"].(int))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Notice)
+	fc.Result = res
+	return ec.marshalNNotice2ᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐNotice(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_notice(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "index":
+				return ec.fieldContext_Notice_index(ctx, field)
+			case "input":
+				return ec.fieldContext_Notice_input(ctx, field)
+			case "payload":
+				return ec.fieldContext_Notice_payload(ctx, field)
+			case "proof":
+				return ec.fieldContext_Notice_proof(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Notice", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_notice_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_report(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_report(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().Report(rctx, fc.Args["reportIndex"].(int))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*model.Report)
+	fc.Result = res
+	return ec.marshalNReport2ᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐReport(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_report(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "index":
+				return ec.fieldContext_Report_index(ctx, field)
+			case "input":
+				return ec.fieldContext_Report_input(ctx, field)
+			case "payload":
+				return ec.fieldContext_Report_payload(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Report", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_report_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -4479,12 +4591,6 @@ func (ec *executionContext) fieldContext_Report_input(ctx context.Context, field
 				return ec.fieldContext_Input_blockNumber(ctx, field)
 			case "payload":
 				return ec.fieldContext_Input_payload(ctx, field)
-			case "voucher":
-				return ec.fieldContext_Input_voucher(ctx, field)
-			case "notice":
-				return ec.fieldContext_Input_notice(ctx, field)
-			case "report":
-				return ec.fieldContext_Input_report(ctx, field)
 			case "vouchers":
 				return ec.fieldContext_Input_vouchers(ctx, field)
 			case "notices":
@@ -4497,6 +4603,10 @@ func (ec *executionContext) fieldContext_Report_input(ctx context.Context, field
 				return ec.fieldContext_Input_espressoBlockNumber(ctx, field)
 			case "inputBoxIndex":
 				return ec.fieldContext_Input_inputBoxIndex(ctx, field)
+			case "blockTimestamp":
+				return ec.fieldContext_Input_blockTimestamp(ctx, field)
+			case "prevRandao":
+				return ec.fieldContext_Input_prevRandao(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Input", field.Name)
 		},
@@ -4889,12 +4999,6 @@ func (ec *executionContext) fieldContext_Voucher_input(ctx context.Context, fiel
 				return ec.fieldContext_Input_blockNumber(ctx, field)
 			case "payload":
 				return ec.fieldContext_Input_payload(ctx, field)
-			case "voucher":
-				return ec.fieldContext_Input_voucher(ctx, field)
-			case "notice":
-				return ec.fieldContext_Input_notice(ctx, field)
-			case "report":
-				return ec.fieldContext_Input_report(ctx, field)
 			case "vouchers":
 				return ec.fieldContext_Input_vouchers(ctx, field)
 			case "notices":
@@ -4907,6 +5011,10 @@ func (ec *executionContext) fieldContext_Voucher_input(ctx context.Context, fiel
 				return ec.fieldContext_Input_espressoBlockNumber(ctx, field)
 			case "inputBoxIndex":
 				return ec.fieldContext_Input_inputBoxIndex(ctx, field)
+			case "blockTimestamp":
+				return ec.fieldContext_Input_blockTimestamp(ctx, field)
+			case "prevRandao":
+				return ec.fieldContext_Input_prevRandao(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Input", field.Name)
 		},
@@ -5066,6 +5174,47 @@ func (ec *executionContext) fieldContext_Voucher_proof(ctx context.Context, fiel
 				return ec.fieldContext_Proof_validityOutputIndexWithinInput(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Proof", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Voucher_value(ctx context.Context, field graphql.CollectedField, obj *model.Voucher) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Voucher_value(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Value, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalOBigInt2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Voucher_value(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Voucher",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type BigInt does not have child fields")
 		},
 	}
 	return fc, nil
@@ -5309,6 +5458,8 @@ func (ec *executionContext) fieldContext_VoucherEdge_node(ctx context.Context, f
 				return ec.fieldContext_Voucher_payload(ctx, field)
 			case "proof":
 				return ec.fieldContext_Voucher_proof(ctx, field)
+			case "value":
+				return ec.fieldContext_Voucher_value(ctx, field)
 			case "executed":
 				return ec.fieldContext_Voucher_executed(ctx, field)
 			}
@@ -7395,114 +7546,6 @@ func (ec *executionContext) _Input(ctx context.Context, sel ast.SelectionSet, ob
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}
-		case "voucher":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Input_voucher(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		case "notice":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Input_notice(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
-		case "report":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Input_report(ctx, field, obj)
-				if res == graphql.Null {
-					atomic.AddUint32(&fs.Invalids, 1)
-				}
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "vouchers":
 			field := field
 
@@ -7617,6 +7660,10 @@ func (ec *executionContext) _Input(ctx context.Context, sel ast.SelectionSet, ob
 			out.Values[i] = ec._Input_espressoBlockNumber(ctx, field, obj)
 		case "inputBoxIndex":
 			out.Values[i] = ec._Input_inputBoxIndex(ctx, field, obj)
+		case "blockTimestamp":
+			out.Values[i] = ec._Input_blockTimestamp(ctx, field, obj)
+		case "prevRandao":
+			out.Values[i] = ec._Input_prevRandao(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -8124,6 +8171,72 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "voucher":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_voucher(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "notice":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_notice(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "report":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_report(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "inputs":
 			field := field
 
@@ -8511,6 +8624,8 @@ func (ec *executionContext) _Voucher(ctx context.Context, sel ast.SelectionSet, 
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "value":
+			out.Values[i] = ec._Voucher_value(ctx, field, obj)
 		case "executed":
 			out.Values[i] = ec._Voucher_executed(ctx, field, obj)
 		default:
@@ -9663,6 +9778,16 @@ func (ec *executionContext) unmarshalOAddressFilterInput2ᚖgithubᚗcomᚋcalin
 	}
 	res, err := ec.unmarshalInputAddressFilterInput(ctx, v)
 	return &res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalOBigInt2string(ctx context.Context, v interface{}) (string, error) {
+	res, err := graphql.UnmarshalID(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalOBigInt2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
+	res := graphql.MarshalID(v)
+	return res
 }
 
 func (ec *executionContext) unmarshalOBoolean2bool(ctx context.Context, v interface{}) (bool, error) {

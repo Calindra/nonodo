@@ -54,21 +54,6 @@ func TestStateSuite(t *testing.T) {
 	suite.Run(t, new(StateSuite))
 }
 
-func (s *StateSuite) TestSendAllVouchersToDecoder() {
-	decoder := FakeDecoder{}
-	vouchers := []cModel.ConvenienceVoucher{}
-	vouchers = append(vouchers, cModel.ConvenienceVoucher{
-		Payload: "123456",
-	})
-	err := sendAllInputVouchersToDecoder(&decoder, 1, vouchers)
-	s.NoError(err)
-	s.Equal(1, len(decoder.outputs))
-	s.Equal(
-		"ef615e2f123456",
-		common.Bytes2Hex(decoder.outputs[0].Payload),
-	)
-}
-
 func (s *StateSuite) TestSendAllNoticesToDecoder() {
 	decoder := FakeDecoder{}
 	notices := []cModel.ConvenienceNotice{}

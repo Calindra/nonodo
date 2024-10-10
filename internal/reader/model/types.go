@@ -26,7 +26,10 @@ type Input struct {
 	EspressoBlockNumber string `json:"espressoBlockNumber"`
 	// Input index in the Inpux Box
 	InputBoxIndex string `json:"inputBoxIndex"`
-	// Input payload in Ethereum hex binary format, starting with '0x'
+
+	BlockTimestamp string `json:"blockTimestamp"`
+
+	PrevRandao string `json:"prevRandao"`
 }
 
 // Representation of a transaction that can be carried out on the base layer blockchain, such as a
@@ -41,6 +44,8 @@ type Voucher struct {
 	Destination string `json:"destination"`
 	// Transaction payload in Ethereum hex binary format, starting with '0x'
 	Payload string `json:"payload"`
+
+	Value string `json:"value"`
 
 	Executed bool `json:"executed"`
 }
@@ -63,6 +68,7 @@ type Notice struct {
 	InputIndex int
 	// Notice data as a payload in Ethereum hex binary format, starting with '0x'
 	Payload string `json:"payload"`
+	// InputId string
 }
 
 //
