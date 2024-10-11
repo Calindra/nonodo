@@ -84,6 +84,7 @@ type NonodoOpts struct {
 	SalsaUrl            string
 	AvailFromBlock      uint64
 	AvailEnabled        bool
+	PaioServerUrl       string
 }
 
 // Create the options struct with default values.
@@ -138,6 +139,7 @@ func NewNonodoOpts() NonodoOpts {
 		AvailFromBlock:      0,
 		AvailEnabled:        false,
 		AutoCount:           false,
+		PaioServerUrl:       "https://cartesi-paio-avail-turing.fly.dev/transaction",
 	}
 }
 
@@ -401,7 +403,9 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		if err != nil {
 			panic(err)
 		}
-
+		paioSequencerBuilder.WithPaioServerUrl(
+			opts.PaioServerUrl,
+		)
 		paioSequencerBuilder.WithAvalClient(availClient)
 	}
 	if opts.Sequencer == "espresso" {

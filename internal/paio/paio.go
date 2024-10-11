@@ -337,7 +337,7 @@ func (p *PaioAPI) SendCartesiTransaction(ctx echo.Context) error {
 		if err != nil {
 			return err
 		}
-		slog.Info("Espresso", "txId", esTxId)
+		slog.Info("Sequencer", "txId", esTxId)
 		response := TransactionResponse{
 			Id: &txId,
 		}
@@ -385,6 +385,7 @@ type PaioBuilder struct {
 	InputRepository *repository.InputRepository
 	RpcUrl          string
 	EspressoUrl     string
+	PaioServerUrl   string
 }
 
 func NewPaioBuilder() *PaioBuilder {
@@ -393,6 +394,7 @@ func NewPaioBuilder() *PaioBuilder {
 		InputRepository: nil,
 		RpcUrl:          "",
 		EspressoUrl:     "",
+		PaioServerUrl:   "",
 	}
 }
 
@@ -416,11 +418,21 @@ func (pb *PaioBuilder) WithEspressoUrl(espressoUrl string) *PaioBuilder {
 	return pb
 }
 
+func (pb *PaioBuilder) WithPaioServerUrl(paioServerUrl string) *PaioBuilder {
+	pb.PaioServerUrl = paioServerUrl
+	return pb
+}
+
 func (pb *PaioBuilder) Build() *PaioAPI {
 	var clientSender Sender
 
 	if pb.EspressoUrl != "" {
 		clientSender = NewEspressoSender(pb.EspressoUrl)
+	}
+
+	if pb.PaioServerUrl != "" {
+		slog.Info("Using Paio's server", "url", pb.PaioServerUrl)
+		clientSender = NewPaioSender2Server(pb.PaioServerUrl)
 	}
 
 	return &PaioAPI{
