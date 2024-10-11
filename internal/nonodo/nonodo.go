@@ -336,10 +336,11 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	if opts.RpcUrl == "" && !opts.DisableDevnet {
 		anvilLocation := opts.AnvilCommand
 		if anvilLocation == "" {
-			anvilLocation, err = handleAnvilInstallation()
+			al, err := handleAnvilInstallation()
 			if err != nil {
 				panic(err)
 			}
+			anvilLocation = al
 		}
 
 		w.Workers = append(w.Workers, devnet.AnvilWorker{
