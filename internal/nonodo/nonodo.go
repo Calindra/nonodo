@@ -45,9 +45,11 @@ const (
 
 // Options to nonodo.
 type NonodoOpts struct {
+	AutoCount          bool
 	AnvilAddress       string
 	AnvilPort          int
 	AnvilVerbose       bool
+	AnvilCommand       string
 	HttpAddress        string
 	HttpPort           int
 	HttpRollupsPort    int
@@ -104,6 +106,7 @@ func NewNonodoOpts() NonodoOpts {
 	return NonodoOpts{
 		AnvilAddress:        devnet.AnvilDefaultAddress,
 		AnvilPort:           devnet.AnvilDefaultPort,
+		AnvilCommand:        "",
 		AnvilVerbose:        false,
 		HttpAddress:         "127.0.0.1",
 		HttpPort:            DefaultHttpPort,
@@ -134,6 +137,7 @@ func NewNonodoOpts() NonodoOpts {
 		SalsaUrl:            "127.0.0.1:5005",
 		AvailFromBlock:      0,
 		AvailEnabled:        false,
+		AutoCount:           false,
 	}
 }
 
@@ -141,7 +145,7 @@ func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 	var w supervisor.SupervisorWorker
 	w.Timeout = opts.TimeoutWorker
 	db := CreateDBInstance(opts)
-	container := convenience.NewContainer(*db)
+	container := convenience.NewContainer(*db, opts.AutoCount)
 	decoder := container.GetOutputDecoder()
 	convenienceService := container.GetConvenienceService()
 
@@ -210,6 +214,7 @@ func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 		decoder,
 		container.GetReportRepository(),
 		container.GetInputRepository(),
+		container.GetVoucherRepository(),
 	)
 
 	e := echo.New()
@@ -299,13 +304,14 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	var w supervisor.SupervisorWorker
 	w.Timeout = opts.TimeoutWorker
 	db := CreateDBInstance(opts)
-	container := convenience.NewContainer(*db)
+	container := convenience.NewContainer(*db, opts.AutoCount)
 	decoder := container.GetOutputDecoder()
 	convenienceService := container.GetConvenienceService()
 	adapter := reader.NewAdapterV1(db, convenienceService)
 	modelInstance := model.NewNonodoModel(decoder,
 		container.GetReportRepository(),
 		container.GetInputRepository(),
+		container.GetVoucherRepository(),
 	)
 	e := echo.New()
 	e.Use(middleware.CORS())
@@ -328,9 +334,12 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	}))
 
 	if opts.RpcUrl == "" && !opts.DisableDevnet {
-		anvilLocation, err := handleAnvilInstallation()
-		if err != nil {
-			panic(err)
+		anvilLocation := opts.AnvilCommand
+		if anvilLocation == "" {
+			anvilLocation, err = handleAnvilInstallation()
+			if err != nil {
+				panic(err)
+			}
 		}
 
 		w.Workers = append(w.Workers, devnet.AnvilWorker{
@@ -404,7 +413,9 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		w.Workers = append(w.Workers, avail.NewAvailListener(
 			opts.AvailFromBlock,
 			modelInstance.GetInputRepository(),
-			inputterWorker))
+			inputterWorker,
+			opts.FromBlock,
+		))
 		sequencer = model.NewInputBoxSequencer(modelInstance)
 	}
 

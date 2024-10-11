@@ -42,7 +42,7 @@ func (o *OutputDecoder) HandleOutput(
 	// https://github.com/cartesi/rollups-contracts/issues/42#issuecomment-1694932058
 	// detect the output type Voucher | Notice
 	// 0xc258d6e5 for Notice
-	// 0xef615e2f for Vouchers
+	// 0x237a816f for Vouchers
 	if payload[2:10] == model.VOUCHER_SELECTOR {
 		_, err := o.convenienceService.CreateVoucher(ctx, &model.ConvenienceVoucher{
 			Destination: destination,
@@ -69,7 +69,7 @@ func (o *OutputDecoder) HandleOutputV2(
 	// https://github.com/cartesi/rollups-contracts/issues/42#issuecomment-1694932058
 	// detect the output type Voucher | Notice
 	// 0xc258d6e5 for Notice
-	// 0xef615e2f for Vouchers
+	// 0x237a816f for Vouchers
 	slog.Debug("Add Voucher/Notices",
 		"inputIndex", processOutputData.InputIndex,
 		"outputIndex", processOutputData.OutputIndex,

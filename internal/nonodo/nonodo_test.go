@@ -19,6 +19,7 @@ import (
 
 	"github.com/Khan/genqlient/graphql"
 	"github.com/calindra/nonodo/internal/commons"
+	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/calindra/nonodo/internal/inspect"
 	"github.com/calindra/nonodo/internal/readerclient"
@@ -78,10 +79,18 @@ func (s *NonodoSuite) TestItProcessesAdvanceInputs() {
 		s.Equal(payloads[i][:], s.decodeHex(input.Payload))
 		s.Equal(devnet.SenderAddress, input.MsgSender)
 		voucher := input.Vouchers.Edges[0].Node
-		s.Equal(payloads[i][:], s.decodeHex(voucher.Payload))
+		s.Equal(model.VOUCHER_SELECTOR, voucher.Payload[2:10])
+		// should ends with
+		s.True(strings.HasSuffix(voucher.Payload, common.Bytes2Hex(payloads[i][:])))
 		s.Equal(devnet.SenderAddress, voucher.Destination)
-		s.Equal(common.Bytes2Hex(payloads[i][:])+"ff",
-			input.Notices.Edges[0].Node.Payload[2:])
+		s.Equal(model.NOTICE_SELECTOR, input.Notices.Edges[0].Node.Payload[2:10])
+
+		s.Contains(input.Notices.Edges[0].Node.Payload, common.Bytes2Hex(payloads[i][:])+"ff")
+		// s.True(strings.HasSuffix(
+		// 	input.Notices.Edges[0].Node.Payload,
+		// 	common.Bytes2Hex(payloads[i][:])+"ff"))
+		// s.Equal("" + common.Bytes2Hex(payloads[i][:])+"ff",
+		// 	input.Notices.Edges[0].Node.Payload[2:])
 		s.Equal(payloads[i][:], s.decodeHex(input.Reports.Edges[0].Node.Payload))
 	}
 }
@@ -139,6 +148,7 @@ func (s *NonodoSuite) setupTest(opts NonodoOpts) {
 	s.nonce += 1
 	opts.AnvilPort += s.nonce
 	opts.HttpPort += s.nonce + 100
+	opts.AnvilCommand = "anvil"
 	s.T().Log("ports", "http", opts.HttpPort, "anvil", opts.AnvilPort)
 	commons.ConfigureLog(slog.LevelDebug)
 	s.ctx, s.timeoutCancel = context.WithTimeout(context.Background(), testTimeout)

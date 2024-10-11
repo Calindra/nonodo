@@ -49,7 +49,7 @@ func (s *AdapterSuite) SetupTest() {
 	}
 }
 
-func TestReportRepositorySuite(t *testing.T) {
+func TestAdapterSuite(t *testing.T) {
 	suite.Run(t, new(AdapterSuite))
 }
 
@@ -60,13 +60,13 @@ func (s *AdapterSuite) TestCreateTables() {
 
 func (s *AdapterSuite) TestGetReport() {
 	ctx := context.Background()
-	_, err := s.reportRepository.Create(ctx, convenience.Report{
+	reportSaved, err := s.reportRepository.CreateReport(ctx, convenience.Report{
 		InputIndex: 1,
-		Index:      2,
+		Index:      999,
 		Payload:    common.Hex2Bytes("1122"),
 	})
 	s.NoError(err)
-	report, err := s.adapter.GetReport(2, 1)
+	report, err := s.adapter.GetReport(reportSaved.Index)
 	s.NoError(err)
 	s.Equal("0x1122", report.Payload)
 }
@@ -74,7 +74,7 @@ func (s *AdapterSuite) TestGetReport() {
 func (s *AdapterSuite) TestGetReports() {
 	ctx := context.Background()
 	for i := 0; i < 3; i++ {
-		_, err := s.reportRepository.Create(ctx, convenience.Report{
+		_, err := s.reportRepository.CreateReport(ctx, convenience.Report{
 			InputIndex: i,
 			Index:      0,
 			Payload:    common.Hex2Bytes("1122"),

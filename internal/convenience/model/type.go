@@ -12,7 +12,8 @@ import (
 const EXECUTED = "Executed"
 const FALSE = "false"
 const DESTINATION = "Destination"
-const VOUCHER_SELECTOR = "ef615e2f"
+const VOUCHER_SELECTOR = "237a816f" // deprecated ef615e2f
+const DELEGATED_CALL_VOUCHER_SELECTOR = "10321e8b"
 const NOTICE_SELECTOR = "c258d6e5"
 const INPUT_INDEX = "InputIndex"
 
@@ -39,6 +40,7 @@ type ConvenienceVoucher struct {
 	InputIndex  uint64         `db:"input_index"`
 	OutputIndex uint64         `db:"output_index"`
 	Executed    bool           `db:"executed"`
+	Value       string         `db:"value"`
 
 	// Proof we can fetch from the original GraphQL
 

@@ -49,12 +49,12 @@ type Input {
   blockNumber: BigInt!
   "Input payload in Ethereum hex binary format, starting with '0x'"
   payload: String!
-  "Get a voucher from this particular input given the voucher's index"
-  voucher(index: Int!): Voucher!
-  "Get a notice from this particular input given the notice's index"
-  notice(index: Int!): Notice!
-  "Get a report from this particular input given the report's index"
-  report(index: Int!): Report!
+  # "Get a voucher from this particular input given the voucher's index"
+  # voucher(index: Int!): Voucher!
+  # "Get a notice from this particular input given the notice's index"
+  # notice(index: Int!): Notice!
+  # "Get a report from this particular input given the report's index"
+  # report(index: Int!): Report!
   "Get vouchers from this particular input with support for pagination"
   vouchers(first: Int, last: Int, after: String, before: String): VoucherConnection!
   "Get notices from this particular input with support for pagination"
@@ -86,6 +86,8 @@ type Voucher {
   "Proof object that allows this voucher to be validated and executed on the base layer blockchain"
   proof: Proof
 
+  value: BigInt
+
   "Indicates whether the voucher has been executed on the base layer blockchain"
   executed: Boolean
 }
@@ -94,6 +96,12 @@ type Voucher {
 type Query {
   "Get input based on its identifier"
   input(id: String!): Input!
+  "Get a voucher based on its index"
+  voucher(outputIndex: Int!): Voucher!
+  "Get a notice based on its index"
+  notice(outputIndex: Int!): Notice!
+  "Get a report based on its index"
+  report(reportIndex: Int!): Report!
   "Get inputs with support for pagination"
   inputs(first: Int, last: Int, after: String, before: String, where: InputFilter): InputConnection!
   "Get vouchers with support for pagination"

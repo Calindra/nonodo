@@ -9,7 +9,6 @@ import (
 	"log/slog"
 	"math/big"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/calindra/nonodo/internal/commons"
@@ -35,21 +34,25 @@ const (
 )
 
 type AvailListener struct {
-	FromBlock       uint64
+	AvailFromBlock  uint64
 	InputRepository *cRepos.InputRepository
 	InputterWorker  *inputter.InputterWorker
 	PaioDecoder     PaioDecoder
+	L1CurrentBlock  uint64
 }
 
 type PaioDecoder interface {
 	DecodePaioBatch(bytes string) (string, error)
 }
 
-func NewAvailListener(fromBlock uint64, repository *cRepos.InputRepository, w *inputter.InputterWorker) supervisor.Worker {
+func NewAvailListener(availFromBlock uint64, repository *cRepos.InputRepository, w *inputter.InputterWorker, fromBlock uint64) supervisor.Worker {
+	paioDecoder := ZzzHuiDecoder{}
 	return AvailListener{
-		FromBlock:       fromBlock,
+		AvailFromBlock:  availFromBlock,
 		InputRepository: repository,
 		InputterWorker:  w,
+		PaioDecoder:     paioDecoder,
+		L1CurrentBlock:  fromBlock,
 	}
 }
 
@@ -115,14 +118,21 @@ func (a AvailListener) connect(ctx context.Context) (*gsrpc.SubstrateAPI, error)
 const retryInterval = 5 * time.Second
 
 func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.SubstrateAPI) error {
-	latestBlock := a.FromBlock
-	l1CurrentBlock := a.FromBlock
-	l1PreviousBlock := a.FromBlock
+	latestAvailBlock := a.AvailFromBlock
 	var index uint = 0
 	defer client.Client.Close()
 
+	ethClient, err := a.InputterWorker.GetEthClient()
+	if err != nil {
+		return fmt.Errorf("avail inputter: dial: %w", err)
+	}
+	inputBox, err := contracts.NewInputBox(a.InputterWorker.InputBoxAddress, ethClient)
+	if err != nil {
+		return fmt.Errorf("avail inputter: bind input box: %w", err)
+	}
+
 	for {
-		if latestBlock == 0 {
+		if latestAvailBlock == 0 {
 			block, err := client.RPC.Chain.GetHeaderLatest()
 			if err != nil {
 				slog.Error("Avail", "Error getting latest block hash", err)
@@ -132,7 +142,7 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 			}
 
 			slog.Info("Avail", "Set last block", block.Number)
-			latestBlock = uint64(block.Number)
+			latestAvailBlock = uint64(block.Number)
 		}
 
 		subscription, err := client.RPC.Chain.SubscribeNewHeads()
@@ -158,16 +168,16 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 				case <-time.After(DELAY * time.Millisecond):
 
 				case i := <-subscription.Chan():
-					for latestBlock <= uint64(i.Number) {
+					for latestAvailBlock <= uint64(i.Number) {
 						index++
 
-						if latestBlock < uint64(i.Number) {
-							slog.Debug("Avail Catching up", "Chain is at block", i.Number, "fetching block", latestBlock)
+						if latestAvailBlock < uint64(i.Number) {
+							slog.Debug("Avail Catching up", "Chain is at block", i.Number, "fetching block", latestAvailBlock)
 						} else {
-							slog.Debug("Avail", "index", index, "Chain is at block", i.Number, "fetching block", latestBlock)
+							slog.Debug("Avail", "index", index, "Chain is at block", i.Number, "fetching block", latestAvailBlock)
 						}
 
-						blockHash, err := client.RPC.Chain.GetBlockHash(latestBlock)
+						blockHash, err := client.RPC.Chain.GetBlockHash(latestAvailBlock)
 						if err != nil {
 							errCh <- err
 							return
@@ -177,98 +187,18 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 							errCh <- err
 							return
 						}
-						timestamp, err := ReadTimestampFromBlock(block)
+						currentL1Block, err := a.TableTennis(ctx, block,
+							ethClient, inputBox,
+							a.L1CurrentBlock,
+						)
 						if err != nil {
 							errCh <- err
 							return
 						}
-						total := len(block.Block.Extrinsics)
-
-						if total > 0 {
-
-							l1FinalizedTimestamp := timestamp
-							// read L1 if there might be update
-							if latestBlock > l1CurrentBlock || l1PreviousBlock == a.FromBlock {
-								slog.Debug("Fetching InputBox between Avail blocks", "from", l1CurrentBlock, "to timestamp", l1FinalizedTimestamp)
-								lastL1BlockRead, err := readInputBoxByBlockAndTimestamp(ctx, l1CurrentBlock, l1FinalizedTimestamp, a.InputterWorker)
-								if err != nil {
-									errCh <- err
-									return
-								}
-								l1PreviousBlock = l1CurrentBlock
-								l1CurrentBlock = lastL1BlockRead + 1
-							}
+						if currentL1Block != nil && *currentL1Block > 0 {
+							a.L1CurrentBlock = *currentL1Block
 						}
-
-						for _, ext := range block.Block.Extrinsics {
-							appID := ext.Signature.AppID.Int64()
-							iso := time.UnixMilli(int64(timestamp)).Format(time.RFC3339)
-
-							slog.Debug("Block", "timestamp", timestamp, "iso", iso, "blockNumber", latestBlock)
-
-							if appID != DEFAULT_APP_ID {
-								slog.Debug("Skipping", "appID", appID)
-								continue
-							}
-
-							args := string(ext.Method.Args)
-
-							msgSender, typedData, signature, err := commons.ExtractSigAndData(args)
-
-							if err != nil {
-								slog.Error("avail: error extracting signature and typed data", "err", err)
-								continue
-							}
-							dappAddress := typedData.Message["app"].(string)
-							nonce := typedData.Message["nonce"].(string)
-							maxGasPrice := typedData.Message["max_gas_price"].(string)
-							payload, ok := typedData.Message["data"].(string)
-							if !ok {
-								slog.Error("avail: error extracting data from message")
-								continue
-							}
-							slog.Debug("Avail input",
-								"dappAddress", dappAddress,
-								"msgSender", msgSender,
-								"nonce", nonce,
-								"maxGasPrice", maxGasPrice,
-								"payload", payload,
-							)
-
-							payloadBytes := []byte(payload)
-							if strings.HasPrefix(payload, "0x") {
-								payload = payload[2:] // remove 0x
-								payloadBytes, err = hex.DecodeString(payload)
-								if err != nil {
-									errCh <- err
-									return
-								}
-							}
-							inputCount, err := a.InputRepository.Count(ctx, nil)
-
-							if err != nil {
-								errCh <- err
-								return
-							}
-
-							_, err = a.InputRepository.Create(ctx, cModel.AdvanceInput{
-								Index:                int(inputCount),
-								CartesiTransactionId: common.Bytes2Hex(crypto.Keccak256(signature)),
-								MsgSender:            msgSender,
-								Payload:              payloadBytes,
-								AppContract:          common.HexToAddress(dappAddress),
-								AvailBlockNumber:     int(i.Number),
-								AvailBlockTimestamp:  time.Unix(int64(timestamp)/ONE_SECOND_IN_MS, 0),
-								InputBoxIndex:        -2,
-								Type:                 "Avail",
-							})
-							if err != nil {
-								errCh <- err
-								return
-							}
-						}
-
-						latestBlock += 1
+						latestAvailBlock += 1
 						time.Sleep(500 * time.Millisecond) // nolint
 					}
 				}
@@ -290,6 +220,51 @@ func (a AvailListener) watchNewTransactions(ctx context.Context, client *gsrpc.S
 			return nil
 		}
 	}
+}
+
+func (a AvailListener) TableTennis(ctx context.Context,
+	block *types.SignedBlock, ethClient *ethclient.Client,
+	inputBox *contracts.InputBox, startBlockNumber uint64) (*uint64, error) {
+
+	var currentL1Block uint64
+	availInputs, err := a.ReadInputsFromPaioBlock(block)
+	if err != nil {
+		return nil, err
+	}
+	var availBlockTimestamp uint64
+	if len(availInputs) == 0 {
+		availBlockTimestamp, err = ReadTimestampFromBlock(block)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		availBlockTimestamp = uint64(availInputs[0].BlockTimestamp.Unix())
+	}
+	inputsL1, err := a.InputterWorker.FindAllInputsByBlockAndTimestampLT(ctx,
+		ethClient, inputBox, startBlockNumber,
+		(availBlockTimestamp/ONE_SECOND_IN_MS)-FIVE_MINUTES,
+	)
+	if err != nil {
+		return nil, err
+	}
+	if len(inputsL1) > 0 {
+		currentL1Block = inputsL1[len(inputsL1)-1].BlockNumber + 1
+	}
+	inputs := append(inputsL1, availInputs...)
+	if len(inputs) > 0 {
+		inputCount, err := a.InputRepository.Count(ctx, nil)
+		if err != nil {
+			return nil, err
+		}
+		for i := range inputs {
+			inputs[i].Index = i + int(inputCount)
+			_, err = a.InputRepository.Create(ctx, inputs[i])
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+	return &currentL1Block, nil
 }
 
 func DecodeTimestamp(hexStr string) uint64 {
@@ -316,6 +291,41 @@ func decodeCompactU64(data []byte) uint64 {
 	}
 }
 
+// nolint
+func encodeCompactU64(value uint64) []byte {
+	var result []byte
+
+	if value < (1 << 6) { // Single byte (6-bit value)
+		result = []byte{byte(value<<2) | 0b00}
+	} else if value < (1 << 14) { // Two bytes (14-bit value)
+		result = []byte{
+			byte((value&0x3F)<<2) | 0b01,
+			byte(value >> 6),
+		}
+	} else if value < (1 << 30) { // Four bytes (30-bit value)
+		result = []byte{
+			byte((value&0x3F)<<2) | 0b10,
+			byte(value >> 6),
+			byte(value >> 14),
+			byte(value >> 22),
+		}
+	} else { // Eight bytes (64-bit value)
+		result = []byte{
+			0b11, // First byte indicates 8-byte encoding
+			byte(value),
+			byte(value >> 8),
+			byte(value >> 16),
+			byte(value >> 24),
+			byte(value >> 32),
+			byte(value >> 40),
+			byte(value >> 48),
+			byte(value >> 56),
+		}
+	}
+
+	return result
+}
+
 func padHexStringRight(hexStr string) string {
 	if len(hexStr) > 1 && hexStr[:2] == "0x" {
 		hexStr = hexStr[2:]
@@ -329,24 +339,36 @@ func padHexStringRight(hexStr string) string {
 	return hexStr
 }
 
-func readInputBoxByBlockAndTimestamp(ctx context.Context, l1FinalizedPrevHeight uint64, timestamp uint64, w *inputter.InputterWorker) (uint64, error) {
-	client, err := ethclient.DialContext(ctx, w.Provider)
-	if err != nil {
-		return 0, fmt.Errorf("avail inputter: dial: %w", err)
-	}
-	inputBox, err := contracts.NewInputBox(w.InputBoxAddress, client)
-	if err != nil {
-		return 0, fmt.Errorf("avail inputter: bind input box: %w", err)
-	}
-	//Avail timestamps are in milliseconds and event timestamps are in seconds
-	lastL1BlockRead, err := w.ReadInputsByBlockAndTimestamp(ctx, client, inputBox, l1FinalizedPrevHeight, (timestamp/ONE_SECOND_IN_MS)-FIVE_MINUTES)
+type ZzzHuiDecoder struct {
+}
 
+func (z ZzzHuiDecoder) DecodePaioBatch(bytes string) (string, error) {
+	_, typedData, signature, err := commons.ExtractSigAndData(bytes)
 	if err != nil {
-		return 0, fmt.Errorf("avail inputter: read past inputs: %w", err)
+		return "", err
 	}
-
-	return lastL1BlockRead, nil
-
+	signature[64] += 27
+	slog.Debug("DecodePaioBatch", "signature", common.Bytes2Hex(signature))
+	txs := []PaioTransaction{}
+	txs = append(txs, PaioTransaction{
+		Signature: PaioSignature{
+			R: fmt.Sprintf("0x%s", common.Bytes2Hex(signature[0:32])),
+			S: fmt.Sprintf("0x%s", common.Bytes2Hex(signature[32:64])),
+			V: fmt.Sprintf("0x%s", common.Bytes2Hex(signature[64:])),
+		},
+		App:         typedData.Message["app"].(string),
+		Nonce:       uint64(typedData.Message["nonce"].(float64)),
+		Data:        common.Hex2Bytes(typedData.Message["data"].(string)[2:]),
+		MaxGasPrice: uint64(typedData.Message["max_gas_price"].(float64)),
+	})
+	paioBatch := PaioBatch{
+		Txs: txs,
+	}
+	paioJson, err := json.Marshal(paioBatch)
+	if err != nil {
+		return "", err
+	}
+	return string(paioJson), nil
 }
 
 func (av *AvailListener) ReadInputsFromPaioBlock(block *types.SignedBlock) ([]cModel.AdvanceInput, error) {
@@ -363,7 +385,7 @@ func (av *AvailListener) ReadInputsFromPaioBlock(block *types.SignedBlock) ([]cM
 		appID := ext.Signature.AppID.Int64()
 		slog.Debug("debug", "appID", appID, "timestamp", timestamp)
 		if appID != DEFAULT_APP_ID {
-			slog.Debug("Skipping", "appID", appID)
+			// slog.Debug("Skipping", "appID", appID)
 			continue
 		}
 		args := string(ext.Method.Args)
@@ -371,12 +393,14 @@ func (av *AvailListener) ReadInputsFromPaioBlock(block *types.SignedBlock) ([]cM
 		if err != nil {
 			return inputs, err
 		}
-		slog.Debug("PaioJson", "json", jsonStr)
-		inputs, err := ParsePaioBatchToInputs(jsonStr, chainId)
+		parsedInputs, err := ParsePaioBatchToInputs(jsonStr, chainId)
 		if err != nil {
 			return inputs, err
 		}
-		slog.Debug("Inputs", "len", len(inputs))
+		inputs = append(inputs, parsedInputs...)
+	}
+	for i := range inputs {
+		inputs[i].BlockTimestamp = time.Unix(int64(timestamp), 0)
 	}
 	return inputs, nil
 }
