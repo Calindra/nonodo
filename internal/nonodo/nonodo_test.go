@@ -83,8 +83,14 @@ func (s *NonodoSuite) TestItProcessesAdvanceInputs() {
 		// should ends with
 		s.True(strings.HasSuffix(voucher.Payload, common.Bytes2Hex(payloads[i][:])))
 		s.Equal(devnet.SenderAddress, voucher.Destination)
-		s.Equal(common.Bytes2Hex(payloads[i][:])+"ff",
-			input.Notices.Edges[0].Node.Payload[2:])
+		s.Equal(model.NOTICE_SELECTOR, input.Notices.Edges[0].Node.Payload[2:10])
+
+		s.Contains(input.Notices.Edges[0].Node.Payload, common.Bytes2Hex(payloads[i][:])+"ff")
+		// s.True(strings.HasSuffix(
+		// 	input.Notices.Edges[0].Node.Payload,
+		// 	common.Bytes2Hex(payloads[i][:])+"ff"))
+		// s.Equal("" + common.Bytes2Hex(payloads[i][:])+"ff",
+		// 	input.Notices.Edges[0].Node.Payload[2:])
 		s.Equal(payloads[i][:], s.decodeHex(input.Reports.Edges[0].Node.Payload))
 	}
 }

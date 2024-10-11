@@ -17,7 +17,6 @@ import (
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/calindra/nonodo/internal/sequencers/avail"
-	"github.com/calindra/nonodo/internal/sequencers/espresso"
 	"github.com/calindra/nonodo/internal/sequencers/paiodecoder"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -42,23 +41,19 @@ type PaioAPI struct {
 	inputRepository *repository.InputRepository
 	EvmRpcUrl       string
 	chainID         *big.Int
-	EspressoClient  EspressoSender
+	ClientSender    Sender
 }
 
-type EspressoSender interface {
-	SubmitSigAndData(namespace int, sigAndData commons.SigAndData) (string, error)
-}
-
-func (p *PaioAPI) getChainID() (*big.Int, error) {
+func (p *PaioAPI) getChainID(ctx context.Context) (*big.Int, error) {
 	if p.chainID != nil {
 		return p.chainID, nil
 	}
-	stdCtx := context.Background()
-	client, err := ethclient.DialContext(stdCtx, p.EvmRpcUrl)
+	client, err := ethclient.DialContext(ctx, p.EvmRpcUrl)
 	if err != nil {
 		return nil, fmt.Errorf("ethclient dial error: %w", err)
 	}
-	chainId, err := client.ChainID(stdCtx)
+	defer client.Close()
+	chainId, err := client.ChainID(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("ethclient chainId error: %w", err)
 	}
@@ -204,7 +199,7 @@ func (p *PaioAPI) SaveTransaction(ctx echo.Context) error {
 		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "avail: error extracting data from message"})
 	}
 
-	chainId, err := p.getChainID()
+	chainId, err := p.getChainID(stdCtx)
 	if err != nil {
 		return fmt.Errorf("ethclient dial error: %w", err)
 	}
@@ -337,13 +332,12 @@ func (p *PaioAPI) SendCartesiTransaction(ctx echo.Context) error {
 		"message", request.TypedData.Message,
 	)
 	txId := fmt.Sprintf("0x%s", common.Bytes2Hex(crypto.Keccak256(signature)))
-	if p.EspressoClient != nil {
-		namespace := 10008
-		esTxId, err := p.EspressoClient.SubmitSigAndData(namespace, sigAndData)
+	if p.ClientSender != nil {
+		esTxId, err := p.ClientSender.SubmitSigAndData(sigAndData)
 		if err != nil {
 			return err
 		}
-		slog.Info("Espresso", "txId", esTxId)
+		slog.Info("Sequencer", "txId", esTxId)
 		response := TransactionResponse{
 			Id: &txId,
 		}
@@ -386,14 +380,71 @@ func (p *PaioAPI) SendCartesiTransaction(ctx echo.Context) error {
 	return ctx.JSON(http.StatusOK, response)
 }
 
-// Register the Paio API to echo
-func Register(e *echo.Echo, availClient *avail.AvailClient, inputRepository *repository.InputRepository, rpcUrl string, espressoUrl *string) {
-	paioAPI := &PaioAPI{availClient, inputRepository, rpcUrl, nil, nil}
-	if espressoUrl != nil {
-		paioAPI.EspressoClient = espresso.EspressoClient{
-			EspressoUrl: *espressoUrl,
-		}
+type PaioBuilder struct {
+	AvalClient      *avail.AvailClient
+	InputRepository *repository.InputRepository
+	RpcUrl          string
+	EspressoUrl     string
+	PaioServerUrl   string
+}
+
+func NewPaioBuilder() *PaioBuilder {
+	return &PaioBuilder{
+		AvalClient:      nil,
+		InputRepository: nil,
+		RpcUrl:          "",
+		EspressoUrl:     "",
+		PaioServerUrl:   "",
 	}
-	var paioServerAPI ServerInterface = paioAPI
+}
+
+func (pb *PaioBuilder) WithAvalClient(availClient *avail.AvailClient) *PaioBuilder {
+	pb.AvalClient = availClient
+	return pb
+}
+
+func (pb *PaioBuilder) WithInputRepository(inputRepository *repository.InputRepository) *PaioBuilder {
+	pb.InputRepository = inputRepository
+	return pb
+}
+
+func (pb *PaioBuilder) WithRpcUrl(rpcUrl string) *PaioBuilder {
+	pb.RpcUrl = rpcUrl
+	return pb
+}
+
+func (pb *PaioBuilder) WithEspressoUrl(espressoUrl string) *PaioBuilder {
+	pb.EspressoUrl = espressoUrl
+	return pb
+}
+
+func (pb *PaioBuilder) WithPaioServerUrl(paioServerUrl string) *PaioBuilder {
+	pb.PaioServerUrl = paioServerUrl
+	return pb
+}
+
+func (pb *PaioBuilder) Build() *PaioAPI {
+	var clientSender Sender
+
+	if pb.EspressoUrl != "" {
+		clientSender = NewEspressoSender(pb.EspressoUrl)
+	}
+
+	if pb.PaioServerUrl != "" {
+		slog.Info("Using Paio's server", "url", pb.PaioServerUrl)
+		clientSender = NewPaioSender2Server(pb.PaioServerUrl)
+	}
+
+	return &PaioAPI{
+		availClient:     pb.AvalClient,
+		inputRepository: pb.InputRepository,
+		EvmRpcUrl:       pb.RpcUrl,
+		ClientSender:    clientSender,
+		chainID:         nil,
+	}
+}
+
+// Register the Paio API to echo
+func Register(e *echo.Echo, paioServerAPI ServerInterface) {
 	RegisterHandlers(e, paioServerAPI)
 }
