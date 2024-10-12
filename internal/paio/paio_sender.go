@@ -23,7 +23,6 @@ type PaioSender2Server struct {
 
 func EncodePaioFormat(sigAndData commons.SigAndData) (string, error) {
 	// nolint
-	encoded := `{"signature":"0x76a270f52ade97cd95ef7be45e08ea956bfdaf14b7fc4f8816207fa9eb3a5c177ccdd94ac1bd86a749b66526fff6579e2b6bf1698e831955332ad9d5ed44da721c","message":"0x000000000000000000000000ab7528bb862fb57e8a2bcd567a2e929a0be56a5e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000a0000000000000000000000000000000000000000000000000000000000000080000000000000000000000000000000000000000000000000000000000000000d48656c6c6f2c20576f726c643f00000000000000000000000000000000000000"}`
 	typedData := apitypes.TypedData{}
 	typedDataBytes, err := base64.StdEncoding.DecodeString(sigAndData.TypedData)
 	if err != nil {
@@ -64,7 +63,7 @@ func EncodePaioFormat(sigAndData commons.SigAndData) (string, error) {
 		slog.Error("ABI error", "err", err)
 		return "", err
 	}
-	encoded = common.Bytes2Hex(encodedBytes)
+	encoded := common.Bytes2Hex(encodedBytes)
 	msg := PaioReqMessage{
 		Signature: sigAndData.Signature,
 		Message:   fmt.Sprintf("0x%s", encoded),
@@ -129,16 +128,20 @@ func (p PaioSender2Server) SubmitSigAndData(sigAndData commons.SigAndData) (stri
 	defer resp.Body.Close()
 
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-		slog.Error("Unexpected paio response", "statusCode", resp.StatusCode)
+		slog.Error("Unexpected paio response",
+			"statusCode", resp.StatusCode,
+			"json", jsonData,
+		)
 		return "", fmt.Errorf("unexpected paio server status code %d", resp.StatusCode)
 	}
+	slog.Debug("POST to Paio", "body", jsonData)
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		fmt.Println("Error reading response:", err)
 		return "", err
 	}
 
-	fmt.Println("Response:", string(body))
+	slog.Debug("Response", "status", resp.StatusCode, "body", string(body))
 	return "", nil
 }
 

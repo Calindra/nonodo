@@ -298,14 +298,10 @@ func (p *PaioAPI) SendCartesiTransaction(ctx echo.Context) error {
 	if err := ctx.Bind(&request); err != nil {
 		return err
 	}
-	slog.Debug("SendCartesiTransaction", "x", stdCtx)
-
 	typeJSON, err := json.Marshal(request.TypedData)
 	if err != nil {
 		return fmt.Errorf("error marshalling typed data: %w", err)
 	}
-
-	// set the typedData as string json below
 	sigAndData := commons.SigAndData{
 		Signature: *request.Signature,
 		TypedData: base64.StdEncoding.EncodeToString(typeJSON),
@@ -315,7 +311,7 @@ func (p *PaioAPI) SendCartesiTransaction(ctx echo.Context) error {
 		slog.Error("Error json.Marshal message:", "err", err)
 		return err
 	}
-	slog.Debug("SaveTransaction", "jsonPayload", string(jsonPayload))
+	slog.Debug("/submit", "jsonPayload", string(jsonPayload))
 	msgSender, _, signature, err := commons.ExtractSigAndData(string(jsonPayload))
 	if err != nil {
 		slog.Error("Error ExtractSigAndData message:", "err", err)
@@ -333,11 +329,11 @@ func (p *PaioAPI) SendCartesiTransaction(ctx echo.Context) error {
 	)
 	txId := fmt.Sprintf("0x%s", common.Bytes2Hex(crypto.Keccak256(signature)))
 	if p.ClientSender != nil {
-		esTxId, err := p.ClientSender.SubmitSigAndData(sigAndData)
+		seqTxId, err := p.ClientSender.SubmitSigAndData(sigAndData)
 		if err != nil {
 			return err
 		}
-		slog.Info("Sequencer", "txId", esTxId)
+		slog.Info("Transaction sent to the sequencer", "txId", seqTxId)
 		response := TransactionResponse{
 			Id: &txId,
 		}

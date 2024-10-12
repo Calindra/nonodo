@@ -256,6 +256,13 @@ func (a AvailListener) TableTennis(ctx context.Context,
 			if err != nil {
 				return nil, err
 			}
+			slog.Info("Input saved",
+				"ID", inputs[i].ID,
+				"index", inputs[i].Index,
+				"appContract", inputs[i].AppContract.Hex(),
+				"msgSender", inputs[i].MsgSender.Hex(),
+				"payload", common.Bytes2Hex(inputs[i].Payload),
+			)
 		}
 	}
 	return &currentL1Block, nil
@@ -419,7 +426,10 @@ type PaioSignature struct {
 }
 
 func (ps *PaioSignature) Hex() string {
-	return fmt.Sprintf("%s%s%s", ps.R, ps.S[2:], ps.V[2:])
+	expectedSize := 64
+	r := fmt.Sprintf("%0*s", expectedSize, ps.R[2:])
+	s := fmt.Sprintf("%0*s", expectedSize, ps.R[2:])
+	return fmt.Sprintf("0x%s%s%s", r, s, ps.V[2:])
 }
 
 func ParsePaioBatchToInputs(jsonStr string, chainId *big.Int) ([]cModel.AdvanceInput, error) {
