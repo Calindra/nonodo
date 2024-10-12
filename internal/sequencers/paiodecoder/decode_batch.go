@@ -59,7 +59,7 @@ func (a *PaioConfig) SavePaioConfig(path string) error {
 	return nil
 }
 
-func (p Paio) SaveConfigOnDefaultLocation(config *PaioConfig) error {
+func (p PaioReleaseHandler) SaveConfigOnDefaultLocation(config *PaioConfig) error {
 	root := filepath.Join(os.TempDir())
 	file := filepath.Join(root, p.ConfigFilename)
 	c := NewPaioConfig(config.AssetPaio)
@@ -67,7 +67,7 @@ func (p Paio) SaveConfigOnDefaultLocation(config *PaioConfig) error {
 	return err
 }
 
-func (a Paio) TryLoadConfig() (*PaioConfig, error) {
+func (a PaioReleaseHandler) TryLoadConfig() (*PaioConfig, error) {
 	root := filepath.Join(os.TempDir())
 	file := filepath.Join(root, a.ConfigFilename)
 	if _, err := os.Stat(file); err == nil {
@@ -99,15 +99,15 @@ func LoadPaioConfig(path string) (*PaioConfig, error) {
 	return &config, nil
 }
 
-type Paio struct {
+type PaioReleaseHandler struct {
 	Namespace      string
 	Repository     string
 	ConfigFilename string
 	Client         *github.Client
 }
 
-func NewPaio() commons.HandleRelease {
-	return Paio{
+func NewPaioReleaseHandler() commons.HandleRelease {
+	return PaioReleaseHandler{
 		// Change for Cartesi when available
 		Namespace:      "cartesi",
 		Repository:     "paio",
@@ -117,7 +117,7 @@ func NewPaio() commons.HandleRelease {
 }
 
 // DownloadAsset implements commons.HandleRelease.
-func (d Paio) DownloadAsset(ctx context.Context, release *commons.ReleaseAsset) (string, error) {
+func (d PaioReleaseHandler) DownloadAsset(ctx context.Context, release *commons.ReleaseAsset) (string, error) {
 	folder := d.Repository + "-" + release.Tag
 	root := filepath.Join(os.TempDir(), folder)
 	var perm os.FileMode = 0755 | os.ModeDir
@@ -162,9 +162,7 @@ func (d Paio) DownloadAsset(ctx context.Context, release *commons.ReleaseAsset) 
 		return "", fmt.Errorf("failed to read asset %s", err.Error())
 	}
 
-	slog.Debug("downloaded binaryfile")
-
-	err = d.ExtractAsset(data, release.Filename, root)
+	err = d.ExtractAsset(data, filename, root)
 	if err != nil {
 		return "", fmt.Errorf("failed to extract asset %s", err.Error())
 	}
@@ -177,18 +175,21 @@ func (d Paio) DownloadAsset(ctx context.Context, release *commons.ReleaseAsset) 
 	if err != nil {
 		return "", err
 	}
-
+	slog.Debug("downloaded binary",
+		"release.Filename", release.Filename,
+		"decodeExec", decodeExec,
+	)
 	return decodeExec, nil
 }
 
 // ExtractAsset implements commons.HandleRelease.
-func (d Paio) ExtractAsset(archive []byte, filename string, destDir string) error {
+func (d PaioReleaseHandler) ExtractAsset(archive []byte, filename string, destDir string) error {
 	var permission fs.FileMode = 0755
 	return os.WriteFile(filepath.Join(destDir, filename), archive, permission)
 }
 
 // FormatNameRelease implements commons.HandleRelease.
-func (d Paio) FormatNameRelease(prefix string, goos string, goarch string, version string) string {
+func (d PaioReleaseHandler) FormatNameRelease(prefix string, goos string, goarch string, version string) string {
 	ext := ""
 	myos := goos
 	myarch := goarch
@@ -218,7 +219,7 @@ func (d Paio) FormatNameRelease(prefix string, goos string, goarch string, versi
 }
 
 // GetLatestReleaseCompatible implements commons.HandleRelease.
-func (p Paio) GetLatestReleaseCompatible(ctx context.Context) (*commons.ReleaseAsset, error) {
+func (p PaioReleaseHandler) GetLatestReleaseCompatible(ctx context.Context) (*commons.ReleaseAsset, error) {
 	platform, err := p.PlatformCompatible()
 	if err != nil {
 		return nil, err
@@ -285,12 +286,12 @@ func (p Paio) GetLatestReleaseCompatible(ctx context.Context) (*commons.ReleaseA
 }
 
 // ListRelease implements commons.HandleRelease.
-func (d Paio) ListRelease(ctx context.Context) ([]commons.ReleaseAsset, error) {
+func (d PaioReleaseHandler) ListRelease(ctx context.Context) ([]commons.ReleaseAsset, error) {
 	return commons.GetAssetsFromLastReleaseGitHub(ctx, d.Client, d.Namespace, d.Repository, "")
 }
 
 // PlatformCompatible implements commons.HandleRelease.
-func (d Paio) PlatformCompatible() (string, error) {
+func (d PaioReleaseHandler) PlatformCompatible() (string, error) {
 	// Check if the platform is compatible
 	slog.Debug("paio: System", "GOARCH:", runtime.GOARCH, "GOOS:", runtime.GOOS)
 	goarch := runtime.GOARCH
@@ -305,6 +306,22 @@ func (d Paio) PlatformCompatible() (string, error) {
 }
 
 // Prerequisites implements commons.HandleRelease.
-func (d Paio) Prerequisites(ctx context.Context) error {
+func (d PaioReleaseHandler) Prerequisites(ctx context.Context) error {
 	return nil
+}
+
+func DownloadPaioDecoderExecutableAsNeeded() (string, error) {
+	paioLocation, installed := IsDecodeBatchInstalled()
+	if !installed {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		paioReleaseHandler := NewPaioReleaseHandler()
+		location, err := commons.HandleReleaseExecution(ctx, paioReleaseHandler)
+		if err != nil {
+			slog.Error("error downloading paio batch decoder executable")
+			return "", err
+		}
+		paioLocation = location
+	}
+	return paioLocation, nil
 }

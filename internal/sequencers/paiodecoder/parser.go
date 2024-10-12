@@ -1,6 +1,7 @@
 package paiodecoder
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"log/slog"
@@ -29,17 +30,18 @@ func NewPaioDecoder(location string) *PaioDecoder {
 }
 
 // call the paio decoder binary
-func (pd *PaioDecoder) DecodePaioBatch(stdCtx context.Context, bytes string) (string, error) {
+func (pd *PaioDecoder) DecodePaioBatch(stdCtx context.Context, bytesStr string) (string, error) {
 	ctx, cancel := context.WithTimeout(stdCtx, TimeoutExecutionPaioDecoder)
 	defer cancel()
-
-	cmd := exec.CommandContext(ctx, pd.location, bytes)
-	output, err := commons.RunCommandOnce(ctx, cmd)
+	cmd := exec.CommandContext(ctx, pd.location)
+	var stdinData bytes.Buffer
+	stdinData.WriteString(bytesStr)
+	cmd.Stdin = &stdinData
+	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return "", fmt.Errorf("failed to run command: %w", err)
 	}
 	slog.Debug("Output decoded", "output", string(output))
-
 	return string(output), nil
 }
 
