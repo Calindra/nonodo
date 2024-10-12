@@ -240,8 +240,7 @@ func ExtractSigAndData(raw string) (common.Address, apitypes.TypedData, []byte, 
 	if err != nil {
 		return common.HexToAddress("0x"), apitypes.TypedData{}, []byte{}, fmt.Errorf("unmarshal: %w", err)
 	}
-	slog.Debug("Pubkey", "pubkey", pubkey)
 	address := crypto.PubkeyToAddress(*pubkey)
-	slog.Debug("Pubkey", "address", address)
+	slog.Debug("ExtractSigAndData", "publicKeyAddress", address)
 	return address, typedData, signature, nil
 }

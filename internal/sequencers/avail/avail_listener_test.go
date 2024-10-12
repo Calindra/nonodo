@@ -14,6 +14,7 @@ import (
 	"github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/calindra/nonodo/internal/sequencers/inputter"
+	"github.com/calindra/nonodo/internal/sequencers/paiodecoder"
 	"github.com/calindra/nonodo/internal/supervisor"
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 	"github.com/ethereum/go-ethereum/common"
@@ -27,6 +28,7 @@ import (
 
 type AvailListenerSuite struct {
 	suite.Suite
+	fd            paiodecoder.DecoderPaio
 	ctx           context.Context
 	workerCtx     context.Context
 	timeoutCancel context.CancelFunc
@@ -113,21 +115,19 @@ func (s *AvailListenerSuite) TestReadInputsFromBlockPaio() {
 	fromPaio := "0x1463f9725f107358c9115bc9d86c72dd5823e9b1e60114ab7528bb862fb57e8a2bcd567a2e929a0be56a5e000a0d48656c6c6f2c20576f726c643f2076a270f52ade97cd95ef7be45e08ea956bfdaf14b7fc4f8816207fa9eb3a5c17207ccdd94ac1bd86a749b66526fff6579e2b6bf1698e831955332ad9d5ed44da7208000000000000001c"
 	extrinsicPaioBlock := CreatePaioExtrinsic(common.Hex2Bytes(fromPaio))
 	block.Block.Extrinsics = append(block.Block.Extrinsics, extrinsicPaioBlock)
-	fd := FakeDecoder{}
 	availListener := AvailListener{
-		PaioDecoder: &fd,
+		PaioDecoder: s.fd,
 		InputterWorker: &inputter.InputterWorker{
 			Provider: s.rpcUrl,
 		},
 	}
-	inputs, err := availListener.ReadInputsFromPaioBlock(&block)
+	inputs, err := availListener.ReadInputsFromPaioBlock(s.ctx, &block)
 	s.NoError(err)
 	s.Equal(1, len(inputs))
 }
 
 func (s *AvailListenerSuite) TestParsePaioBatchToInputs() {
-	fd := FakeDecoder{}
-	jsonStr, err := fd.DecodePaioBatch("it doesn't matter")
+	jsonStr, err := s.fd.DecodePaioBatch(s.ctx, ([]byte)("it doesn't matter"))
 	s.NoError(err)
 	chainId := big.NewInt(11155111)
 	inputs, err := ParsePaioBatchToInputs(jsonStr, chainId)
@@ -186,7 +186,7 @@ func (s *AvailListenerSuite) TestTableTennis() {
 		InputterWorker:  &inputterWorker,
 		InputRepository: inputRepository,
 	}
-	inputs, err := availListener.ReadInputsFromPaioBlock(&block)
+	inputs, err := availListener.ReadInputsFromPaioBlock(ctx, &block)
 	s.NoError(err)
 	s.Equal(1, len(inputs))
 	s.Equal(int64(timestamp)+int64(delta), inputs[0].BlockTimestamp.Unix())
@@ -219,7 +219,7 @@ func (s *AvailListenerSuite) TestTableTennis() {
 type FakeDecoder struct {
 }
 
-func (fd *FakeDecoder) DecodePaioBatch(bytes string) (string, error) {
+func (fd *FakeDecoder) DecodePaioBatch(ctx context.Context, bytes []byte) (string, error) {
 	// nolint
 	return `{"sequencer_payment_address":"0x63F9725f107358c9115BC9d86c72dD5823E9B1E6","txs":[{"app":"0xab7528bb862fB57E8A2BCd567a2e929a0Be56a5e","nonce":0,"max_gas_price":10,"data":[72,101,108,108,111,44,32,87,111,114,108,100,63],"signature":{"r":"0x76a270f52ade97cd95ef7be45e08ea956bfdaf14b7fc4f8816207fa9eb3a5c17","s":"0x7ccdd94ac1bd86a749b66526fff6579e2b6bf1698e831955332ad9d5ed44da72","v":"0x1c"}}]}`, nil
 }
@@ -259,7 +259,7 @@ func (s *AvailListenerSuite) SetupTest() {
 	s.portCounter += 1
 	s.ctx, s.timeoutCancel = context.WithTimeout(context.Background(), testTimeout)
 	s.workerResult = make(chan error)
-
+	s.fd = &FakeDecoder{}
 	s.workerCtx, s.workerCancel = context.WithCancel(s.ctx)
 	w.Workers = append(w.Workers, devnet.AnvilWorker{
 		Address:  devnet.AnvilDefaultAddress,

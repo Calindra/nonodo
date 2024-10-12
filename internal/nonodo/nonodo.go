@@ -29,6 +29,7 @@ import (
 	"github.com/calindra/nonodo/internal/sequencers/avail"
 	"github.com/calindra/nonodo/internal/sequencers/espresso"
 	"github.com/calindra/nonodo/internal/sequencers/inputter"
+	"github.com/calindra/nonodo/internal/sequencers/paiodecoder"
 	"github.com/calindra/nonodo/internal/supervisor"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
@@ -84,6 +85,7 @@ type NonodoOpts struct {
 	SalsaUrl            string
 	AvailFromBlock      uint64
 	AvailEnabled        bool
+	PaioServerUrl       string
 }
 
 // Create the options struct with default values.
@@ -138,6 +140,7 @@ func NewNonodoOpts() NonodoOpts {
 		AvailFromBlock:      0,
 		AvailEnabled:        false,
 		AutoCount:           false,
+		PaioServerUrl:       "https://cartesi-paio-avail-turing.fly.dev/transaction",
 	}
 }
 
@@ -324,15 +327,6 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	reader.Register(e, modelInstance, convenienceService, adapter)
 	health.Register(e)
 
-	availClient, err := avail.NewAvailClient(
-		fmt.Sprintf("http://%s:%d", opts.HttpAddress, opts.HttpPort),
-		avail.DEFAULT_CHAINID_HARDHAT,
-		avail.DEFAULT_APP_ID,
-	)
-	if err != nil {
-		panic(err)
-	}
-
 	// Start the "internal" http rollup server
 	re := echo.New()
 	re.Use(middleware.CORS())
@@ -345,10 +339,11 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	if opts.RpcUrl == "" && !opts.DisableDevnet {
 		anvilLocation := opts.AnvilCommand
 		if anvilLocation == "" {
-			anvilLocation, err = handleAnvilInstallation()
+			al, err := handleAnvilInstallation()
 			if err != nil {
 				panic(err)
 			}
+			anvilLocation = al
 		}
 
 		w.Workers = append(w.Workers, devnet.AnvilWorker{
@@ -395,18 +390,44 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		}
 	}
 
-	if opts.Sequencer == "espresso" {
-		paio.Register(e, availClient, container.GetInputRepository(), opts.RpcUrl, &opts.EspressoUrl)
-	} else {
-		paio.Register(e, availClient, container.GetInputRepository(), opts.RpcUrl, nil)
-	}
+	paioSequencerBuilder := paio.NewPaioBuilder()
+	paioSequencerBuilder.WithInputRepository(container.GetInputRepository())
+	paioSequencerBuilder.WithRpcUrl(opts.RpcUrl)
 
 	if opts.AvailEnabled {
+		availClient, err := avail.NewAvailClient(
+			fmt.Sprintf("http://%s:%d", opts.HttpAddress, opts.HttpPort),
+			avail.DEFAULT_CHAINID_HARDHAT,
+			avail.DEFAULT_APP_ID,
+		)
+
+		if err != nil {
+			panic(err)
+		}
+		paioSequencerBuilder.WithPaioServerUrl(
+			opts.PaioServerUrl,
+		)
+		paioSequencerBuilder.WithAvalClient(availClient)
+	}
+	if opts.Sequencer == "espresso" {
+		paioSequencerBuilder = paioSequencerBuilder.WithEspressoUrl(opts.EspressoUrl)
+	}
+	paioSequencer := paioSequencerBuilder.Build()
+	paio.Register(e, paioSequencer)
+
+	if opts.AvailEnabled {
+		// Check if paio decoder is installed
+		paioLocation, err := paiodecoder.DownloadPaioDecoderExecutableAsNeeded()
+		if err != nil {
+			panic(err)
+		}
+		slog.Debug("AvailEnabled", "paioLocation", paioLocation)
 		w.Workers = append(w.Workers, avail.NewAvailListener(
 			opts.AvailFromBlock,
 			modelInstance.GetInputRepository(),
 			inputterWorker,
 			opts.FromBlock,
+			paioLocation,
 		))
 		sequencer = model.NewInputBoxSequencer(modelInstance)
 	}

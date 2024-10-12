@@ -34,10 +34,11 @@ const (
 )
 
 type AvailListener struct {
-	AvailFromBlock  uint64
+	PaioDecoder     paiodecoder.DecoderPaio
 	InputRepository *cRepos.InputRepository
 	InputterWorker  *inputter.InputterWorker
-	PaioDecoder     PaioDecoder
+	FromBlock       uint64
+	AvailFromBlock  uint64
 	L1CurrentBlock  uint64
 }
 
@@ -45,14 +46,15 @@ type PaioDecoder interface {
 	DecodePaioBatch(bytes string) (string, error)
 }
 
-func NewAvailListener(availFromBlock uint64, repository *cRepos.InputRepository, w *inputter.InputterWorker, fromBlock uint64) supervisor.Worker {
-	paioDecoder := ZzzHuiDecoder{}
+func NewAvailListener(availFromBlock uint64, repository *cRepos.InputRepository, w *inputter.InputterWorker, fromBlock uint64, decoder string) supervisor.Worker {
+	// paioDecoder := ZzzHuiDecoder{}
 	return AvailListener{
 		AvailFromBlock:  availFromBlock,
 		InputRepository: repository,
 		InputterWorker:  w,
-		PaioDecoder:     paioDecoder,
-		L1CurrentBlock:  fromBlock,
+		PaioDecoder:     paiodecoder.NewPaioDecoder(decoder),
+		// PaioDecoder:     paioDecoder,
+		L1CurrentBlock: fromBlock,
 	}
 }
 
@@ -71,14 +73,6 @@ func (a AvailListener) Start(ctx context.Context, ready chan<- struct{}) error {
 }
 
 func (a AvailListener) connect(ctx context.Context) (*gsrpc.SubstrateAPI, error) {
-	// uses env RPC_URL for connecting
-	// cfg := config.Default()
-
-	// cfg := config.Config{}
-	// err := cfg.GetConfig("config.json")
-	// if err != nil {
-	// 	return nil, err
-	// }
 	rpcURL, haveURL := os.LookupEnv("AVAIL_RPC_URL")
 	if !haveURL {
 		rpcURL = DEFAULT_AVAIL_RPC_URL
@@ -227,7 +221,7 @@ func (a AvailListener) TableTennis(ctx context.Context,
 	inputBox *contracts.InputBox, startBlockNumber uint64) (*uint64, error) {
 
 	var currentL1Block uint64
-	availInputs, err := a.ReadInputsFromPaioBlock(block)
+	availInputs, err := a.ReadInputsFromPaioBlock(ctx, block)
 	if err != nil {
 		return nil, err
 	}
@@ -262,6 +256,13 @@ func (a AvailListener) TableTennis(ctx context.Context,
 			if err != nil {
 				return nil, err
 			}
+			slog.Info("Input saved",
+				"ID", inputs[i].ID,
+				"index", inputs[i].Index,
+				"appContract", inputs[i].AppContract.Hex(),
+				"msgSender", inputs[i].MsgSender.Hex(),
+				"payload", common.Bytes2Hex(inputs[i].Payload),
+			)
 		}
 	}
 	return &currentL1Block, nil
@@ -371,7 +372,7 @@ func (z ZzzHuiDecoder) DecodePaioBatch(bytes string) (string, error) {
 	return string(paioJson), nil
 }
 
-func (av *AvailListener) ReadInputsFromPaioBlock(block *types.SignedBlock) ([]cModel.AdvanceInput, error) {
+func (av *AvailListener) ReadInputsFromPaioBlock(ctx context.Context, block *types.SignedBlock) ([]cModel.AdvanceInput, error) {
 	inputs := []cModel.AdvanceInput{}
 	timestamp, err := ReadTimestampFromBlock(block)
 	if err != nil {
@@ -388,8 +389,8 @@ func (av *AvailListener) ReadInputsFromPaioBlock(block *types.SignedBlock) ([]cM
 			// slog.Debug("Skipping", "appID", appID)
 			continue
 		}
-		args := string(ext.Method.Args)
-		jsonStr, err := av.PaioDecoder.DecodePaioBatch(args)
+		args := ext.Method.Args
+		jsonStr, err := av.PaioDecoder.DecodePaioBatch(ctx, args)
 		if err != nil {
 			return inputs, err
 		}
@@ -425,7 +426,10 @@ type PaioSignature struct {
 }
 
 func (ps *PaioSignature) Hex() string {
-	return fmt.Sprintf("%s%s%s", ps.R, ps.S[2:], ps.V[2:])
+	expectedSize := 64
+	r := fmt.Sprintf("%0*s", expectedSize, ps.R[2:])
+	s := fmt.Sprintf("%0*s", expectedSize, ps.S[2:])
+	return fmt.Sprintf("0x%s%s%s", r, s, ps.V[2:])
 }
 
 func ParsePaioBatchToInputs(jsonStr string, chainId *big.Int) ([]cModel.AdvanceInput, error) {

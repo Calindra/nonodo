@@ -83,3 +83,21 @@ export GRAPHILE_URL=localhost:5001/graphql
 ```bash
 go run . -d --avail  --avail-from-block 746430
 ```
+
+Avail + Sepolia
+
+```bash
+ go build . && ./nonodo --avail-enabled -d \
+    --avail-from-block <L2 block number> \
+    --rpc-url <your rpc endpoint> \
+    --contracts-input-box-block <L1 block number> \
+```
+
+Example:
+
+```bash
+go build . && ./nonodo --avail-enabled -d \
+    --avail-from-block 853228 \
+    --rpc-url wss://ethereum-sepolia-rpc.publicnode.com \
+    --contracts-input-box-block 6863007
+```
