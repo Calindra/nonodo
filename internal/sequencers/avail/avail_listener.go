@@ -428,7 +428,7 @@ type PaioSignature struct {
 func (ps *PaioSignature) Hex() string {
 	expectedSize := 64
 	r := fmt.Sprintf("%0*s", expectedSize, ps.R[2:])
-	s := fmt.Sprintf("%0*s", expectedSize, ps.R[2:])
+	s := fmt.Sprintf("%0*s", expectedSize, ps.S[2:])
 	return fmt.Sprintf("0x%s%s%s", r, s, ps.V[2:])
 }
 
