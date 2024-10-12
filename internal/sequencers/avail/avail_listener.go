@@ -382,7 +382,7 @@ func (av *AvailListener) ReadInputsFromPaioBlock(ctx context.Context, block *typ
 			// slog.Debug("Skipping", "appID", appID)
 			continue
 		}
-		args := string(ext.Method.Args)
+		args := ext.Method.Args
 		jsonStr, err := av.PaioDecoder.DecodePaioBatch(ctx, args)
 		if err != nil {
 			return inputs, err

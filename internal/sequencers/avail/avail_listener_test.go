@@ -127,7 +127,7 @@ func (s *AvailListenerSuite) TestReadInputsFromBlockPaio() {
 }
 
 func (s *AvailListenerSuite) TestParsePaioBatchToInputs() {
-	jsonStr, err := s.fd.DecodePaioBatch(s.ctx, "it doesn't matter")
+	jsonStr, err := s.fd.DecodePaioBatch(s.ctx, ([]byte)("it doesn't matter"))
 	s.NoError(err)
 	chainId := big.NewInt(11155111)
 	inputs, err := ParsePaioBatchToInputs(jsonStr, chainId)
@@ -219,7 +219,7 @@ func (s *AvailListenerSuite) TestTableTennis() {
 type FakeDecoder struct {
 }
 
-func (fd *FakeDecoder) DecodePaioBatch(ctx context.Context, bytes string) (string, error) {
+func (fd *FakeDecoder) DecodePaioBatch(ctx context.Context, bytes []byte) (string, error) {
 	// nolint
 	return `{"sequencer_payment_address":"0x63F9725f107358c9115BC9d86c72dD5823E9B1E6","txs":[{"app":"0xab7528bb862fB57E8A2BCd567a2e929a0Be56a5e","nonce":0,"max_gas_price":10,"data":[72,101,108,108,111,44,32,87,111,114,108,100,63],"signature":{"r":"0x76a270f52ade97cd95ef7be45e08ea956bfdaf14b7fc4f8816207fa9eb3a5c17","s":"0x7ccdd94ac1bd86a749b66526fff6579e2b6bf1698e831955332ad9d5ed44da72","v":"0x1c"}}]}`, nil
 }

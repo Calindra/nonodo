@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/calindra/nonodo/internal/commons"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -29,7 +30,7 @@ func (s *ParserSuite) TestDecodeBytes() {
 	// nolint
 	bytes := `0x1400000000000000000000000000000000000000000114ab7528bb862fb57e8a2bcd567a2e929a0be56a5e000a07deadbeeffab10920205f3aa429e8ea753d2e799fa4bf9166264d4114745fb4670eaed856f0dae8e5204e74225ca715f951fed4bec7b0bc635f067183ac3ec44139533b0715e04b4da808000000000000001c`
 	decoder := NewPaioDecoder(binLocation)
-	json, err := decoder.DecodePaioBatch(ctx, bytes)
+	json, err := decoder.DecodePaioBatch(ctx, common.Hex2Bytes(bytes[2:]))
 	s.Require().NoError(err)
 	slog.Debug("decoded", "json", json)
 	// nolint

@@ -18,7 +18,7 @@ import (
 const TimeoutExecutionPaioDecoder = 1 * time.Minute
 
 type DecoderPaio interface {
-	DecodePaioBatch(ctx context.Context, bytes string) (string, error)
+	DecodePaioBatch(ctx context.Context, bytes []byte) (string, error)
 }
 
 type PaioDecoder struct {
@@ -30,15 +30,30 @@ func NewPaioDecoder(location string) *PaioDecoder {
 }
 
 // call the paio decoder binary
-func (pd *PaioDecoder) DecodePaioBatch(stdCtx context.Context, bytesStr string) (string, error) {
+func (pd *PaioDecoder) DecodePaioBatch(stdCtx context.Context, rawBytes []byte) (string, error) {
+	first, err := pd.DecodePaioBatchSkip(stdCtx, 0, rawBytes) // nolint
+	if err == nil {
+		return first, nil
+	}
+	slog.Warn("failed to decode, we will try again removing 2 bytes")
+	second, err := pd.DecodePaioBatchSkip(stdCtx, 2, rawBytes) // nolint
+	if err != nil {
+		return "", err
+	}
+	return second, nil
+}
+
+func (pd *PaioDecoder) DecodePaioBatchSkip(stdCtx context.Context, skip int, rawBytes []byte) (string, error) {
 	ctx, cancel := context.WithTimeout(stdCtx, TimeoutExecutionPaioDecoder)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, pd.location)
 	var stdinData bytes.Buffer
+	bytesStr := common.Bytes2Hex(rawBytes[skip:])
 	stdinData.WriteString(bytesStr)
 	cmd.Stdin = &stdinData
 	output, err := cmd.CombinedOutput()
 	if err != nil {
+		slog.Error("Failed to decode", "bytes", bytesStr)
 		return "", fmt.Errorf("failed to run command: %w", err)
 	}
 	slog.Debug("Output decoded", "output", string(output))
