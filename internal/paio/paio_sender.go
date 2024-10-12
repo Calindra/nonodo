@@ -119,6 +119,7 @@ func (p PaioSender2Server) SubmitSigAndData(sigAndData commons.SigAndData) (stri
 		return "", err
 	}
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "*/*")
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -129,6 +130,7 @@ func (p PaioSender2Server) SubmitSigAndData(sigAndData commons.SigAndData) (stri
 
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		slog.Error("Unexpected paio response",
+			"paioServerUrl", p.PaioServerUrl,
 			"statusCode", resp.StatusCode,
 			"json", jsonData,
 		)
