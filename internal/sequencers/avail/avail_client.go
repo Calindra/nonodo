@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -274,4 +275,94 @@ func fetchNonce(sender string, graphqlURL string) (string, error) {
 
 	nextNonce := graphqlResponse.Data.Inputs.TotalCount + 1
 	return fmt.Sprintf("%d", nextNonce), nil
+}
+
+func ReadTimestampFromBlock(block *types.SignedBlock) (uint64, error) {
+	timestampSectionIndex := uint8(TIMESTAMP_SECTION_INDEX)
+	timestampMethodIndex := uint8(0)
+	coreAppID := int64(0)
+	for _, ext := range block.Block.Extrinsics {
+		appID := ext.Signature.AppID.Int64()
+
+		mi := ext.Method.CallIndex.MethodIndex
+		si := ext.Method.CallIndex.SectionIndex
+
+		if appID == coreAppID && si == uint8(timestampSectionIndex) && mi == uint8(timestampMethodIndex) {
+			timestamp := DecodeTimestamp(common.Bytes2Hex(ext.Method.Args))
+			return timestamp, nil
+		}
+	}
+	return 0, fmt.Errorf("block %d without timestamp", block.Block.Header.Number)
+}
+
+func DecodeTimestamp(hexStr string) uint64 {
+	decoded, err := hex.DecodeString(padHexStringRight(hexStr))
+	if err != nil {
+		fmt.Println("Error decoding hex:", err)
+		return 0
+	}
+	return decodeCompactU64(decoded)
+}
+
+// nolint
+func decodeCompactU64(data []byte) uint64 {
+	firstByte := data[0]
+	if firstByte&0b11 == 0b00 { // Single byte (6-bit value)
+		return uint64(firstByte >> 2)
+	} else if firstByte&0b11 == 0b01 { // Two bytes (14-bit value)
+		return uint64(firstByte>>2) | uint64(data[1])<<6
+	} else if firstByte&0b11 == 0b10 { // Four bytes (30-bit value)
+		return uint64(firstByte>>2) | uint64(data[1])<<6 | uint64(data[2])<<14 | uint64(data[3])<<22
+	} else { // Eight bytes (64-bit value)
+		return uint64(data[1]) | uint64(data[2])<<8 | uint64(data[3])<<16 | uint64(data[4])<<24 |
+			uint64(data[5])<<32 | uint64(data[6])<<40 | uint64(data[7])<<48
+	}
+}
+
+// nolint
+func encodeCompactU64(value uint64) []byte {
+	var result []byte
+
+	if value < (1 << 6) { // Single byte (6-bit value)
+		result = []byte{byte(value<<2) | 0b00}
+	} else if value < (1 << 14) { // Two bytes (14-bit value)
+		result = []byte{
+			byte((value&0x3F)<<2) | 0b01,
+			byte(value >> 6),
+		}
+	} else if value < (1 << 30) { // Four bytes (30-bit value)
+		result = []byte{
+			byte((value&0x3F)<<2) | 0b10,
+			byte(value >> 6),
+			byte(value >> 14),
+			byte(value >> 22),
+		}
+	} else { // Eight bytes (64-bit value)
+		result = []byte{
+			0b11, // First byte indicates 8-byte encoding
+			byte(value),
+			byte(value >> 8),
+			byte(value >> 16),
+			byte(value >> 24),
+			byte(value >> 32),
+			byte(value >> 40),
+			byte(value >> 48),
+			byte(value >> 56),
+		}
+	}
+
+	return result
+}
+
+func padHexStringRight(hexStr string) string {
+	if len(hexStr) > 1 && hexStr[:2] == "0x" {
+		hexStr = hexStr[2:]
+	}
+
+	// Right pad with zeros to ensure it's 16 characters long (8 bytes)
+	for len(hexStr) < 16 {
+		hexStr += "0"
+	}
+
+	return hexStr
 }
