@@ -11,29 +11,28 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-type SynchronizerNodeSuite struct {
+type RawNodeSuite struct {
 	suite.Suite
-	node SynchronizerNode
+	node RawNode
 }
 
-func (s *SynchronizerNodeSuite) SetupTest() {
+func (s *RawNodeSuite) SetupTest() {
 	commons.ConfigureLog(slog.LevelDebug)
-	s.node = SynchronizerNode{
+	s.node = RawNode{
 		connectionURL: "postgres://postgres:password@localhost:5432/test_rollupsdb?sslmode=disable",
 	}
-
 }
 
-func TestGraphileV2Suite(t *testing.T) {
-	suite.Run(t, new(SynchronizerNodeSuite))
+func TestRawNodeSuite(t *testing.T) {
+	suite.Run(t, new(RawNodeSuite))
 }
 
-func (s *SynchronizerNodeSuite) TestSynchronizerNodeConnection() {
+func (s *RawNodeSuite) TestSynchronizerNodeConnection() {
 	_, err := s.node.Connect()
 	s.NoError(err)
 }
 
-func (s *SynchronizerNodeSuite) TestSynchronizerNodeListInputs() {
+func (s *RawNodeSuite) TestSynchronizerNodeListInputs() {
 	conn, err := s.node.Connect()
 	s.NoError(err)
 
@@ -68,8 +67,8 @@ func (s *SynchronizerNodeSuite) TestSynchronizerNodeListInputs() {
 
 }
 
-func (s *SynchronizerNodeSuite) TestSynchronizerNodeInputByID() {
-	inputs, err := s.node.FindAllInputsByFilter(FilterID{IDgt: 2})
+func (s *RawNodeSuite) TestSynchronizerNodeInputByID() {
+	inputs, err := s.node.FindAllInputsByFilter(FilterInput{IDgt: 2})
 	s.NoError(err)
 	firstInput := inputs[0]
 	s.Equal(firstInput.ID, int64(2))
@@ -89,7 +88,7 @@ func (s *SynchronizerNodeSuite) TestSynchronizerNodeInputByID() {
 	s.Equal("0x5112cF49F2511ac7b13A032c4c62A48410FC28Fb", common.BytesToAddress(inputs[0].ApplicationAddress).Hex())
 }
 
-func (s *SynchronizerNodeSuite) TestSynchronizerNodeReportByID() {
+func (s *RawNodeSuite) TestSynchronizerNodeReportByID() {
 	reports, err := s.node.FindAllReportsByFilter(FilterID{IDgt: 1})
 	s.NoError(err)
 	firstInput := reports[0]
@@ -107,7 +106,7 @@ func (s *SynchronizerNodeSuite) TestSynchronizerNodeReportByID() {
 	s.Equal(firstInputIDDB, firstInputID)
 }
 
-func (s *SynchronizerNodeSuite) TestSynchronizerNodeOutputtByID() {
+func (s *RawNodeSuite) TestSynchronizerNodeOutputtByID() {
 	outputs, err := s.node.FindAllOutputsByFilter(FilterID{IDgt: 1})
 	s.NoError(err)
 	firstInput := outputs[0]

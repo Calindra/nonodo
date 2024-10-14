@@ -5,7 +5,7 @@ import (
 	_ "github.com/lib/pq"
 )
 
-type SynchronizerNode struct {
+type RawNode struct {
 	connectionURL string
 }
 
@@ -39,18 +39,26 @@ type Output struct {
 }
 
 type FilterOutput struct {
-	FilterID
+	IDgt                int64
+	HaveTransactionHash bool
 }
+
+type FilterInput struct {
+	IDgt         int64
+	IsStatusNone bool
+}
+
+const LIMIT = 50
 
 type FilterID struct {
 	IDgt int64
 }
 
-func (s *SynchronizerNode) Connect() (*sqlx.DB, error) {
+func (s *RawNode) Connect() (*sqlx.DB, error) {
 	return sqlx.Connect("postgres", s.connectionURL)
 }
 
-func (s *SynchronizerNode) FindAllInputsByFilter(filter FilterID) ([]Input, error) {
+func (s *RawNode) FindAllInputsByFilter(filter FilterInput) ([]Input, error) {
 	inputs := []Input{}
 	conn, err := s.Connect()
 
@@ -58,7 +66,7 @@ func (s *SynchronizerNode) FindAllInputsByFilter(filter FilterID) ([]Input, erro
 		return nil, err
 	}
 
-	result, err := conn.Queryx("SELECT * FROM input WHERE ID >= $1", filter.IDgt)
+	result, err := conn.Queryx("SELECT * FROM input WHERE ID >= $1 LIMIT $2", filter.IDgt, LIMIT)
 
 	if err != nil {
 		return nil, err
@@ -77,7 +85,7 @@ func (s *SynchronizerNode) FindAllInputsByFilter(filter FilterID) ([]Input, erro
 
 }
 
-func (s *SynchronizerNode) FindAllReportsByFilter(filter FilterID) ([]Report, error) {
+func (s *RawNode) FindAllReportsByFilter(filter FilterID) ([]Report, error) {
 	reports := []Report{}
 	conn, err := s.Connect()
 
@@ -85,7 +93,7 @@ func (s *SynchronizerNode) FindAllReportsByFilter(filter FilterID) ([]Report, er
 		return nil, err
 	}
 
-	result, err := conn.Queryx("SELECT * FROM report WHERE ID >= $1", filter.IDgt)
+	result, err := conn.Queryx("SELECT * FROM report WHERE ID >= $1 LIMIT $2", filter.IDgt, LIMIT)
 
 	if err != nil {
 		return nil, err
@@ -104,7 +112,7 @@ func (s *SynchronizerNode) FindAllReportsByFilter(filter FilterID) ([]Report, er
 
 }
 
-func (s *SynchronizerNode) FindAllOutputsByFilter(filter FilterID) ([]Output, error) {
+func (s *RawNode) FindAllOutputsByFilter(filter FilterID) ([]Output, error) {
 	outputs := []Output{}
 	conn, err := s.Connect()
 
@@ -112,7 +120,7 @@ func (s *SynchronizerNode) FindAllOutputsByFilter(filter FilterID) ([]Output, er
 		return nil, err
 	}
 
-	result, err := conn.Queryx("SELECT * FROM output WHERE ID >= $1", filter.IDgt)
+	result, err := conn.Queryx("SELECT * FROM output WHERE ID >= $1 LIMIT $2", filter.IDgt, LIMIT)
 
 	if err != nil {
 		return nil, err
