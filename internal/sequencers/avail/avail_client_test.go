@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/calindra/nonodo/internal/devnet"
+	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -45,6 +46,22 @@ func (s *AvailClientSuite) TestSubmit712() {
 		s.NoError(err)
 		s.Fail("XXX")
 	}
+}
+
+func (s *AvailClientSuite) TestDecodeTimestamp() {
+	// https://explorer.avail.so/#/extrinsics/decode/0x280403000b20008c2e9201
+	timestamp := DecodeTimestamp("0b20008c2e9201")
+	s.Equal(uint64(1727357780000), timestamp)
+}
+
+func (s *AvailClientSuite) TestReadTimestampFromBlock() {
+	block := types.SignedBlock{}
+	block.Block = types.Block{}
+	timestampExtrinsic := CreateTimestampExtrinsic()
+	block.Block.Extrinsics = append([]types.Extrinsic{}, timestampExtrinsic)
+	timestamp, err := ReadTimestampFromBlock(&block)
+	s.NoError(err)
+	s.Equal(uint64(1727357780000), timestamp)
 }
 
 func TestEspressoListenerSuite(t *testing.T) {

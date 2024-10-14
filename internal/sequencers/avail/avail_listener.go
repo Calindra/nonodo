@@ -2,12 +2,8 @@ package avail
 
 import (
 	"context"
-	"encoding/base64"
-	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"log/slog"
-	"math/big"
 	"os"
 	"time"
 
@@ -23,7 +19,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 )
 
 const (
@@ -34,27 +29,34 @@ const (
 )
 
 type AvailListener struct {
-	PaioDecoder     paiodecoder.DecoderPaio
-	InputRepository *cRepos.InputRepository
-	InputterWorker  *inputter.InputterWorker
-	FromBlock       uint64
-	AvailFromBlock  uint64
-	L1CurrentBlock  uint64
+	PaioDecoder        paiodecoder.DecoderPaio
+	InputRepository    *cRepos.InputRepository
+	InputterWorker     *inputter.InputterWorker
+	FromBlock          uint64
+	AvailFromBlock     uint64
+	L1CurrentBlock     uint64
+	ApplicationAddress common.Address
 }
 
 type PaioDecoder interface {
-	DecodePaioBatch(bytes string) (string, error)
+	DecodePaioBatch(ctx context.Context, bytes []byte) (string, error)
 }
 
-func NewAvailListener(availFromBlock uint64, repository *cRepos.InputRepository, w *inputter.InputterWorker, fromBlock uint64, decoder string) supervisor.Worker {
-	// paioDecoder := ZzzHuiDecoder{}
+func NewAvailListener(availFromBlock uint64, repository *cRepos.InputRepository,
+	w *inputter.InputterWorker, fromBlock uint64, binaryDecoderPathLocation string,
+	applicationAddress string,
+) supervisor.Worker {
+	var paioDecoder PaioDecoder = paiodecoder.ZzzzHuiDecoder{}
+	if binaryDecoderPathLocation != "" {
+		paioDecoder = paiodecoder.NewPaioDecoder(binaryDecoderPathLocation)
+	}
 	return AvailListener{
-		AvailFromBlock:  availFromBlock,
-		InputRepository: repository,
-		InputterWorker:  w,
-		PaioDecoder:     paiodecoder.NewPaioDecoder(decoder),
-		// PaioDecoder:     paioDecoder,
-		L1CurrentBlock: fromBlock,
+		AvailFromBlock:     availFromBlock,
+		InputRepository:    repository,
+		InputterWorker:     w,
+		PaioDecoder:        paioDecoder,
+		L1CurrentBlock:     fromBlock,
+		ApplicationAddress: common.HexToAddress(applicationAddress),
 	}
 }
 
@@ -252,6 +254,16 @@ func (a AvailListener) TableTennis(ctx context.Context,
 		}
 		for i := range inputs {
 			inputs[i].Index = i + int(inputCount)
+			if inputs[i].AppContract != a.ApplicationAddress {
+				slog.Warn("Skipping input",
+					"appContract", inputs[i].AppContract.Hex(),
+					"expected", a.ApplicationAddress.Hex(),
+					"msgSender", inputs[i].MsgSender.Hex(),
+					"payload", common.Bytes2Hex(inputs[i].Payload),
+				)
+				continue
+			}
+			// The chainId information does not come in Paio's batch.
 			_, err = a.InputRepository.Create(ctx, inputs[i])
 			if err != nil {
 				return nil, err
@@ -266,110 +278,6 @@ func (a AvailListener) TableTennis(ctx context.Context,
 		}
 	}
 	return &currentL1Block, nil
-}
-
-func DecodeTimestamp(hexStr string) uint64 {
-	decoded, err := hex.DecodeString(padHexStringRight(hexStr))
-	if err != nil {
-		fmt.Println("Error decoding hex:", err)
-		return 0
-	}
-	return decodeCompactU64(decoded)
-}
-
-// nolint
-func decodeCompactU64(data []byte) uint64 {
-	firstByte := data[0]
-	if firstByte&0b11 == 0b00 { // Single byte (6-bit value)
-		return uint64(firstByte >> 2)
-	} else if firstByte&0b11 == 0b01 { // Two bytes (14-bit value)
-		return uint64(firstByte>>2) | uint64(data[1])<<6
-	} else if firstByte&0b11 == 0b10 { // Four bytes (30-bit value)
-		return uint64(firstByte>>2) | uint64(data[1])<<6 | uint64(data[2])<<14 | uint64(data[3])<<22
-	} else { // Eight bytes (64-bit value)
-		return uint64(data[1]) | uint64(data[2])<<8 | uint64(data[3])<<16 | uint64(data[4])<<24 |
-			uint64(data[5])<<32 | uint64(data[6])<<40 | uint64(data[7])<<48
-	}
-}
-
-// nolint
-func encodeCompactU64(value uint64) []byte {
-	var result []byte
-
-	if value < (1 << 6) { // Single byte (6-bit value)
-		result = []byte{byte(value<<2) | 0b00}
-	} else if value < (1 << 14) { // Two bytes (14-bit value)
-		result = []byte{
-			byte((value&0x3F)<<2) | 0b01,
-			byte(value >> 6),
-		}
-	} else if value < (1 << 30) { // Four bytes (30-bit value)
-		result = []byte{
-			byte((value&0x3F)<<2) | 0b10,
-			byte(value >> 6),
-			byte(value >> 14),
-			byte(value >> 22),
-		}
-	} else { // Eight bytes (64-bit value)
-		result = []byte{
-			0b11, // First byte indicates 8-byte encoding
-			byte(value),
-			byte(value >> 8),
-			byte(value >> 16),
-			byte(value >> 24),
-			byte(value >> 32),
-			byte(value >> 40),
-			byte(value >> 48),
-			byte(value >> 56),
-		}
-	}
-
-	return result
-}
-
-func padHexStringRight(hexStr string) string {
-	if len(hexStr) > 1 && hexStr[:2] == "0x" {
-		hexStr = hexStr[2:]
-	}
-
-	// Right pad with zeros to ensure it's 16 characters long (8 bytes)
-	for len(hexStr) < 16 {
-		hexStr += "0"
-	}
-
-	return hexStr
-}
-
-type ZzzHuiDecoder struct {
-}
-
-func (z ZzzHuiDecoder) DecodePaioBatch(bytes string) (string, error) {
-	_, typedData, signature, err := commons.ExtractSigAndData(bytes)
-	if err != nil {
-		return "", err
-	}
-	signature[64] += 27
-	slog.Debug("DecodePaioBatch", "signature", common.Bytes2Hex(signature))
-	txs := []PaioTransaction{}
-	txs = append(txs, PaioTransaction{
-		Signature: PaioSignature{
-			R: fmt.Sprintf("0x%s", common.Bytes2Hex(signature[0:32])),
-			S: fmt.Sprintf("0x%s", common.Bytes2Hex(signature[32:64])),
-			V: fmt.Sprintf("0x%s", common.Bytes2Hex(signature[64:])),
-		},
-		App:         typedData.Message["app"].(string),
-		Nonce:       uint64(typedData.Message["nonce"].(float64)),
-		Data:        common.Hex2Bytes(typedData.Message["data"].(string)[2:]),
-		MaxGasPrice: uint64(typedData.Message["max_gas_price"].(float64)),
-	})
-	paioBatch := PaioBatch{
-		Txs: txs,
-	}
-	paioJson, err := json.Marshal(paioBatch)
-	if err != nil {
-		return "", err
-	}
-	return string(paioJson), nil
 }
 
 func (av *AvailListener) ReadInputsFromPaioBlock(ctx context.Context, block *types.SignedBlock) ([]cModel.AdvanceInput, error) {
@@ -394,7 +302,7 @@ func (av *AvailListener) ReadInputsFromPaioBlock(ctx context.Context, block *typ
 		if err != nil {
 			return inputs, err
 		}
-		parsedInputs, err := ParsePaioBatchToInputs(jsonStr, chainId)
+		parsedInputs, err := paiodecoder.ParsePaioBatchToInputs(jsonStr, chainId)
 		if err != nil {
 			return inputs, err
 		}
@@ -402,87 +310,6 @@ func (av *AvailListener) ReadInputsFromPaioBlock(ctx context.Context, block *typ
 	}
 	for i := range inputs {
 		inputs[i].BlockTimestamp = time.Unix(int64(timestamp), 0)
-	}
-	return inputs, nil
-}
-
-type PaioBatch struct {
-	SequencerPaymentAddress string            `json:"sequencer_payment_address"`
-	Txs                     []PaioTransaction `json:"txs"`
-}
-
-type PaioTransaction struct {
-	App         string        `json:"app"`
-	Nonce       uint64        `json:"nonce"`
-	MaxGasPrice uint64        `json:"max_gas_price"`
-	Data        []byte        `json:"data"`
-	Signature   PaioSignature `json:"signature"`
-}
-
-type PaioSignature struct {
-	R string `json:"r"`
-	S string `json:"s"`
-	V string `json:"v"`
-}
-
-func (ps *PaioSignature) Hex() string {
-	expectedSize := 64
-	r := fmt.Sprintf("%0*s", expectedSize, ps.R[2:])
-	s := fmt.Sprintf("%0*s", expectedSize, ps.S[2:])
-	return fmt.Sprintf("0x%s%s%s", r, s, ps.V[2:])
-}
-
-func ParsePaioBatchToInputs(jsonStr string, chainId *big.Int) ([]cModel.AdvanceInput, error) {
-	inputs := []cModel.AdvanceInput{}
-	var paioBatch PaioBatch
-	if err := json.Unmarshal([]byte(jsonStr), &paioBatch); err != nil {
-		return inputs, fmt.Errorf("unmarshal paio batch: %w", err)
-	}
-	slog.Debug("PaioBatch", "tx len", len(paioBatch.Txs), "json", jsonStr)
-	for _, tx := range paioBatch.Txs {
-		slog.Debug("Tx",
-			"app", tx.App,
-			"signature", tx.Signature.Hex(),
-		)
-		typedData := paiodecoder.CreateTypedData(
-			common.HexToAddress(tx.App),
-			tx.Nonce,
-			big.NewInt(int64(tx.MaxGasPrice)),
-			tx.Data,
-			chainId,
-		)
-		typeJSON, err := json.Marshal(typedData)
-		if err != nil {
-			return inputs, fmt.Errorf("error marshalling typed data: %w", err)
-		}
-		// set the typedData as string json below
-		sigAndData := commons.SigAndData{
-			Signature: tx.Signature.Hex(),
-			TypedData: base64.StdEncoding.EncodeToString(typeJSON),
-		}
-		jsonPayload, err := json.Marshal(sigAndData)
-		if err != nil {
-			slog.Error("Error json.Marshal message:", "err", err)
-			return inputs, err
-		}
-		slog.Debug("SaveTransaction", "jsonPayload", string(jsonPayload))
-		msgSender, _, signature, err := commons.ExtractSigAndData(string(jsonPayload))
-		if err != nil {
-			slog.Error("Error ExtractSigAndData message:", "err", err)
-			return inputs, err
-		}
-		txId := fmt.Sprintf("0x%s", common.Bytes2Hex(crypto.Keccak256(signature)))
-		inputs = append(inputs, cModel.AdvanceInput{
-			Index:               int(0),
-			ID:                  txId,
-			MsgSender:           msgSender,
-			Payload:             tx.Data,
-			AppContract:         common.HexToAddress(tx.App),
-			AvailBlockNumber:    0,
-			AvailBlockTimestamp: time.Unix(0, 0),
-			InputBoxIndex:       -2,
-			Type:                "Avail",
-		})
 	}
 	return inputs, nil
 }
@@ -506,7 +333,7 @@ func ReadInputsFromAvailBlockZzzHui(block *types.SignedBlock) ([]cModel.AdvanceI
 		if err != nil {
 			return inputs, err
 		}
-		paioMessage, err := ParsePaioFrom712Message(typedData)
+		paioMessage, err := paiodecoder.ParsePaioFrom712Message(typedData)
 		if err != nil {
 			return inputs, err
 		}
@@ -524,40 +351,4 @@ func ReadInputsFromAvailBlockZzzHui(block *types.SignedBlock) ([]cModel.AdvanceI
 		})
 	}
 	return inputs, nil
-}
-
-func ReadTimestampFromBlock(block *types.SignedBlock) (uint64, error) {
-	timestampSectionIndex := uint8(TIMESTAMP_SECTION_INDEX)
-	timestampMethodIndex := uint8(0)
-	coreAppID := int64(0)
-	for _, ext := range block.Block.Extrinsics {
-		appID := ext.Signature.AppID.Int64()
-
-		mi := ext.Method.CallIndex.MethodIndex
-		si := ext.Method.CallIndex.SectionIndex
-
-		if appID == coreAppID && si == uint8(timestampSectionIndex) && mi == uint8(timestampMethodIndex) {
-			timestamp := DecodeTimestamp(common.Bytes2Hex(ext.Method.Args))
-			return timestamp, nil
-		}
-	}
-	return 0, fmt.Errorf("block %d without timestamp", block.Block.Header.Number)
-}
-
-func ParsePaioFrom712Message(typedData apitypes.TypedData) (PaioMessage, error) {
-	message := PaioMessage{
-		App:         typedData.Message["app"].(string),
-		Nonce:       typedData.Message["nonce"].(string),
-		MaxGasPrice: typedData.Message["max_gas_price"].(string),
-		Payload:     []byte(typedData.Message["data"].(string)),
-	}
-	return message, nil
-}
-
-// alterar para usar o nome do Paio
-type PaioMessage struct {
-	App         string
-	Nonce       string
-	MaxGasPrice string
-	Payload     []byte
 }
