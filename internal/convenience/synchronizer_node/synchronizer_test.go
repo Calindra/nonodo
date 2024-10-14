@@ -68,8 +68,8 @@ func (s *SynchronizerNodeSuite) TestSynchronizerNodeListInputs() {
 
 }
 
-func (s *SynchronizerNodeSuite) TestSynchronizerNodeSelectByID() {
-	inputs, err := s.node.FindAllInputsByFilter(Filter{IDgt: 2})
+func (s *SynchronizerNodeSuite) TestSynchronizerNodeInputByID() {
+	inputs, err := s.node.FindAllInputsByFilter(FilterID{IDgt: 2})
 	s.NoError(err)
 	firstInput := inputs[0]
 	s.Equal(firstInput.ID, int64(2))
@@ -87,4 +87,40 @@ func (s *SynchronizerNodeSuite) TestSynchronizerNodeSelectByID() {
 	s.Equal(firstBlockNumberDB, firstBlockNumber)
 
 	s.Equal("0x5112cF49F2511ac7b13A032c4c62A48410FC28Fb", common.BytesToAddress(inputs[0].ApplicationAddress).Hex())
+}
+
+func (s *SynchronizerNodeSuite) TestSynchronizerNodeReportByID() {
+	reports, err := s.node.FindAllReportsByFilter(FilterID{IDgt: 1})
+	s.NoError(err)
+	firstInput := reports[0]
+	s.Equal(firstInput.ID, int64(1))
+
+	slog.Info("Report", "reports", reports)
+
+	b := reports[0].InputID
+
+	firstInputID := big.NewInt(b)
+	slog.Info("First Input ID", "firstInputID", firstInputID)
+
+	firstInputIDDB := big.NewInt(1)
+
+	s.Equal(firstInputIDDB, firstInputID)
+}
+
+func (s *SynchronizerNodeSuite) TestSynchronizerNodeOutputtByID() {
+	outputs, err := s.node.FindAllOutputsByFilter(FilterID{IDgt: 1})
+	s.NoError(err)
+	firstInput := outputs[0]
+	s.Equal(firstInput.ID, int64(1))
+
+	slog.Info("Output", "outputs", outputs)
+
+	b := outputs[0].InputID
+
+	firstInputID := big.NewInt(b)
+	slog.Info("First Input ID", "firstInputID", firstInputID)
+
+	firstInputIDDB := big.NewInt(1)
+
+	s.Equal(firstInputIDDB, firstInputID)
 }

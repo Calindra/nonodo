@@ -21,7 +21,28 @@ type Input struct {
 	EpochID            int64  `db:"epoch_id"`
 }
 
-type Filter struct {
+type Report struct {
+	ID      int64  `db:"id"`
+	Index   string `db:"index"`
+	RawData []byte `db:"raw_data"`
+	InputID int64  `db:"input_id"`
+}
+
+type Output struct {
+	ID                   int64  `db:"id"`
+	Index                string `db:"index"`
+	RawData              []byte `db:"raw_data"`
+	Hash                 []byte `db:"hash,omitempty"`
+	OutputHashesSiblings []byte `db:"output_hashes_siblings,omitempty"`
+	InputID              int64  `db:"input_id"`
+	TransactionHash      []byte `db:"transaction_hash,omitempty"`
+}
+
+type FilterOutput struct {
+	FilterID
+}
+
+type FilterID struct {
 	IDgt int64
 }
 
@@ -29,7 +50,7 @@ func (s *SynchronizerNode) Connect() (*sqlx.DB, error) {
 	return sqlx.Connect("postgres", s.connectionURL)
 }
 
-func (s *SynchronizerNode) FindAllInputsByFilter(filter Filter) ([]Input, error) {
+func (s *SynchronizerNode) FindAllInputsByFilter(filter FilterID) ([]Input, error) {
 	inputs := []Input{}
 	conn, err := s.Connect()
 
@@ -54,4 +75,57 @@ func (s *SynchronizerNode) FindAllInputsByFilter(filter Filter) ([]Input, error)
 
 	return inputs, nil
 
+}
+
+func (s *SynchronizerNode) FindAllReportsByFilter(filter FilterID) ([]Report, error) {
+	reports := []Report{}
+	conn, err := s.Connect()
+
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := conn.Queryx("SELECT * FROM report WHERE ID >= $1", filter.IDgt)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for result.Next() {
+		var report Report
+		err := result.StructScan(&report)
+		if err != nil {
+			return nil, err
+		}
+		reports = append(reports, report)
+	}
+
+	return reports, nil
+
+}
+
+func (s *SynchronizerNode) FindAllOutputsByFilter(filter FilterID) ([]Output, error) {
+	outputs := []Output{}
+	conn, err := s.Connect()
+
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := conn.Queryx("SELECT * FROM output WHERE ID >= $1", filter.IDgt)
+
+	if err != nil {
+		return nil, err
+	}
+
+	for result.Next() {
+		var report Output
+		err := result.StructScan(&report)
+		if err != nil {
+			return nil, err
+		}
+		outputs = append(outputs, report)
+	}
+
+	return outputs, nil
 }
