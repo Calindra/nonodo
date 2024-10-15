@@ -19,6 +19,10 @@ func TestRawRefInputSuite(t *testing.T) {
 	suite.Run(t, new(RawInputRefSuite))
 }
 
+func (s *RawInputRefSuite) TearDownTest() {
+	defer s.dbFactory.Cleanup()
+}
+
 func (s *RawInputRefSuite) SetupTest() {
 	commons.ConfigureLog(slog.LevelDebug)
 	s.dbFactory = commons.NewDbFactory()

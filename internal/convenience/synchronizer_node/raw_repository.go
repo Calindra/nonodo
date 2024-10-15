@@ -61,13 +61,11 @@ func (s *RawNode) Connect() (*sqlx.DB, error) {
 func (s *RawNode) FindAllInputsByFilter(filter FilterInput) ([]Input, error) {
 	inputs := []Input{}
 	conn, err := s.Connect()
-
 	if err != nil {
 		return nil, err
 	}
 
 	result, err := conn.Queryx("SELECT * FROM input WHERE ID >= $1 LIMIT $2", filter.IDgt, LIMIT)
-
 	if err != nil {
 		return nil, err
 	}
@@ -82,19 +80,16 @@ func (s *RawNode) FindAllInputsByFilter(filter FilterInput) ([]Input, error) {
 	}
 
 	return inputs, nil
-
 }
 
 func (s *RawNode) FindAllReportsByFilter(filter FilterID) ([]Report, error) {
 	reports := []Report{}
 	conn, err := s.Connect()
-
 	if err != nil {
 		return nil, err
 	}
 
 	result, err := conn.Queryx("SELECT * FROM report WHERE ID >= $1 LIMIT $2", filter.IDgt, LIMIT)
-
 	if err != nil {
 		return nil, err
 	}
@@ -109,19 +104,16 @@ func (s *RawNode) FindAllReportsByFilter(filter FilterID) ([]Report, error) {
 	}
 
 	return reports, nil
-
 }
 
 func (s *RawNode) FindAllOutputsByFilter(filter FilterID) ([]Output, error) {
 	outputs := []Output{}
 	conn, err := s.Connect()
-
 	if err != nil {
 		return nil, err
 	}
 
 	result, err := conn.Queryx("SELECT * FROM output WHERE ID >= $1 LIMIT $2", filter.IDgt, LIMIT)
-
 	if err != nil {
 		return nil, err
 	}
