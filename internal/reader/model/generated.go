@@ -57,21 +57,8 @@ type PageInfo struct {
 
 // Data that can be used as proof to validate notices and execute vouchers on the base layer blockchain
 type Proof struct {
-	FirstIndex int `json:"firstIndex"`
-	// Reads a single `Input` that is related to this `Proof`.
-	InputByInputIndex *Input `json:"inputByInputIndex,omitempty"`
-	InputIndex        int    `json:"inputIndex"`
-	LastInput         int    `json:"lastInput"`
-	// A globally unique identifier. Can be used in various places throughout the system to identify this single value.
-	NodeID                                   string    `json:"nodeId"`
-	OutputIndex                              int       `json:"outputIndex"`
-	ValidityInputIndexWithinEpoch            int       `json:"validityInputIndexWithinEpoch"`
-	ValidityMachineStateHash                 string    `json:"validityMachineStateHash"`
-	ValidityOutputEpochRootHash              string    `json:"validityOutputEpochRootHash"`
-	ValidityOutputHashInOutputHashesSiblings []*string `json:"validityOutputHashInOutputHashesSiblings"`
-	ValidityOutputHashesInEpochSiblings      []*string `json:"validityOutputHashesInEpochSiblings"`
-	ValidityOutputHashesRootHash             string    `json:"validityOutputHashesRootHash"`
-	ValidityOutputIndexWithinInput           int       `json:"validityOutputIndexWithinInput"`
+	OutputIndex          string    `json:"outputIndex"`
+	OutputHashesSiblings []*string `json:"outputHashesSiblings"`
 }
 
 type CompletionStatus string

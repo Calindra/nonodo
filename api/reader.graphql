@@ -1,25 +1,7 @@
 "Data that can be used as proof to validate notices and execute vouchers on the base layer blockchain"
 type Proof {
-  firstIndex: Int!
-
-  """Reads a single `Input` that is related to this `Proof`."""
-  inputByInputIndex: Input
-  inputIndex: Int!
-  lastInput: Int!
-
-  """
-  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
-  """
-  nodeId: ID!
-
-  outputIndex: Int!
-  validityInputIndexWithinEpoch: Int!
-  validityMachineStateHash: String!
-  validityOutputEpochRootHash: String!
-  validityOutputHashInOutputHashesSiblings: [String]!
-  validityOutputHashesInEpochSiblings: [String]!
-  validityOutputHashesRootHash: String!
-  validityOutputIndexWithinInput: Int!
+  outputIndex: BigInt!
+  outputHashesSiblings: [String]!
 }
 
 enum CompletionStatus {
