@@ -36,6 +36,7 @@ type AvailListenerSuite struct {
 	workerResult  chan error
 	rpcUrl        string
 	portCounter   int
+	DbFactory     *commons.DbFactory
 }
 
 func TestAvailListenerSuite(t *testing.T) {
@@ -173,8 +174,8 @@ func (s *AvailListenerSuite) TestTableTennis() {
 	extrinsicPaioBlock := CreatePaioExtrinsic(common.Hex2Bytes(fromPaio))
 	block.Block.Extrinsics = append(block.Block.Extrinsics, extrinsicPaioBlock)
 
-	dbFactory := commons.NewDbFactory()
-	db := dbFactory.CreateDb("input.sqlite3")
+	s.DbFactory = commons.NewDbFactory()
+	db := s.DbFactory.CreateDb("input.sqlite3")
 	inputRepository := &repository.InputRepository{
 		Db: *db,
 	}
@@ -283,6 +284,9 @@ func (s *AvailListenerSuite) SetupTest() {
 }
 
 func (s *AvailListenerSuite) TearDownTest() {
+	if s.DbFactory != nil {
+		defer s.DbFactory.Cleanup()
+	}
 	err := exec.Command("pkill", "anvil").Run()
 	s.NoError(err)
 	s.workerCancel()
