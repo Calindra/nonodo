@@ -13,9 +13,9 @@ type RawNode struct {
 
 type Input struct {
 	ID                 int64  `db:"id"`
-	Index              string `db:"index"` // numeric(20,0)
+	Index              uint64 `db:"index"` // numeric(20,0)
 	RawData            []byte `db:"raw_data"`
-	BlockNumber        string `db:"block_number"` // numeric(20,0)
+	BlockNumber        uint64 `db:"block_number"` // numeric(20,0)
 	Status             string `db:"status"`
 	MachineHash        []byte `db:"machine_hash,omitempty"`
 	OutputsHash        []byte `db:"outputs_hash,omitempty"`
@@ -31,29 +31,29 @@ type Report struct {
 }
 
 type Output struct {
-	ID                   int64  `db:"id"`
+	ID                   uint64 `db:"id"`
 	Index                string `db:"index"`
 	RawData              []byte `db:"raw_data"`
 	Hash                 []byte `db:"hash,omitempty"`
 	OutputHashesSiblings []byte `db:"output_hashes_siblings,omitempty"`
-	InputID              int64  `db:"input_id"`
+	InputID              uint64 `db:"input_id"`
 	TransactionHash      []byte `db:"transaction_hash,omitempty"`
 }
 
 type FilterOutput struct {
-	IDgt                int64
+	IDgt                uint64
 	HaveTransactionHash bool
 }
 
 type FilterInput struct {
-	IDgt         int64
+	IDgt         uint64
 	IsStatusNone bool
 }
 
 const LIMIT = 50
 
 type FilterID struct {
-	IDgt int64
+	IDgt uint64
 }
 
 func NewRawNode(connectionURL string) *RawNode {
@@ -71,7 +71,7 @@ func (s *RawNode) FindAllInputsByFilter(ctx context.Context, filter FilterInput)
 		return nil, err
 	}
 
-	result, err := conn.Queryx("SELECT * FROM input WHERE ID >= $1 LIMIT $2", filter.IDgt, LIMIT)
+	result, err := conn.QueryxContext(ctx, "SELECT * FROM input WHERE ID >= $1 LIMIT $2", filter.IDgt, LIMIT)
 	if err != nil {
 		return nil, err
 	}

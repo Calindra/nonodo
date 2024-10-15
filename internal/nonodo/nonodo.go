@@ -247,7 +247,7 @@ func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 	}
 
 	if opts.RawEnabled {
-		rawSequencer := synchronizernode.NewSynchronizerCreateWorker(opts.DbRawUrl)
+		rawSequencer := synchronizernode.NewSynchronizerCreateWorker(container, opts.DbRawUrl)
 		w.Workers = append(w.Workers, rawSequencer)
 	}
 
@@ -443,7 +443,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	}
 
 	if opts.RawEnabled {
-		rawSequencer := synchronizernode.NewSynchronizerCreateWorker(opts.DbRawUrl)
+		rawSequencer := synchronizernode.NewSynchronizerCreateWorker(container, opts.DbRawUrl)
 		w.Workers = append(w.Workers, rawSequencer)
 	}
 

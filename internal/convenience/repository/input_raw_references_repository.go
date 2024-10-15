@@ -13,8 +13,8 @@ type RawInputRefRepository struct {
 
 type RawInputRef struct {
 	ID          string `db:"id"`
-	RawID       string `db:"raw_id"`
-	InputIndex  int    `db:"input_index"`
+	RawID       uint64 `db:"raw_id"`
+	InputIndex  uint64 `db:"input_index"`
 	AppContract string `db:"app_contract"`
 	Status      string `db:"status"`
 	ChainID     string `db:"chain_id"`
@@ -23,7 +23,7 @@ type RawInputRef struct {
 func (r *RawInputRefRepository) CreateTables() error {
 	schema := `CREATE TABLE IF NOT EXISTS convenience_input_raw_references (
 		id 				text NOT NULL PRIMARY KEY,
-		raw_id 			text NOT NULL,
+		raw_id 			integer NOT NULL,
 		input_index		integer NOT NULL,
 		app_contract    text NOT NULL,
 		status	 		text,
@@ -65,4 +65,10 @@ func (r *RawInputRefRepository) Create(ctx context.Context, rawInput RawInputRef
 	}
 
 	return err
+}
+
+func (r *RawInputRefRepository) GetLatestRawId(ctx context.Context) (uint64, error) {
+	var rawId uint64
+	err := r.Db.GetContext(ctx, &rawId, `SELECT raw_id FROM convenience_input_raw_references ORDER BY raw_id DESC LIMIT 1`)
+	return rawId, err
 }

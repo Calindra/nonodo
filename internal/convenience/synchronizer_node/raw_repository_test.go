@@ -62,8 +62,7 @@ func (s *RawNodeSuite) TestSynchronizerNodeListInputs() {
 
 	b := inputs[0].BlockNumber
 
-	firstBlockNumber, ok := big.NewInt(0).SetString(b, 10)
-	s.True(ok)
+	firstBlockNumber := big.NewInt(0).SetUint64(b)
 	slog.Info("First block number", "blockNumber", firstBlockNumber)
 
 	firstBlockNumberDB := big.NewInt(1129)
@@ -86,8 +85,7 @@ func (s *RawNodeSuite) TestSynchronizerNodeInputByID() {
 
 	b := inputs[0].BlockNumber
 
-	firstBlockNumber, ok := big.NewInt(0).SetString(b, 10)
-	s.True(ok)
+	firstBlockNumber := big.NewInt(0).SetUint64(b)
 	slog.Info("First block number", "blockNumber", firstBlockNumber)
 
 	firstBlockNumberDB := big.NewInt(1152)
@@ -123,13 +121,13 @@ func (s *RawNodeSuite) TestSynchronizerNodeOutputtByID() {
 	outputs, err := s.node.FindAllOutputsByFilter(ctx, FilterID{IDgt: 1})
 	s.NoError(err)
 	firstInput := outputs[0]
-	s.Equal(firstInput.ID, int64(1))
+	s.Equal(firstInput.ID, uint64(1))
 
 	slog.Info("Output", "outputs", outputs)
 
 	b := outputs[0].InputID
 
-	firstInputID := big.NewInt(b)
+	firstInputID := big.NewInt(0).SetUint64(b)
 	slog.Info("First Input ID", "firstInputID", firstInputID)
 
 	firstInputIDDB := big.NewInt(1)
