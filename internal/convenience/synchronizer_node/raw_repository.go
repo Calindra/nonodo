@@ -1,6 +1,8 @@
 package synchronizernode
 
 import (
+	"context"
+
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 )
@@ -54,13 +56,17 @@ type FilterID struct {
 	IDgt int64
 }
 
-func (s *RawNode) Connect() (*sqlx.DB, error) {
-	return sqlx.Connect("postgres", s.connectionURL)
+func NewRawNode(connectionURL string) *RawNode {
+	return &RawNode{connectionURL}
 }
 
-func (s *RawNode) FindAllInputsByFilter(filter FilterInput) ([]Input, error) {
+func (s *RawNode) Connect(ctx context.Context) (*sqlx.DB, error) {
+	return sqlx.ConnectContext(ctx, "postgres", s.connectionURL)
+}
+
+func (s *RawNode) FindAllInputsByFilter(ctx context.Context, filter FilterInput) ([]Input, error) {
 	inputs := []Input{}
-	conn, err := s.Connect()
+	conn, err := s.Connect(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -82,14 +88,14 @@ func (s *RawNode) FindAllInputsByFilter(filter FilterInput) ([]Input, error) {
 	return inputs, nil
 }
 
-func (s *RawNode) FindAllReportsByFilter(filter FilterID) ([]Report, error) {
+func (s *RawNode) FindAllReportsByFilter(ctx context.Context, filter FilterID) ([]Report, error) {
 	reports := []Report{}
-	conn, err := s.Connect()
+	conn, err := s.Connect(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	result, err := conn.Queryx("SELECT * FROM report WHERE ID >= $1 LIMIT $2", filter.IDgt, LIMIT)
+	result, err := conn.QueryxContext(ctx, "SELECT * FROM report WHERE ID >= $1 LIMIT $2", filter.IDgt, LIMIT)
 	if err != nil {
 		return nil, err
 	}
@@ -106,14 +112,14 @@ func (s *RawNode) FindAllReportsByFilter(filter FilterID) ([]Report, error) {
 	return reports, nil
 }
 
-func (s *RawNode) FindAllOutputsByFilter(filter FilterID) ([]Output, error) {
+func (s *RawNode) FindAllOutputsByFilter(ctx context.Context, filter FilterID) ([]Output, error) {
 	outputs := []Output{}
-	conn, err := s.Connect()
+	conn, err := s.Connect(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	result, err := conn.Queryx("SELECT * FROM output WHERE ID >= $1 LIMIT $2", filter.IDgt, LIMIT)
+	result, err := conn.QueryxContext(ctx, "SELECT * FROM output WHERE ID >= $1 LIMIT $2", filter.IDgt, LIMIT)
 	if err != nil {
 		return nil, err
 	}

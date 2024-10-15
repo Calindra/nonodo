@@ -1,6 +1,7 @@
 package synchronizernode
 
 import (
+	"context"
 	"log/slog"
 	"math/big"
 	"testing"
@@ -14,10 +15,12 @@ import (
 type RawNodeSuite struct {
 	suite.Suite
 	node RawNode
+	ctx  context.Context
 }
 
 func (s *RawNodeSuite) SetupTest() {
 	commons.ConfigureLog(slog.LevelDebug)
+	s.ctx = context.Background()
 	s.node = RawNode{
 		connectionURL: "postgres://postgres:password@localhost:5432/test_rollupsdb?sslmode=disable",
 	}
@@ -28,15 +31,19 @@ func TestRawNodeSuite(t *testing.T) {
 }
 
 func (s *RawNodeSuite) TestSynchronizerNodeConnection() {
-	_, err := s.node.Connect()
+	ctx, cancel := context.WithCancel(s.ctx)
+	defer cancel()
+	_, err := s.node.Connect(ctx)
 	s.NoError(err)
 }
 
 func (s *RawNodeSuite) TestSynchronizerNodeListInputs() {
-	conn, err := s.node.Connect()
+	ctx, cancel := context.WithCancel(s.ctx)
+	defer cancel()
+	conn, err := s.node.Connect(ctx)
 	s.NoError(err)
 
-	result, err := conn.Queryx("SELECT * FROM input")
+	result, err := conn.QueryxContext(ctx, "SELECT * FROM input")
 	s.NoError(err)
 
 	inputs := []Input{}
@@ -68,7 +75,9 @@ func (s *RawNodeSuite) TestSynchronizerNodeListInputs() {
 }
 
 func (s *RawNodeSuite) TestSynchronizerNodeInputByID() {
-	inputs, err := s.node.FindAllInputsByFilter(FilterInput{IDgt: 2})
+	ctx, cancel := context.WithCancel(s.ctx)
+	defer cancel()
+	inputs, err := s.node.FindAllInputsByFilter(ctx, FilterInput{IDgt: 2})
 	s.NoError(err)
 	firstInput := inputs[0]
 	s.Equal(firstInput.ID, int64(2))
@@ -89,7 +98,9 @@ func (s *RawNodeSuite) TestSynchronizerNodeInputByID() {
 }
 
 func (s *RawNodeSuite) TestSynchronizerNodeReportByID() {
-	reports, err := s.node.FindAllReportsByFilter(FilterID{IDgt: 1})
+	ctx, cancel := context.WithCancel(s.ctx)
+	defer cancel()
+	reports, err := s.node.FindAllReportsByFilter(ctx, FilterID{IDgt: 1})
 	s.NoError(err)
 	firstInput := reports[0]
 	s.Equal(firstInput.ID, int64(1))
@@ -107,7 +118,9 @@ func (s *RawNodeSuite) TestSynchronizerNodeReportByID() {
 }
 
 func (s *RawNodeSuite) TestSynchronizerNodeOutputtByID() {
-	outputs, err := s.node.FindAllOutputsByFilter(FilterID{IDgt: 1})
+	ctx, cancel := context.WithCancel(s.ctx)
+	defer cancel()
+	outputs, err := s.node.FindAllOutputsByFilter(ctx, FilterID{IDgt: 1})
 	s.NoError(err)
 	firstInput := outputs[0]
 	s.Equal(firstInput.ID, int64(1))

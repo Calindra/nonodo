@@ -17,6 +17,7 @@ import (
 
 	"github.com/calindra/nonodo/internal/convenience"
 	"github.com/calindra/nonodo/internal/convenience/synchronizer"
+	synchronizernode "github.com/calindra/nonodo/internal/convenience/synchronizer_node"
 	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/calindra/nonodo/internal/echoapp"
 	"github.com/calindra/nonodo/internal/health"
@@ -86,6 +87,8 @@ type NonodoOpts struct {
 	AvailFromBlock      uint64
 	AvailEnabled        bool
 	PaioServerUrl       string
+	DbRawUrl            string
+	RawEnabled          bool
 }
 
 // Create the options struct with default values.
@@ -141,6 +144,8 @@ func NewNonodoOpts() NonodoOpts {
 		AvailEnabled:        false,
 		AutoCount:           false,
 		PaioServerUrl:       "https://cartesi-paio-avail-turing.fly.dev/transaction",
+		DbRawUrl:            "postgres://postgres:password@localhost:5432/test_rollupsdb?sslmode=disable",
+		RawEnabled:          false,
 	}
 }
 
@@ -239,6 +244,11 @@ func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 		w.Workers = append(w.Workers, salsa.SalsaWorker{
 			Address: opts.SalsaUrl,
 		})
+	}
+
+	if opts.RawEnabled {
+		rawSequencer := synchronizernode.NewSynchronizerCreateWorker(opts.DbRawUrl)
+		w.Workers = append(w.Workers, rawSequencer)
 	}
 
 	cleanSync := synchronizer.NewCleanSynchronizer(container.GetSyncRepository(), nil)
@@ -430,6 +440,11 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 			paioLocation,
 		))
 		sequencer = model.NewInputBoxSequencer(modelInstance)
+	}
+
+	if opts.RawEnabled {
+		rawSequencer := synchronizernode.NewSynchronizerCreateWorker(opts.DbRawUrl)
+		w.Workers = append(w.Workers, rawSequencer)
 	}
 
 	rollup.Register(re, modelInstance, sequencer)
