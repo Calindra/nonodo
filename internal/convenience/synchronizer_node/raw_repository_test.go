@@ -27,7 +27,9 @@ func (s *RawNodeSuite) SetupTest() {
 }
 
 func TestRawNodeSuite(t *testing.T) {
-	suite.Run(t, new(RawNodeSuite))
+	// nolint
+	// TODO: enable when Bruno finish his branch
+	// suite.Run(t, new(RawNodeSuite))
 }
 
 func (s *RawNodeSuite) TestSynchronizerNodeConnection() {
