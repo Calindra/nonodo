@@ -10,6 +10,7 @@ import (
 
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/convenience/model"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -160,8 +161,9 @@ func (c *NoticeRepository) FindAllNotices(
 	return pageResult, nil
 }
 
-func (c *NoticeRepository) FindNoticeByOutputIndex(
+func (c *NoticeRepository) FindNoticeByOutputIndexAndAppContract(
 	ctx context.Context, outputIndex uint64,
+	appContract *common.Address,
 ) (*model.ConvenienceNotice, error) {
 	query := `SELECT * FROM notices WHERE output_index = $1 LIMIT 1`
 	stmt, err := c.Db.Preparex(query)

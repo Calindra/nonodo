@@ -181,9 +181,14 @@ func (a AdapterV1) GetVouchers(
 }
 
 func (a AdapterV1) GetNotice(ctx context.Context, outputIndex int) (*graphql.Notice, error) {
-	notice, err := a.convenienceService.FindNoticeByOutputIndex(
+	appContract, err := getAppContractFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	notice, err := a.convenienceService.FindNoticeByOutputIndexAndAppContract(
 		ctx,
 		uint64(outputIndex),
+		appContract,
 	)
 	if err != nil {
 		return nil, err

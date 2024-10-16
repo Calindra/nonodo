@@ -7,6 +7,7 @@ import (
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/convenience/repository"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 type ConvenienceService struct {
@@ -219,11 +220,12 @@ func (c *ConvenienceService) FindVoucherByInputAndOutputIndex(
 	)
 }
 
-func (c *ConvenienceService) FindNoticeByOutputIndex(
+func (c *ConvenienceService) FindNoticeByOutputIndexAndAppContract(
 	ctx context.Context, outputIndex uint64,
+	appContract *common.Address,
 ) (*model.ConvenienceNotice, error) {
-	return c.noticeRepository.FindNoticeByOutputIndex(
-		ctx, outputIndex,
+	return c.noticeRepository.FindNoticeByOutputIndexAndAppContract(
+		ctx, outputIndex, appContract,
 	)
 }
 
