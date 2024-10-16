@@ -165,8 +165,6 @@ type InputResolver interface {
 }
 type NoticeResolver interface {
 	Input(ctx context.Context, obj *model.Notice) (*model.Input, error)
-
-	Proof(ctx context.Context, obj *model.Notice) (*model.Proof, error)
 }
 type QueryResolver interface {
 	Input(ctx context.Context, id string) (*model.Input, error)
@@ -183,8 +181,6 @@ type ReportResolver interface {
 }
 type VoucherResolver interface {
 	Input(ctx context.Context, obj *model.Voucher) (*model.Input, error)
-
-	Proof(ctx context.Context, obj *model.Voucher) (*model.Proof, error)
 }
 
 type executableSchema struct {
@@ -2649,7 +2645,7 @@ func (ec *executionContext) _Notice_proof(ctx context.Context, field graphql.Col
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Notice().Proof(rctx, obj)
+		return obj.Proof, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2658,17 +2654,17 @@ func (ec *executionContext) _Notice_proof(ctx context.Context, field graphql.Col
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*model.Proof)
+	res := resTmp.(model.Proof)
 	fc.Result = res
-	return ec.marshalOProof2ᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐProof(ctx, field.Selections, res)
+	return ec.marshalOProof2githubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐProof(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Notice_proof(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Notice",
 		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
+		IsMethod:   false,
+		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "outputIndex":
@@ -3168,9 +3164,9 @@ func (ec *executionContext) _Proof_outputHashesSiblings(ctx context.Context, fie
 		}
 		return graphql.Null
 	}
-	res := resTmp.([]*string)
+	res := resTmp.([]string)
 	fc.Result = res
-	return ec.marshalNString2ᚕᚖstring(ctx, field.Selections, res)
+	return ec.marshalNString2ᚕstring(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Proof_outputHashesSiblings(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -4483,7 +4479,7 @@ func (ec *executionContext) _Voucher_proof(ctx context.Context, field graphql.Co
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Voucher().Proof(rctx, obj)
+		return obj.Proof, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -4492,17 +4488,17 @@ func (ec *executionContext) _Voucher_proof(ctx context.Context, field graphql.Co
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*model.Proof)
+	res := resTmp.(model.Proof)
 	fc.Result = res
-	return ec.marshalOProof2ᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐProof(ctx, field.Selections, res)
+	return ec.marshalOProof2githubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐProof(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Voucher_proof(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Voucher",
 		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
+		IsMethod:   false,
+		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "outputIndex":
@@ -7175,38 +7171,7 @@ func (ec *executionContext) _Notice(ctx context.Context, sel ast.SelectionSet, o
 				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "proof":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Notice_proof(ctx, field, obj)
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			out.Values[i] = ec._Notice_proof(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -7877,38 +7842,7 @@ func (ec *executionContext) _Voucher(ctx context.Context, sel ast.SelectionSet, 
 				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "proof":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Voucher_proof(ctx, field, obj)
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			out.Values[i] = ec._Voucher_proof(ctx, field, obj)
 		case "value":
 			out.Values[i] = ec._Voucher_value(ctx, field, obj)
 		case "executed":
@@ -8681,16 +8615,16 @@ func (ec *executionContext) marshalNString2string(ctx context.Context, sel ast.S
 	return res
 }
 
-func (ec *executionContext) unmarshalNString2ᚕᚖstring(ctx context.Context, v interface{}) ([]*string, error) {
+func (ec *executionContext) unmarshalNString2ᚕstring(ctx context.Context, v interface{}) ([]string, error) {
 	var vSlice []interface{}
 	if v != nil {
 		vSlice = graphql.CoerceList(v)
 	}
 	var err error
-	res := make([]*string, len(vSlice))
+	res := make([]string, len(vSlice))
 	for i := range vSlice {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
-		res[i], err = ec.unmarshalOString2ᚖstring(ctx, vSlice[i])
+		res[i], err = ec.unmarshalOString2string(ctx, vSlice[i])
 		if err != nil {
 			return nil, err
 		}
@@ -8698,10 +8632,10 @@ func (ec *executionContext) unmarshalNString2ᚕᚖstring(ctx context.Context, v
 	return res, nil
 }
 
-func (ec *executionContext) marshalNString2ᚕᚖstring(ctx context.Context, sel ast.SelectionSet, v []*string) graphql.Marshaler {
+func (ec *executionContext) marshalNString2ᚕstring(ctx context.Context, sel ast.SelectionSet, v []string) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	for i := range v {
-		ret[i] = ec.marshalOString2ᚖstring(ctx, sel, v[i])
+		ret[i] = ec.marshalOString2string(ctx, sel, v[i])
 	}
 
 	return ret
@@ -9146,11 +9080,8 @@ func (ec *executionContext) marshalOInt2ᚖint(ctx context.Context, sel ast.Sele
 	return res
 }
 
-func (ec *executionContext) marshalOProof2ᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐProof(ctx context.Context, sel ast.SelectionSet, v *model.Proof) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return ec._Proof(ctx, sel, v)
+func (ec *executionContext) marshalOProof2githubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐProof(ctx context.Context, sel ast.SelectionSet, v model.Proof) graphql.Marshaler {
+	return ec._Proof(ctx, sel, &v)
 }
 
 func (ec *executionContext) unmarshalOString2string(ctx context.Context, v interface{}) (string, error) {

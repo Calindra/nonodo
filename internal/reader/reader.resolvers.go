@@ -38,11 +38,6 @@ func (r *noticeResolver) Input(ctx context.Context, obj *model.Notice) (*model.I
 	return input, nil
 }
 
-// Proof is the resolver for the proof field.
-func (r *noticeResolver) Proof(ctx context.Context, obj *model.Notice) (*model.Proof, error) {
-	return r.adapter.GetProof(ctx, obj.InputIndex, obj.Index)
-}
-
 // Input is the resolver for the input field.
 func (r *queryResolver) Input(ctx context.Context, id string) (*model.Input, error) {
 	slog.Debug("queryResolver.Input", "id", id)
@@ -100,11 +95,6 @@ func (r *reportResolver) Input(ctx context.Context, obj *model.Report) (*model.I
 // Input is the resolver for the input field.
 func (r *voucherResolver) Input(ctx context.Context, obj *model.Voucher) (*model.Input, error) {
 	return r.adapter.GetInputByIndex(obj.InputIndex)
-}
-
-// Proof is the resolver for the proof field.
-func (r *voucherResolver) Proof(ctx context.Context, obj *model.Voucher) (*model.Proof, error) {
-	return r.adapter.GetProof(ctx, obj.InputIndex, obj.Index)
 }
 
 // Input returns graph.InputResolver implementation.

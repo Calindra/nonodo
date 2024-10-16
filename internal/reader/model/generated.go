@@ -55,12 +55,6 @@ type PageInfo struct {
 	HasPreviousPage bool `json:"hasPreviousPage"`
 }
 
-// Data that can be used as proof to validate notices and execute vouchers on the base layer blockchain
-type Proof struct {
-	OutputIndex          string    `json:"outputIndex"`
-	OutputHashesSiblings []*string `json:"outputHashesSiblings"`
-}
-
 type CompletionStatus string
 
 const (

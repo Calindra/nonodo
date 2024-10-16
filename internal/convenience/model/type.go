@@ -35,14 +35,14 @@ type ConvenienceNotice struct {
 
 // Voucher metadata type
 type ConvenienceVoucher struct {
-	Destination common.Address `db:"destination"`
-	Payload     string         `db:"payload"`
-	InputIndex  uint64         `db:"input_index"`
-	OutputIndex uint64         `db:"output_index"`
-	Executed    bool           `db:"executed"`
-	Value       string         `db:"value"`
-
-	// Proof we can fetch from the original GraphQL
+	Destination          common.Address `db:"destination"`
+	Payload              string         `db:"payload"`
+	InputIndex           uint64         `db:"input_index"`
+	OutputIndex          uint64         `db:"output_index"`
+	Executed             bool           `db:"executed"`
+	Value                string         `db:"value"`
+	AppContract          common.Address `db:"app_contract"`
+	OutputHashesSiblings string         `db:"output_hashes_siblings"`
 
 	// future improvements
 	// Contract        common.Address

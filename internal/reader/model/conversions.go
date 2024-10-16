@@ -4,6 +4,7 @@
 package model
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -71,7 +72,12 @@ func ConvertInput(input cModel.AdvanceInput) (*Input, error) {
 	}, nil
 }
 
-func convertConvenientVoucherV1(cVoucher cModel.ConvenienceVoucher) *Voucher {
+func ConvertConvenientVoucherV1(cVoucher cModel.ConvenienceVoucher) *Voucher {
+	var outputHashesSiblings []string
+	err := json.Unmarshal([]byte(cVoucher.OutputHashesSiblings), &outputHashesSiblings)
+	if err != nil {
+		outputHashesSiblings = []string{}
+	}
 	return &Voucher{
 		Index:       int(cVoucher.OutputIndex),
 		InputIndex:  int(cVoucher.InputIndex),
@@ -79,6 +85,10 @@ func convertConvenientVoucherV1(cVoucher cModel.ConvenienceVoucher) *Voucher {
 		Payload:     cVoucher.Payload,
 		Value:       cVoucher.Value,
 		// Executed:    &cVoucher.Executed,
+		Proof: Proof{
+			OutputIndex:          strconv.FormatUint(cVoucher.OutputIndex, 10),
+			OutputHashesSiblings: outputHashesSiblings,
+		},
 	}
 }
 
@@ -188,7 +198,7 @@ func ConvertToVoucherConnectionV1(
 ) (*VoucherConnection, error) {
 	convNodes := make([]*Voucher, len(vouchers))
 	for i := range vouchers {
-		convNodes[i] = convertConvenientVoucherV1(vouchers[i])
+		convNodes[i] = ConvertConvenientVoucherV1(vouchers[i])
 	}
 	return NewConnection(offset, total, convNodes), nil
 }

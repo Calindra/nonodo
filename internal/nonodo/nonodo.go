@@ -151,23 +151,7 @@ func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 	container := convenience.NewContainer(*db, opts.AutoCount)
 	decoder := container.GetOutputDecoder()
 	convenienceService := container.GetConvenienceService()
-
-	var adapter reader.Adapter
-
-	if opts.NodeVersion == "v1" {
-		adapter = reader.NewAdapterV1(db, convenienceService)
-	} else {
-		graphileUrl, err := url.Parse(opts.GraphileUrl)
-		if err != nil {
-			slog.Error("Error parsing Graphile URL", "error", err)
-			panic(err)
-		}
-
-		httpClient := container.GetGraphileClient(*graphileUrl, opts.LoadTestMode)
-		inputBlobAdapter := reader.InputBlobAdapter{}
-		adapter = reader.NewAdapterV2(convenienceService, httpClient, inputBlobAdapter)
-	}
-
+	adapter := reader.NewAdapterV1(db, convenienceService)
 	if opts.RpcUrl == "" && !opts.DisableDevnet {
 		anvilLocation, err := handleAnvilInstallation()
 		if err != nil {

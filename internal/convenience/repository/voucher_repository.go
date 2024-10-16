@@ -24,23 +24,27 @@ type VoucherRepository struct {
 }
 
 type voucherRow struct {
-	Destination string `db:"destination"`
-	Payload     string `db:"payload"`
-	InputIndex  uint64 `db:"input_index"`
-	OutputIndex uint64 `db:"output_index"`
-	Executed    bool   `db:"executed"`
-	Value       string `db:"value"`
+	Destination          string `db:"destination"`
+	Payload              string `db:"payload"`
+	InputIndex           uint64 `db:"input_index"`
+	OutputIndex          uint64 `db:"output_index"`
+	Executed             bool   `db:"executed"`
+	Value                string `db:"value"`
+	OutputHashesSiblings string `db:"output_hashes_siblings"`
+	AppContract          string `db:"app_contract"`
 }
 
 func (c *VoucherRepository) CreateTables() error {
 	schema := `CREATE TABLE IF NOT EXISTS vouchers (
-		destination text,
-		payload 	text,
-		executed	BOOLEAN,
-		input_index  integer,
-		output_index integer,
-		value		 text,
-		PRIMARY KEY (input_index, output_index));`
+		destination            text,
+		payload 	           text,
+		executed	           BOOLEAN,
+		input_index            integer,
+		output_index           integer,
+		value		           text,
+		output_hashes_siblings text,
+		app_contract           text,
+		PRIMARY KEY (input_index, output_index, app_contract));`
 
 	// execute a query on the server
 	_, err := c.Db.Exec(schema)
@@ -64,7 +68,9 @@ func (c *VoucherRepository) CreateVoucher(
 		executed,
 		input_index,
 		output_index,
-		value) VALUES ($1, $2, $3, $4, $5, $6)`
+		value,
+		output_hashes_siblings,
+		app_contract) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
 
 	exec := DBExecutor{&c.Db}
 
@@ -77,6 +83,8 @@ func (c *VoucherRepository) CreateVoucher(
 		voucher.InputIndex,
 		voucher.OutputIndex,
 		voucher.Value,
+		voucher.OutputHashesSiblings,
+		voucher.AppContract.Hex(),
 	)
 	if err != nil {
 		slog.Error("Error creating vouchers", "Error", err)
