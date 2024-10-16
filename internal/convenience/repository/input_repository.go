@@ -73,7 +73,8 @@ func (r *InputRepository) CreateTables() error {
 }
 
 func (r *InputRepository) Create(ctx context.Context, input model.AdvanceInput) (*model.AdvanceInput, error) {
-	exist, err := r.FindByID(ctx, input.ID)
+	appContract := input.AppContract
+	exist, err := r.FindByIDAndAppContract(ctx, input.ID, &appContract)
 	if err != nil {
 		return nil, err
 	}
@@ -294,31 +295,8 @@ func (r *InputRepository) FindByIndex(ctx context.Context, inputIndex int) (*mod
 	return nil, nil
 }
 
-func (r *InputRepository) FindByID(ctx context.Context, id string) (*model.AdvanceInput, error) {
-	sql := `SELECT
-		id,
-		input_index,
-		status,
-		msg_sender,
-		payload,
-		block_number,
-		block_timestamp,
-		prev_randao,
-		exception,
-		app_contract,
-		espresso_block_number,
-		espresso_block_timestamp,
-		input_box_index, 
-		avail_block_number,
-		avail_block_timestamp,
-		type,
-		chain_id
-	FROM convenience_inputs WHERE id = $1`
-	res, err := r.Db.QueryxContext(
-		ctx,
-		sql,
-		id,
-	)
+func (r *InputRepository) FindByIDAndAppContract(ctx context.Context, id string, appContract *common.Address) (*model.AdvanceInput, error) {
+	res, err := r.queryByIdAndAppContract(ctx, id, appContract)
 	if err != nil {
 		return nil, err
 	}
@@ -331,6 +309,63 @@ func (r *InputRepository) FindByID(ctx context.Context, id string) (*model.Advan
 		return input, nil
 	}
 	return nil, nil
+}
+
+func (r *InputRepository) queryByIdAndAppContract(
+	ctx context.Context,
+	id string,
+	appContract *common.Address,
+) (*sqlx.Rows, error) {
+	if appContract != nil {
+		return r.Db.QueryxContext(ctx, `
+			SELECT 
+				id,
+				input_index,
+				status,
+				msg_sender,
+				payload,
+				block_number,
+				block_timestamp,
+				prev_randao,
+				exception,
+				app_contract,
+				espresso_block_number,
+				espresso_block_timestamp,
+				input_box_index, 
+				avail_block_number,
+				avail_block_timestamp,
+				type,
+				chain_id FROM convenience_inputs
+			WHERE id = $1 and app_contract = $2
+			LIMIT 1`,
+			id,
+			appContract.Hex(),
+		)
+	} else {
+		return r.Db.QueryxContext(ctx, `
+			SELECT 
+				id,
+				input_index,
+				status,
+				msg_sender,
+				payload,
+				block_number,
+				block_timestamp,
+				prev_randao,
+				exception,
+				app_contract,
+				espresso_block_number,
+				espresso_block_timestamp,
+				input_box_index, 
+				avail_block_number,
+				avail_block_timestamp,
+				type,
+				chain_id FROM convenience_inputs
+			WHERE id = $1
+			LIMIT 1`,
+			id,
+		)
+	}
 }
 
 func (c *InputRepository) Count(

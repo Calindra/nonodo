@@ -228,7 +228,7 @@ func (s *ModelSuite) TestItFinishesAdvanceWithAccept() {
 
 	// check input
 	ctx := context.Background()
-	input, err := s.inputRepository.FindByID(ctx, "0")
+	input, err := s.inputRepository.FindByIDAndAppContract(ctx, "0", nil)
 	s.NoError(err)
 	s.Equal("0", input.ID)
 	s.Equal(cModel.CompletionStatusAccepted, input.Status)
@@ -266,7 +266,7 @@ func (s *ModelSuite) TestItFinishesAdvanceWithReject() {
 
 	// check input
 	ctx := context.Background()
-	input, err := s.inputRepository.FindByID(ctx, "0")
+	input, err := s.inputRepository.FindByIDAndAppContract(ctx, "0", nil)
 	s.NoError(err)
 	s.Equal("0", input.ID)
 	s.Equal(cModel.CompletionStatusRejected, input.Status)
@@ -561,7 +561,7 @@ func (s *ModelSuite) TestItRegistersExceptionWhenAdvancing() {
 	s.Nil(err)
 
 	// check input
-	input, err := s.inputRepository.FindByID(ctx, "0")
+	input, err := s.inputRepository.FindByIDAndAppContract(ctx, "0", nil)
 	s.NoError(err)
 	s.Equal("0", input.ID)
 	s.Equal(cModel.CompletionStatusException, input.Status)
@@ -610,7 +610,7 @@ func (s *ModelSuite) TestItGetsAdvanceInputs() {
 	for i := 0; i < s.n; i++ {
 		err := s.m.AddAdvanceInput(s.senders[i], s.payloads[i], s.blockNumbers[i], s.timestamps[i], i, "", common.Address{}, "")
 		s.NoError(err)
-		input, err := s.inputRepository.FindByID(ctx, strconv.Itoa(i))
+		input, err := s.inputRepository.FindByIDAndAppContract(ctx, strconv.Itoa(i), nil)
 		s.NoError(err)
 		s.Equal(strconv.Itoa(i), input.ID)
 		s.Equal(cModel.CompletionStatusUnprocessed, input.Status)
@@ -623,7 +623,7 @@ func (s *ModelSuite) TestItGetsAdvanceInputs() {
 
 func (s *ModelSuite) TestItFailsToGetAdvanceInput() {
 	ctx := context.Background()
-	input, err := s.inputRepository.FindByID(ctx, "0")
+	input, err := s.inputRepository.FindByIDAndAppContract(ctx, "0", nil)
 	s.NoError(err)
 	s.Nil(input)
 }

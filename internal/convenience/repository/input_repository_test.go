@@ -97,7 +97,7 @@ func (s *InputRepositorySuite) TestCreateAndFindInputByID() {
 	s.NoError(err)
 	s.Equal(123, input.Index)
 
-	input2, err := s.inputRepository.FindByID(ctx, "123")
+	input2, err := s.inputRepository.FindByIDAndAppContract(ctx, "123", nil)
 	s.NoError(err)
 	s.Equal("123", input.ID)
 	s.Equal(input.Status, input2.Status)
@@ -126,7 +126,7 @@ func (s *InputRepositorySuite) TestCreateInputAndUpdateStatus() {
 	_, err = s.inputRepository.Update(ctx, *input)
 	s.NoError(err)
 
-	input2, err := s.inputRepository.FindByID(ctx, "2222")
+	input2, err := s.inputRepository.FindByIDAndAppContract(ctx, "2222", nil)
 	s.NoError(err)
 	s.Equal(convenience.CompletionStatusAccepted, input2.Status)
 	s.Equal("0x70997970C51812dc3A010C7d01b50e0d17dc79C8", input2.AppContract.Hex())
@@ -292,7 +292,7 @@ func (s *InputRepositorySuite) TestCreateInputAndCheckAppContract() {
 
 	s.NoError(err)
 
-	input2, err := s.inputRepository.FindByID(ctx, "2222")
+	input2, err := s.inputRepository.FindByIDAndAppContract(ctx, "2222", nil)
 	s.NoError(err)
 	s.Equal("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", input2.AppContract.Hex())
 }

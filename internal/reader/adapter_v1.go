@@ -309,7 +309,11 @@ func (a AdapterV1) GetInputByIndex(
 func (a AdapterV1) GetInput(
 	ctx context.Context,
 	id string) (*graphql.Input, error) {
-	input, err := a.inputRepository.FindByID(ctx, id)
+	appContract, err := getAppContractFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	input, err := a.inputRepository.FindByIDAndAppContract(ctx, id, appContract)
 	if err != nil {
 		return nil, err
 	}
