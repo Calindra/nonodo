@@ -207,6 +207,7 @@ func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 		container.GetReportRepository(),
 		container.GetInputRepository(),
 		container.GetVoucherRepository(),
+		container.GetNoticeRepository(),
 	)
 
 	e := echo.New()
@@ -309,6 +310,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		container.GetReportRepository(),
 		container.GetInputRepository(),
 		container.GetVoucherRepository(),
+		container.GetNoticeRepository(),
 	)
 	e := echo.New()
 	e.Use(middleware.CORS())
@@ -432,7 +434,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		w.Workers = append(w.Workers, rawSequencer)
 	}
 
-	rollup.Register(re, modelInstance, sequencer)
+	rollup.Register(re, modelInstance, sequencer, common.HexToAddress(opts.ApplicationAddress))
 	w.Workers = append(w.Workers, supervisor.HttpWorker{
 		Address: fmt.Sprintf("%v:%v", opts.HttpAddress, opts.HttpRollupsPort),
 		Handler: re,

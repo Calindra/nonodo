@@ -15,6 +15,7 @@ import (
 
 	cModel "github.com/calindra/nonodo/internal/convenience/model"
 	cRepos "github.com/calindra/nonodo/internal/convenience/repository"
+	"github.com/calindra/nonodo/internal/devnet"
 
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/convenience"
@@ -42,6 +43,7 @@ type ModelSuite struct {
 	reportRepository   *cRepos.ReportRepository
 	inputRepository    *cRepos.InputRepository
 	voucherRepository  *cRepos.VoucherRepository
+	noticeRepository   *cRepos.NoticeRepository
 	tempDir            string
 	convenienceService *services.ConvenienceService
 }
@@ -58,11 +60,14 @@ func (s *ModelSuite) SetupTest() {
 	s.reportRepository = container.GetReportRepository()
 	s.inputRepository = container.GetInputRepository()
 	s.voucherRepository = container.GetVoucherRepository()
+	s.noticeRepository = container.GetNoticeRepository()
+
 	s.m = NewNonodoModel(
 		decoder,
 		s.reportRepository,
 		s.inputRepository,
 		s.voucherRepository,
+		s.noticeRepository,
 	)
 	s.convenienceService = container.GetConvenienceService()
 	s.n = 3
@@ -217,11 +222,11 @@ func (s *ModelSuite) TestItFinishesAdvanceWithAccept() {
 	s.NoError(err)
 	_, err = s.m.FinishAndGetNext(true) // get
 	s.NoError(err)
-	_, err = s.m.AddVoucher(s.senders[0], "0", s.payloads[0])
+	_, err = s.m.AddVoucher(common.HexToAddress(devnet.ApplicationAddress), s.senders[0], "0", s.payloads[0])
 	s.NoError(err)
-	_, err = s.m.AddNotice(s.payloads[0])
+	_, err = s.m.AddNotice(s.payloads[0], common.HexToAddress(devnet.ApplicationAddress))
 	s.NoError(err)
-	err = s.m.AddReport(s.payloads[0])
+	err = s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), s.payloads[0])
 	s.NoError(err)
 	_, err = s.m.FinishAndGetNext(true) // finish
 	s.NoError(err)
@@ -255,11 +260,11 @@ func (s *ModelSuite) TestItFinishesAdvanceWithReject() {
 	s.NoError(err)
 	_, err = s.m.FinishAndGetNext(true) // get
 	s.Nil(err)
-	_, err = s.m.AddVoucher(s.senders[0], "0", s.payloads[0])
+	_, err = s.m.AddVoucher(common.HexToAddress(devnet.ApplicationAddress), s.senders[0], "0", s.payloads[0])
 	s.Nil(err)
-	_, err = s.m.AddNotice(s.payloads[0])
+	_, err = s.m.AddNotice(s.payloads[0], common.HexToAddress(devnet.ApplicationAddress))
 	s.Nil(err)
-	err = s.m.AddReport(s.payloads[0])
+	err = s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), s.payloads[0])
 	s.Nil(err)
 	_, err = s.m.FinishAndGetNext(false) // finish
 	s.Nil(err)
@@ -296,7 +301,7 @@ func (s *ModelSuite) TestItFinishesInspectWithAccept() {
 	s.m.AddInspectInput(s.payloads[0])
 	_, err := s.m.FinishAndGetNext(true) // get
 	s.NoError(err)
-	err = s.m.AddReport(s.payloads[0])
+	err = s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), s.payloads[0])
 	s.NoError(err)
 	_, err = s.m.FinishAndGetNext(true) // finish
 	s.NoError(err)
@@ -316,7 +321,7 @@ func (s *ModelSuite) TestItFinishesInspectWithReject() {
 	s.m.AddInspectInput(s.payloads[0])
 	_, err := s.m.FinishAndGetNext(true) // get
 	s.Nil(err)
-	err = s.m.AddReport(s.payloads[0])
+	err = s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), s.payloads[0])
 	s.Nil(err)
 	_, err = s.m.FinishAndGetNext(false) // finish
 	s.Nil(err)
@@ -368,7 +373,7 @@ func (s *ModelSuite) TestItAddsVoucher() {
 
 	// add vouchers
 	for i := 0; i < s.n; i++ {
-		index, err := s.m.AddVoucher(s.senders[i], "0", s.payloads[i])
+		index, err := s.m.AddVoucher(common.HexToAddress(devnet.ApplicationAddress), s.senders[i], "0", s.payloads[i])
 		s.Nil(err)
 		s.Equal(i, index)
 	}
@@ -399,12 +404,12 @@ func (s *ModelSuite) TestItFailsToAddVoucherWhenInspect() {
 	s.m.AddInspectInput(s.payloads[0])
 	_, err := s.m.FinishAndGetNext(true)
 	s.NoError(err)
-	_, err = s.m.AddVoucher(s.senders[0], "0", s.payloads[0])
+	_, err = s.m.AddVoucher(common.HexToAddress(devnet.ApplicationAddress), s.senders[0], "0", s.payloads[0])
 	s.Error(err)
 }
 
 func (s *ModelSuite) TestItFailsToAddVoucherWhenIdle() {
-	_, err := s.m.AddVoucher(s.senders[0], "0", s.payloads[0])
+	_, err := s.m.AddVoucher(common.HexToAddress(devnet.ApplicationAddress), s.senders[0], "0", s.payloads[0])
 	s.Error(err)
 	s.Equal(errors.New("cannot add voucher in idle state"), err)
 }
@@ -422,7 +427,7 @@ func (s *ModelSuite) TestItAddsNotice() {
 
 	// add notices
 	for i := 0; i < s.n; i++ {
-		index, err := s.m.AddNotice(s.payloads[i])
+		index, err := s.m.AddNotice(s.payloads[i], common.HexToAddress(devnet.ApplicationAddress))
 		s.Nil(err)
 		s.Equal(i, index)
 	}
@@ -452,12 +457,12 @@ func (s *ModelSuite) TestItFailsToAddNoticeWhenInspect() {
 	s.m.AddInspectInput(s.payloads[0])
 	_, err := s.m.FinishAndGetNext(true)
 	s.NoError(err)
-	_, err = s.m.AddNotice(s.payloads[0])
+	_, err = s.m.AddNotice(s.payloads[0], common.HexToAddress(devnet.ApplicationAddress))
 	s.Error(err)
 }
 
 func (s *ModelSuite) TestItFailsToAddNoticeWhenIdle() {
-	_, err := s.m.AddNotice(s.payloads[0])
+	_, err := s.m.AddNotice(s.payloads[0], common.HexToAddress(devnet.ApplicationAddress))
 	s.Error(err)
 	s.Equal(errors.New("cannot add notice in current state"), err)
 }
@@ -477,7 +482,7 @@ func (s *ModelSuite) TestItAddsReportWhenAdvancing() {
 
 	// add reports
 	for i := 0; i < s.n; i++ {
-		err := s.m.AddReport(s.payloads[i])
+		err := s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), s.payloads[i])
 		s.Nil(err)
 	}
 
@@ -512,7 +517,7 @@ func (s *ModelSuite) TestItAddsReportWhenInspecting() {
 
 	// add reports
 	for i := 0; i < s.n; i++ {
-		err := s.m.AddReport(s.payloads[i])
+		err := s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), s.payloads[i])
 		s.Nil(err)
 	}
 
@@ -535,7 +540,7 @@ func (s *ModelSuite) TestItAddsReportWhenInspecting() {
 }
 
 func (s *ModelSuite) TestItFailsToAddReportWhenIdle() {
-	err := s.m.AddReport(s.payloads[0])
+	err := s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), s.payloads[0])
 	s.Error(err)
 	s.Equal(errors.New("cannot add report in current state"), err)
 }
@@ -551,11 +556,11 @@ func (s *ModelSuite) TestItRegistersExceptionWhenAdvancing() {
 	s.NoError(err)
 	_, err = s.m.FinishAndGetNext(true) // get
 	s.Nil(err)
-	_, err = s.m.AddVoucher(s.senders[0], "0", s.payloads[0])
+	_, err = s.m.AddVoucher(common.HexToAddress(devnet.ApplicationAddress), s.senders[0], "0", s.payloads[0])
 	s.Nil(err)
-	_, err = s.m.AddNotice(s.payloads[0])
+	_, err = s.m.AddNotice(s.payloads[0], common.HexToAddress(devnet.ApplicationAddress))
 	s.Nil(err)
-	err = s.m.AddReport(s.payloads[0])
+	err = s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), s.payloads[0])
 	s.Nil(err)
 	err = s.m.RegisterException(s.payloads[0])
 	s.Nil(err)
@@ -580,7 +585,7 @@ func (s *ModelSuite) TestItRegistersExceptionWhenInspecting() {
 	s.m.AddInspectInput(s.payloads[0])
 	_, err := s.m.FinishAndGetNext(true) // get
 	s.Nil(err)
-	err = s.m.AddReport(s.payloads[0])
+	err = s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), s.payloads[0])
 	s.Nil(err)
 	err = s.m.RegisterException(s.payloads[0])
 	s.Nil(err)
@@ -640,7 +645,7 @@ func (s *ModelSuite) TestItGetsVoucher() {
 		_, err = s.m.FinishAndGetNext(true) // get
 		s.NoError(err)
 		for j := 0; j < s.n; j++ {
-			_, err := s.m.AddVoucher(s.senders[j], "0", s.payloads[j])
+			_, err := s.m.AddVoucher(common.HexToAddress(devnet.ApplicationAddress), s.senders[j], "0", s.payloads[j])
 			s.Nil(err)
 		}
 		_, err = s.m.FinishAndGetNext(true) // finish
@@ -692,7 +697,7 @@ func (s *ModelSuite) TestItGetsNotice() {
 		_, err = s.m.FinishAndGetNext(true) // get
 		s.NoError(err)
 		for j := 0; j < s.n; j++ {
-			_, err := s.m.AddNotice(s.payloads[j])
+			_, err := s.m.AddNotice(s.payloads[j], common.HexToAddress(devnet.ApplicationAddress))
 			s.Nil(err)
 		}
 		_, err = s.m.FinishAndGetNext(true) // finish
@@ -736,7 +741,7 @@ func (s *ModelSuite) TestItGetsReport() {
 		_, err = s.m.FinishAndGetNext(true) // get
 		s.NoError(err)
 		for j := 0; j < s.n; j++ {
-			err := s.m.AddReport(s.payloads[j])
+			err := s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), s.payloads[j])
 			s.Nil(err)
 		}
 		_, err = s.m.FinishAndGetNext(true) // finish
@@ -826,7 +831,7 @@ func (s *ModelSuite) TestItGetsNumVouchers() {
 		s.NoError(err)
 		_, err = s.m.FinishAndGetNext(true) // get
 		s.NoError(err)
-		_, err = s.m.AddVoucher(s.senders[i], "0", s.payloads[i])
+		_, err = s.m.AddVoucher(common.HexToAddress(devnet.ApplicationAddress), s.senders[i], "0", s.payloads[i])
 		s.Nil(err)
 		_, err = s.m.FinishAndGetNext(true) // finish
 		s.Nil(err)
@@ -853,7 +858,7 @@ func (s *ModelSuite) TestItGetsNumNotices() {
 		s.NoError(err)
 		_, err = s.m.FinishAndGetNext(true) // get
 		s.NoError(err)
-		_, err = s.m.AddNotice(s.payloads[i])
+		_, err = s.m.AddNotice(s.payloads[i], common.HexToAddress(devnet.ApplicationAddress))
 		s.Nil(err)
 		_, err = s.m.FinishAndGetNext(true) // finish
 		s.Nil(err)
@@ -883,7 +888,7 @@ func (s *ModelSuite) TestItGetsNumReports() {
 		s.NoError(err)
 		_, err = s.m.FinishAndGetNext(true) // get
 		s.NoError(err)
-		err = s.m.AddReport(s.payloads[i])
+		err = s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), s.payloads[i])
 		s.Nil(err)
 		_, err = s.m.FinishAndGetNext(true) // finish
 		s.Nil(err)
@@ -1000,7 +1005,7 @@ func (s *ModelSuite) TestItGetsVouchers() {
 		_, err = s.m.FinishAndGetNext(true) // get
 		s.NoError(err)
 		for j := 0; j < s.n; j++ {
-			_, err := s.m.AddVoucher(s.senders[j], "0", s.payloads[j])
+			_, err := s.m.AddVoucher(common.HexToAddress(devnet.ApplicationAddress), s.senders[j], "0", s.payloads[j])
 			s.Nil(err)
 		}
 		_, err = s.m.FinishAndGetNext(true) // finish
@@ -1026,7 +1031,7 @@ func (s *ModelSuite) TestItGetsVouchersWithFilter() {
 		_, err = s.m.FinishAndGetNext(true) // get
 		s.NoError(err)
 		for j := 0; j < s.n; j++ {
-			_, err := s.m.AddVoucher(s.senders[j], "0", s.payloads[j])
+			_, err := s.m.AddVoucher(common.HexToAddress(devnet.ApplicationAddress), s.senders[j], "0", s.payloads[j])
 			s.Nil(err)
 		}
 		_, err = s.m.FinishAndGetNext(true) // finish
@@ -1059,7 +1064,7 @@ func (s *ModelSuite) TestItGetsVouchersWithOffset() {
 	_, err = s.m.FinishAndGetNext(true) // get
 	s.NoError(err)
 	for i := 0; i < s.n; i++ {
-		_, err := s.m.AddVoucher(s.senders[i], "0", s.payloads[i])
+		_, err := s.m.AddVoucher(common.HexToAddress(devnet.ApplicationAddress), s.senders[i], "0", s.payloads[i])
 		s.Nil(err)
 	}
 	_, err = s.m.FinishAndGetNext(true) // finish
@@ -1077,7 +1082,7 @@ func (s *ModelSuite) TestItGetsVouchersWithLimit() {
 	_, err = s.m.FinishAndGetNext(true) // get
 	s.NoError(err)
 	for i := 0; i < s.n; i++ {
-		_, err := s.m.AddVoucher(s.senders[i], "0", s.payloads[i])
+		_, err := s.m.AddVoucher(common.HexToAddress(devnet.ApplicationAddress), s.senders[i], "0", s.payloads[i])
 		s.Nil(err)
 	}
 	_, err = s.m.FinishAndGetNext(true) // finish
@@ -1095,7 +1100,7 @@ func (s *ModelSuite) TestItGetsNoVouchersWithZeroLimit() {
 	_, err = s.m.FinishAndGetNext(true) // get
 	s.NoError(err)
 	for i := 0; i < s.n; i++ {
-		_, err := s.m.AddVoucher(s.senders[i], "0", s.payloads[i])
+		_, err := s.m.AddVoucher(common.HexToAddress(devnet.ApplicationAddress), s.senders[i], "0", s.payloads[i])
 		s.Nil(err)
 	}
 	_, err = s.m.FinishAndGetNext(true) // finish
@@ -1111,7 +1116,7 @@ func (s *ModelSuite) TestItGetsNoVouchersWhenOffsetIsGreaterThanInputs() {
 	_, err = s.m.FinishAndGetNext(true) // get
 	s.NoError(err)
 	for i := 0; i < s.n; i++ {
-		_, err := s.m.AddVoucher(s.senders[i], "0", s.payloads[i])
+		_, err := s.m.AddVoucher(common.HexToAddress(devnet.ApplicationAddress), s.senders[i], "0", s.payloads[i])
 		s.Nil(err)
 	}
 	_, err = s.m.FinishAndGetNext(true) // finish
@@ -1139,7 +1144,7 @@ func (s *ModelSuite) TestItGetsNotices() {
 		_, err = s.m.FinishAndGetNext(true) // get
 		s.NoError(err)
 		for j := 0; j < s.n; j++ {
-			_, err := s.m.AddNotice(s.payloads[j])
+			_, err := s.m.AddNotice(s.payloads[j], common.HexToAddress(devnet.ApplicationAddress))
 			s.Nil(err)
 		}
 		_, err = s.m.FinishAndGetNext(true) // finish
@@ -1167,7 +1172,7 @@ func (s *ModelSuite) TestItGetsNoticesWithFilter() {
 		_, err = s.m.FinishAndGetNext(true) // get
 		s.NoError(err)
 		for j := 0; j < s.n; j++ {
-			_, err := s.m.AddNotice(s.payloads[j])
+			_, err := s.m.AddNotice(s.payloads[j], common.HexToAddress(devnet.ApplicationAddress))
 			s.Nil(err)
 		}
 		_, err = s.m.FinishAndGetNext(true) // finish
@@ -1199,7 +1204,7 @@ func (s *ModelSuite) TestItGetsNoticesWithOffset() {
 	_, err = s.m.FinishAndGetNext(true) // get
 	s.NoError(err)
 	for i := 0; i < s.n; i++ {
-		_, err := s.m.AddNotice(s.payloads[i])
+		_, err := s.m.AddNotice(s.payloads[i], common.HexToAddress(devnet.ApplicationAddress))
 		s.Nil(err)
 	}
 	_, err = s.m.FinishAndGetNext(true) // finish
@@ -1221,7 +1226,7 @@ func (s *ModelSuite) TestItGetsNoticesWithLimit() {
 	_, err = s.m.FinishAndGetNext(true) // get
 	s.NoError(err)
 	for i := 0; i < s.n; i++ {
-		_, err := s.m.AddNotice(s.payloads[i])
+		_, err := s.m.AddNotice(s.payloads[i], common.HexToAddress(devnet.ApplicationAddress))
 		s.Nil(err)
 	}
 	_, err = s.m.FinishAndGetNext(true) // finish
@@ -1243,7 +1248,7 @@ func (s *ModelSuite) TestItGetsNoNoticesWithZeroLimit() {
 	_, err = s.m.FinishAndGetNext(true) // get
 	s.NoError(err)
 	for i := 0; i < s.n; i++ {
-		_, err := s.m.AddNotice(s.payloads[i])
+		_, err := s.m.AddNotice(s.payloads[i], common.HexToAddress(devnet.ApplicationAddress))
 		s.Nil(err)
 	}
 	_, err = s.m.FinishAndGetNext(true) // finish
@@ -1263,7 +1268,7 @@ func (s *ModelSuite) TestItGetsNoNoticesWhenOffsetIsGreaterThanInputs() {
 	_, err = s.m.FinishAndGetNext(true) // get
 	s.NoError(err)
 	for i := 0; i < s.n; i++ {
-		_, err := s.m.AddNotice(s.payloads[i])
+		_, err := s.m.AddNotice(s.payloads[i], common.HexToAddress(devnet.ApplicationAddress))
 		s.Nil(err)
 	}
 	_, err = s.m.FinishAndGetNext(true) // finish
@@ -1302,7 +1307,7 @@ func (s *ModelSuite) TestItGetsReports() {
 		_, err = s.m.FinishAndGetNext(true) // get
 		s.NoError(err)
 		for j := 0; j < s.n; j++ {
-			err := s.m.AddReport(s.payloads[j])
+			err := s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), s.payloads[j])
 			s.Nil(err)
 		}
 		_, err = s.m.FinishAndGetNext(true) // finish
@@ -1329,7 +1334,7 @@ func (s *ModelSuite) TestItGetsReportsWithFilter() {
 		_, err = s.m.FinishAndGetNext(true) // get
 		s.NoError(err)
 		for j := 0; j < s.n; j++ {
-			err := s.m.AddReport(s.payloads[j])
+			err := s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), s.payloads[j])
 			s.Nil(err)
 		}
 		_, err = s.m.FinishAndGetNext(true) // finish
@@ -1353,7 +1358,7 @@ func (s *ModelSuite) TestItGetsReportsWithOffset() {
 	_, err = s.m.FinishAndGetNext(true) // get
 	s.NoError(err)
 	for i := 0; i < s.n*2; i++ {
-		err := s.m.AddReport(s.payloads[i%s.n])
+		err := s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), s.payloads[i%s.n])
 		s.Nil(err)
 	}
 	_, err = s.m.FinishAndGetNext(true) // finish
@@ -1373,7 +1378,7 @@ func (s *ModelSuite) TestItGetsReportsWithLimit() {
 	_, err = s.m.FinishAndGetNext(true) // get
 	s.NoError(err)
 	for i := 0; i < s.n; i++ {
-		err := s.m.AddReport(s.payloads[i])
+		err := s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), s.payloads[i])
 		s.Nil(err)
 	}
 	_, err = s.m.FinishAndGetNext(true) // finish
@@ -1393,7 +1398,7 @@ func (s *ModelSuite) TestItGetsNoReportsWithZeroLimit() {
 	_, err = s.m.FinishAndGetNext(true) // get
 	s.NoError(err)
 	for i := 0; i < s.n; i++ {
-		err := s.m.AddReport(s.payloads[i])
+		err := s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), s.payloads[i])
 		s.NoError(err)
 	}
 	_, err = s.m.FinishAndGetNext(true) // finish
@@ -1411,7 +1416,7 @@ func (s *ModelSuite) TestItGetsNoReportsWhenOffsetIsGreaterThanInputs() {
 	_, err = s.m.FinishAndGetNext(true) // get
 	s.NoError(err)
 	for i := 0; i < s.n; i++ {
-		err := s.m.AddReport(s.payloads[i])
+		err := s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), s.payloads[i])
 		s.Nil(err)
 	}
 	_, err = s.m.FinishAndGetNext(true) // finish
