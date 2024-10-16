@@ -4,9 +4,11 @@ import (
 	"context"
 	"log/slog"
 	"math/big"
+	"strings"
 	"testing"
 
 	"github.com/calindra/nonodo/internal/commons"
+	"github.com/calindra/nonodo/internal/contracts"
 	"github.com/ethereum/go-ethereum/common"
 	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/suite"
@@ -76,7 +78,7 @@ func (s *RawNodeSuite) TestSynchronizerNodeListInputs() {
 func (s *RawNodeSuite) TestSynchronizerNodeInputByID() {
 	ctx, cancel := context.WithCancel(s.ctx)
 	defer cancel()
-	inputs, err := s.node.FindAllInputsByFilter(ctx, FilterInput{IDgt: 2})
+	inputs, err := s.node.FindAllInputsByFilter(ctx, FilterInput{IDgt: 2, IsStatusNone: false}, nil)
 	s.NoError(err)
 	firstInput := inputs[0]
 	s.Equal(firstInput.ID, int64(2))
@@ -133,4 +135,25 @@ func (s *RawNodeSuite) TestSynchronizerNodeOutputtByID() {
 	firstInputIDDB := big.NewInt(1)
 
 	s.Equal(firstInputIDDB, firstInputID)
+}
+
+func (s *RawNodeSuite) TestDecodeChainIDFromInputbox() {
+	abi, err := contracts.InputsMetaData.GetAbi()
+	s.NoError(err)
+
+	rawData := "0x415bf3630000000000000000000000000000000000000000000000000000000000007a690000000000000000000000005112cf49f2511ac7b13a032c4c62a48410fc28fb000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb92266000000000000000000000000000000000000000000000000000000000000046900000000000000000000000000000000000000000000000000000000670931c70a06511d13afecb37c88e47c1a7357e42205ac4b8e49fcd4632373e036261e26000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000005deadbeef11000000000000000000000000000000000000000000000000000000" // nolint
+
+	// EvmAdvance
+	data := common.Hex2Bytes(strings.TrimPrefix(rawData, "0x"))
+	methodId := data[:4]
+	slog.Debug("MethodId", "methodId", methodId, "hex", rawData[2:10])
+	input, err := abi.MethodById(methodId)
+	s.NoError(err)
+
+	dataDecoded := make(map[string]interface{})
+	dataEncoded := data[4:]
+	err = input.Inputs.UnpackIntoMap(dataDecoded, dataEncoded)
+	s.NoError(err)
+	s.NotEmpty(dataDecoded)
+	s.Equal(big.NewInt(31337), dataDecoded["chainId"])
 }
