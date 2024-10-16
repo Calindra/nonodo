@@ -96,6 +96,9 @@ func ConvertToConvenienceFilter(
 	filter []*ConvenientFilter,
 ) ([]*cModel.ConvenienceFilter, error) {
 	filters := []*cModel.ConvenienceFilter{}
+	if filter == nil {
+		return filters, nil
+	}
 	for _, f := range filter {
 		and, err := ConvertToConvenienceFilter(f.And)
 		if err != nil {

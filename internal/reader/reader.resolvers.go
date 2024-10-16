@@ -14,12 +14,12 @@ import (
 
 // Vouchers is the resolver for the vouchers field.
 func (r *inputResolver) Vouchers(ctx context.Context, obj *model.Input, first *int, last *int, after *string, before *string) (*model.Connection[*model.Voucher], error) {
-	return r.adapter.GetVouchers(first, last, after, before, &obj.Index)
+	return r.adapter.GetVouchers(ctx, first, last, after, before, &obj.Index, nil)
 }
 
 // Notices is the resolver for the notices field.
 func (r *inputResolver) Notices(ctx context.Context, obj *model.Input, first *int, last *int, after *string, before *string) (*model.Connection[*model.Notice], error) {
-	return r.adapter.GetNotices(first, last, after, before, &obj.Index)
+	return r.adapter.GetNotices(ctx, first, last, after, before, &obj.Index)
 }
 
 // Reports is the resolver for the reports field.
@@ -30,7 +30,7 @@ func (r *inputResolver) Reports(ctx context.Context, obj *model.Input, first *in
 // Input is the resolver for the input field.
 func (r *noticeResolver) Input(ctx context.Context, obj *model.Notice) (*model.Input, error) {
 	slog.Debug("Find input by index", "inputIndex", obj.InputIndex)
-	input, err := r.adapter.GetInputByIndex(obj.InputIndex)
+	input, err := r.adapter.GetInputByIndex(ctx, obj.InputIndex)
 	if err != nil {
 		slog.Error("Input not found")
 		return nil, err
@@ -40,51 +40,38 @@ func (r *noticeResolver) Input(ctx context.Context, obj *model.Notice) (*model.I
 
 // Input is the resolver for the input field.
 func (r *queryResolver) Input(ctx context.Context, id string) (*model.Input, error) {
-	// Here, we will need to add the appAddress from the path, as Catarino did.
 	slog.Debug("queryResolver.Input", "id", id)
-	return r.adapter.GetInput(id)
+	return r.adapter.GetInput(ctx, id)
 }
 
 // Voucher is the resolver for the voucher field.
 func (r *queryResolver) Voucher(ctx context.Context, outputIndex int) (*model.Voucher, error) {
-	// Here, we will need to add the appAddress from the path, as Catarino did.
-	return r.adapter.GetVoucher(outputIndex)
+	return r.adapter.GetVoucher(ctx, outputIndex)
 }
 
 // Notice is the resolver for the notice field.
 func (r *queryResolver) Notice(ctx context.Context, outputIndex int) (*model.Notice, error) {
-	// Here, we will need to add the appAddress from the path, as Catarino did.
-	return r.adapter.GetNotice(outputIndex)
+	return r.adapter.GetNotice(ctx, outputIndex)
 }
 
 // Report is the resolver for the report field.
 func (r *queryResolver) Report(ctx context.Context, reportIndex int) (*model.Report, error) {
-	// Here, we will need to add the appAddress from the path, as Catarino did.
-	return r.adapter.GetReport(reportIndex)
+	return r.adapter.GetReport(ctx, reportIndex)
 }
 
 // Inputs is the resolver for the inputs field.
 func (r *queryResolver) Inputs(ctx context.Context, first *int, last *int, after *string, before *string, where *model.InputFilter) (*model.Connection[*model.Input], error) {
-	// Here, we will need to add the appAddress from the path, as Catarino did.
 	return r.adapter.GetInputs(ctx, first, last, after, before, where)
 }
 
 // Vouchers is the resolver for the vouchers field.
 func (r *queryResolver) Vouchers(ctx context.Context, first *int, last *int, after *string, before *string, filter []*model.ConvenientFilter) (*model.Connection[*model.Voucher], error) {
-	convenienceFilter, err := model.ConvertToConvenienceFilter(filter)
-	if err != nil {
-		return nil, err
-	}
-	vouchers, err := r.convenienceService.FindAllVouchers(ctx, first, last, after, before, convenienceFilter)
-	if err != nil {
-		return nil, err
-	}
-	return model.ConvertToVoucherConnectionV1(vouchers.Rows, int(vouchers.Offset), int(vouchers.Total))
+	return r.adapter.GetVouchers(ctx, first, last, after, before, nil, filter)
 }
 
 // Notices is the resolver for the notices field.
 func (r *queryResolver) Notices(ctx context.Context, first *int, last *int, after *string, before *string) (*model.Connection[*model.Notice], error) {
-	return r.adapter.GetNotices(first, last, after, before, nil)
+	return r.adapter.GetNotices(ctx, first, last, after, before, nil)
 }
 
 // Reports is the resolver for the reports field.
@@ -94,12 +81,12 @@ func (r *queryResolver) Reports(ctx context.Context, first *int, last *int, afte
 
 // Input is the resolver for the input field.
 func (r *reportResolver) Input(ctx context.Context, obj *model.Report) (*model.Input, error) {
-	return r.adapter.GetInputByIndex(obj.InputIndex)
+	return r.adapter.GetInputByIndex(ctx, obj.InputIndex)
 }
 
 // Input is the resolver for the input field.
 func (r *voucherResolver) Input(ctx context.Context, obj *model.Voucher) (*model.Input, error) {
-	return r.adapter.GetInputByIndex(obj.InputIndex)
+	return r.adapter.GetInputByIndex(ctx, obj.InputIndex)
 }
 
 // Input returns graph.InputResolver implementation.

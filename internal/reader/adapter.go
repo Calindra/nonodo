@@ -3,11 +3,15 @@ package reader
 import (
 	"context"
 
+	"github.com/calindra/nonodo/internal/reader/model"
 	graphql "github.com/calindra/nonodo/internal/reader/model"
 )
 
 type Adapter interface {
-	GetReport(reportIndex int) (*graphql.Report, error)
+	GetReport(
+		ctx context.Context,
+		reportIndex int,
+	) (*graphql.Report, error)
 
 	GetReports(
 		ctx context.Context,
@@ -19,19 +23,33 @@ type Adapter interface {
 		first *int, last *int, after *string, before *string, where *graphql.InputFilter,
 	) (*graphql.InputConnection, error)
 
-	GetInput(id string) (*graphql.Input, error)
-	GetInputByIndex(inputIndex int) (*graphql.Input, error)
+	GetInput(
+		ctx context.Context,
+		id string,
+	) (*graphql.Input, error)
+	GetInputByIndex(
+		ctx context.Context,
+		inputIndex int,
+	) (*graphql.Input, error)
 
-	GetNotice(outputIndex int) (*graphql.Notice, error)
+	GetNotice(
+		ctx context.Context,
+		outputIndex int,
+	) (*graphql.Notice, error)
 
 	GetNotices(
+		ctx context.Context,
 		first *int, last *int, after *string, before *string, inputIndex *int,
 	) (*graphql.NoticeConnection, error)
 
-	GetVoucher(outputIndex int) (*graphql.Voucher, error)
+	GetVoucher(
+		ctx context.Context,
+		outputIndex int) (*graphql.Voucher, error)
 
 	GetVouchers(
+		ctx context.Context,
 		first *int, last *int, after *string, before *string, inputIndex *int,
+		filter []*model.ConvenientFilter,
 	) (*graphql.VoucherConnection, error)
 
 	GetProof(ctx context.Context, inputIndex, outputIndex int) (*graphql.Proof, error)

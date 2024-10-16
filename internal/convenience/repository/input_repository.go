@@ -494,7 +494,7 @@ func transformToInputQuery(
 			} else {
 				return "", nil, 0, fmt.Errorf("operation not implemented field type")
 			}
-		} else if *filter.Field == "AppContract" {
+		} else if *filter.Field == model.APP_CONTRACT {
 			if filter.Eq != nil {
 				where = append(where, fmt.Sprintf("app_contract = $%d ", count))
 				args = append(args, *filter.Eq)

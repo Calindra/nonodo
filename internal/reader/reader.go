@@ -8,6 +8,7 @@ package reader
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
 	"github.com/99designs/gqlgen/graphql/handler"
@@ -53,6 +54,11 @@ func Register(
 		return nil
 	})
 	e.GET("/:appContract/graphql", func(c echo.Context) error {
+		appContract := c.Param("appContract")
+		slog.Debug("graphql playground", "appContract", appContract)
+		playgroundHandler := playground.Handler("GraphQL",
+			fmt.Sprintf("/%s/graphql", appContract),
+		)
 		playgroundHandler.ServeHTTP(c.Response(), c.Request())
 		return nil
 	})
