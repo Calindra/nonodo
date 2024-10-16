@@ -108,15 +108,27 @@ func (a AdapterV1) GetVoucher(ctx context.Context, outputIndex int) (*graphql.Vo
 	}, nil
 }
 
-func addAppContractFilterAsNeeded(ctx context.Context, filters []*cModel.ConvenienceFilter) ([]*cModel.ConvenienceFilter, error) {
+func getAppContractFromContext(ctx context.Context) (*common.Address, error) {
 	appContractParam := ctx.Value(cModel.AppContractKey)
 	if appContractParam != nil {
 		appContract, ok := appContractParam.(string)
 		if !ok {
 			return nil, fmt.Errorf("wrong app contract type")
 		}
+		value := common.HexToAddress(appContract)
+		return &value, nil
+	}
+	return nil, nil
+}
+
+func addAppContractFilterAsNeeded(ctx context.Context, filters []*cModel.ConvenienceFilter) ([]*cModel.ConvenienceFilter, error) {
+	appContract, err := getAppContractFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if appContract != nil {
 		field := cModel.APP_CONTRACT
-		value := common.HexToAddress(appContract).Hex()
+		value := appContract.Hex()
 		filters = append(filters, &cModel.ConvenienceFilter{
 			Field: &field,
 			Eq:    &value,
@@ -190,9 +202,14 @@ func (a AdapterV1) GetReport(
 	ctx context.Context,
 	reportIndex int,
 ) (*graphql.Report, error) {
-	report, err := a.reportRepository.FindByOutputIndex(
+	appContract, err := getAppContractFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	report, err := a.reportRepository.FindByOutputIndexAndAppContract(
 		ctx,
 		uint64(reportIndex),
+		appContract,
 	)
 	if err != nil {
 		return nil, err

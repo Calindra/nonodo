@@ -217,6 +217,30 @@ func (s *AdapterSuite) TestGetReportsFilteredByAppContract() {
 	s.Equal(3, res3.TotalCount) // returns all
 }
 
+func (s *AdapterSuite) TestGetReportFilteredByAppContract() {
+	ctx := context.Background()
+	appContract := common.HexToAddress(devnet.ApplicationAddress)
+	s.createTestData(ctx)
+
+	// without address
+	res, err := s.adapter.GetReport(ctx, 1)
+	s.Require().NoError(err)
+	s.NotNil(res) // returns the report
+
+	// with inexistent address
+	appContract2 := common.HexToAddress("0x000028bb862fb57e8a2bcd567a2e929a0be56a5e")
+	ctx2 := context.WithValue(ctx, cModel.AppContractKey, appContract2.Hex())
+	res2, err := s.adapter.GetReport(ctx2, 1)
+	s.ErrorContains(err, "report not found")
+	s.Nil(res2) // returns nothing
+
+	// with correct address
+	ctx3 := context.WithValue(ctx, cModel.AppContractKey, appContract.Hex())
+	res3, err := s.adapter.GetReport(ctx3, 1)
+	s.Require().NoError(err)
+	s.NotNil(res3) // returns all
+}
+
 func (s *AdapterSuite) createTestData(ctx context.Context) {
 	appContract := common.HexToAddress(devnet.ApplicationAddress)
 	for i := 0; i < 3; i++ {
@@ -246,7 +270,7 @@ func (s *AdapterSuite) createTestData(ctx context.Context) {
 		_, err = s.reportRepository.CreateReport(ctx, cModel.Report{
 			AppContract: appContract,
 			InputIndex:  i,
-			Index:       0,
+			Index:       i, // now it's a global number for the dapp
 			Payload:     common.Hex2Bytes("1122"),
 		})
 		s.NoError(err)

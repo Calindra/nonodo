@@ -89,16 +89,35 @@ func (r *ReportRepository) Update(ctx context.Context, report cModel.Report) (*c
 	return &report, nil
 }
 
-func (r *ReportRepository) FindByOutputIndex(
+func (r *ReportRepository) queryByOutputIndexAndAppContract(
 	ctx context.Context,
 	outputIndex uint64,
+	appContract *common.Address,
+) (*sqlx.Rows, error) {
+	if appContract != nil {
+		return r.Db.QueryxContext(ctx, `
+			SELECT payload, input_index FROM convenience_reports
+			WHERE output_index = $1 and app_contract = $2
+			LIMIT 1`,
+			outputIndex,
+			appContract.Hex(),
+		)
+	} else {
+		return r.Db.QueryxContext(ctx, `
+			SELECT payload, input_index FROM convenience_reports
+			WHERE output_index = $1
+			LIMIT 1`,
+			outputIndex,
+		)
+	}
+}
+
+func (r *ReportRepository) FindByOutputIndexAndAppContract(
+	ctx context.Context,
+	outputIndex uint64,
+	appContract *common.Address,
 ) (*cModel.Report, error) {
-	rows, err := r.Db.QueryxContext(ctx, `
-		SELECT payload, input_index FROM convenience_reports
-		WHERE output_index = $1
-		LIMIT 1`,
-		outputIndex,
-	)
+	rows, err := r.queryByOutputIndexAndAppContract(ctx, outputIndex, appContract)
 	if err != nil {
 		slog.Error("database error", "err", err)
 		return nil, err

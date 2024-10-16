@@ -349,6 +349,5 @@ func transformToQuery(
 		}
 	}
 	query += strings.Join(where, " and ")
-	slog.Debug("Query", "query", query, "args", args)
 	return query, args, count, nil
 }
