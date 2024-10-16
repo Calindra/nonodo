@@ -140,7 +140,7 @@ func NewNonodoOpts() NonodoOpts {
 		AvailFromBlock:      0,
 		AvailEnabled:        false,
 		AutoCount:           false,
-		PaioServerUrl:       "https://cartesi-paio-avail-turing.fly.dev/transaction",
+		PaioServerUrl:       "https://cartesi-paio-avail-turing.fly.dev",
 	}
 }
 
