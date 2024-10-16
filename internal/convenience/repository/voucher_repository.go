@@ -131,29 +131,55 @@ func (c *VoucherRepository) VoucherCount(
 	return uint64(count), nil
 }
 
-func (c *VoucherRepository) FindVoucherByOutputIndex(
+func (c *VoucherRepository) queryByOutputIndexAndAppContract(
+	ctx context.Context,
+	outputIndex uint64,
+	appContract *common.Address,
+) (*sqlx.Rows, error) {
+	if appContract != nil {
+		return c.Db.QueryxContext(ctx, `
+			SELECT * FROM vouchers
+			WHERE output_index = $1 and app_contract = $2
+			LIMIT 1`,
+			outputIndex,
+			appContract.Hex(),
+		)
+	} else {
+		return c.Db.QueryxContext(ctx, `
+			SELECT * FROM vouchers
+			WHERE output_index = $1
+			LIMIT 1`,
+			outputIndex,
+		)
+	}
+}
+
+func (c *VoucherRepository) FindVoucherByOutputIndexAndAppContract(
 	ctx context.Context, outputIndex uint64,
+	appContract *common.Address,
 ) (*model.ConvenienceVoucher, error) {
+	rows, err := c.queryByOutputIndexAndAppContract(ctx, outputIndex, appContract)
 
-	query := `SELECT * FROM vouchers WHERE output_index = $1 LIMIT 1`
-
-	stmt, err := c.Db.Preparex(query)
 	if err != nil {
+		slog.Error("database error", "err", err)
 		return nil, err
 	}
-	var row voucherRow
-	err = stmt.GetContext(ctx, &row, outputIndex)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
+	defer rows.Close()
+
+	if rows.Next() {
+		var cVoucher model.ConvenienceVoucher
+		if err := rows.StructScan(&cVoucher); err != nil {
+			return nil, err
 		}
+
+		return &cVoucher, nil
+	}
+
+	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-	defer stmt.Close()
 
-	p := convertToConvenienceVoucher(row)
-
-	return &p, nil
+	return nil, nil
 }
 
 func (c *VoucherRepository) FindVoucherByInputAndOutputIndex(

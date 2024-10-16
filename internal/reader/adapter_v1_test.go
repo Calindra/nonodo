@@ -169,6 +169,30 @@ func (s *AdapterSuite) TestGetVouchersFilteredByAppContract() {
 	s.Equal(3, res3.TotalCount)
 }
 
+func (s *AdapterSuite) TestGetVoucherFilteredByAppContract() {
+	ctx := context.Background()
+	appContract := common.HexToAddress(devnet.ApplicationAddress)
+	s.createTestData(ctx)
+
+	// without address
+	res, err := s.adapter.GetVoucher(ctx, 1)
+	s.Require().NoError(err)
+	s.NotNil(res) // returns the notice
+
+	// with inexistent address
+	appContract2 := common.HexToAddress("0x000028bb862fb57e8a2bcd567a2e929a0be56a5e")
+	ctx2 := context.WithValue(ctx, cModel.AppContractKey, appContract2.Hex())
+	res2, err := s.adapter.GetVoucher(ctx2, 1)
+	s.ErrorContains(err, "voucher not found")
+	s.Nil(res2) // returns nothing
+
+	// with correct address
+	ctx3 := context.WithValue(ctx, cModel.AppContractKey, appContract.Hex())
+	res3, err := s.adapter.GetVoucher(ctx3, 1)
+	s.Require().NoError(err)
+	s.NotNil(res3) // returns the notice
+}
+
 func (s *AdapterSuite) TestGetNoticesFilteredByAppContract() {
 	ctx := context.Background()
 	appContract := common.HexToAddress(devnet.ApplicationAddress)

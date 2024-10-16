@@ -204,11 +204,12 @@ func (c *ConvenienceService) FindAllByInputIndex(
 	)
 }
 
-func (c *ConvenienceService) FindVoucherByOutputIndex(
+func (c *ConvenienceService) FindVoucherByOutputIndexAndAppContract(
 	ctx context.Context, outputIndex uint64,
+	appContract *common.Address,
 ) (*model.ConvenienceVoucher, error) {
-	return c.voucherRepository.FindVoucherByOutputIndex(
-		ctx, outputIndex,
+	return c.voucherRepository.FindVoucherByOutputIndexAndAppContract(
+		ctx, outputIndex, appContract,
 	)
 }
 
