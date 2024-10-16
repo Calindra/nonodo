@@ -8,7 +8,6 @@ import (
 	cModel "github.com/calindra/nonodo/internal/convenience/model"
 	cRepos "github.com/calindra/nonodo/internal/convenience/repository"
 	services "github.com/calindra/nonodo/internal/convenience/services"
-	"github.com/calindra/nonodo/internal/reader/model"
 	graphql "github.com/calindra/nonodo/internal/reader/model"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
@@ -61,6 +60,10 @@ func (a AdapterV1) GetNotices(
 	inputIndex *int,
 ) (*graphql.Connection[*graphql.Notice], error) {
 	filters := []*cModel.ConvenienceFilter{}
+	filters, err := addAppContractFilterAsNeeded(ctx, filters)
+	if err != nil {
+		return nil, err
+	}
 	if inputIndex != nil {
 		field := cModel.INPUT_INDEX
 		value := fmt.Sprintf("%d", *inputIndex)
@@ -112,7 +115,7 @@ func addAppContractFilterAsNeeded(ctx context.Context, filters []*cModel.Conveni
 		if !ok {
 			return nil, fmt.Errorf("wrong app contract type")
 		}
-		field := "AppContract"
+		field := cModel.APP_CONTRACT
 		value := common.HexToAddress(appContract).Hex()
 		filters = append(filters, &cModel.ConvenienceFilter{
 			Field: &field,
@@ -129,9 +132,9 @@ func (a AdapterV1) GetVouchers(
 	after *string,
 	before *string,
 	inputIndex *int,
-	filter []*model.ConvenientFilter,
+	filter []*graphql.ConvenientFilter,
 ) (*graphql.Connection[*graphql.Voucher], error) {
-	filters, err := model.ConvertToConvenienceFilter(filter)
+	filters, err := graphql.ConvertToConvenienceFilter(filter)
 	if err != nil {
 		return nil, err
 	}

@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/calindra/nonodo/internal/commons"
-	convenience "github.com/calindra/nonodo/internal/convenience/model"
+	cModel "github.com/calindra/nonodo/internal/convenience/model"
 	cRepos "github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/calindra/nonodo/internal/convenience/services"
 	"github.com/calindra/nonodo/internal/devnet"
@@ -29,6 +29,7 @@ type AdapterSuite struct {
 	reportRepository  *cRepos.ReportRepository
 	inputRepository   *cRepos.InputRepository
 	voucherRepository *cRepos.VoucherRepository
+	noticeRepository  *cRepos.NoticeRepository
 	adapter           Adapter
 	dbFactory         *commons.DbFactory
 }
@@ -53,11 +54,17 @@ func (s *AdapterSuite) SetupTest() {
 	}
 	err = s.voucherRepository.CreateTables()
 	s.Require().NoError(err)
+
+	s.noticeRepository = &cRepos.NoticeRepository{
+		Db: *db,
+	}
+	err = s.noticeRepository.CreateTables()
+	s.Require().NoError(err)
 	s.adapter = &AdapterV1{
 		reportRepository: s.reportRepository,
 		inputRepository:  s.inputRepository,
 		convenienceService: services.NewConvenienceService(
-			s.voucherRepository, nil, nil, nil,
+			s.voucherRepository, s.noticeRepository, nil, nil,
 		),
 	}
 }
@@ -73,7 +80,7 @@ func (s *AdapterSuite) TestCreateTables() {
 
 func (s *AdapterSuite) TestGetReport() {
 	ctx := context.Background()
-	reportSaved, err := s.reportRepository.CreateReport(ctx, convenience.Report{
+	reportSaved, err := s.reportRepository.CreateReport(ctx, cModel.Report{
 		InputIndex: 1,
 		Index:      999,
 		Payload:    common.Hex2Bytes("1122"),
@@ -87,7 +94,7 @@ func (s *AdapterSuite) TestGetReport() {
 func (s *AdapterSuite) TestGetReports() {
 	ctx := context.Background()
 	for i := 0; i < 3; i++ {
-		_, err := s.reportRepository.CreateReport(ctx, convenience.Report{
+		_, err := s.reportRepository.CreateReport(ctx, cModel.Report{
 			InputIndex: i,
 			Index:      0,
 			Payload:    common.Hex2Bytes("1122"),
@@ -107,10 +114,10 @@ func (s *AdapterSuite) TestGetReports() {
 func (s *AdapterSuite) TestGetInputs() {
 	ctx := context.Background()
 	for i := 0; i < 3; i++ {
-		_, err := s.inputRepository.Create(ctx, convenience.AdvanceInput{
+		_, err := s.inputRepository.Create(ctx, cModel.AdvanceInput{
 			ID:             strconv.Itoa(i),
 			Index:          i,
-			Status:         convenience.CompletionStatusUnprocessed,
+			Status:         cModel.CompletionStatusUnprocessed,
 			MsgSender:      common.HexToAddress(fmt.Sprintf("000000000000000000000000000000000000000%d", i)),
 			Payload:        common.Hex2Bytes("0x1122"),
 			BlockNumber:    1,
@@ -136,10 +143,10 @@ func (s *AdapterSuite) TestGetInputsFilteredByAppContract() {
 	ctx := context.Background()
 	appContract := common.HexToAddress(devnet.ApplicationAddress)
 	for i := 0; i < 3; i++ {
-		_, err := s.inputRepository.Create(ctx, convenience.AdvanceInput{
+		_, err := s.inputRepository.Create(ctx, cModel.AdvanceInput{
 			ID:             strconv.Itoa(i),
 			Index:          i,
-			Status:         convenience.CompletionStatusUnprocessed,
+			Status:         cModel.CompletionStatusUnprocessed,
 			MsgSender:      common.HexToAddress(fmt.Sprintf("000000000000000000000000000000000000000%d", i)),
 			Payload:        common.Hex2Bytes("0x1122"),
 			BlockNumber:    1,
@@ -156,13 +163,13 @@ func (s *AdapterSuite) TestGetInputsFilteredByAppContract() {
 
 	// with inexistent address
 	appContract2 := common.HexToAddress("0x000028bb862fb57e8a2bcd567a2e929a0be56a5e")
-	ctx2 := context.WithValue(ctx, convenience.AppContractKey, appContract2.Hex())
+	ctx2 := context.WithValue(ctx, cModel.AppContractKey, appContract2.Hex())
 	res2, err := s.adapter.GetInputs(ctx2, nil, nil, nil, nil, nil)
 	s.Require().NoError(err)
 	s.Equal(0, res2.TotalCount)
 
 	// with correct address
-	ctx3 := context.WithValue(ctx, convenience.AppContractKey, appContract.Hex())
+	ctx3 := context.WithValue(ctx, cModel.AppContractKey, appContract.Hex())
 	res3, err := s.adapter.GetInputs(ctx3, nil, nil, nil, nil, nil)
 	s.Require().NoError(err)
 	s.Equal(3, res3.TotalCount)
@@ -172,10 +179,10 @@ func (s *AdapterSuite) TestGetVouchersFilteredByAppContract() {
 	ctx := context.Background()
 	appContract := common.HexToAddress(devnet.ApplicationAddress)
 	for i := 0; i < 3; i++ {
-		_, err := s.inputRepository.Create(ctx, convenience.AdvanceInput{
+		_, err := s.inputRepository.Create(ctx, cModel.AdvanceInput{
 			ID:             strconv.Itoa(i),
 			Index:          i,
-			Status:         convenience.CompletionStatusUnprocessed,
+			Status:         cModel.CompletionStatusUnprocessed,
 			MsgSender:      common.HexToAddress(fmt.Sprintf("000000000000000000000000000000000000000%d", i)),
 			Payload:        common.Hex2Bytes("0x1122"),
 			BlockNumber:    1,
@@ -183,7 +190,7 @@ func (s *AdapterSuite) TestGetVouchersFilteredByAppContract() {
 			AppContract:    appContract,
 		})
 		s.NoError(err)
-		_, err = s.voucherRepository.CreateVoucher(ctx, &convenience.ConvenienceVoucher{
+		_, err = s.voucherRepository.CreateVoucher(ctx, &cModel.ConvenienceVoucher{
 			AppContract: appContract,
 			OutputIndex: uint64(i),
 			InputIndex:  uint64(i),
@@ -198,14 +205,56 @@ func (s *AdapterSuite) TestGetVouchersFilteredByAppContract() {
 
 	// with inexistent address
 	appContract2 := common.HexToAddress("0x000028bb862fb57e8a2bcd567a2e929a0be56a5e")
-	ctx2 := context.WithValue(ctx, convenience.AppContractKey, appContract2.Hex())
+	ctx2 := context.WithValue(ctx, cModel.AppContractKey, appContract2.Hex())
 	res2, err := s.adapter.GetVouchers(ctx2, nil, nil, nil, nil, nil, nil)
 	s.Require().NoError(err)
 	s.Equal(0, res2.TotalCount)
 
 	// with correct address
-	ctx3 := context.WithValue(ctx, convenience.AppContractKey, appContract.Hex())
+	ctx3 := context.WithValue(ctx, cModel.AppContractKey, appContract.Hex())
 	res3, err := s.adapter.GetVouchers(ctx3, nil, nil, nil, nil, nil, nil)
+	s.Require().NoError(err)
+	s.Equal(3, res3.TotalCount)
+}
+
+func (s *AdapterSuite) TestGetNoticesFilteredByAppContract() {
+	ctx := context.Background()
+	appContract := common.HexToAddress(devnet.ApplicationAddress)
+	for i := 0; i < 3; i++ {
+		_, err := s.inputRepository.Create(ctx, cModel.AdvanceInput{
+			ID:             strconv.Itoa(i),
+			Index:          i,
+			Status:         cModel.CompletionStatusUnprocessed,
+			MsgSender:      common.HexToAddress(fmt.Sprintf("000000000000000000000000000000000000000%d", i)),
+			Payload:        common.Hex2Bytes("0x1122"),
+			BlockNumber:    1,
+			BlockTimestamp: time.Now(),
+			AppContract:    appContract,
+		})
+		s.NoError(err)
+		_, err = s.noticeRepository.Create(ctx, &cModel.ConvenienceNotice{
+			AppContract: appContract.Hex(),
+			OutputIndex: uint64(i),
+			InputIndex:  uint64(i),
+		})
+		s.Require().NoError(err)
+	}
+
+	// without address
+	res, err := s.adapter.GetNotices(ctx, nil, nil, nil, nil, nil)
+	s.Require().NoError(err)
+	s.Equal(3, res.TotalCount)
+
+	// with inexistent address
+	appContract2 := common.HexToAddress("0x000028bb862fb57e8a2bcd567a2e929a0be56a5e")
+	ctx2 := context.WithValue(ctx, cModel.AppContractKey, appContract2.Hex())
+	res2, err := s.adapter.GetNotices(ctx2, nil, nil, nil, nil, nil)
+	s.Require().NoError(err)
+	s.Equal(0, res2.TotalCount)
+
+	// with correct address
+	ctx3 := context.WithValue(ctx, cModel.AppContractKey, appContract.Hex())
+	res3, err := s.adapter.GetNotices(ctx3, nil, nil, nil, nil, nil)
 	s.Require().NoError(err)
 	s.Equal(3, res3.TotalCount)
 }

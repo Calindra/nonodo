@@ -24,7 +24,9 @@ func (c *NoticeRepository) CreateTables() error {
 		payload 		text,
 		input_index		integer,
 		output_index	integer,
-		PRIMARY KEY (input_index, output_index));`
+		app_contract    text,
+		output_hashes_siblings text,
+		PRIMARY KEY (input_index, output_index, app_contract));`
 
 	// execute a query on the server
 	_, err := c.Db.Exec(schema)
@@ -45,7 +47,9 @@ func (c *NoticeRepository) Create(
 	insertSql := `INSERT INTO notices (
 		payload,
 		input_index,
-		output_index) VALUES ($1, $2, $3)`
+		output_index,
+		app_contract,
+		output_hashes_siblings) VALUES ($1, $2, $3, $4, $5)`
 
 	exec := DBExecutor{&c.Db}
 	_, err := exec.ExecContext(ctx,
@@ -53,6 +57,8 @@ func (c *NoticeRepository) Create(
 		data.Payload,
 		data.InputIndex,
 		data.OutputIndex,
+		data.AppContract,
+		data.OutputHashesSiblings,
 	)
 	if err != nil {
 		slog.Error("Error creating notice", "Error", err)
@@ -216,11 +222,21 @@ func transformToNoticeQuery(
 			} else {
 				return "", nil, 0, fmt.Errorf("operation not implemented")
 			}
+		} else if *filter.Field == model.APP_CONTRACT {
+			if filter.Eq != nil {
+				where = append(
+					where,
+					fmt.Sprintf("app_contract = $%d ", count),
+				)
+				args = append(args, *filter.Eq)
+				count += 1
+			} else {
+				return "", nil, 0, fmt.Errorf("operation not implemented")
+			}
 		} else {
 			return "", nil, 0, fmt.Errorf("unexpected field %s", *filter.Field)
 		}
 	}
 	query += strings.Join(where, " and ")
-	slog.Debug("Query", "query", query, "args", args)
 	return query, args, count, nil
 }

@@ -29,9 +29,11 @@ const (
 )
 
 type ConvenienceNotice struct {
-	Payload     string `db:"payload"`
-	InputIndex  uint64 `db:"input_index"`
-	OutputIndex uint64 `db:"output_index"`
+	AppContract          string `db:"app_contract"`
+	Payload              string `db:"payload"`
+	InputIndex           uint64 `db:"input_index"`
+	OutputIndex          uint64 `db:"output_index"`
+	OutputHashesSiblings string `db:"output_hashes_siblings"`
 }
 
 // Voucher metadata type
