@@ -167,10 +167,11 @@ func (c *VoucherRepository) FindVoucherByOutputIndexAndAppContract(
 	defer rows.Close()
 
 	if rows.Next() {
-		var cVoucher model.ConvenienceVoucher
-		if err := rows.StructScan(&cVoucher); err != nil {
+		var row voucherRow
+		if err := rows.StructScan(&row); err != nil {
 			return nil, err
 		}
+		cVoucher := convertToConvenienceVoucher(row)
 
 		return &cVoucher, nil
 	}
