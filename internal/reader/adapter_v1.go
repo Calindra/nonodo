@@ -259,6 +259,8 @@ func (a AdapterV1) GetInputs(
 	ctx context.Context,
 	first *int, last *int, after *string, before *string, where *graphql.InputFilter,
 ) (*graphql.InputConnection, error) {
+	appContract := ctx.Value(cModel.AppContractKey)
+	slog.Debug("GetInputs", "appContract", appContract)
 	filters := []*cModel.ConvenienceFilter{}
 	if where != nil {
 		field := "Index"

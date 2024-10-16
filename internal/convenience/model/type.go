@@ -183,3 +183,7 @@ type RepoSynchronizer interface {
 	Count(ctx context.Context) (uint64, error)
 	GetLastFetched(ctx context.Context) (*SynchronizerFetch, error)
 }
+
+type contextKey string
+
+const AppContractKey contextKey = "appContract"

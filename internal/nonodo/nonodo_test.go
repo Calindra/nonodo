@@ -55,7 +55,7 @@ func (s *NonodoSuite) TestItProcessesAdvanceInputs() {
 	sqliteFileName := fmt.Sprintf("test%d.sqlite3", time.Now().UnixMilli())
 	opts.EnableEcho = true
 	opts.SqliteFile = path.Join(tempDir, sqliteFileName)
-	s.setupTest(opts)
+	s.setupTest(&opts)
 	defer os.RemoveAll(tempDir)
 	s.T().Log("sending advance inputs")
 	const n = 3
@@ -86,11 +86,6 @@ func (s *NonodoSuite) TestItProcessesAdvanceInputs() {
 		s.Equal(model.NOTICE_SELECTOR, input.Notices.Edges[0].Node.Payload[2:10])
 
 		s.Contains(input.Notices.Edges[0].Node.Payload, common.Bytes2Hex(payloads[i][:])+"ff")
-		// s.True(strings.HasSuffix(
-		// 	input.Notices.Edges[0].Node.Payload,
-		// 	common.Bytes2Hex(payloads[i][:])+"ff"))
-		// s.Equal("" + common.Bytes2Hex(payloads[i][:])+"ff",
-		// 	input.Notices.Edges[0].Node.Payload[2:])
 		s.Equal(payloads[i][:], s.decodeHex(input.Reports.Edges[0].Node.Payload))
 	}
 }
@@ -98,7 +93,7 @@ func (s *NonodoSuite) TestItProcessesAdvanceInputs() {
 func (s *NonodoSuite) TestItProcessesInspectInputs() {
 	opts := NewNonodoOpts()
 	opts.EnableEcho = true
-	s.setupTest(opts)
+	s.setupTest(&opts)
 
 	s.T().Log("sending inspect inputs")
 	const n = 3
@@ -125,7 +120,7 @@ func (s *NonodoSuite) TestItWorksWithExternalApplication() {
 		fmt.Sprintf("http://%v:%v", opts.HttpAddress, opts.HttpRollupsPort),
 	}
 	opts.HttpPort = 8090
-	s.setupTest(opts)
+	s.setupTest(&opts)
 	time.Sleep(100 * time.Millisecond)
 
 	s.T().Log("sending inspect to external application")
@@ -138,13 +133,34 @@ func (s *NonodoSuite) TestItWorksWithExternalApplication() {
 	s.Require().Equal(payload[:], s.decodeHex(response.JSON200.Reports[0].Payload))
 }
 
+func (s *NonodoSuite) TestAppAddressGraphQL() {
+	opts := NewNonodoOpts()
+	opts.ApplicationArgs = []string{
+		"go",
+		"run",
+		"github.com/calindra/nonodo/internal/echoapp/echoapp",
+		"--endpoint",
+		fmt.Sprintf("http://%v:%v", opts.HttpAddress, opts.HttpRollupsPort),
+	}
+	opts.HttpPort = 8090
+	s.setupTest(&opts)
+	time.Sleep(100 * time.Millisecond)
+
+	s.T().Log("query graphql state")
+	graphqlEndpoint := fmt.Sprintf("http://%s:%v/%s/graphql", opts.HttpAddress, opts.HttpPort, devnet.ApplicationAddress)
+	graphqlClient := graphql.NewClient(graphqlEndpoint, nil)
+	response, err := readerclient.State(s.ctx, graphqlClient)
+	s.NoError(err)
+	s.Equal(0, len(response.Inputs.Edges))
+}
+
 //
 // Setup and tear down
 //
 
 // Setup the nonodo suite.
 // This method requires the nonodo options, so each test must call it explicitly.
-func (s *NonodoSuite) setupTest(opts NonodoOpts) {
+func (s *NonodoSuite) setupTest(opts *NonodoOpts) {
 	s.nonce += 1
 	opts.AnvilPort += s.nonce
 	opts.HttpPort += s.nonce + 100
@@ -157,7 +173,7 @@ func (s *NonodoSuite) setupTest(opts NonodoOpts) {
 	var workerCtx context.Context
 	workerCtx, s.workerCancel = context.WithCancel(s.ctx)
 
-	w := NewSupervisor(opts)
+	w := NewSupervisor(*opts)
 
 	ready := make(chan struct{})
 	go func() {
