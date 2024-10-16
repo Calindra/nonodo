@@ -93,14 +93,7 @@ func (s *AdapterSuite) TestGetReport() {
 
 func (s *AdapterSuite) TestGetReports() {
 	ctx := context.Background()
-	for i := 0; i < 3; i++ {
-		_, err := s.reportRepository.CreateReport(ctx, cModel.Report{
-			InputIndex: i,
-			Index:      0,
-			Payload:    common.Hex2Bytes("1122"),
-		})
-		s.NoError(err)
-	}
+	s.createTestData(ctx)
 	res, err := s.adapter.GetReports(ctx, nil, nil, nil, nil, nil)
 	s.NoError(err)
 	s.Equal(3, res.TotalCount)
@@ -113,18 +106,7 @@ func (s *AdapterSuite) TestGetReports() {
 
 func (s *AdapterSuite) TestGetInputs() {
 	ctx := context.Background()
-	for i := 0; i < 3; i++ {
-		_, err := s.inputRepository.Create(ctx, cModel.AdvanceInput{
-			ID:             strconv.Itoa(i),
-			Index:          i,
-			Status:         cModel.CompletionStatusUnprocessed,
-			MsgSender:      common.HexToAddress(fmt.Sprintf("000000000000000000000000000000000000000%d", i)),
-			Payload:        common.Hex2Bytes("0x1122"),
-			BlockNumber:    1,
-			BlockTimestamp: time.Now(),
-		})
-		s.NoError(err)
-	}
+	s.createTestData(ctx)
 	res, err := s.adapter.GetInputs(ctx, nil, nil, nil, nil, nil)
 	s.NoError(err)
 	s.Equal(3, res.TotalCount)
@@ -142,19 +124,7 @@ func (s *AdapterSuite) TestGetInputs() {
 func (s *AdapterSuite) TestGetInputsFilteredByAppContract() {
 	ctx := context.Background()
 	appContract := common.HexToAddress(devnet.ApplicationAddress)
-	for i := 0; i < 3; i++ {
-		_, err := s.inputRepository.Create(ctx, cModel.AdvanceInput{
-			ID:             strconv.Itoa(i),
-			Index:          i,
-			Status:         cModel.CompletionStatusUnprocessed,
-			MsgSender:      common.HexToAddress(fmt.Sprintf("000000000000000000000000000000000000000%d", i)),
-			Payload:        common.Hex2Bytes("0x1122"),
-			BlockNumber:    1,
-			BlockTimestamp: time.Now(),
-			AppContract:    appContract,
-		})
-		s.NoError(err)
-	}
+	s.createTestData(ctx)
 
 	// without address
 	res, err := s.adapter.GetInputs(ctx, nil, nil, nil, nil, nil)
@@ -178,25 +148,7 @@ func (s *AdapterSuite) TestGetInputsFilteredByAppContract() {
 func (s *AdapterSuite) TestGetVouchersFilteredByAppContract() {
 	ctx := context.Background()
 	appContract := common.HexToAddress(devnet.ApplicationAddress)
-	for i := 0; i < 3; i++ {
-		_, err := s.inputRepository.Create(ctx, cModel.AdvanceInput{
-			ID:             strconv.Itoa(i),
-			Index:          i,
-			Status:         cModel.CompletionStatusUnprocessed,
-			MsgSender:      common.HexToAddress(fmt.Sprintf("000000000000000000000000000000000000000%d", i)),
-			Payload:        common.Hex2Bytes("0x1122"),
-			BlockNumber:    1,
-			BlockTimestamp: time.Now(),
-			AppContract:    appContract,
-		})
-		s.NoError(err)
-		_, err = s.voucherRepository.CreateVoucher(ctx, &cModel.ConvenienceVoucher{
-			AppContract: appContract,
-			OutputIndex: uint64(i),
-			InputIndex:  uint64(i),
-		})
-		s.Require().NoError(err)
-	}
+	s.createTestData(ctx)
 
 	// without address
 	res, err := s.adapter.GetVouchers(ctx, nil, nil, nil, nil, nil, nil)
@@ -220,6 +172,53 @@ func (s *AdapterSuite) TestGetVouchersFilteredByAppContract() {
 func (s *AdapterSuite) TestGetNoticesFilteredByAppContract() {
 	ctx := context.Background()
 	appContract := common.HexToAddress(devnet.ApplicationAddress)
+	s.createTestData(ctx)
+
+	// without address
+	res, err := s.adapter.GetNotices(ctx, nil, nil, nil, nil, nil)
+	s.Require().NoError(err)
+	s.Equal(3, res.TotalCount) // returns all
+
+	// with inexistent address
+	appContract2 := common.HexToAddress("0x000028bb862fb57e8a2bcd567a2e929a0be56a5e")
+	ctx2 := context.WithValue(ctx, cModel.AppContractKey, appContract2.Hex())
+	res2, err := s.adapter.GetNotices(ctx2, nil, nil, nil, nil, nil)
+	s.Require().NoError(err)
+	s.Equal(0, res2.TotalCount) // returns nothing
+
+	// with correct address
+	ctx3 := context.WithValue(ctx, cModel.AppContractKey, appContract.Hex())
+	res3, err := s.adapter.GetNotices(ctx3, nil, nil, nil, nil, nil)
+	s.Require().NoError(err)
+	s.Equal(3, res3.TotalCount) // returns all
+}
+
+func (s *AdapterSuite) TestGetReportsFilteredByAppContract() {
+	ctx := context.Background()
+	appContract := common.HexToAddress(devnet.ApplicationAddress)
+	s.createTestData(ctx)
+
+	// without address
+	res, err := s.adapter.GetReports(ctx, nil, nil, nil, nil, nil)
+	s.Require().NoError(err)
+	s.Equal(3, res.TotalCount) // returns all
+
+	// with inexistent address
+	appContract2 := common.HexToAddress("0x000028bb862fb57e8a2bcd567a2e929a0be56a5e")
+	ctx2 := context.WithValue(ctx, cModel.AppContractKey, appContract2.Hex())
+	res2, err := s.adapter.GetReports(ctx2, nil, nil, nil, nil, nil)
+	s.Require().NoError(err)
+	s.Equal(0, res2.TotalCount) // returns nothing
+
+	// with correct address
+	ctx3 := context.WithValue(ctx, cModel.AppContractKey, appContract.Hex())
+	res3, err := s.adapter.GetReports(ctx3, nil, nil, nil, nil, nil)
+	s.Require().NoError(err)
+	s.Equal(3, res3.TotalCount) // returns all
+}
+
+func (s *AdapterSuite) createTestData(ctx context.Context) {
+	appContract := common.HexToAddress(devnet.ApplicationAddress)
 	for i := 0; i < 3; i++ {
 		_, err := s.inputRepository.Create(ctx, cModel.AdvanceInput{
 			ID:             strconv.Itoa(i),
@@ -238,23 +237,18 @@ func (s *AdapterSuite) TestGetNoticesFilteredByAppContract() {
 			InputIndex:  uint64(i),
 		})
 		s.Require().NoError(err)
+		_, err = s.voucherRepository.CreateVoucher(ctx, &cModel.ConvenienceVoucher{
+			AppContract: appContract,
+			OutputIndex: uint64(i),
+			InputIndex:  uint64(i),
+		})
+		s.Require().NoError(err)
+		_, err = s.reportRepository.CreateReport(ctx, cModel.Report{
+			AppContract: appContract,
+			InputIndex:  i,
+			Index:       0,
+			Payload:     common.Hex2Bytes("1122"),
+		})
+		s.NoError(err)
 	}
-
-	// without address
-	res, err := s.adapter.GetNotices(ctx, nil, nil, nil, nil, nil)
-	s.Require().NoError(err)
-	s.Equal(3, res.TotalCount)
-
-	// with inexistent address
-	appContract2 := common.HexToAddress("0x000028bb862fb57e8a2bcd567a2e929a0be56a5e")
-	ctx2 := context.WithValue(ctx, cModel.AppContractKey, appContract2.Hex())
-	res2, err := s.adapter.GetNotices(ctx2, nil, nil, nil, nil, nil)
-	s.Require().NoError(err)
-	s.Equal(0, res2.TotalCount)
-
-	// with correct address
-	ctx3 := context.WithValue(ctx, cModel.AppContractKey, appContract.Hex())
-	res3, err := s.adapter.GetNotices(ctx3, nil, nil, nil, nil, nil)
-	s.Require().NoError(err)
-	s.Equal(3, res3.TotalCount)
 }

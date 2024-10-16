@@ -12,8 +12,6 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-const INPUT_INDEX = "InputIndex"
-
 type ReportRepository struct {
 	Db        *sqlx.DB
 	AutoCount bool
@@ -21,9 +19,10 @@ type ReportRepository struct {
 
 func (r *ReportRepository) CreateTables() error {
 	schema := `CREATE TABLE IF NOT EXISTS convenience_reports (
-		output_index	integer,
-		payload 		text,
-		input_index 	integer,
+		output_index  integer,
+		payload       text,
+		input_index   integer,
+		app_contract  text,
 		PRIMARY KEY (input_index, output_index));`
 	_, err := r.Db.Exec(schema)
 	if err == nil {
@@ -47,7 +46,8 @@ func (r *ReportRepository) CreateReport(ctx context.Context, report cModel.Repor
 	insertSql := `INSERT INTO convenience_reports (
 		output_index,
 		payload,
-		input_index) VALUES ($1, $2, $3)`
+		input_index,
+		app_contract) VALUES ($1, $2, $3, $4)`
 
 	exec := DBExecutor{r.Db}
 	_, err := exec.ExecContext(
@@ -56,6 +56,7 @@ func (r *ReportRepository) CreateReport(ctx context.Context, report cModel.Repor
 		report.Index,
 		common.Bytes2Hex(report.Payload),
 		report.InputIndex,
+		report.AppContract.Hex(),
 	)
 
 	if err != nil {
@@ -199,7 +200,7 @@ func (c *ReportRepository) FindAllByInputIndex(
 ) (*commons.PageResult[cModel.Report], error) {
 	filter := []*cModel.ConvenienceFilter{}
 	if inputIndex != nil {
-		field := INPUT_INDEX
+		field := cModel.INPUT_INDEX
 		value := fmt.Sprintf("%d", *inputIndex)
 		filter = append(filter, &cModel.ConvenienceFilter{
 			Field: &field,
@@ -309,9 +310,17 @@ func transformToReportQuery(
 			} else {
 				return "", nil, 0, fmt.Errorf("operation not implemented")
 			}
-		} else if *filter.Field == INPUT_INDEX {
+		} else if *filter.Field == cModel.INPUT_INDEX {
 			if filter.Eq != nil {
 				where = append(where, fmt.Sprintf("input_index = $%d ", count))
+				args = append(args, *filter.Eq)
+				count += 1
+			} else {
+				return "", nil, 0, fmt.Errorf("operation not implemented")
+			}
+		} else if *filter.Field == cModel.APP_CONTRACT {
+			if filter.Eq != nil {
+				where = append(where, fmt.Sprintf("app_contract = $%d ", count))
 				args = append(args, *filter.Eq)
 				count += 1
 			} else {

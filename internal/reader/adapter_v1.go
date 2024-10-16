@@ -207,9 +207,25 @@ func (a AdapterV1) GetReports(
 	ctx context.Context,
 	first *int, last *int, after *string, before *string, inputIndex *int,
 ) (*graphql.ReportConnection, error) {
-	reports, err := a.reportRepository.FindAllByInputIndex(
+	filters, err := graphql.ConvertToConvenienceFilter(nil)
+	if err != nil {
+		return nil, err
+	}
+	filters, err = addAppContractFilterAsNeeded(ctx, filters)
+	if err != nil {
+		return nil, err
+	}
+	if inputIndex != nil {
+		field := cModel.INPUT_INDEX
+		value := fmt.Sprintf("%d", *inputIndex)
+		filters = append(filters, &cModel.ConvenienceFilter{
+			Field: &field,
+			Eq:    &value,
+		})
+	}
+	reports, err := a.reportRepository.FindAll(
 		ctx,
-		first, last, after, before, inputIndex,
+		first, last, after, before, filters,
 	)
 	if err != nil {
 		slog.Error("Adapter GetReports", "error", err)
