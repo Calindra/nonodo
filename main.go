@@ -537,6 +537,9 @@ func init() {
 	cmd.Flags().Uint64Var(&opts.AvailFromBlock, "avail-from-block", opts.AvailFromBlock, "The beginning of the queried range for events")
 
 	cmd.Flags().StringVar(&opts.PaioServerUrl, "paio-server-url", opts.PaioServerUrl, "The Paio's server url")
+
+	cmd.Flags().StringVar(&opts.DbRawUrl, "db-raw-url", opts.DbRawUrl, "The raw database url")
+	cmd.Flags().BoolVar(&opts.RawEnabled, "raw-enabled", opts.RawEnabled, "If set, enables raw database")
 }
 
 func run(cmd *cobra.Command, args []string) {
