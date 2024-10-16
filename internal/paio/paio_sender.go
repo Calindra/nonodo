@@ -113,7 +113,8 @@ func (p PaioSender2Server) SubmitSigAndData(sigAndData commons.SigAndData) (stri
 	if err != nil {
 		return "", err
 	}
-	req, err := http.NewRequest("POST", p.PaioServerUrl, bytes.NewBuffer([]byte(jsonData)))
+	transactionUrl := fmt.Sprintf("%s/transaction", p.PaioServerUrl)
+	req, err := http.NewRequest("POST", transactionUrl, bytes.NewBuffer([]byte(jsonData)))
 	if err != nil {
 		fmt.Println("Error creating request:", err)
 		return "", err
@@ -130,7 +131,7 @@ func (p PaioSender2Server) SubmitSigAndData(sigAndData commons.SigAndData) (stri
 
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
 		slog.Error("Unexpected paio response",
-			"paioServerUrl", p.PaioServerUrl,
+			"paioTransactionUrl", transactionUrl,
 			"statusCode", resp.StatusCode,
 			"json", jsonData,
 		)
