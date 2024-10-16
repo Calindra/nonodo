@@ -40,27 +40,32 @@ func (r *noticeResolver) Input(ctx context.Context, obj *model.Notice) (*model.I
 
 // Input is the resolver for the input field.
 func (r *queryResolver) Input(ctx context.Context, id string) (*model.Input, error) {
+	// Here, we will need to add the appAddress from the path, as Catarino did.
 	slog.Debug("queryResolver.Input", "id", id)
 	return r.adapter.GetInput(id)
 }
 
 // Voucher is the resolver for the voucher field.
 func (r *queryResolver) Voucher(ctx context.Context, outputIndex int) (*model.Voucher, error) {
+	// Here, we will need to add the appAddress from the path, as Catarino did.
 	return r.adapter.GetVoucher(outputIndex)
 }
 
 // Notice is the resolver for the notice field.
 func (r *queryResolver) Notice(ctx context.Context, outputIndex int) (*model.Notice, error) {
+	// Here, we will need to add the appAddress from the path, as Catarino did.
 	return r.adapter.GetNotice(outputIndex)
 }
 
 // Report is the resolver for the report field.
 func (r *queryResolver) Report(ctx context.Context, reportIndex int) (*model.Report, error) {
+	// Here, we will need to add the appAddress from the path, as Catarino did.
 	return r.adapter.GetReport(reportIndex)
 }
 
 // Inputs is the resolver for the inputs field.
 func (r *queryResolver) Inputs(ctx context.Context, first *int, last *int, after *string, before *string, where *model.InputFilter) (*model.Connection[*model.Input], error) {
+	// Here, we will need to add the appAddress from the path, as Catarino did.
 	return r.adapter.GetInputs(ctx, first, last, after, before, where)
 }
 

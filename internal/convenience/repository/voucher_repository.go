@@ -277,14 +277,16 @@ func (c *VoucherRepository) FindAllVouchers(
 
 func convertToConvenienceVoucher(row voucherRow) model.ConvenienceVoucher {
 	destinationAddress := common.HexToAddress(row.Destination)
-
+	appContract := common.HexToAddress(row.AppContract)
 	voucher := model.ConvenienceVoucher{
-		Destination: destinationAddress,
-		Payload:     row.Payload,
-		InputIndex:  row.InputIndex,
-		OutputIndex: row.OutputIndex,
-		Executed:    row.Executed,
-		Value:       row.Value,
+		Destination:          destinationAddress,
+		Payload:              row.Payload,
+		InputIndex:           row.InputIndex,
+		OutputIndex:          row.OutputIndex,
+		Executed:             row.Executed,
+		Value:                row.Value,
+		AppContract:          appContract,
+		OutputHashesSiblings: row.OutputHashesSiblings,
 	}
 	slog.Debug("Voucher", "value", row.Value)
 	return voucher
