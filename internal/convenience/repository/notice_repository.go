@@ -165,21 +165,66 @@ func (c *NoticeRepository) FindNoticeByOutputIndexAndAppContract(
 	ctx context.Context, outputIndex uint64,
 	appContract *common.Address,
 ) (*model.ConvenienceNotice, error) {
-	query := `SELECT * FROM notices WHERE output_index = $1 LIMIT 1`
-	stmt, err := c.Db.Preparex(query)
+	rows, err := c.queryByOutputIndexAndAppContract(ctx, outputIndex, appContract)
+
 	if err != nil {
+		slog.Error("database error", "err", err)
 		return nil, err
 	}
-	defer stmt.Close()
-	var p model.ConvenienceNotice
-	err = stmt.GetContext(ctx, &p, outputIndex)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
+	defer rows.Close()
+
+	if rows.Next() {
+		var cNotice model.ConvenienceNotice
+		if err := rows.StructScan(&cNotice); err != nil {
+			return nil, err
 		}
+
+		return &cNotice, nil
+	}
+
+	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-	return &p, nil
+
+	return nil, nil
+	// query := `SELECT * FROM notices WHERE output_index = $1 LIMIT 1`
+	// stmt, err := c.Db.Preparex(query)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// defer stmt.Close()
+	// var p model.ConvenienceNotice
+	// err = stmt.GetContext(ctx, &p, outputIndex)
+	// if err != nil {
+	// 	if errors.Is(err, sql.ErrNoRows) {
+	// 		return nil, nil
+	// 	}
+	// 	return nil, err
+	// }
+	// return &p, nil
+}
+
+func (c *NoticeRepository) queryByOutputIndexAndAppContract(
+	ctx context.Context,
+	outputIndex uint64,
+	appContract *common.Address,
+) (*sqlx.Rows, error) {
+	if appContract != nil {
+		return c.Db.QueryxContext(ctx, `
+			SELECT * FROM notices
+			WHERE output_index = $1 and app_contract = $2
+			LIMIT 1`,
+			outputIndex,
+			appContract.Hex(),
+		)
+	} else {
+		return c.Db.QueryxContext(ctx, `
+			SELECT * FROM notices
+			WHERE output_index = $1
+			LIMIT 1`,
+			outputIndex,
+		)
+	}
 }
 
 func (c *NoticeRepository) FindByInputAndOutputIndex(

@@ -207,7 +207,7 @@ func (s *AdapterSuite) TestGetNoticeFilteredByAppContract() {
 	appContract2 := common.HexToAddress("0x000028bb862fb57e8a2bcd567a2e929a0be56a5e")
 	ctx2 := context.WithValue(ctx, cModel.AppContractKey, appContract2.Hex())
 	res2, err := s.adapter.GetNotice(ctx2, 1)
-	s.Require().NoError(err)
+	s.ErrorContains(err, "notice not found")
 	s.Nil(res2) // returns nothing
 
 	// with correct address
