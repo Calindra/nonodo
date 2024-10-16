@@ -3,6 +3,8 @@ package paiodecoder
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"math/big"
@@ -10,8 +12,10 @@ import (
 	"time"
 
 	"github.com/calindra/nonodo/internal/commons"
+	cModel "github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 )
 
@@ -92,4 +96,69 @@ func CreateTypedData(
 		"data":          fmt.Sprintf("0x%s", common.Bytes2Hex(dataBytes)),
 	}
 	return typedData
+}
+
+func ParsePaioBatchToInputs(jsonStr string, chainId *big.Int) ([]cModel.AdvanceInput, error) {
+	inputs := []cModel.AdvanceInput{}
+	var paioBatch PaioBatch
+	if err := json.Unmarshal([]byte(jsonStr), &paioBatch); err != nil {
+		return inputs, fmt.Errorf("unmarshal paio batch: %w", err)
+	}
+	slog.Debug("PaioBatch", "tx len", len(paioBatch.Txs), "json", jsonStr)
+	for _, tx := range paioBatch.Txs {
+		slog.Debug("Tx",
+			"app", tx.App,
+			"signature", tx.Signature.Hex(),
+		)
+		typedData := CreateTypedData(
+			common.HexToAddress(tx.App),
+			tx.Nonce,
+			big.NewInt(int64(tx.MaxGasPrice)),
+			tx.Data,
+			chainId,
+		)
+		typeJSON, err := json.Marshal(typedData)
+		if err != nil {
+			return inputs, fmt.Errorf("error marshalling typed data: %w", err)
+		}
+		// set the typedData as string json below
+		sigAndData := commons.SigAndData{
+			Signature: tx.Signature.Hex(),
+			TypedData: base64.StdEncoding.EncodeToString(typeJSON),
+		}
+		jsonPayload, err := json.Marshal(sigAndData)
+		if err != nil {
+			slog.Error("Error json.Marshal message:", "err", err)
+			return inputs, err
+		}
+		slog.Debug("SaveTransaction", "jsonPayload", string(jsonPayload))
+		msgSender, _, signature, err := commons.ExtractSigAndData(string(jsonPayload))
+		if err != nil {
+			slog.Error("Error ExtractSigAndData message:", "err", err)
+			return inputs, err
+		}
+		txId := fmt.Sprintf("0x%s", common.Bytes2Hex(crypto.Keccak256(signature)))
+		inputs = append(inputs, cModel.AdvanceInput{
+			Index:               int(0),
+			ID:                  txId,
+			MsgSender:           msgSender,
+			Payload:             tx.Data,
+			AppContract:         common.HexToAddress(tx.App),
+			AvailBlockNumber:    0,
+			AvailBlockTimestamp: time.Unix(0, 0),
+			InputBoxIndex:       -2,
+			Type:                "Avail",
+		})
+	}
+	return inputs, nil
+}
+
+func ParsePaioFrom712Message(typedData apitypes.TypedData) (PaioMessage, error) {
+	message := PaioMessage{
+		App:         typedData.Message["app"].(string),
+		Nonce:       typedData.Message["nonce"].(string),
+		MaxGasPrice: typedData.Message["max_gas_price"].(string),
+		Payload:     []byte(typedData.Message["data"].(string)),
+	}
+	return message, nil
 }

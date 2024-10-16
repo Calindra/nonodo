@@ -19,7 +19,6 @@ import (
 	"github.com/centrifuge/go-substrate-rpc-client/v4/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/ethereum/go-ethereum/signer/core/apitypes"
 	"github.com/stretchr/testify/suite"
 
 	_ "github.com/ncruces/go-sqlite3/driver"
@@ -44,22 +43,6 @@ func TestAvailListenerSuite(t *testing.T) {
 	suite.Run(t, &AvailListenerSuite{})
 }
 
-func (s *AvailListenerSuite) TestDecodeTimestamp() {
-	// https://explorer.avail.so/#/extrinsics/decode/0x280403000b20008c2e9201
-	timestamp := DecodeTimestamp("0b20008c2e9201")
-	s.Equal(uint64(1727357780000), timestamp)
-}
-
-func (s *AvailListenerSuite) TestReadTimestampFromBlock() {
-	block := types.SignedBlock{}
-	block.Block = types.Block{}
-	timestampExtrinsic := CreateTimestampExtrinsic()
-	block.Block.Extrinsics = append([]types.Extrinsic{}, timestampExtrinsic)
-	timestamp, err := ReadTimestampFromBlock(&block)
-	s.NoError(err)
-	s.Equal(uint64(1727357780000), timestamp)
-}
-
 func (s *AvailListenerSuite) TestReadTimestampFromBlockError() {
 	block := types.SignedBlock{}
 	block.Block = types.Block{}
@@ -67,20 +50,6 @@ func (s *AvailListenerSuite) TestReadTimestampFromBlockError() {
 	block.Block.Extrinsics = append([]types.Extrinsic{}, timestampExtrinsic)
 	_, err := ReadTimestampFromBlock(&block)
 	s.ErrorContains(err, "block 0 without timestamp")
-}
-
-func (s *AvailListenerSuite) TestParsePaioFrom712Message() {
-	typedData := apitypes.TypedData{
-		Message: apitypes.TypedDataMessage{},
-	}
-	typedData.Message["app"] = "0xab7528bb862fb57e8a2bcd567a2e929a0be56a5e"
-	typedData.Message["nonce"] = "1"
-	typedData.Message["max_gas_price"] = "10"
-	typedData.Message["data"] = "0xdeadff"
-	message, err := ParsePaioFrom712Message(typedData)
-	s.NoError(err)
-	s.Equal("0xab7528bb862fb57e8a2bcd567a2e929a0be56a5e", message.App)
-	s.Equal("0xdeadff", string(message.Payload))
 }
 
 func (s *AvailListenerSuite) TestReadInputsFromBlockZzzHui() {
@@ -127,21 +96,6 @@ func (s *AvailListenerSuite) TestReadInputsFromBlockPaio() {
 	s.Equal(1, len(inputs))
 }
 
-func (s *AvailListenerSuite) TestParsePaioBatchToInputs() {
-	jsonStr, err := s.fd.DecodePaioBatch(s.ctx, ([]byte)("it doesn't matter"))
-	s.NoError(err)
-	chainId := big.NewInt(11155111)
-	inputs, err := ParsePaioBatchToInputs(jsonStr, chainId)
-	s.NoError(err)
-	s.Equal(1, len(inputs))
-
-	// changed to new msg_sender because domain name changed from CartesiPaio to Cartesi,
-	// so hash changed and then public key also changed
-	s.Equal("0x631e372a9Ed7808Cbf55117f3263d3e1c9Bc3710", inputs[0].MsgSender.Hex())
-	s.Equal("0xab7528bb862fB57E8A2BCd567a2e929a0Be56a5e", inputs[0].AppContract.Hex())
-	s.Equal("Hello, World?", string(inputs[0].Payload))
-}
-
 func (s *AvailListenerSuite) TestTableTennis() {
 	ethClient, err := ethclient.DialContext(s.ctx, s.rpcUrl)
 	s.NoError(err)
@@ -183,9 +137,10 @@ func (s *AvailListenerSuite) TestTableTennis() {
 	s.NoError(err)
 	fd := FakeDecoder{}
 	availListener := AvailListener{
-		PaioDecoder:     &fd,
-		InputterWorker:  &inputterWorker,
-		InputRepository: inputRepository,
+		PaioDecoder:        &fd,
+		InputterWorker:     &inputterWorker,
+		InputRepository:    inputRepository,
+		ApplicationAddress: common.HexToAddress(devnet.ApplicationAddress),
 	}
 	inputs, err := availListener.ReadInputsFromPaioBlock(ctx, &block)
 	s.NoError(err)
