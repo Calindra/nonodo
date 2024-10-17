@@ -41,7 +41,7 @@ func Register(
 		graphqlHandler.ServeHTTP(c.Response(), c.Request())
 		return nil
 	})
-	e.POST("/:appContract/graphql", func(c echo.Context) error {
+	e.POST("/graphql/:appContract", func(c echo.Context) error {
 		appContract := c.Param("appContract")
 		slog.Debug("path parameter received: ", "app_contract", appContract)
 		ctx := context.WithValue(c.Request().Context(), cModel.AppContractKey, appContract)
@@ -53,7 +53,7 @@ func Register(
 		playgroundHandler.ServeHTTP(c.Response(), c.Request())
 		return nil
 	})
-	e.GET("/:appContract/graphql", func(c echo.Context) error {
+	e.GET("/graphql/:appContract", func(c echo.Context) error {
 		appContract := c.Param("appContract")
 		slog.Debug("graphql playground", "appContract", appContract)
 		playgroundHandler := playground.Handler("GraphQL",
