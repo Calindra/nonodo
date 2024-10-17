@@ -57,7 +57,7 @@ func Register(
 		appContract := c.Param("appContract")
 		slog.Debug("graphql playground", "appContract", appContract)
 		playgroundHandler := playground.Handler("GraphQL",
-			fmt.Sprintf("/%s/graphql", appContract),
+			fmt.Sprintf("/graphql/%s", appContract),
 		)
 		playgroundHandler.ServeHTTP(c.Response(), c.Request())
 		return nil
