@@ -4,8 +4,8 @@
 package devnet
 
 // Input box address in devnet.
-const InputBoxAddress = "0x593E5BCf894D6829Dd26D0810DA7F064406aebB6" // v2.0.0-rc.10
-
+// v2.0.0-rc.10
+const InputBoxAddress = "0x593E5BCf894D6829Dd26D0810DA7F064406aebB6"
 
 const ApplicationContractName = "Application"
 
