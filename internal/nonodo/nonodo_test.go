@@ -147,7 +147,7 @@ func (s *NonodoSuite) TestAppAddressGraphQL() {
 	time.Sleep(100 * time.Millisecond)
 
 	s.T().Log("query graphql state")
-	graphqlEndpoint := fmt.Sprintf("http://%s:%v/%s/graphql", opts.HttpAddress, opts.HttpPort, devnet.ApplicationAddress)
+	graphqlEndpoint := fmt.Sprintf("http://%s:%v/graphql/%s", opts.HttpAddress, opts.HttpPort, devnet.ApplicationAddress)
 	graphqlClient := graphql.NewClient(graphqlEndpoint, nil)
 	response, err := readerclient.State(s.ctx, graphqlClient)
 	s.NoError(err)
