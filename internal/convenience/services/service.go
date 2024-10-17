@@ -238,9 +238,3 @@ func (c *ConvenienceService) FindNoticeByInputAndOutputIndex(
 		ctx, inputIndex, outputIndex,
 	)
 }
-
-func (c *ConvenienceService) FindByIndex(
-	ctx context.Context, inputIndex int,
-) (*model.AdvanceInput, error) {
-	return c.inputRepository.FindByIndex(ctx, inputIndex)
-}

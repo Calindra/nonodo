@@ -288,8 +288,13 @@ func (a AdapterV1) convertToReport(
 // GetInputByIndex implements Adapter.
 func (a AdapterV1) GetInputByIndex(
 	ctx context.Context,
-	inputIndex int) (*graphql.Input, error) {
-	input, err := a.inputRepository.FindByIndex(ctx, inputIndex)
+	inputIndex int,
+) (*graphql.Input, error) {
+	appContract, err := getAppContractFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	input, err := a.inputRepository.FindByIndexAndAppContract(ctx, inputIndex, appContract)
 	if err != nil {
 		return nil, err
 	}

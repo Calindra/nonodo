@@ -256,31 +256,11 @@ func (r *InputRepository) FindByStatus(ctx context.Context, status model.Complet
 	}
 	return nil, nil
 }
-func (r *InputRepository) FindByIndex(ctx context.Context, inputIndex int) (*model.AdvanceInput, error) {
-	sql := `SELECT
-		id,
-		input_index,
-		status,
-		msg_sender,
-		payload,
-		block_number,
-		block_timestamp,
-		prev_randao,
-		exception,
-		app_contract,
-		espresso_block_number,
-		espresso_block_timestamp,
-		input_box_index, 
-		avail_block_number,
-		avail_block_timestamp,
-		type,
-		chain_id
-	FROM convenience_inputs WHERE input_index = $1`
-	res, err := r.Db.QueryxContext(
-		ctx,
-		sql,
-		inputIndex,
-	)
+func (r *InputRepository) FindByIndexAndAppContract(ctx context.Context,
+	inputIndex int,
+	appContract *common.Address,
+) (*model.AdvanceInput, error) {
+	res, err := r.queryByIndexAndAppContract(ctx, inputIndex, appContract)
 	if err != nil {
 		return nil, err
 	}
@@ -362,6 +342,63 @@ func (r *InputRepository) queryByIdAndAppContract(
 				type,
 				chain_id FROM convenience_inputs
 			WHERE id = $1
+			LIMIT 1`,
+			id,
+		)
+	}
+}
+
+func (r *InputRepository) queryByIndexAndAppContract(
+	ctx context.Context,
+	id int,
+	appContract *common.Address,
+) (*sqlx.Rows, error) {
+	if appContract != nil {
+		return r.Db.QueryxContext(ctx, `
+			SELECT 
+				id,
+				input_index,
+				status,
+				msg_sender,
+				payload,
+				block_number,
+				block_timestamp,
+				prev_randao,
+				exception,
+				app_contract,
+				espresso_block_number,
+				espresso_block_timestamp,
+				input_box_index, 
+				avail_block_number,
+				avail_block_timestamp,
+				type,
+				chain_id FROM convenience_inputs
+			WHERE input_index = $1 and app_contract = $2
+			LIMIT 1`,
+			id,
+			appContract.Hex(),
+		)
+	} else {
+		return r.Db.QueryxContext(ctx, `
+			SELECT 
+				id,
+				input_index,
+				status,
+				msg_sender,
+				payload,
+				block_number,
+				block_timestamp,
+				prev_randao,
+				exception,
+				app_contract,
+				espresso_block_number,
+				espresso_block_timestamp,
+				input_box_index, 
+				avail_block_number,
+				avail_block_timestamp,
+				type,
+				chain_id FROM convenience_inputs
+			WHERE input_index = $1
 			LIMIT 1`,
 			id,
 		)
