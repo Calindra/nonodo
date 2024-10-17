@@ -1,6 +1,7 @@
 package paio
 
 import (
+	"bytes"
 	"context"
 	_ "embed"
 	"encoding/base64"
@@ -42,6 +43,7 @@ type PaioAPI struct {
 	EvmRpcUrl       string
 	chainID         *big.Int
 	ClientSender    Sender
+	paioNonceUrl    string
 }
 
 func (p *PaioAPI) getChainID(ctx context.Context) (*big.Int, error) {
@@ -88,6 +90,37 @@ func (p *PaioAPI) SendTransaction(ctx echo.Context) error {
 	return nil
 }
 
+func (p *PaioAPI) getNonceFromPaio(user string, app string) (*NonceResponse, error) {
+	url := p.paioNonceUrl
+	payload := map[string]string{
+		"application": app,
+		"user":        user,
+	}
+	jsonData, err := json.Marshal(payload)
+	if err != nil {
+		slog.Error("error marshaling json", "error", err)
+		return nil, err
+	}
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		slog.Error("error creating request", "error", err)
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		slog.Error("error sending request", "error", err)
+		return nil, err
+	}
+	defer resp.Body.Close()
+	var response NonceResponse
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
+		slog.Error("error decoding paio's response", "error", err)
+		return nil, err
+	}
+	return &response, nil
+}
+
 func (p *PaioAPI) GetNonce(ctx echo.Context) error {
 	var request GetNonceJSONRequestBody
 	stdCtx, cancel := context.WithCancel(ctx.Request().Context())
@@ -122,16 +155,26 @@ func (p *PaioAPI) GetNonce(ctx echo.Context) error {
 		Eq:    &appContract,
 	})
 
+	if p.paioNonceUrl != "" {
+		slog.Debug("Requesting Paio's nonce for",
+			"msgSender", msgSender,
+			"appContract", appContract,
+		)
+		response, err := p.getNonceFromPaio(msgSender, appContract)
+		if err != nil {
+			return err
+		}
+		return ctx.JSON(http.StatusOK, response)
+	}
+
 	slog.Debug("GetNonce", "AppContract", request.AppContract, "MsgSender", request.MsgSender)
 
-	inputs, err := p.inputRepository.FindAll(stdCtx, nil, nil, nil, nil, filters)
-
+	total, err := p.inputRepository.Count(stdCtx, filters)
 	if err != nil {
 		slog.Error("Error querying for inputs:", "err", err)
 		return err
 	}
-
-	nonce := int(inputs.Total + 1)
+	nonce := int(total)
 	response := NonceResponse{
 		Nonce: &nonce,
 	}
@@ -374,70 +417,6 @@ func (p *PaioAPI) SendCartesiTransaction(ctx echo.Context) error {
 		Id: &txId,
 	}
 	return ctx.JSON(http.StatusOK, response)
-}
-
-type PaioBuilder struct {
-	AvalClient      *avail.AvailClient
-	InputRepository *repository.InputRepository
-	RpcUrl          string
-	EspressoUrl     string
-	PaioServerUrl   string
-}
-
-func NewPaioBuilder() *PaioBuilder {
-	return &PaioBuilder{
-		AvalClient:      nil,
-		InputRepository: nil,
-		RpcUrl:          "",
-		EspressoUrl:     "",
-		PaioServerUrl:   "",
-	}
-}
-
-func (pb *PaioBuilder) WithAvalClient(availClient *avail.AvailClient) *PaioBuilder {
-	pb.AvalClient = availClient
-	return pb
-}
-
-func (pb *PaioBuilder) WithInputRepository(inputRepository *repository.InputRepository) *PaioBuilder {
-	pb.InputRepository = inputRepository
-	return pb
-}
-
-func (pb *PaioBuilder) WithRpcUrl(rpcUrl string) *PaioBuilder {
-	pb.RpcUrl = rpcUrl
-	return pb
-}
-
-func (pb *PaioBuilder) WithEspressoUrl(espressoUrl string) *PaioBuilder {
-	pb.EspressoUrl = espressoUrl
-	return pb
-}
-
-func (pb *PaioBuilder) WithPaioServerUrl(paioServerUrl string) *PaioBuilder {
-	pb.PaioServerUrl = paioServerUrl
-	return pb
-}
-
-func (pb *PaioBuilder) Build() *PaioAPI {
-	var clientSender Sender
-
-	if pb.EspressoUrl != "" {
-		clientSender = NewEspressoSender(pb.EspressoUrl)
-	}
-
-	if pb.PaioServerUrl != "" {
-		slog.Info("Using Paio's server", "url", pb.PaioServerUrl)
-		clientSender = NewPaioSender2Server(pb.PaioServerUrl)
-	}
-
-	return &PaioAPI{
-		availClient:     pb.AvalClient,
-		inputRepository: pb.InputRepository,
-		EvmRpcUrl:       pb.RpcUrl,
-		ClientSender:    clientSender,
-		chainID:         nil,
-	}
 }
 
 // Register the Paio API to echo

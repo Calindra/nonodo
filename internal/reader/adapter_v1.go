@@ -19,12 +19,6 @@ type AdapterV1 struct {
 	convenienceService *services.ConvenienceService
 }
 
-// GetProof implements Adapter.
-func (a AdapterV1) GetProof(ctx context.Context, inputIndex int, outputIndex int) (*graphql.Proof, error) {
-	// nonodo v1 does not have proofs
-	return nil, fmt.Errorf("proofs are not supported in nonodo v1")
-}
-
 func NewAdapterV1(
 	db *sqlx.DB,
 	convenienceService *services.ConvenienceService,
@@ -52,6 +46,7 @@ func NewAdapterV1(
 }
 
 func (a AdapterV1) GetNotices(
+	ctx context.Context,
 	first *int,
 	last *int,
 	after *string,
@@ -59,6 +54,10 @@ func (a AdapterV1) GetNotices(
 	inputIndex *int,
 ) (*graphql.Connection[*graphql.Notice], error) {
 	filters := []*cModel.ConvenienceFilter{}
+	filters, err := addAppContractFilterAsNeeded(ctx, filters)
+	if err != nil {
+		return nil, err
+	}
 	if inputIndex != nil {
 		field := cModel.INPUT_INDEX
 		value := fmt.Sprintf("%d", *inputIndex)
@@ -67,7 +66,6 @@ func (a AdapterV1) GetNotices(
 			Eq:    &value,
 		})
 	}
-	ctx := context.Background()
 	notices, err := a.convenienceService.FindAllNotices(
 		ctx,
 		first,
@@ -86,10 +84,13 @@ func (a AdapterV1) GetNotices(
 	)
 }
 
-func (a AdapterV1) GetVoucher(outputIndex int) (*graphql.Voucher, error) {
-	ctx := context.Background()
-	voucher, err := a.convenienceService.FindVoucherByOutputIndex(
-		ctx, uint64(outputIndex))
+func (a AdapterV1) GetVoucher(ctx context.Context, outputIndex int) (*graphql.Voucher, error) {
+	appContract, err := getAppContractFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	voucher, err := a.convenienceService.FindVoucherByOutputIndexAndAppContract(
+		ctx, uint64(outputIndex), appContract)
 	if err != nil {
 		return nil, err
 	}
@@ -105,14 +106,52 @@ func (a AdapterV1) GetVoucher(outputIndex int) (*graphql.Voucher, error) {
 	}, nil
 }
 
+func getAppContractFromContext(ctx context.Context) (*common.Address, error) {
+	appContractParam := ctx.Value(cModel.AppContractKey)
+	if appContractParam != nil {
+		appContract, ok := appContractParam.(string)
+		if !ok {
+			return nil, fmt.Errorf("wrong app contract type")
+		}
+		value := common.HexToAddress(appContract)
+		return &value, nil
+	}
+	return nil, nil
+}
+
+func addAppContractFilterAsNeeded(ctx context.Context, filters []*cModel.ConvenienceFilter) ([]*cModel.ConvenienceFilter, error) {
+	appContract, err := getAppContractFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if appContract != nil {
+		field := cModel.APP_CONTRACT
+		value := appContract.Hex()
+		filters = append(filters, &cModel.ConvenienceFilter{
+			Field: &field,
+			Eq:    &value,
+		})
+	}
+	return filters, nil
+}
+
 func (a AdapterV1) GetVouchers(
+	ctx context.Context,
 	first *int,
 	last *int,
 	after *string,
 	before *string,
 	inputIndex *int,
+	filter []*graphql.ConvenientFilter,
 ) (*graphql.Connection[*graphql.Voucher], error) {
-	filters := []*cModel.ConvenienceFilter{}
+	filters, err := graphql.ConvertToConvenienceFilter(filter)
+	if err != nil {
+		return nil, err
+	}
+	filters, err = addAppContractFilterAsNeeded(ctx, filters)
+	if err != nil {
+		return nil, err
+	}
 	if inputIndex != nil {
 		field := cModel.INPUT_INDEX
 		value := fmt.Sprintf("%d", *inputIndex)
@@ -121,7 +160,6 @@ func (a AdapterV1) GetVouchers(
 			Eq:    &value,
 		})
 	}
-	ctx := context.Background()
 	vouchers, err := a.convenienceService.FindAllVouchers(
 		ctx,
 		first,
@@ -140,11 +178,15 @@ func (a AdapterV1) GetVouchers(
 	)
 }
 
-func (a AdapterV1) GetNotice(outputIndex int) (*graphql.Notice, error) {
-	ctx := context.Background()
-	notice, err := a.convenienceService.FindNoticeByOutputIndex(
+func (a AdapterV1) GetNotice(ctx context.Context, outputIndex int) (*graphql.Notice, error) {
+	appContract, err := getAppContractFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	notice, err := a.convenienceService.FindNoticeByOutputIndexAndAppContract(
 		ctx,
 		uint64(outputIndex),
+		appContract,
 	)
 	if err != nil {
 		return nil, err
@@ -160,12 +202,17 @@ func (a AdapterV1) GetNotice(outputIndex int) (*graphql.Notice, error) {
 }
 
 func (a AdapterV1) GetReport(
+	ctx context.Context,
 	reportIndex int,
 ) (*graphql.Report, error) {
-	ctx := context.Background()
-	report, err := a.reportRepository.FindByOutputIndex(
+	appContract, err := getAppContractFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	report, err := a.reportRepository.FindByOutputIndexAndAppContract(
 		ctx,
 		uint64(reportIndex),
+		appContract,
 	)
 	if err != nil {
 		return nil, err
@@ -180,9 +227,25 @@ func (a AdapterV1) GetReports(
 	ctx context.Context,
 	first *int, last *int, after *string, before *string, inputIndex *int,
 ) (*graphql.ReportConnection, error) {
-	reports, err := a.reportRepository.FindAllByInputIndex(
+	filters, err := graphql.ConvertToConvenienceFilter(nil)
+	if err != nil {
+		return nil, err
+	}
+	filters, err = addAppContractFilterAsNeeded(ctx, filters)
+	if err != nil {
+		return nil, err
+	}
+	if inputIndex != nil {
+		field := cModel.INPUT_INDEX
+		value := fmt.Sprintf("%d", *inputIndex)
+		filters = append(filters, &cModel.ConvenienceFilter{
+			Field: &field,
+			Eq:    &value,
+		})
+	}
+	reports, err := a.reportRepository.FindAll(
 		ctx,
-		first, last, after, before, inputIndex,
+		first, last, after, before, filters,
 	)
 	if err != nil {
 		slog.Error("Adapter GetReports", "error", err)
@@ -217,9 +280,15 @@ func (a AdapterV1) convertToReport(
 }
 
 // GetInputByIndex implements Adapter.
-func (a AdapterV1) GetInputByIndex(inputIndex int) (*graphql.Input, error) {
-	ctx := context.Background()
-	input, err := a.inputRepository.FindByIndex(ctx, inputIndex)
+func (a AdapterV1) GetInputByIndex(
+	ctx context.Context,
+	inputIndex int,
+) (*graphql.Input, error) {
+	appContract, err := getAppContractFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	input, err := a.inputRepository.FindByIndexAndAppContract(ctx, inputIndex, appContract)
 	if err != nil {
 		return nil, err
 	}
@@ -236,9 +305,14 @@ func (a AdapterV1) GetInputByIndex(inputIndex int) (*graphql.Input, error) {
 	return convertedInput, nil
 }
 
-func (a AdapterV1) GetInput(id string) (*graphql.Input, error) {
-	ctx := context.Background()
-	input, err := a.inputRepository.FindByID(ctx, id)
+func (a AdapterV1) GetInput(
+	ctx context.Context,
+	id string) (*graphql.Input, error) {
+	appContract, err := getAppContractFromContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	input, err := a.inputRepository.FindByIDAndAppContract(ctx, id, appContract)
 	if err != nil {
 		return nil, err
 	}
@@ -259,7 +333,13 @@ func (a AdapterV1) GetInputs(
 	ctx context.Context,
 	first *int, last *int, after *string, before *string, where *graphql.InputFilter,
 ) (*graphql.InputConnection, error) {
+	appContract := ctx.Value(cModel.AppContractKey)
+	slog.Debug("GetInputs", "appContract", appContract)
 	filters := []*cModel.ConvenienceFilter{}
+	filters, err := addAppContractFilterAsNeeded(ctx, filters)
+	if err != nil {
+		return nil, err
+	}
 	if where != nil {
 		field := "Index"
 		if where.IndexGreaterThan != nil {

@@ -104,19 +104,8 @@ type ComplexityRoot struct {
 	}
 
 	Proof struct {
-		FirstIndex                               func(childComplexity int) int
-		InputByInputIndex                        func(childComplexity int) int
-		InputIndex                               func(childComplexity int) int
-		LastInput                                func(childComplexity int) int
-		NodeID                                   func(childComplexity int) int
-		OutputIndex                              func(childComplexity int) int
-		ValidityInputIndexWithinEpoch            func(childComplexity int) int
-		ValidityMachineStateHash                 func(childComplexity int) int
-		ValidityOutputEpochRootHash              func(childComplexity int) int
-		ValidityOutputHashInOutputHashesSiblings func(childComplexity int) int
-		ValidityOutputHashesInEpochSiblings      func(childComplexity int) int
-		ValidityOutputHashesRootHash             func(childComplexity int) int
-		ValidityOutputIndexWithinInput           func(childComplexity int) int
+		OutputHashesSiblings func(childComplexity int) int
+		OutputIndex          func(childComplexity int) int
 	}
 
 	Query struct {
@@ -176,8 +165,6 @@ type InputResolver interface {
 }
 type NoticeResolver interface {
 	Input(ctx context.Context, obj *model.Notice) (*model.Input, error)
-
-	Proof(ctx context.Context, obj *model.Notice) (*model.Proof, error)
 }
 type QueryResolver interface {
 	Input(ctx context.Context, id string) (*model.Input, error)
@@ -194,8 +181,6 @@ type ReportResolver interface {
 }
 type VoucherResolver interface {
 	Input(ctx context.Context, obj *model.Voucher) (*model.Input, error)
-
-	Proof(ctx context.Context, obj *model.Voucher) (*model.Proof, error)
 }
 
 type executableSchema struct {
@@ -463,40 +448,12 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.PageInfo.StartCursor(childComplexity), true
 
-	case "Proof.firstIndex":
-		if e.complexity.Proof.FirstIndex == nil {
+	case "Proof.outputHashesSiblings":
+		if e.complexity.Proof.OutputHashesSiblings == nil {
 			break
 		}
 
-		return e.complexity.Proof.FirstIndex(childComplexity), true
-
-	case "Proof.inputByInputIndex":
-		if e.complexity.Proof.InputByInputIndex == nil {
-			break
-		}
-
-		return e.complexity.Proof.InputByInputIndex(childComplexity), true
-
-	case "Proof.inputIndex":
-		if e.complexity.Proof.InputIndex == nil {
-			break
-		}
-
-		return e.complexity.Proof.InputIndex(childComplexity), true
-
-	case "Proof.lastInput":
-		if e.complexity.Proof.LastInput == nil {
-			break
-		}
-
-		return e.complexity.Proof.LastInput(childComplexity), true
-
-	case "Proof.nodeId":
-		if e.complexity.Proof.NodeID == nil {
-			break
-		}
-
-		return e.complexity.Proof.NodeID(childComplexity), true
+		return e.complexity.Proof.OutputHashesSiblings(childComplexity), true
 
 	case "Proof.outputIndex":
 		if e.complexity.Proof.OutputIndex == nil {
@@ -504,55 +461,6 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 		}
 
 		return e.complexity.Proof.OutputIndex(childComplexity), true
-
-	case "Proof.validityInputIndexWithinEpoch":
-		if e.complexity.Proof.ValidityInputIndexWithinEpoch == nil {
-			break
-		}
-
-		return e.complexity.Proof.ValidityInputIndexWithinEpoch(childComplexity), true
-
-	case "Proof.validityMachineStateHash":
-		if e.complexity.Proof.ValidityMachineStateHash == nil {
-			break
-		}
-
-		return e.complexity.Proof.ValidityMachineStateHash(childComplexity), true
-
-	case "Proof.validityOutputEpochRootHash":
-		if e.complexity.Proof.ValidityOutputEpochRootHash == nil {
-			break
-		}
-
-		return e.complexity.Proof.ValidityOutputEpochRootHash(childComplexity), true
-
-	case "Proof.validityOutputHashInOutputHashesSiblings":
-		if e.complexity.Proof.ValidityOutputHashInOutputHashesSiblings == nil {
-			break
-		}
-
-		return e.complexity.Proof.ValidityOutputHashInOutputHashesSiblings(childComplexity), true
-
-	case "Proof.validityOutputHashesInEpochSiblings":
-		if e.complexity.Proof.ValidityOutputHashesInEpochSiblings == nil {
-			break
-		}
-
-		return e.complexity.Proof.ValidityOutputHashesInEpochSiblings(childComplexity), true
-
-	case "Proof.validityOutputHashesRootHash":
-		if e.complexity.Proof.ValidityOutputHashesRootHash == nil {
-			break
-		}
-
-		return e.complexity.Proof.ValidityOutputHashesRootHash(childComplexity), true
-
-	case "Proof.validityOutputIndexWithinInput":
-		if e.complexity.Proof.ValidityOutputIndexWithinInput == nil {
-			break
-		}
-
-		return e.complexity.Proof.ValidityOutputIndexWithinInput(childComplexity), true
 
 	case "Query.input":
 		if e.complexity.Query.Input == nil {
@@ -886,26 +794,8 @@ func (ec *executionContext) introspectType(name string) (*introspection.Type, er
 var sources = []*ast.Source{
 	{Name: "../../../api/reader.graphql", Input: `"Data that can be used as proof to validate notices and execute vouchers on the base layer blockchain"
 type Proof {
-  firstIndex: Int!
-
-  """Reads a single ` + "`" + `Input` + "`" + ` that is related to this ` + "`" + `Proof` + "`" + `."""
-  inputByInputIndex: Input
-  inputIndex: Int!
-  lastInput: Int!
-
-  """
-  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
-  """
-  nodeId: ID!
-
-  outputIndex: Int!
-  validityInputIndexWithinEpoch: Int!
-  validityMachineStateHash: String!
-  validityOutputEpochRootHash: String!
-  validityOutputHashInOutputHashesSiblings: [String]!
-  validityOutputHashesInEpochSiblings: [String]!
-  validityOutputHashesRootHash: String!
-  validityOutputIndexWithinInput: Int!
+  outputIndex: BigInt!
+  outputHashesSiblings: [String]!
 }
 
 enum CompletionStatus {
@@ -2755,7 +2645,7 @@ func (ec *executionContext) _Notice_proof(ctx context.Context, field graphql.Col
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Notice().Proof(rctx, obj)
+		return obj.Proof, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -2764,45 +2654,23 @@ func (ec *executionContext) _Notice_proof(ctx context.Context, field graphql.Col
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*model.Proof)
+	res := resTmp.(model.Proof)
 	fc.Result = res
-	return ec.marshalOProof2ᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐProof(ctx, field.Selections, res)
+	return ec.marshalOProof2githubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐProof(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Notice_proof(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Notice",
 		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
+		IsMethod:   false,
+		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "firstIndex":
-				return ec.fieldContext_Proof_firstIndex(ctx, field)
-			case "inputByInputIndex":
-				return ec.fieldContext_Proof_inputByInputIndex(ctx, field)
-			case "inputIndex":
-				return ec.fieldContext_Proof_inputIndex(ctx, field)
-			case "lastInput":
-				return ec.fieldContext_Proof_lastInput(ctx, field)
-			case "nodeId":
-				return ec.fieldContext_Proof_nodeId(ctx, field)
 			case "outputIndex":
 				return ec.fieldContext_Proof_outputIndex(ctx, field)
-			case "validityInputIndexWithinEpoch":
-				return ec.fieldContext_Proof_validityInputIndexWithinEpoch(ctx, field)
-			case "validityMachineStateHash":
-				return ec.fieldContext_Proof_validityMachineStateHash(ctx, field)
-			case "validityOutputEpochRootHash":
-				return ec.fieldContext_Proof_validityOutputEpochRootHash(ctx, field)
-			case "validityOutputHashInOutputHashesSiblings":
-				return ec.fieldContext_Proof_validityOutputHashInOutputHashesSiblings(ctx, field)
-			case "validityOutputHashesInEpochSiblings":
-				return ec.fieldContext_Proof_validityOutputHashesInEpochSiblings(ctx, field)
-			case "validityOutputHashesRootHash":
-				return ec.fieldContext_Proof_validityOutputHashesRootHash(ctx, field)
-			case "validityOutputIndexWithinInput":
-				return ec.fieldContext_Proof_validityOutputIndexWithinInput(ctx, field)
+			case "outputHashesSiblings":
+				return ec.fieldContext_Proof_outputHashesSiblings(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Proof", field.Name)
 		},
@@ -3226,255 +3094,6 @@ func (ec *executionContext) fieldContext_PageInfo_hasPreviousPage(ctx context.Co
 	return fc, nil
 }
 
-func (ec *executionContext) _Proof_firstIndex(ctx context.Context, field graphql.CollectedField, obj *model.Proof) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Proof_firstIndex(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.FirstIndex, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(int)
-	fc.Result = res
-	return ec.marshalNInt2int(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Proof_firstIndex(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Proof",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Proof_inputByInputIndex(ctx context.Context, field graphql.CollectedField, obj *model.Proof) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Proof_inputByInputIndex(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.InputByInputIndex, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		return graphql.Null
-	}
-	res := resTmp.(*model.Input)
-	fc.Result = res
-	return ec.marshalOInput2ᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐInput(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Proof_inputByInputIndex(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Proof",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			switch field.Name {
-			case "id":
-				return ec.fieldContext_Input_id(ctx, field)
-			case "index":
-				return ec.fieldContext_Input_index(ctx, field)
-			case "status":
-				return ec.fieldContext_Input_status(ctx, field)
-			case "msgSender":
-				return ec.fieldContext_Input_msgSender(ctx, field)
-			case "timestamp":
-				return ec.fieldContext_Input_timestamp(ctx, field)
-			case "blockNumber":
-				return ec.fieldContext_Input_blockNumber(ctx, field)
-			case "payload":
-				return ec.fieldContext_Input_payload(ctx, field)
-			case "vouchers":
-				return ec.fieldContext_Input_vouchers(ctx, field)
-			case "notices":
-				return ec.fieldContext_Input_notices(ctx, field)
-			case "reports":
-				return ec.fieldContext_Input_reports(ctx, field)
-			case "espressoTimestamp":
-				return ec.fieldContext_Input_espressoTimestamp(ctx, field)
-			case "espressoBlockNumber":
-				return ec.fieldContext_Input_espressoBlockNumber(ctx, field)
-			case "inputBoxIndex":
-				return ec.fieldContext_Input_inputBoxIndex(ctx, field)
-			case "blockTimestamp":
-				return ec.fieldContext_Input_blockTimestamp(ctx, field)
-			case "prevRandao":
-				return ec.fieldContext_Input_prevRandao(ctx, field)
-			}
-			return nil, fmt.Errorf("no field named %q was found under type Input", field.Name)
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Proof_inputIndex(ctx context.Context, field graphql.CollectedField, obj *model.Proof) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Proof_inputIndex(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.InputIndex, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(int)
-	fc.Result = res
-	return ec.marshalNInt2int(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Proof_inputIndex(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Proof",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Proof_lastInput(ctx context.Context, field graphql.CollectedField, obj *model.Proof) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Proof_lastInput(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.LastInput, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(int)
-	fc.Result = res
-	return ec.marshalNInt2int(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Proof_lastInput(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Proof",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Proof_nodeId(ctx context.Context, field graphql.CollectedField, obj *model.Proof) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Proof_nodeId(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.NodeID, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(string)
-	fc.Result = res
-	return ec.marshalNID2string(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Proof_nodeId(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Proof",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type ID does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
 func (ec *executionContext) _Proof_outputIndex(ctx context.Context, field graphql.CollectedField, obj *model.Proof) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_Proof_outputIndex(ctx, field)
 	if err != nil {
@@ -3501,9 +3120,9 @@ func (ec *executionContext) _Proof_outputIndex(ctx context.Context, field graphq
 		}
 		return graphql.Null
 	}
-	res := resTmp.(int)
+	res := resTmp.(string)
 	fc.Result = res
-	return ec.marshalNInt2int(ctx, field.Selections, res)
+	return ec.marshalNBigInt2string(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Proof_outputIndex(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -3513,14 +3132,14 @@ func (ec *executionContext) fieldContext_Proof_outputIndex(ctx context.Context, 
 		IsMethod:   false,
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int does not have child fields")
+			return nil, errors.New("field of type BigInt does not have child fields")
 		},
 	}
 	return fc, nil
 }
 
-func (ec *executionContext) _Proof_validityInputIndexWithinEpoch(ctx context.Context, field graphql.CollectedField, obj *model.Proof) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Proof_validityInputIndexWithinEpoch(ctx, field)
+func (ec *executionContext) _Proof_outputHashesSiblings(ctx context.Context, field graphql.CollectedField, obj *model.Proof) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Proof_outputHashesSiblings(ctx, field)
 	if err != nil {
 		return graphql.Null
 	}
@@ -3533,7 +3152,7 @@ func (ec *executionContext) _Proof_validityInputIndexWithinEpoch(ctx context.Con
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.ValidityInputIndexWithinEpoch, nil
+		return obj.OutputHashesSiblings, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -3545,56 +3164,12 @@ func (ec *executionContext) _Proof_validityInputIndexWithinEpoch(ctx context.Con
 		}
 		return graphql.Null
 	}
-	res := resTmp.(int)
+	res := resTmp.([]string)
 	fc.Result = res
-	return ec.marshalNInt2int(ctx, field.Selections, res)
+	return ec.marshalNString2ᚕstring(ctx, field.Selections, res)
 }
 
-func (ec *executionContext) fieldContext_Proof_validityInputIndexWithinEpoch(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Proof",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Proof_validityMachineStateHash(ctx context.Context, field graphql.CollectedField, obj *model.Proof) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Proof_validityMachineStateHash(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.ValidityMachineStateHash, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(string)
-	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Proof_validityMachineStateHash(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+func (ec *executionContext) fieldContext_Proof_outputHashesSiblings(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Proof",
 		Field:      field,
@@ -3602,226 +3177,6 @@ func (ec *executionContext) fieldContext_Proof_validityMachineStateHash(ctx cont
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Proof_validityOutputEpochRootHash(ctx context.Context, field graphql.CollectedField, obj *model.Proof) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Proof_validityOutputEpochRootHash(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.ValidityOutputEpochRootHash, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(string)
-	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Proof_validityOutputEpochRootHash(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Proof",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Proof_validityOutputHashInOutputHashesSiblings(ctx context.Context, field graphql.CollectedField, obj *model.Proof) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Proof_validityOutputHashInOutputHashesSiblings(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.ValidityOutputHashInOutputHashesSiblings, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.([]*string)
-	fc.Result = res
-	return ec.marshalNString2ᚕᚖstring(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Proof_validityOutputHashInOutputHashesSiblings(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Proof",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Proof_validityOutputHashesInEpochSiblings(ctx context.Context, field graphql.CollectedField, obj *model.Proof) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Proof_validityOutputHashesInEpochSiblings(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.ValidityOutputHashesInEpochSiblings, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.([]*string)
-	fc.Result = res
-	return ec.marshalNString2ᚕᚖstring(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Proof_validityOutputHashesInEpochSiblings(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Proof",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Proof_validityOutputHashesRootHash(ctx context.Context, field graphql.CollectedField, obj *model.Proof) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Proof_validityOutputHashesRootHash(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.ValidityOutputHashesRootHash, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(string)
-	fc.Result = res
-	return ec.marshalNString2string(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Proof_validityOutputHashesRootHash(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Proof",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type String does not have child fields")
-		},
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Proof_validityOutputIndexWithinInput(ctx context.Context, field graphql.CollectedField, obj *model.Proof) (ret graphql.Marshaler) {
-	fc, err := ec.fieldContext_Proof_validityOutputIndexWithinInput(ctx, field)
-	if err != nil {
-		return graphql.Null
-	}
-	ctx = graphql.WithFieldContext(ctx, fc)
-	defer func() {
-		if r := recover(); r != nil {
-			ec.Error(ctx, ec.Recover(ctx, r))
-			ret = graphql.Null
-		}
-	}()
-	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
-		ctx = rctx // use context from middleware stack in children
-		return obj.ValidityOutputIndexWithinInput, nil
-	})
-	if err != nil {
-		ec.Error(ctx, err)
-		return graphql.Null
-	}
-	if resTmp == nil {
-		if !graphql.HasFieldError(ctx, fc) {
-			ec.Errorf(ctx, "must not be null")
-		}
-		return graphql.Null
-	}
-	res := resTmp.(int)
-	fc.Result = res
-	return ec.marshalNInt2int(ctx, field.Selections, res)
-}
-
-func (ec *executionContext) fieldContext_Proof_validityOutputIndexWithinInput(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Proof",
-		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int does not have child fields")
 		},
 	}
 	return fc, nil
@@ -5124,7 +4479,7 @@ func (ec *executionContext) _Voucher_proof(ctx context.Context, field graphql.Co
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Voucher().Proof(rctx, obj)
+		return obj.Proof, nil
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -5133,45 +4488,23 @@ func (ec *executionContext) _Voucher_proof(ctx context.Context, field graphql.Co
 	if resTmp == nil {
 		return graphql.Null
 	}
-	res := resTmp.(*model.Proof)
+	res := resTmp.(model.Proof)
 	fc.Result = res
-	return ec.marshalOProof2ᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐProof(ctx, field.Selections, res)
+	return ec.marshalOProof2githubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐProof(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Voucher_proof(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "Voucher",
 		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
+		IsMethod:   false,
+		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
-			case "firstIndex":
-				return ec.fieldContext_Proof_firstIndex(ctx, field)
-			case "inputByInputIndex":
-				return ec.fieldContext_Proof_inputByInputIndex(ctx, field)
-			case "inputIndex":
-				return ec.fieldContext_Proof_inputIndex(ctx, field)
-			case "lastInput":
-				return ec.fieldContext_Proof_lastInput(ctx, field)
-			case "nodeId":
-				return ec.fieldContext_Proof_nodeId(ctx, field)
 			case "outputIndex":
 				return ec.fieldContext_Proof_outputIndex(ctx, field)
-			case "validityInputIndexWithinEpoch":
-				return ec.fieldContext_Proof_validityInputIndexWithinEpoch(ctx, field)
-			case "validityMachineStateHash":
-				return ec.fieldContext_Proof_validityMachineStateHash(ctx, field)
-			case "validityOutputEpochRootHash":
-				return ec.fieldContext_Proof_validityOutputEpochRootHash(ctx, field)
-			case "validityOutputHashInOutputHashesSiblings":
-				return ec.fieldContext_Proof_validityOutputHashInOutputHashesSiblings(ctx, field)
-			case "validityOutputHashesInEpochSiblings":
-				return ec.fieldContext_Proof_validityOutputHashesInEpochSiblings(ctx, field)
-			case "validityOutputHashesRootHash":
-				return ec.fieldContext_Proof_validityOutputHashesRootHash(ctx, field)
-			case "validityOutputIndexWithinInput":
-				return ec.fieldContext_Proof_validityOutputIndexWithinInput(ctx, field)
+			case "outputHashesSiblings":
+				return ec.fieldContext_Proof_outputHashesSiblings(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Proof", field.Name)
 		},
@@ -7838,38 +7171,7 @@ func (ec *executionContext) _Notice(ctx context.Context, sel ast.SelectionSet, o
 				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "proof":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Notice_proof(ctx, field, obj)
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			out.Values[i] = ec._Notice_proof(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -8045,65 +7347,13 @@ func (ec *executionContext) _Proof(ctx context.Context, sel ast.SelectionSet, ob
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("Proof")
-		case "firstIndex":
-			out.Values[i] = ec._Proof_firstIndex(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "inputByInputIndex":
-			out.Values[i] = ec._Proof_inputByInputIndex(ctx, field, obj)
-		case "inputIndex":
-			out.Values[i] = ec._Proof_inputIndex(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "lastInput":
-			out.Values[i] = ec._Proof_lastInput(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "nodeId":
-			out.Values[i] = ec._Proof_nodeId(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
 		case "outputIndex":
 			out.Values[i] = ec._Proof_outputIndex(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
-		case "validityInputIndexWithinEpoch":
-			out.Values[i] = ec._Proof_validityInputIndexWithinEpoch(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "validityMachineStateHash":
-			out.Values[i] = ec._Proof_validityMachineStateHash(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "validityOutputEpochRootHash":
-			out.Values[i] = ec._Proof_validityOutputEpochRootHash(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "validityOutputHashInOutputHashesSiblings":
-			out.Values[i] = ec._Proof_validityOutputHashInOutputHashesSiblings(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "validityOutputHashesInEpochSiblings":
-			out.Values[i] = ec._Proof_validityOutputHashesInEpochSiblings(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "validityOutputHashesRootHash":
-			out.Values[i] = ec._Proof_validityOutputHashesRootHash(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				out.Invalids++
-			}
-		case "validityOutputIndexWithinInput":
-			out.Values[i] = ec._Proof_validityOutputIndexWithinInput(ctx, field, obj)
+		case "outputHashesSiblings":
+			out.Values[i] = ec._Proof_outputHashesSiblings(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
@@ -8592,38 +7842,7 @@ func (ec *executionContext) _Voucher(ctx context.Context, sel ast.SelectionSet, 
 				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "proof":
-			field := field
-
-			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
-				defer func() {
-					if r := recover(); r != nil {
-						ec.Error(ctx, ec.Recover(ctx, r))
-					}
-				}()
-				res = ec._Voucher_proof(ctx, field, obj)
-				return res
-			}
-
-			if field.Deferrable != nil {
-				dfs, ok := deferred[field.Deferrable.Label]
-				di := 0
-				if ok {
-					dfs.AddField(field)
-					di = len(dfs.Values) - 1
-				} else {
-					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
-					deferred[field.Deferrable.Label] = dfs
-				}
-				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
-					return innerFunc(ctx, dfs)
-				})
-
-				// don't run the out.Concurrently() call below
-				out.Values[i] = graphql.Null
-				continue
-			}
-
-			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			out.Values[i] = ec._Voucher_proof(ctx, field, obj)
 		case "value":
 			out.Values[i] = ec._Voucher_value(ctx, field, obj)
 		case "executed":
@@ -9110,21 +8329,6 @@ func (ec *executionContext) marshalNCompletionStatus2githubᚗcomᚋcalindraᚋn
 	return v
 }
 
-func (ec *executionContext) unmarshalNID2string(ctx context.Context, v interface{}) (string, error) {
-	res, err := graphql.UnmarshalID(v)
-	return res, graphql.ErrorOnPath(ctx, err)
-}
-
-func (ec *executionContext) marshalNID2string(ctx context.Context, sel ast.SelectionSet, v string) graphql.Marshaler {
-	res := graphql.MarshalID(v)
-	if res == graphql.Null {
-		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
-			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
-		}
-	}
-	return res
-}
-
 func (ec *executionContext) marshalNInput2githubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐInput(ctx context.Context, sel ast.SelectionSet, v model.Input) graphql.Marshaler {
 	return ec._Input(ctx, sel, &v)
 }
@@ -9411,16 +8615,16 @@ func (ec *executionContext) marshalNString2string(ctx context.Context, sel ast.S
 	return res
 }
 
-func (ec *executionContext) unmarshalNString2ᚕᚖstring(ctx context.Context, v interface{}) ([]*string, error) {
+func (ec *executionContext) unmarshalNString2ᚕstring(ctx context.Context, v interface{}) ([]string, error) {
 	var vSlice []interface{}
 	if v != nil {
 		vSlice = graphql.CoerceList(v)
 	}
 	var err error
-	res := make([]*string, len(vSlice))
+	res := make([]string, len(vSlice))
 	for i := range vSlice {
 		ctx := graphql.WithPathContext(ctx, graphql.NewPathWithIndex(i))
-		res[i], err = ec.unmarshalOString2ᚖstring(ctx, vSlice[i])
+		res[i], err = ec.unmarshalOString2string(ctx, vSlice[i])
 		if err != nil {
 			return nil, err
 		}
@@ -9428,10 +8632,10 @@ func (ec *executionContext) unmarshalNString2ᚕᚖstring(ctx context.Context, v
 	return res, nil
 }
 
-func (ec *executionContext) marshalNString2ᚕᚖstring(ctx context.Context, sel ast.SelectionSet, v []*string) graphql.Marshaler {
+func (ec *executionContext) marshalNString2ᚕstring(ctx context.Context, sel ast.SelectionSet, v []string) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	for i := range v {
-		ret[i] = ec.marshalOString2ᚖstring(ctx, sel, v[i])
+		ret[i] = ec.marshalOString2string(ctx, sel, v[i])
 	}
 
 	return ret
@@ -9852,13 +9056,6 @@ func (ec *executionContext) unmarshalOConvenientFilter2ᚖgithubᚗcomᚋcalindr
 	return &res, graphql.ErrorOnPath(ctx, err)
 }
 
-func (ec *executionContext) marshalOInput2ᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐInput(ctx context.Context, sel ast.SelectionSet, v *model.Input) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return ec._Input(ctx, sel, v)
-}
-
 func (ec *executionContext) unmarshalOInputFilter2ᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐInputFilter(ctx context.Context, v interface{}) (*model.InputFilter, error) {
 	if v == nil {
 		return nil, nil
@@ -9883,11 +9080,8 @@ func (ec *executionContext) marshalOInt2ᚖint(ctx context.Context, sel ast.Sele
 	return res
 }
 
-func (ec *executionContext) marshalOProof2ᚖgithubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐProof(ctx context.Context, sel ast.SelectionSet, v *model.Proof) graphql.Marshaler {
-	if v == nil {
-		return graphql.Null
-	}
-	return ec._Proof(ctx, sel, v)
+func (ec *executionContext) marshalOProof2githubᚗcomᚋcalindraᚋnonodoᚋinternalᚋreaderᚋmodelᚐProof(ctx context.Context, sel ast.SelectionSet, v model.Proof) graphql.Marshaler {
+	return ec._Proof(ctx, sel, &v)
 }
 
 func (ec *executionContext) unmarshalOString2string(ctx context.Context, v interface{}) (string, error) {

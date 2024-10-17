@@ -48,6 +48,13 @@ type Voucher struct {
 	Value string `json:"value"`
 
 	Executed bool `json:"executed"`
+
+	Proof Proof `json:"proof"`
+}
+
+type Proof struct {
+	OutputIndex          string   `json:"outputIndex"`
+	OutputHashesSiblings []string `json:"outputHashesSiblings"`
 }
 
 // Application log or diagnostic information
@@ -69,6 +76,7 @@ type Notice struct {
 	// Notice data as a payload in Ethereum hex binary format, starting with '0x'
 	Payload string `json:"payload"`
 	// InputId string
+	Proof Proof `json:"proof"`
 }
 
 //

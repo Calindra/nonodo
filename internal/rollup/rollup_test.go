@@ -79,6 +79,7 @@ func (s *RollupSuite) SetupTest() {
 		container.GetReportRepository(),
 		container.GetInputRepository(),
 		container.GetVoucherRepository(),
+		container.GetNoticeRepository(),
 	)
 
 	// Sequencer
