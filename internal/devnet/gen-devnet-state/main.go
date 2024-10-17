@@ -30,7 +30,7 @@ func main() {
 	// https://github.com/cartesi/cli/pkgs/container/sdk
 	// update me when the image is updated
 	slog.Info("Creating temporary container")
-	run("docker", "create", "--name", "temp-devnet", "ghcr.io/cartesi/sdk:0.10.0")
+	run("docker", "create", "--name", "temp-devnet", "ghcr.io/cartesi/sdk:0.11.0")
 	slog.Info("Copying the state file")
 	defer func() {
 		run("docker", "rm", "temp-devnet")
