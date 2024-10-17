@@ -148,6 +148,7 @@ func ParsePaioBatchToInputs(jsonStr string, chainId *big.Int) ([]cModel.AdvanceI
 			AvailBlockTimestamp: time.Unix(0, 0),
 			InputBoxIndex:       -2,
 			Type:                "Avail",
+			ChainId:             chainId.String(),
 		})
 	}
 	return inputs, nil

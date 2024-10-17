@@ -73,6 +73,7 @@ func (r *RollupAPI) Gio(ctx echo.Context) error {
 
 // Handle requests to /finish.
 func (r *RollupAPI) Finish(c echo.Context) error {
+	slog.Debug("/finish start handling...")
 	if !checkContentType(c) {
 		return c.String(http.StatusUnsupportedMediaType, "invalid content type")
 	}
@@ -80,6 +81,7 @@ func (r *RollupAPI) Finish(c echo.Context) error {
 	// parse body
 	var request FinishJSONRequestBody
 	if err := c.Bind(&request); err != nil {
+		slog.Error("/finish bind request error", "error", err)
 		return err
 	}
 
@@ -102,6 +104,7 @@ func (r *RollupAPI) Finish(c echo.Context) error {
 		input, err := r.sequencer.FinishAndGetNext(accepted)
 
 		if err != nil {
+			slog.Error("/finish and get next", "error", err)
 			return err
 		}
 
@@ -109,6 +112,7 @@ func (r *RollupAPI) Finish(c echo.Context) error {
 			resp, err := convertInput(input)
 
 			if err != nil {
+				slog.Error("/finish convert input", "error", err)
 				return err
 			}
 
@@ -285,14 +289,31 @@ func checkContentType(c echo.Context) bool {
 	return strings.HasPrefix(cType, echo.MIMEApplicationJSON)
 }
 
+func parseChainID(value string) (*big.Int, error) {
+	if strings.HasPrefix(value, "0x") {
+		chainId, ok := new(big.Int).SetString(value, 16) // nolint
+		if ok {
+			return chainId, nil
+		}
+		slog.Error("failed to convert chain id", "value", value)
+		return nil, errors.New("failed to convert chain id")
+	}
+	chainId, ok := new(big.Int).SetString(value, 10) // nolint
+	if ok {
+		return chainId, nil
+	}
+	slog.Error("failed to convert chain id", "value", value)
+	return nil, errors.New("failed to convert chain id")
+}
+
 // Convert model input to API type.
 func convertInput(input cModel.Input) (RollupRequest, error) {
 	var resp RollupRequest
 	switch input := input.(type) {
 	case cModel.AdvanceInput:
-		chainId, ok := new(big.Int).SetString(input.ChainId, 10) // nolint
-		if !ok {
-			return RollupRequest{}, errors.New("failed to convert chain id")
+		chainId, err := parseChainID(input.ChainId)
+		if err != nil {
+			return RollupRequest{}, err
 		}
 		advance := Advance{
 			Metadata: Metadata{
@@ -306,7 +327,7 @@ func convertInput(input cModel.Input) (RollupRequest, error) {
 			},
 			Payload: hexutil.Encode(input.Payload),
 		}
-		err := resp.Data.FromAdvance(advance)
+		err = resp.Data.FromAdvance(advance)
 		if err != nil {
 			return RollupRequest{}, errors.New("failed to convert advance")
 		}
