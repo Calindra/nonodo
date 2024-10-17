@@ -315,7 +315,6 @@ func convertToConvenienceVoucher(row voucherRow) model.ConvenienceVoucher {
 		AppContract:          appContract,
 		OutputHashesSiblings: row.OutputHashesSiblings,
 	}
-	slog.Debug("Voucher", "value", row.Value)
 	return voucher
 }
 

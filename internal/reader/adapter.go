@@ -51,6 +51,4 @@ type Adapter interface {
 		first *int, last *int, after *string, before *string, inputIndex *int,
 		filter []*model.ConvenientFilter,
 	) (*graphql.VoucherConnection, error)
-
-	GetProof(ctx context.Context, inputIndex, outputIndex int) (*graphql.Proof, error)
 }

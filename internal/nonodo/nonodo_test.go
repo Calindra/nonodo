@@ -70,6 +70,13 @@ func (s *NonodoSuite) TestItProcessesAdvanceInputs() {
 	err = s.waitForAdvanceInput(n - 1)
 	s.NoError(err)
 
+	s.T().Log("inserting proofs")
+	db := CreateDBInstance(opts)
+	_, err = db.Exec(`update vouchers set output_hashes_siblings = $1`, `["0x11","0x22","0x33"]`)
+	s.NoError(err)
+	_, err = db.Exec(`update notices set output_hashes_siblings = $1`, `["0x1111","0x2222","0x3333"]`)
+	s.NoError(err)
+
 	s.T().Log("verifying node state")
 	response, err := readerclient.State(s.ctx, s.graphqlClient)
 	s.NoError(err)
@@ -78,16 +85,37 @@ func (s *NonodoSuite) TestItProcessesAdvanceInputs() {
 		s.Equal(i, input.Index)
 		s.Equal(payloads[i][:], s.decodeHex(input.Payload))
 		s.Equal(devnet.SenderAddress, input.MsgSender)
+
+		// check voucher
 		voucher := input.Vouchers.Edges[0].Node
 		s.Equal(model.VOUCHER_SELECTOR, voucher.Payload[2:10])
-		// should ends with
-		s.True(strings.HasSuffix(voucher.Payload, common.Bytes2Hex(payloads[i][:])))
+		s.True(strings.HasSuffix(voucher.Payload, common.Bytes2Hex(payloads[i][:]))) // should ends with
 		s.Equal(devnet.SenderAddress, voucher.Destination)
-		s.Equal(model.NOTICE_SELECTOR, input.Notices.Edges[0].Node.Payload[2:10])
+		s.Equal(3, len(voucher.Proof.OutputHashesSiblings))
 
-		s.Contains(input.Notices.Edges[0].Node.Payload, common.Bytes2Hex(payloads[i][:])+"ff")
+		// check notice
+		notice := input.Notices.Edges[0].Node
+		s.Equal(model.NOTICE_SELECTOR, notice.Payload[2:10])
+		s.Contains(notice.Payload, common.Bytes2Hex(payloads[i][:])+"ff")
+		s.Equal(3, len(notice.Proof.OutputHashesSiblings))
+
+		// check report
 		s.Equal(payloads[i][:], s.decodeHex(input.Reports.Edges[0].Node.Payload))
 	}
+
+	s.T().Log("query graphql state with new graphql path pattern (no results)")
+	graphqlEndpoint := fmt.Sprintf("http://%s:%v/graphql/%s", opts.HttpAddress, opts.HttpPort, common.Address{}.Hex())
+	graphqlClient := graphql.NewClient(graphqlEndpoint, nil)
+	response2, err := readerclient.State(s.ctx, graphqlClient)
+	s.NoError(err)
+	s.Equal(0, len(response2.Inputs.Edges))
+
+	s.T().Log("query graphql state with new graphql path pattern")
+	graphqlEndpoint3 := fmt.Sprintf("http://%s:%v/graphql/%s", opts.HttpAddress, opts.HttpPort, devnet.ApplicationAddress)
+	graphqlClient3 := graphql.NewClient(graphqlEndpoint3, nil)
+	response3, err := readerclient.State(s.ctx, graphqlClient3)
+	s.NoError(err)
+	s.Equal(3, len(response3.Inputs.Edges))
 }
 
 func (s *NonodoSuite) TestItProcessesInspectInputs() {
@@ -131,27 +159,6 @@ func (s *NonodoSuite) TestItWorksWithExternalApplication() {
 	slog.Debug("response", "body", string(response.Body))
 	s.Require().Equal(http.StatusOK, response.StatusCode())
 	s.Require().Equal(payload[:], s.decodeHex(response.JSON200.Reports[0].Payload))
-}
-
-func (s *NonodoSuite) TestAppAddressGraphQL() {
-	opts := NewNonodoOpts()
-	opts.ApplicationArgs = []string{
-		"go",
-		"run",
-		"github.com/calindra/nonodo/internal/echoapp/echoapp",
-		"--endpoint",
-		fmt.Sprintf("http://%v:%v", opts.HttpAddress, opts.HttpRollupsPort),
-	}
-	opts.HttpPort = 8090
-	s.setupTest(&opts)
-	time.Sleep(100 * time.Millisecond)
-
-	s.T().Log("query graphql state")
-	graphqlEndpoint := fmt.Sprintf("http://%s:%v/graphql/%s", opts.HttpAddress, opts.HttpPort, devnet.ApplicationAddress)
-	graphqlClient := graphql.NewClient(graphqlEndpoint, nil)
-	response, err := readerclient.State(s.ctx, graphqlClient)
-	s.NoError(err)
-	s.Equal(0, len(response.Inputs.Edges))
 }
 
 //

@@ -169,6 +169,8 @@ type StateInputsInputConnectionEdgesInputEdgeNodeInputNoticesNoticeConnectionEdg
 	Index int `json:"index"`
 	// Notice data as a payload in Ethereum hex binary format, starting with '0x'
 	Payload string `json:"payload"`
+	// Proof object that allows this notice to be validated by the base layer blockchain
+	Proof StateInputsInputConnectionEdgesInputEdgeNodeInputNoticesNoticeConnectionEdgesNoticeEdgeNodeNoticeProof `json:"proof"`
 }
 
 // GetIndex returns StateInputsInputConnectionEdgesInputEdgeNodeInputNoticesNoticeConnectionEdgesNoticeEdgeNodeNotice.Index, and is useful for accessing the field via an interface.
@@ -179,6 +181,30 @@ func (v *StateInputsInputConnectionEdgesInputEdgeNodeInputNoticesNoticeConnectio
 // GetPayload returns StateInputsInputConnectionEdgesInputEdgeNodeInputNoticesNoticeConnectionEdgesNoticeEdgeNodeNotice.Payload, and is useful for accessing the field via an interface.
 func (v *StateInputsInputConnectionEdgesInputEdgeNodeInputNoticesNoticeConnectionEdgesNoticeEdgeNodeNotice) GetPayload() string {
 	return v.Payload
+}
+
+// GetProof returns StateInputsInputConnectionEdgesInputEdgeNodeInputNoticesNoticeConnectionEdgesNoticeEdgeNodeNotice.Proof, and is useful for accessing the field via an interface.
+func (v *StateInputsInputConnectionEdgesInputEdgeNodeInputNoticesNoticeConnectionEdgesNoticeEdgeNodeNotice) GetProof() StateInputsInputConnectionEdgesInputEdgeNodeInputNoticesNoticeConnectionEdgesNoticeEdgeNodeNoticeProof {
+	return v.Proof
+}
+
+// StateInputsInputConnectionEdgesInputEdgeNodeInputNoticesNoticeConnectionEdgesNoticeEdgeNodeNoticeProof includes the requested fields of the GraphQL type Proof.
+// The GraphQL type's documentation follows.
+//
+// Data that can be used as proof to validate notices and execute vouchers on the base layer blockchain
+type StateInputsInputConnectionEdgesInputEdgeNodeInputNoticesNoticeConnectionEdgesNoticeEdgeNodeNoticeProof struct {
+	OutputIndex          string   `json:"outputIndex"`
+	OutputHashesSiblings []string `json:"outputHashesSiblings"`
+}
+
+// GetOutputIndex returns StateInputsInputConnectionEdgesInputEdgeNodeInputNoticesNoticeConnectionEdgesNoticeEdgeNodeNoticeProof.OutputIndex, and is useful for accessing the field via an interface.
+func (v *StateInputsInputConnectionEdgesInputEdgeNodeInputNoticesNoticeConnectionEdgesNoticeEdgeNodeNoticeProof) GetOutputIndex() string {
+	return v.OutputIndex
+}
+
+// GetOutputHashesSiblings returns StateInputsInputConnectionEdgesInputEdgeNodeInputNoticesNoticeConnectionEdgesNoticeEdgeNodeNoticeProof.OutputHashesSiblings, and is useful for accessing the field via an interface.
+func (v *StateInputsInputConnectionEdgesInputEdgeNodeInputNoticesNoticeConnectionEdgesNoticeEdgeNodeNoticeProof) GetOutputHashesSiblings() []string {
+	return v.OutputHashesSiblings
 }
 
 // StateInputsInputConnectionEdgesInputEdgeNodeInputReportsReportConnection includes the requested fields of the GraphQL type ReportConnection.
@@ -269,6 +295,8 @@ type StateInputsInputConnectionEdgesInputEdgeNodeInputVouchersVoucherConnectionE
 	Payload string `json:"payload"`
 	// Transaction destination address in Ethereum hex binary format (20 bytes), starting with '0x'
 	Destination string `json:"destination"`
+	// Proof object that allows this voucher to be validated and executed on the base layer blockchain
+	Proof StateInputsInputConnectionEdgesInputEdgeNodeInputVouchersVoucherConnectionEdgesVoucherEdgeNodeVoucherProof `json:"proof"`
 }
 
 // GetIndex returns StateInputsInputConnectionEdgesInputEdgeNodeInputVouchersVoucherConnectionEdgesVoucherEdgeNodeVoucher.Index, and is useful for accessing the field via an interface.
@@ -284,6 +312,30 @@ func (v *StateInputsInputConnectionEdgesInputEdgeNodeInputVouchersVoucherConnect
 // GetDestination returns StateInputsInputConnectionEdgesInputEdgeNodeInputVouchersVoucherConnectionEdgesVoucherEdgeNodeVoucher.Destination, and is useful for accessing the field via an interface.
 func (v *StateInputsInputConnectionEdgesInputEdgeNodeInputVouchersVoucherConnectionEdgesVoucherEdgeNodeVoucher) GetDestination() string {
 	return v.Destination
+}
+
+// GetProof returns StateInputsInputConnectionEdgesInputEdgeNodeInputVouchersVoucherConnectionEdgesVoucherEdgeNodeVoucher.Proof, and is useful for accessing the field via an interface.
+func (v *StateInputsInputConnectionEdgesInputEdgeNodeInputVouchersVoucherConnectionEdgesVoucherEdgeNodeVoucher) GetProof() StateInputsInputConnectionEdgesInputEdgeNodeInputVouchersVoucherConnectionEdgesVoucherEdgeNodeVoucherProof {
+	return v.Proof
+}
+
+// StateInputsInputConnectionEdgesInputEdgeNodeInputVouchersVoucherConnectionEdgesVoucherEdgeNodeVoucherProof includes the requested fields of the GraphQL type Proof.
+// The GraphQL type's documentation follows.
+//
+// Data that can be used as proof to validate notices and execute vouchers on the base layer blockchain
+type StateInputsInputConnectionEdgesInputEdgeNodeInputVouchersVoucherConnectionEdgesVoucherEdgeNodeVoucherProof struct {
+	OutputIndex          string   `json:"outputIndex"`
+	OutputHashesSiblings []string `json:"outputHashesSiblings"`
+}
+
+// GetOutputIndex returns StateInputsInputConnectionEdgesInputEdgeNodeInputVouchersVoucherConnectionEdgesVoucherEdgeNodeVoucherProof.OutputIndex, and is useful for accessing the field via an interface.
+func (v *StateInputsInputConnectionEdgesInputEdgeNodeInputVouchersVoucherConnectionEdgesVoucherEdgeNodeVoucherProof) GetOutputIndex() string {
+	return v.OutputIndex
+}
+
+// GetOutputHashesSiblings returns StateInputsInputConnectionEdgesInputEdgeNodeInputVouchersVoucherConnectionEdgesVoucherEdgeNodeVoucherProof.OutputHashesSiblings, and is useful for accessing the field via an interface.
+func (v *StateInputsInputConnectionEdgesInputEdgeNodeInputVouchersVoucherConnectionEdgesVoucherEdgeNodeVoucherProof) GetOutputHashesSiblings() []string {
+	return v.OutputHashesSiblings
 }
 
 // StateResponse is returned by State on success.
@@ -356,6 +408,10 @@ query State {
 						node {
 							index
 							payload
+							proof {
+								outputIndex
+								outputHashesSiblings
+							}
 						}
 					}
 				}
@@ -365,6 +421,10 @@ query State {
 							index
 							payload
 							destination
+							proof {
+								outputIndex
+								outputHashesSiblings
+							}
 						}
 					}
 				}

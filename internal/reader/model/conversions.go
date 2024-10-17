@@ -177,20 +177,6 @@ func ConvertToConvenienceFilter(
 				Or:    or,
 			})
 		}
-		// field := f.Field.String()
-		// filters = append(filters, &convenience.ConvenienceFilter{
-		// 	Field: &field,
-		// 	Eq:    f.Eq,
-		// 	Ne:    f.Ne,
-		// 	Gt:    f.Gt,
-		// 	Gte:   f.Gte,
-		// 	Lt:    f.Lt,
-		// 	Lte:   f.Lte,
-		// 	In:    f.In,
-		// 	Nin:   f.Nin,
-		// 	And:   and,
-		// 	Or:    or,
-		// })
 	}
 	return filters, nil
 }
@@ -207,10 +193,19 @@ func ConvertToVoucherConnectionV1(
 }
 
 func convertConvenientNoticeV1(cNotice cModel.ConvenienceNotice) *Notice {
+	var outputHashesSiblings []string
+	err := json.Unmarshal([]byte(cNotice.OutputHashesSiblings), &outputHashesSiblings)
+	if err != nil {
+		outputHashesSiblings = []string{}
+	}
 	return &Notice{
 		Index:      int(cNotice.OutputIndex),
 		InputIndex: int(cNotice.InputIndex),
 		Payload:    cNotice.Payload,
+		Proof: Proof{
+			OutputIndex:          strconv.FormatUint(cNotice.OutputIndex, 10),
+			OutputHashesSiblings: outputHashesSiblings,
+		},
 	}
 }
 

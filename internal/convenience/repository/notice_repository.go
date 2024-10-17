@@ -187,21 +187,6 @@ func (c *NoticeRepository) FindNoticeByOutputIndexAndAppContract(
 	}
 
 	return nil, nil
-	// query := `SELECT * FROM notices WHERE output_index = $1 LIMIT 1`
-	// stmt, err := c.Db.Preparex(query)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// defer stmt.Close()
-	// var p model.ConvenienceNotice
-	// err = stmt.GetContext(ctx, &p, outputIndex)
-	// if err != nil {
-	// 	if errors.Is(err, sql.ErrNoRows) {
-	// 		return nil, nil
-	// 	}
-	// 	return nil, err
-	// }
-	// return &p, nil
 }
 
 func (c *NoticeRepository) queryByOutputIndexAndAppContract(

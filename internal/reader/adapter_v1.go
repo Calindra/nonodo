@@ -19,12 +19,6 @@ type AdapterV1 struct {
 	convenienceService *services.ConvenienceService
 }
 
-// GetProof implements Adapter.
-func (a AdapterV1) GetProof(ctx context.Context, inputIndex int, outputIndex int) (*graphql.Proof, error) {
-	// nonodo v1 does not have proofs
-	return nil, fmt.Errorf("proofs are not supported in nonodo v1")
-}
-
 func NewAdapterV1(
 	db *sqlx.DB,
 	convenienceService *services.ConvenienceService,
