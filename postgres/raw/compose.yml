@@ -17,7 +17,3 @@ services:
           "-U",
           "$${POSTGRES_USER}",
         ]
-    volumes:
-      - postgres-raw-data:/var/lib/postgresql/data
-volumes:
-  postgres-raw-data:

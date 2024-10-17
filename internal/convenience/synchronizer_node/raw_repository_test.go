@@ -41,7 +41,9 @@ func (s *RawNodeSuite) SetupTest() {
 		dbName = envMap["POSTGRES_DB"]
 	}
 
-	uri := fmt.Sprintf("postgres://postgres:%s@%s:5432/%s?sslmode=disable", dbPass, raw.DOCKER_COMPOSE_SERVICE, dbName)
+	uri := fmt.Sprintf("postgres://postgres:%s@localhost:5432/%s?sslmode=disable", dbPass, dbName)
+
+	slog.Info("Raw Input URI", "uri", uri)
 
 	s.node = RawNode{
 		connectionURL: uri,

@@ -74,6 +74,8 @@ func RunDockerCompose(stdCtx context.Context) error {
 		return fmt.Errorf("docker compose up failed: %s", err)
 	}
 
+	slog.Debug("docker compose up", "output", string(output))
+
 	return nil
 }
 
