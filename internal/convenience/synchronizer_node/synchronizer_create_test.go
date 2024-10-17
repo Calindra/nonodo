@@ -10,28 +10,34 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-type SynchorizerNodeSuite struct {
+type SynchronizerNodeSuite struct {
 	suite.Suite
-	ctx context.Context
+	ctx                        context.Context
+	dockerComposeStartedByTest bool
 }
 
-func (s *SynchorizerNodeSuite) SetupTest() {
+func (s *SynchronizerNodeSuite) SetupTest() {
 	commons.ConfigureLog(slog.LevelDebug)
 	s.ctx = context.Background()
-
-	err := raw.RunDockerCompose(s.ctx)
-	s.NoError(err)
+	pgUp := commons.IsPortInUse(5432)
+	if !pgUp {
+		err := raw.RunDockerCompose(s.ctx)
+		s.NoError(err)
+		s.dockerComposeStartedByTest = true
+	}
 }
 
-func (s *SynchorizerNodeSuite) TearDownTest() {
-	err := raw.StopDockerCompose(s.ctx)
-	s.NoError(err)
+func (s *SynchronizerNodeSuite) TearDownTest() {
+	if s.dockerComposeStartedByTest {
+		err := raw.StopDockerCompose(s.ctx)
+		s.NoError(err)
+	}
 }
 
 func TestSynchronizerNodeSuite(t *testing.T) {
-	suite.Run(t, new(SynchorizerNodeSuite))
+	suite.Run(t, new(SynchronizerNodeSuite))
 }
 
-func (s *SynchorizerNodeSuite) TestSynchronizerNodeConnection() {
+func (s *SynchronizerNodeSuite) TestSynchronizerNodeConnection() {
 	s.Equal(4, 2+2)
 }

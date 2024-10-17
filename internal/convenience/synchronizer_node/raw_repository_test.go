@@ -18,8 +18,9 @@ import (
 
 type RawNodeSuite struct {
 	suite.Suite
-	node RawNode
-	ctx  context.Context
+	node                       RawNode
+	ctx                        context.Context
+	dockerComposeStartedByTest bool
 }
 
 func (s *RawNodeSuite) SetupTest() {
@@ -27,8 +28,12 @@ func (s *RawNodeSuite) SetupTest() {
 	s.ctx = context.Background()
 	envMap, err := raw.LoadMapEnvFile()
 	s.NoError(err)
-	err = raw.RunDockerCompose(s.ctx)
-	s.NoError(err)
+	pgUp := commons.IsPortInUse(5432)
+	if !pgUp {
+		err = raw.RunDockerCompose(s.ctx)
+		s.NoError(err)
+		s.dockerComposeStartedByTest = true
+	}
 
 	dbName := "rollupsdb"
 	dbPass := "password"
@@ -50,8 +55,10 @@ func (s *RawNodeSuite) SetupTest() {
 	}
 }
 func (s *RawNodeSuite) TearDownTest() {
-	err := raw.StopDockerCompose(s.ctx)
-	s.NoError(err)
+	if s.dockerComposeStartedByTest {
+		err := raw.StopDockerCompose(s.ctx)
+		s.NoError(err)
+	}
 }
 
 func TestRawNodeSuite(t *testing.T) {
