@@ -264,6 +264,7 @@ func (s *NonodoSuite) decodeHex(value string) []byte {
 func (s *NonodoSuite) sendInspect(payload []byte) (*inspect.InspectPostResponse, error) {
 	return s.inspectClient.InspectPostWithBodyWithResponse(
 		s.ctx,
+		devnet.ApplicationAddress,
 		"application/octet-stream",
 		bytes.NewReader(payload),
 	)

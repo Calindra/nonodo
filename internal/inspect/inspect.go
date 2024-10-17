@@ -6,6 +6,7 @@ package inspect
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -41,7 +42,7 @@ type inspectAPI struct {
 }
 
 // Handle POST requests to /.
-func (a *inspectAPI) InspectPost(c echo.Context) error {
+func (a *inspectAPI) InspectPost(c echo.Context, _ string) error {
 	body := c.Request().Body
 	defer body.Close()
 	payload, err := io.ReadAll(body)
@@ -55,9 +56,11 @@ func (a *inspectAPI) InspectPost(c echo.Context) error {
 }
 
 // Handle GET requests to /{payload}.
-func (a *inspectAPI) Inspect(c echo.Context, _ string) error {
-	uri := c.Request().RequestURI[9:] // remove '/inspect/'
+func (a *inspectAPI) Inspect(c echo.Context, appAddress string, _ string) error {
+	toRemove := len(fmt.Sprintf("/inspect/%s/", appAddress))
+	uri := c.Request().RequestURI[toRemove:] // remove '/inspect/<app-address>'
 	payload, err := url.QueryUnescape(uri)
+	slog.Debug("/inspect", "payload", payload)
 	if err != nil {
 		return c.String(http.StatusBadRequest, err.Error())
 	}
