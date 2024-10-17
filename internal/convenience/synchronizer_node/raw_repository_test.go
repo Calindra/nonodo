@@ -2,6 +2,7 @@ package synchronizernode
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"math/big"
 	"strings"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/contracts"
+	"github.com/calindra/nonodo/postgres/raw"
 	"github.com/ethereum/go-ethereum/common"
 	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/suite"
@@ -23,12 +25,34 @@ type RawNodeSuite struct {
 func (s *RawNodeSuite) SetupTest() {
 	commons.ConfigureLog(slog.LevelDebug)
 	s.ctx = context.Background()
+	envMap, err := raw.LoadMapEnvFile()
+	s.NoError(err)
+	err = raw.RunDockerCompose(s.ctx)
+	s.NoError(err)
+
+	dbName := "rollupsdb"
+	dbPass := "password"
+
+	if _, ok := envMap["POSTGRES_PASSWORD"]; ok {
+		dbPass = envMap["POSTGRES_PASSWORD"]
+	}
+
+	if _, ok := envMap["POSTGRES_DB"]; ok {
+		dbName = envMap["POSTGRES_DB"]
+	}
+
+	uri := fmt.Sprintf("postgres://postgres:%s@%s:5432/%s?sslmode=disable", dbPass, raw.DOCKER_COMPOSE_SERVICE, dbName)
+
 	s.node = RawNode{
-		connectionURL: "postgres://postgres:password@localhost:5432/test_rollupsdb?sslmode=disable",
+		connectionURL: uri,
 	}
 }
+func (s *RawNodeSuite) TearDownTest() {
+	err := raw.StopDockerCompose(s.ctx)
+	s.NoError(err)
+}
 
-func XTestRawNodeSuite(t *testing.T) {
+func TestRawNodeSuite(t *testing.T) {
 	suite.Run(t, new(RawNodeSuite))
 }
 

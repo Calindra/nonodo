@@ -3,6 +3,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    ports:
+      - "5432:5432"
     env_file:
       - .env
     healthcheck:
@@ -15,3 +17,7 @@ services:
           "-U",
           "$${POSTGRES_USER}",
         ]
+    volumes:
+      - postgres-raw-data:/var/lib/postgresql/data
+volumes:
+  postgres-raw-data:

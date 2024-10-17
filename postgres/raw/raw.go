@@ -8,6 +8,8 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+
+	"github.com/joho/godotenv"
 )
 
 const (
@@ -26,6 +28,14 @@ func GetFilePath(name string) (string, error) {
 	filePath := path.Join(dir, name)
 
 	return filePath, nil
+}
+
+func LoadMapEnvFile() (map[string]string, error) {
+	path, err := GetFilePath(".env")
+	if err != nil {
+		return nil, err
+	}
+	return godotenv.Read(path)
 }
 
 // check if docker compose command is available
@@ -55,7 +65,7 @@ func RunDockerCompose(stdCtx context.Context) error {
 	}
 	slog.Debug("docker compose file path", "path", filePath)
 
-	cmd := exec.CommandContext(ctx, "docker", "compose", "-f", filePath, "up", DOCKER_COMPOSE_SERVICE, "--wait", "--build", "--remove-orphans")
+	cmd := exec.CommandContext(ctx, "docker", "compose", "-f", filePath, "up", DOCKER_COMPOSE_SERVICE, "--wait")
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {
@@ -76,7 +86,7 @@ func StopDockerCompose(stdCtx context.Context) error {
 		return err
 	}
 
-	cmd := exec.CommandContext(ctx, "docker", "compose", "-f", filePath, "down", "--remove-orphans", "--volumes")
+	cmd := exec.CommandContext(ctx, "docker", "compose", "-f", filePath, "down", "--remove-orphans")
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -98,6 +108,29 @@ func ShowDockerComposeLog(ctx context.Context, filePath string) error {
 	}
 
 	slog.Debug("docker compose logs", "output", string(output))
+
+	return nil
+}
+
+func CleanupDockerCompose(stdCtx context.Context) error {
+	ctx, cancel := context.WithCancel(stdCtx)
+	defer cancel()
+
+	filePath, err := GetFilePath(DOCKER_COMPOSE_FILE)
+	if err != nil {
+		return err
+	}
+
+	cmd := exec.CommandContext(ctx, "docker", "compose", "-f", filePath, "down", "--remove-orphans", "--volumes", "--rmi", "local")
+	output, err := cmd.CombinedOutput()
+
+	if err != nil {
+		slog.Debug("docker compose cleanup failed", "output", string(output))
+		_ = ShowDockerComposeLog(ctx, filePath)
+		return fmt.Errorf("docker compose cleanup failed: %s", err)
+	}
+
+	slog.Debug("docker compose cleanup", "output", string(output))
 
 	return nil
 }
