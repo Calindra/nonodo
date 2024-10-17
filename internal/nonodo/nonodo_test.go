@@ -11,7 +11,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
-	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -54,7 +54,7 @@ func (s *NonodoSuite) TestItProcessesAdvanceInputs() {
 	s.NoError(err)
 	sqliteFileName := fmt.Sprintf("test%d.sqlite3", time.Now().UnixMilli())
 	opts.EnableEcho = true
-	opts.SqliteFile = path.Join(tempDir, sqliteFileName)
+	opts.SqliteFile = filepath.Join(tempDir, sqliteFileName)
 	s.setupTest(&opts)
 	defer os.RemoveAll(tempDir)
 	s.T().Log("sending advance inputs")

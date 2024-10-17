@@ -11,7 +11,7 @@ import (
 	"log/slog"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -137,7 +137,7 @@ func (w AnvilWorker) Start(ctx context.Context, ready chan<- struct{}) error {
 	server.Port = w.Port
 	server.Args = append(server.Args, "--host", fmt.Sprint(w.Address))
 	server.Args = append(server.Args, "--port", fmt.Sprint(w.Port))
-	server.Args = append(server.Args, "--load-state", path.Join(dir, stateFileName))
+	server.Args = append(server.Args, "--load-state", filepath.Join(dir, stateFileName))
 	if !w.Verbose {
 		server.Args = append(server.Args, "--silent")
 	}
@@ -151,7 +151,7 @@ func makeStateTemp() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("anvil: failed to create temp dir: %w", err)
 	}
-	stateFile := path.Join(tempDir, stateFileName)
+	stateFile := filepath.Join(tempDir, stateFileName)
 	const permissions = 0644
 	err = os.WriteFile(stateFile, devnetState, permissions)
 	if err != nil {
