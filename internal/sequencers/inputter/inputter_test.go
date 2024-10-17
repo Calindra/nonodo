@@ -66,8 +66,8 @@ func (s *InputterTestSuite) SetupTest() {
 func (s *InputterTestSuite) TestReadInputsByBlockAndTimestamp() {
 	client, err := ethclient.DialContext(s.ctx, "http://127.0.0.1:8545")
 	s.NoError(err)
-	appAddress := common.HexToAddress("0xab7528bb862fb57e8a2bcd567a2e929a0be56a5e")
-	inputBoxAddress := common.HexToAddress("0x58Df21fE097d4bE5dCf61e01d9ea3f6B81c2E1dB")
+	appAddress := common.HexToAddress(devnet.ApplicationAddress)
+	inputBoxAddress := common.HexToAddress(devnet.InputBoxAddress)
 	inputBox, err := contracts.NewInputBox(inputBoxAddress, client)
 	s.NoError(err)
 	ctx := context.Background()
@@ -92,8 +92,8 @@ func (s *InputterTestSuite) TestReadInputsByBlockAndTimestamp() {
 func (s *InputterTestSuite) TestFindAllInputsByBlockAndTimestampLT() {
 	client, err := ethclient.DialContext(s.ctx, "http://127.0.0.1:8545")
 	s.NoError(err)
-	appAddress := common.HexToAddress("0xab7528bb862fb57e8a2bcd567a2e929a0be56a5e")
-	inputBoxAddress := common.HexToAddress("0x58Df21fE097d4bE5dCf61e01d9ea3f6B81c2E1dB")
+	appAddress := common.HexToAddress(devnet.ApplicationAddress)
+	inputBoxAddress := common.HexToAddress(devnet.InputBoxAddress)
 	inputBox, err := contracts.NewInputBox(inputBoxAddress, client)
 	s.NoError(err)
 	ctx := context.Background()
@@ -118,8 +118,8 @@ func (s *InputterTestSuite) TestFindAllInputsByBlockAndTimestampLT() {
 func (s *InputterTestSuite) TestZeroResultsFindAllInputsByBlockAndTimestampLT() {
 	client, err := ethclient.DialContext(s.ctx, "http://127.0.0.1:8545")
 	s.NoError(err)
-	appAddress := common.HexToAddress("0xab7528bb862fb57e8a2bcd567a2e929a0be56a5e")
-	inputBoxAddress := common.HexToAddress("0x58Df21fE097d4bE5dCf61e01d9ea3f6B81c2E1dB")
+	appAddress := common.HexToAddress(devnet.ApplicationAddress)
+	inputBoxAddress := common.HexToAddress(devnet.InputBoxAddress)
 	inputBox, err := contracts.NewInputBox(inputBoxAddress, client)
 	s.NoError(err)
 	ctx := context.Background()
