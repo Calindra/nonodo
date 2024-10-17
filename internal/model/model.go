@@ -29,6 +29,7 @@ type NonodoModel struct {
 	reportRepository  *cRepos.ReportRepository
 	inputRepository   *cRepos.InputRepository
 	voucherRepository *cRepos.VoucherRepository
+	noticeRepository  *cRepos.NoticeRepository
 }
 
 func (m *NonodoModel) GetInputRepository() *cRepos.InputRepository {
@@ -41,6 +42,7 @@ func NewNonodoModel(
 	reportRepository *cRepos.ReportRepository,
 	inputRepository *cRepos.InputRepository,
 	voucherRepository *cRepos.VoucherRepository,
+	noticeRepository *cRepos.NoticeRepository,
 ) *NonodoModel {
 	return &NonodoModel{
 		state:             &rollupsStateIdle{},
@@ -48,6 +50,7 @@ func NewNonodoModel(
 		reportRepository:  reportRepository,
 		inputRepository:   inputRepository,
 		voucherRepository: voucherRepository,
+		noticeRepository:  noticeRepository,
 	}
 }
 
@@ -180,6 +183,7 @@ func (m *NonodoModel) FinishAndGetNext(accepted bool) (cModel.Input, error) {
 			m.reportRepository,
 			m.inputRepository,
 			m.voucherRepository,
+			m.noticeRepository,
 		)
 		return *input, nil
 	}
@@ -192,30 +196,30 @@ func (m *NonodoModel) FinishAndGetNext(accepted bool) (cModel.Input, error) {
 // Add a voucher to the model.
 // Return the voucher index within the input.
 // Return an error if the state isn't advance.
-func (m *NonodoModel) AddVoucher(destination common.Address, value string, payload []byte) (int, error) {
+func (m *NonodoModel) AddVoucher(appAddress common.Address, destination common.Address, value string, payload []byte) (int, error) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
-	return m.state.addVoucher(destination, value, payload)
+	return m.state.addVoucher(appAddress, destination, value, payload)
 }
 
 // Add a notice to the model.
 // Return the notice index within the input.
 // Return an error if the state isn't advance.
-func (m *NonodoModel) AddNotice(payload []byte) (int, error) {
+func (m *NonodoModel) AddNotice(payload []byte, appAddress common.Address) (int, error) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
-	return m.state.addNotice(payload)
+	return m.state.addNotice(payload, appAddress)
 }
 
 // Add a report to the model.
 // Return an error if the state isn't advance or inspect.
-func (m *NonodoModel) AddReport(payload []byte) error {
+func (m *NonodoModel) AddReport(appAddress common.Address, payload []byte) error {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
-	return m.state.addReport(payload)
+	return m.state.addReport(appAddress, payload)
 }
 
 // Finish the current input with an exception.

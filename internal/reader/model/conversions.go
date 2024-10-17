@@ -4,6 +4,7 @@
 package model
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -71,7 +72,12 @@ func ConvertInput(input cModel.AdvanceInput) (*Input, error) {
 	}, nil
 }
 
-func convertConvenientVoucherV1(cVoucher cModel.ConvenienceVoucher) *Voucher {
+func ConvertConvenientVoucherV1(cVoucher cModel.ConvenienceVoucher) *Voucher {
+	var outputHashesSiblings []string
+	err := json.Unmarshal([]byte(cVoucher.OutputHashesSiblings), &outputHashesSiblings)
+	if err != nil {
+		outputHashesSiblings = []string{}
+	}
 	return &Voucher{
 		Index:       int(cVoucher.OutputIndex),
 		InputIndex:  int(cVoucher.InputIndex),
@@ -79,6 +85,10 @@ func convertConvenientVoucherV1(cVoucher cModel.ConvenienceVoucher) *Voucher {
 		Payload:     cVoucher.Payload,
 		Value:       cVoucher.Value,
 		// Executed:    &cVoucher.Executed,
+		Proof: Proof{
+			OutputIndex:          strconv.FormatUint(cVoucher.OutputIndex, 10),
+			OutputHashesSiblings: outputHashesSiblings,
+		},
 	}
 }
 
@@ -86,6 +96,9 @@ func ConvertToConvenienceFilter(
 	filter []*ConvenientFilter,
 ) ([]*cModel.ConvenienceFilter, error) {
 	filters := []*cModel.ConvenienceFilter{}
+	if filter == nil {
+		return filters, nil
+	}
 	for _, f := range filter {
 		and, err := ConvertToConvenienceFilter(f.And)
 		if err != nil {
@@ -164,20 +177,6 @@ func ConvertToConvenienceFilter(
 				Or:    or,
 			})
 		}
-		// field := f.Field.String()
-		// filters = append(filters, &convenience.ConvenienceFilter{
-		// 	Field: &field,
-		// 	Eq:    f.Eq,
-		// 	Ne:    f.Ne,
-		// 	Gt:    f.Gt,
-		// 	Gte:   f.Gte,
-		// 	Lt:    f.Lt,
-		// 	Lte:   f.Lte,
-		// 	In:    f.In,
-		// 	Nin:   f.Nin,
-		// 	And:   and,
-		// 	Or:    or,
-		// })
 	}
 	return filters, nil
 }
@@ -188,16 +187,25 @@ func ConvertToVoucherConnectionV1(
 ) (*VoucherConnection, error) {
 	convNodes := make([]*Voucher, len(vouchers))
 	for i := range vouchers {
-		convNodes[i] = convertConvenientVoucherV1(vouchers[i])
+		convNodes[i] = ConvertConvenientVoucherV1(vouchers[i])
 	}
 	return NewConnection(offset, total, convNodes), nil
 }
 
 func convertConvenientNoticeV1(cNotice cModel.ConvenienceNotice) *Notice {
+	var outputHashesSiblings []string
+	err := json.Unmarshal([]byte(cNotice.OutputHashesSiblings), &outputHashesSiblings)
+	if err != nil {
+		outputHashesSiblings = []string{}
+	}
 	return &Notice{
 		Index:      int(cNotice.OutputIndex),
 		InputIndex: int(cNotice.InputIndex),
 		Payload:    cNotice.Payload,
+		Proof: Proof{
+			OutputIndex:          strconv.FormatUint(cNotice.OutputIndex, 10),
+			OutputHashesSiblings: outputHashesSiblings,
+		},
 	}
 }
 

@@ -28,15 +28,16 @@ const FinishRetries = 50
 const FinishPollInterval = time.Millisecond * 100
 
 // Register the rollup API to echo
-func Register(e *echo.Echo, model *mdl.NonodoModel, sequencer Sequencer) {
-	var rollupAPI ServerInterface = &RollupAPI{model, sequencer}
+func Register(e *echo.Echo, model *mdl.NonodoModel, sequencer Sequencer, applicationAddress common.Address) {
+	var rollupAPI ServerInterface = &RollupAPI{model, sequencer, applicationAddress}
 	RegisterHandlers(e, rollupAPI)
 }
 
 // Shared struct for request handlers.
 type RollupAPI struct {
-	model     *mdl.NonodoModel
-	sequencer Sequencer
+	model              *mdl.NonodoModel
+	sequencer          Sequencer
+	ApplicationAddress common.Address
 }
 
 type Sequencer interface {
@@ -169,7 +170,7 @@ func (r *RollupAPI) AddVoucher(c echo.Context) error {
 		return err
 	}
 
-	index, err := r.model.AddVoucher(common.Address(destination), request.Value, encodedPayload)
+	index, err := r.model.AddVoucher(r.ApplicationAddress, common.Address(destination), request.Value, encodedPayload)
 	if err != nil {
 		slog.Error("AddVoucher", "err", err)
 		return c.String(http.StatusInternalServerError, err.Error())
@@ -214,7 +215,8 @@ func (r *RollupAPI) AddNotice(c echo.Context) error {
 		return err
 	}
 	// talk to model
-	index, err := r.model.AddNotice(encodedPayload)
+	slog.Debug("RollupAPI", "encodedPayload", common.Bytes2Hex(encodedPayload))
+	index, err := r.model.AddNotice(encodedPayload, r.ApplicationAddress)
 	if err != nil {
 		slog.Error("add notice error", "err", err)
 		return c.String(http.StatusForbidden, err.Error())
@@ -244,7 +246,7 @@ func (r *RollupAPI) AddReport(c echo.Context) error {
 	}
 
 	// talk to model
-	err = r.model.AddReport(payload)
+	err = r.model.AddReport(r.ApplicationAddress, payload)
 	if err != nil {
 		return c.String(http.StatusForbidden, err.Error())
 	}

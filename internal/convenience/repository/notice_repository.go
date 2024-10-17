@@ -10,6 +10,7 @@ import (
 
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/convenience/model"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -24,7 +25,9 @@ func (c *NoticeRepository) CreateTables() error {
 		payload 		text,
 		input_index		integer,
 		output_index	integer,
-		PRIMARY KEY (input_index, output_index));`
+		app_contract    text,
+		output_hashes_siblings text,
+		PRIMARY KEY (input_index, output_index, app_contract));`
 
 	// execute a query on the server
 	_, err := c.Db.Exec(schema)
@@ -45,7 +48,9 @@ func (c *NoticeRepository) Create(
 	insertSql := `INSERT INTO notices (
 		payload,
 		input_index,
-		output_index) VALUES ($1, $2, $3)`
+		output_index,
+		app_contract,
+		output_hashes_siblings) VALUES ($1, $2, $3, $4, $5)`
 
 	exec := DBExecutor{&c.Db}
 	_, err := exec.ExecContext(ctx,
@@ -53,6 +58,8 @@ func (c *NoticeRepository) Create(
 		data.Payload,
 		data.InputIndex,
 		data.OutputIndex,
+		data.AppContract,
+		data.OutputHashesSiblings,
 	)
 	if err != nil {
 		slog.Error("Error creating notice", "Error", err)
@@ -154,24 +161,55 @@ func (c *NoticeRepository) FindAllNotices(
 	return pageResult, nil
 }
 
-func (c *NoticeRepository) FindNoticeByOutputIndex(
+func (c *NoticeRepository) FindNoticeByOutputIndexAndAppContract(
 	ctx context.Context, outputIndex uint64,
+	appContract *common.Address,
 ) (*model.ConvenienceNotice, error) {
-	query := `SELECT * FROM notices WHERE output_index = $1 LIMIT 1`
-	stmt, err := c.Db.Preparex(query)
+	rows, err := c.queryByOutputIndexAndAppContract(ctx, outputIndex, appContract)
+
 	if err != nil {
+		slog.Error("database error", "err", err)
 		return nil, err
 	}
-	defer stmt.Close()
-	var p model.ConvenienceNotice
-	err = stmt.GetContext(ctx, &p, outputIndex)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
+	defer rows.Close()
+
+	if rows.Next() {
+		var cNotice model.ConvenienceNotice
+		if err := rows.StructScan(&cNotice); err != nil {
+			return nil, err
 		}
+
+		return &cNotice, nil
+	}
+
+	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-	return &p, nil
+
+	return nil, nil
+}
+
+func (c *NoticeRepository) queryByOutputIndexAndAppContract(
+	ctx context.Context,
+	outputIndex uint64,
+	appContract *common.Address,
+) (*sqlx.Rows, error) {
+	if appContract != nil {
+		return c.Db.QueryxContext(ctx, `
+			SELECT * FROM notices
+			WHERE output_index = $1 and app_contract = $2
+			LIMIT 1`,
+			outputIndex,
+			appContract.Hex(),
+		)
+	} else {
+		return c.Db.QueryxContext(ctx, `
+			SELECT * FROM notices
+			WHERE output_index = $1
+			LIMIT 1`,
+			outputIndex,
+		)
+	}
 }
 
 func (c *NoticeRepository) FindByInputAndOutputIndex(
@@ -216,11 +254,21 @@ func transformToNoticeQuery(
 			} else {
 				return "", nil, 0, fmt.Errorf("operation not implemented")
 			}
+		} else if *filter.Field == model.APP_CONTRACT {
+			if filter.Eq != nil {
+				where = append(
+					where,
+					fmt.Sprintf("app_contract = $%d ", count),
+				)
+				args = append(args, *filter.Eq)
+				count += 1
+			} else {
+				return "", nil, 0, fmt.Errorf("operation not implemented")
+			}
 		} else {
 			return "", nil, 0, fmt.Errorf("unexpected field %s", *filter.Field)
 		}
 	}
 	query += strings.Join(where, " and ")
-	slog.Debug("Query", "query", query, "args", args)
 	return query, args, count, nil
 }

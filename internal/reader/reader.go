@@ -7,8 +7,13 @@ package reader
 //go:generate go run github.com/99designs/gqlgen generate
 
 import (
+	"context"
+	"fmt"
+	"log/slog"
+
 	"github.com/99designs/gqlgen/graphql/handler"
 	"github.com/99designs/gqlgen/graphql/playground"
+	cModel "github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/convenience/services"
 	nonodomodel "github.com/calindra/nonodo/internal/model"
 	"github.com/calindra/nonodo/internal/reader/graph"
@@ -36,7 +41,24 @@ func Register(
 		graphqlHandler.ServeHTTP(c.Response(), c.Request())
 		return nil
 	})
+	e.POST("/graphql/:appContract", func(c echo.Context) error {
+		appContract := c.Param("appContract")
+		slog.Debug("path parameter received: ", "app_contract", appContract)
+		ctx := context.WithValue(c.Request().Context(), cModel.AppContractKey, appContract)
+		c.SetRequest(c.Request().WithContext(ctx))
+		graphqlHandler.ServeHTTP(c.Response(), c.Request())
+		return nil
+	})
 	e.GET("/graphql", func(c echo.Context) error {
+		playgroundHandler.ServeHTTP(c.Response(), c.Request())
+		return nil
+	})
+	e.GET("/graphql/:appContract", func(c echo.Context) error {
+		appContract := c.Param("appContract")
+		slog.Debug("graphql playground", "appContract", appContract)
+		playgroundHandler := playground.Handler("GraphQL",
+			fmt.Sprintf("/graphql/%s", appContract),
+		)
 		playgroundHandler.ServeHTTP(c.Response(), c.Request())
 		return nil
 	})

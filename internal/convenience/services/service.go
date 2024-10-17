@@ -7,6 +7,7 @@ import (
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/convenience/repository"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 type ConvenienceService struct {
@@ -79,7 +80,8 @@ func (s *ConvenienceService) CreateInput(
 	ctx context.Context,
 	input *model.AdvanceInput,
 ) (*model.AdvanceInput, error) {
-	inputInDb, err := s.inputRepository.FindByID(ctx, input.ID)
+
+	inputInDb, err := s.inputRepository.FindByIDAndAppContract(ctx, input.ID, &input.AppContract)
 
 	if err != nil {
 		return nil, err
@@ -203,11 +205,12 @@ func (c *ConvenienceService) FindAllByInputIndex(
 	)
 }
 
-func (c *ConvenienceService) FindVoucherByOutputIndex(
+func (c *ConvenienceService) FindVoucherByOutputIndexAndAppContract(
 	ctx context.Context, outputIndex uint64,
+	appContract *common.Address,
 ) (*model.ConvenienceVoucher, error) {
-	return c.voucherRepository.FindVoucherByOutputIndex(
-		ctx, outputIndex,
+	return c.voucherRepository.FindVoucherByOutputIndexAndAppContract(
+		ctx, outputIndex, appContract,
 	)
 }
 
@@ -219,11 +222,12 @@ func (c *ConvenienceService) FindVoucherByInputAndOutputIndex(
 	)
 }
 
-func (c *ConvenienceService) FindNoticeByOutputIndex(
+func (c *ConvenienceService) FindNoticeByOutputIndexAndAppContract(
 	ctx context.Context, outputIndex uint64,
+	appContract *common.Address,
 ) (*model.ConvenienceNotice, error) {
-	return c.noticeRepository.FindNoticeByOutputIndex(
-		ctx, outputIndex,
+	return c.noticeRepository.FindNoticeByOutputIndexAndAppContract(
+		ctx, outputIndex, appContract,
 	)
 }
 
@@ -233,16 +237,4 @@ func (c *ConvenienceService) FindNoticeByInputAndOutputIndex(
 	return c.noticeRepository.FindByInputAndOutputIndex(
 		ctx, inputIndex, outputIndex,
 	)
-}
-
-func (c *ConvenienceService) FindInputByID(
-	ctx context.Context, id string,
-) (*model.AdvanceInput, error) {
-	return c.inputRepository.FindByID(ctx, id)
-}
-
-func (c *ConvenienceService) FindByIndex(
-	ctx context.Context, inputIndex int,
-) (*model.AdvanceInput, error) {
-	return c.inputRepository.FindByIndex(ctx, inputIndex)
 }

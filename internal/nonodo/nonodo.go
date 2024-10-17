@@ -17,6 +17,7 @@ import (
 
 	"github.com/calindra/nonodo/internal/convenience"
 	"github.com/calindra/nonodo/internal/convenience/synchronizer"
+	synchronizernode "github.com/calindra/nonodo/internal/convenience/synchronizer_node"
 	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/calindra/nonodo/internal/echoapp"
 	"github.com/calindra/nonodo/internal/health"
@@ -86,6 +87,8 @@ type NonodoOpts struct {
 	AvailFromBlock      uint64
 	AvailEnabled        bool
 	PaioServerUrl       string
+	DbRawUrl            string
+	RawEnabled          bool
 }
 
 // Create the options struct with default values.
@@ -141,6 +144,8 @@ func NewNonodoOpts() NonodoOpts {
 		AvailEnabled:        false,
 		AutoCount:           false,
 		PaioServerUrl:       "https://cartesi-paio-avail-turing.fly.dev",
+		DbRawUrl:            "postgres://postgres:password@localhost:5432/test_rollupsdb?sslmode=disable",
+		RawEnabled:          false,
 	}
 }
 
@@ -151,23 +156,7 @@ func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 	container := convenience.NewContainer(*db, opts.AutoCount)
 	decoder := container.GetOutputDecoder()
 	convenienceService := container.GetConvenienceService()
-
-	var adapter reader.Adapter
-
-	if opts.NodeVersion == "v1" {
-		adapter = reader.NewAdapterV1(db, convenienceService)
-	} else {
-		graphileUrl, err := url.Parse(opts.GraphileUrl)
-		if err != nil {
-			slog.Error("Error parsing Graphile URL", "error", err)
-			panic(err)
-		}
-
-		httpClient := container.GetGraphileClient(*graphileUrl, opts.LoadTestMode)
-		inputBlobAdapter := reader.InputBlobAdapter{}
-		adapter = reader.NewAdapterV2(convenienceService, httpClient, inputBlobAdapter)
-	}
-
+	adapter := reader.NewAdapterV1(db, convenienceService)
 	if opts.RpcUrl == "" && !opts.DisableDevnet {
 		anvilLocation, err := handleAnvilInstallation()
 		if err != nil {
@@ -218,6 +207,7 @@ func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 		container.GetReportRepository(),
 		container.GetInputRepository(),
 		container.GetVoucherRepository(),
+		container.GetNoticeRepository(),
 	)
 
 	e := echo.New()
@@ -239,6 +229,11 @@ func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 		w.Workers = append(w.Workers, salsa.SalsaWorker{
 			Address: opts.SalsaUrl,
 		})
+	}
+
+	if opts.RawEnabled {
+		rawSequencer := synchronizernode.NewSynchronizerCreateWorker(container, opts.DbRawUrl)
+		w.Workers = append(w.Workers, rawSequencer)
 	}
 
 	cleanSync := synchronizer.NewCleanSynchronizer(container.GetSyncRepository(), nil)
@@ -315,6 +310,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		container.GetReportRepository(),
 		container.GetInputRepository(),
 		container.GetVoucherRepository(),
+		container.GetNoticeRepository(),
 	)
 	e := echo.New()
 	e.Use(middleware.CORS())
@@ -433,7 +429,12 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		sequencer = model.NewInputBoxSequencer(modelInstance)
 	}
 
-	rollup.Register(re, modelInstance, sequencer)
+	if opts.RawEnabled {
+		rawSequencer := synchronizernode.NewSynchronizerCreateWorker(container, opts.DbRawUrl)
+		w.Workers = append(w.Workers, rawSequencer)
+	}
+
+	rollup.Register(re, modelInstance, sequencer, common.HexToAddress(opts.ApplicationAddress))
 	w.Workers = append(w.Workers, supervisor.HttpWorker{
 		Address: fmt.Sprintf("%v:%v", opts.HttpAddress, opts.HttpRollupsPort),
 		Handler: re,

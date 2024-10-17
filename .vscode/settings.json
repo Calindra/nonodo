@@ -93,5 +93,10 @@
         "watchexec",
         "Zehui",
         "Zheng"
+    ],
+    "recommendations": [
+        "mkhl.direnv",
+        "golang.go",
+        "ms-azuretools.vscode-docker"
     ]
 }

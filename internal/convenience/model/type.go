@@ -16,6 +16,7 @@ const VOUCHER_SELECTOR = "237a816f" // deprecated ef615e2f
 const DELEGATED_CALL_VOUCHER_SELECTOR = "10321e8b"
 const NOTICE_SELECTOR = "c258d6e5"
 const INPUT_INDEX = "InputIndex"
+const APP_CONTRACT = "AppContract"
 
 // Completion status for inputs.
 type CompletionStatus int
@@ -28,21 +29,23 @@ const (
 )
 
 type ConvenienceNotice struct {
-	Payload     string `db:"payload"`
-	InputIndex  uint64 `db:"input_index"`
-	OutputIndex uint64 `db:"output_index"`
+	AppContract          string `db:"app_contract"`
+	Payload              string `db:"payload"`
+	InputIndex           uint64 `db:"input_index"`
+	OutputIndex          uint64 `db:"output_index"`
+	OutputHashesSiblings string `db:"output_hashes_siblings"`
 }
 
 // Voucher metadata type
 type ConvenienceVoucher struct {
-	Destination common.Address `db:"destination"`
-	Payload     string         `db:"payload"`
-	InputIndex  uint64         `db:"input_index"`
-	OutputIndex uint64         `db:"output_index"`
-	Executed    bool           `db:"executed"`
-	Value       string         `db:"value"`
-
-	// Proof we can fetch from the original GraphQL
+	Destination          common.Address `db:"destination"`
+	Payload              string         `db:"payload"`
+	InputIndex           uint64         `db:"input_index"`
+	OutputIndex          uint64         `db:"output_index"`
+	Executed             bool           `db:"executed"`
+	Value                string         `db:"value"`
+	AppContract          common.Address `db:"app_contract"`
+	OutputHashesSiblings string         `db:"output_hashes_siblings"`
 
 	// future improvements
 	// Contract        common.Address
@@ -88,9 +91,10 @@ type Input interface{}
 
 // Rollups report type.
 type Report struct {
-	Index      int
-	InputIndex int
-	Payload    []byte
+	Index       int
+	InputIndex  int
+	Payload     []byte
+	AppContract common.Address `json:"app_contract"`
 }
 
 // Rollups advance input type.
@@ -183,3 +187,7 @@ type RepoSynchronizer interface {
 	Count(ctx context.Context) (uint64, error)
 	GetLastFetched(ctx context.Context) (*SynchronizerFetch, error)
 }
+
+type contextKey string
+
+const AppContractKey contextKey = "appContract"
