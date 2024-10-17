@@ -14,6 +14,10 @@ query State {
             node {
               index
               payload
+              proof {
+                outputIndex
+                outputHashesSiblings
+              }
             }
           }
         }
@@ -23,6 +27,10 @@ query State {
               index
               payload
               destination
+              proof {
+                outputIndex
+                outputHashesSiblings
+              }
             }
           }
         }

@@ -143,7 +143,7 @@ func NewNonodoOpts() NonodoOpts {
 		AvailFromBlock:      0,
 		AvailEnabled:        false,
 		AutoCount:           false,
-		PaioServerUrl:       "https://cartesi-paio-avail-turing.fly.dev/transaction",
+		PaioServerUrl:       "https://cartesi-paio-avail-turing.fly.dev",
 		DbRawUrl:            "postgres://postgres:password@localhost:5432/rollupsdb?sslmode=disable",
 		RawEnabled:          false,
 	}
@@ -156,23 +156,7 @@ func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 	container := convenience.NewContainer(*db, opts.AutoCount)
 	decoder := container.GetOutputDecoder()
 	convenienceService := container.GetConvenienceService()
-
-	var adapter reader.Adapter
-
-	if opts.NodeVersion == "v1" {
-		adapter = reader.NewAdapterV1(db, convenienceService)
-	} else {
-		graphileUrl, err := url.Parse(opts.GraphileUrl)
-		if err != nil {
-			slog.Error("Error parsing Graphile URL", "error", err)
-			panic(err)
-		}
-
-		httpClient := container.GetGraphileClient(*graphileUrl, opts.LoadTestMode)
-		inputBlobAdapter := reader.InputBlobAdapter{}
-		adapter = reader.NewAdapterV2(convenienceService, httpClient, inputBlobAdapter)
-	}
-
+	adapter := reader.NewAdapterV1(db, convenienceService)
 	if opts.RpcUrl == "" && !opts.DisableDevnet {
 		anvilLocation, err := handleAnvilInstallation()
 		if err != nil {
@@ -223,6 +207,7 @@ func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 		container.GetReportRepository(),
 		container.GetInputRepository(),
 		container.GetVoucherRepository(),
+		container.GetNoticeRepository(),
 	)
 
 	e := echo.New()
@@ -325,6 +310,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		container.GetReportRepository(),
 		container.GetInputRepository(),
 		container.GetVoucherRepository(),
+		container.GetNoticeRepository(),
 	)
 	e := echo.New()
 	e.Use(middleware.CORS())
@@ -448,7 +434,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		w.Workers = append(w.Workers, rawSequencer)
 	}
 
-	rollup.Register(re, modelInstance, sequencer)
+	rollup.Register(re, modelInstance, sequencer, common.HexToAddress(opts.ApplicationAddress))
 	w.Workers = append(w.Workers, supervisor.HttpWorker{
 		Address: fmt.Sprintf("%v:%v", opts.HttpAddress, opts.HttpRollupsPort),
 		Handler: re,

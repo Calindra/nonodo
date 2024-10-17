@@ -25,6 +25,9 @@ models:
   Voucher:
     model:
       - github.com/calindra/nonodo/internal/reader/model.Voucher
+  Proof:
+    model:
+      - github.com/calindra/nonodo/internal/reader/model.Proof
   Notice:
     model:
       - github.com/calindra/nonodo/internal/reader/model.Notice

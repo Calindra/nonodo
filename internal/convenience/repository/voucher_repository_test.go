@@ -4,15 +4,12 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"os"
-	"path"
 	"testing"
-	"time"
 
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/convenience/model"
+	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/jmoiron/sqlx"
 	_ "github.com/ncruces/go-sqlite3/driver"
 	_ "github.com/ncruces/go-sqlite3/embed"
 	"github.com/stretchr/testify/suite"
@@ -21,22 +18,19 @@ import (
 type VoucherRepositorySuite struct {
 	suite.Suite
 	voucherRepository *VoucherRepository
+	dbFactory         *commons.DbFactory
 }
 
 func (s *VoucherRepositorySuite) SetupTest() {
 	commons.ConfigureLog(slog.LevelDebug)
-	tempDir, err := os.MkdirTemp("", "")
-	s.NoError(err)
-	sqliteFileName := fmt.Sprintf("test%d.sqlite3", time.Now().UnixMilli())
-	sqliteFileName = path.Join(tempDir, sqliteFileName)
-	db := sqlx.MustConnect("sqlite3", sqliteFileName)
-	// db := sqlx.MustConnect("sqlite3", ":memory:")
+	s.dbFactory = commons.NewDbFactory()
+	db := s.dbFactory.CreateDb("voucher.sqlite3")
 	outputRepository := OutputRepository{*db}
 	s.voucherRepository = &VoucherRepository{
 		Db: *db, OutputRepository: outputRepository,
 	}
 	noticeRepository := NoticeRepository{*db, outputRepository, false}
-	err = noticeRepository.CreateTables()
+	err := noticeRepository.CreateTables()
 	s.NoError(err)
 	err = s.voucherRepository.CreateTables()
 	s.NoError(err)
@@ -60,18 +54,21 @@ func (s *VoucherRepositorySuite) TestCreateVoucher() {
 
 func (s *VoucherRepositorySuite) TestFindVoucher() {
 	ctx := context.Background()
+	appAddress := common.HexToAddress(devnet.ApplicationAddress)
 	voucherSaved, err := s.voucherRepository.CreateVoucher(ctx, &model.ConvenienceVoucher{
 		Destination: common.HexToAddress("0x26A61aF89053c847B4bd5084E2caFe7211874a29"),
 		Payload:     "0x0011",
 		InputIndex:  1,
 		OutputIndex: 2,
 		Executed:    false,
+		AppContract: appAddress,
 	})
 	s.NoError(err)
 	voucher, err := s.voucherRepository.FindVoucherByInputAndOutputIndex(ctx, voucherSaved.InputIndex, voucherSaved.OutputIndex)
 	s.NoError(err)
 	fmt.Println(voucher.Destination)
 	s.Equal("0x26A61aF89053c847B4bd5084E2caFe7211874a29", voucher.Destination.String())
+	s.Equal(appAddress.Hex(), voucher.AppContract.Hex())
 	s.Equal("0x0011", voucher.Payload)
 	s.Equal(1, int(voucher.InputIndex))
 	s.Equal(2, int(voucher.OutputIndex))
@@ -81,11 +78,12 @@ func (s *VoucherRepositorySuite) TestFindVoucher() {
 func (s *VoucherRepositorySuite) TestFindVoucherExecuted() {
 	ctx := context.Background()
 	_, err := s.voucherRepository.CreateVoucher(ctx, &model.ConvenienceVoucher{
-		Destination: common.HexToAddress("0x26A61aF89053c847B4bd5084E2caFe7211874a29"),
-		Payload:     "0x0011",
-		InputIndex:  1,
-		OutputIndex: 2,
-		Executed:    true,
+		Destination:          common.HexToAddress("0x26A61aF89053c847B4bd5084E2caFe7211874a29"),
+		Payload:              "0x0011",
+		InputIndex:           1,
+		OutputIndex:          2,
+		Executed:             true,
+		OutputHashesSiblings: `["0x01","0x02"]`,
 	})
 	s.NoError(err)
 	voucher, err := s.voucherRepository.FindVoucherByInputAndOutputIndex(ctx, 1, 2)
@@ -96,6 +94,7 @@ func (s *VoucherRepositorySuite) TestFindVoucherExecuted() {
 	s.Equal(1, int(voucher.InputIndex))
 	s.Equal(2, int(voucher.OutputIndex))
 	s.Equal(true, voucher.Executed)
+	s.Equal(`["0x01","0x02"]`, voucher.OutputHashesSiblings)
 }
 
 func (s *VoucherRepositorySuite) TestCountVoucher() {
