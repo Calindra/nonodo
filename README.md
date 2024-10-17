@@ -127,7 +127,7 @@ application.
 
 ```sh
 INPUT=0xdeadbeef; \
-INPUT_BOX_ADDRESS=0x58Df21fE097d4bE5dCf61e01d9ea3f6B81c2E1dB; \
+INPUT_BOX_ADDRESS=0x593E5BCf894D6829Dd26D0810DA7F064406aebB6; \
 APPLICATION_ADDRESS=0xab7528bb862fb57e8a2bcd567a2e929a0be56a5e; \
 cast send \
     --mnemonic "test test test test test test test test test test test junk" \
@@ -220,8 +220,8 @@ NoNodo is compatible with the following version of the Cartesi Rollups.
 
 | Component                 | Version                                                                    |
 | ------------------------- | -------------------------------------------------------------------------- |
-| Cartesi Rollups Contracts | [v1.1.0](https://github.com/cartesi/rollups-contracts/releases/tag/v1.1.0) |
-| Cartesi Rollups Node      | [v1.2.0](https://github.com/cartesi/rollups-node/releases/tag/v1.2.0)      |
+| Cartesi Rollups Contracts | [v2.0.0](https://github.com/cartesi/rollups-contracts/releases/tag/v2.0.0) |
+| Cartesi Rollups Node      | [v2.0.0](https://github.com/cartesi/rollups-node/releases/tag/v2.0.0)      |
 
 ## Avail Integration
 
