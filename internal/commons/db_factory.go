@@ -3,7 +3,7 @@ package commons
 import (
 	"log/slog"
 	"os"
-	"path"
+	"path/filepath"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -31,7 +31,7 @@ func NewDbFactory() *DbFactory {
 
 func (d *DbFactory) CreateDb(sqliteFileName string) *sqlx.DB {
 	// db := sqlx.MustConnect("sqlite3", ":memory:")
-	sqlitePath := path.Join(d.TempDir, sqliteFileName)
+	sqlitePath := filepath.Join(d.TempDir, sqliteFileName)
 	slog.Info("Creating db attempting", "sqlitePath", sqlitePath)
 	return sqlx.MustConnect("sqlite3", sqlitePath)
 }

@@ -12,7 +12,7 @@ import (
 	"math/big"
 	"net/url"
 	"os"
-	"path"
+	"path/filepath"
 	"time"
 
 	"github.com/calindra/nonodo/internal/convenience"
@@ -273,7 +273,7 @@ func handleSQLite(opts NonodoOpts) *sqlx.DB {
 		if err != nil {
 			panic(err)
 		}
-		sqliteFile = path.Join(sqlitePath, "nonodo.sqlite3")
+		sqliteFile = filepath.Join(sqlitePath, "nonodo.sqlite3")
 		slog.Debug("SQLite3 file created", "path", sqliteFile)
 	}
 
