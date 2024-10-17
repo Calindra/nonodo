@@ -1,0 +1,21 @@
+services:
+  postgres-raw:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready",
+          "-d",
+          "$${POSTGRES_DB}",
+          "-U",
+          "$${POSTGRES_USER}",
+        ]
+      interval: 5s
+      timeout: 20s
+      retries: 5
+      start_period: 5s

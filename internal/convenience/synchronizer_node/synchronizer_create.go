@@ -68,6 +68,8 @@ func (s SynchronizerCreateWorker) WatchNewInputs(stdCtx context.Context, db *sql
 		return err
 	}
 
+	page := &Pagination{Limit: LIMIT}
+
 	for {
 		errCh := make(chan error)
 
@@ -79,7 +81,7 @@ func (s SynchronizerCreateWorker) WatchNewInputs(stdCtx context.Context, db *sql
 					return
 				case <-time.After(DEFAULT_TIMEOUT):
 				default:
-					inputs, err := s.DbRaw.FindAllInputsByFilter(ctx, FilterInput{IDgt: latestRawID, IsStatusNone: true}, nil)
+					inputs, err := s.DbRaw.FindAllInputsByFilter(ctx, FilterInput{IDgt: latestRawID, IsStatusNone: true}, page)
 					if err != nil {
 						errCh <- err
 						return

@@ -48,8 +48,8 @@ type FilterOutput struct {
 }
 
 type Pagination struct {
-	Limit  uint64
-	Offset uint64
+	Limit uint64
+	// Offset uint64
 }
 
 type FilterInput struct {
@@ -79,9 +79,7 @@ func (s *RawNode) FindAllInputsByFilter(ctx context.Context, filter FilterInput,
 	}
 
 	limit := LIMIT
-	offset := uint64(0)
 	if pag != nil {
-		offset = pag.Offset
 		limit = pag.Limit
 	}
 
@@ -98,9 +96,9 @@ func (s *RawNode) FindAllInputsByFilter(ctx context.Context, filter FilterInput,
 		args = append(args, "NONE")
 	}
 
-	pagination := fmt.Sprintf(" OFFSET $%d LIMIT $%d", bindvarIdx, bindvarIdx+1)
+	pagination := fmt.Sprintf(" LIMIT $%d", bindvarIdx)
 	// bindvarIdx += 2
-	args = append(args, offset, limit)
+	args = append(args, limit)
 
 	query := baseQuery + additionalFilter + pagination
 	slog.Debug("Query", "query", query)

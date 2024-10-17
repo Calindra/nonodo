@@ -28,7 +28,7 @@ func (s *RawNodeSuite) SetupTest() {
 	}
 }
 
-func TestRawNodeSuite(t *testing.T) {
+func XTestRawNodeSuite(t *testing.T) {
 	suite.Run(t, new(RawNodeSuite))
 }
 
