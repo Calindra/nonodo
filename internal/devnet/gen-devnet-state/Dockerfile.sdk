@@ -1,0 +1,27 @@
+# syntax=docker/dockerfile:1
+FROM ghcr.io/cartesi/sdk:0.11.0
+
+ENV CONTRACT_VERSION=2.0.0-rc.10
+
+ADD https://github.com/cartesi/rollups-contracts/archive/refs/tags/v${CONTRACT_VERSION}.tar.gz /tmp/contracts.tar.gz
+
+RUN <<EOF
+    mkdir -pv /tmp/contracts
+    tar -xvzf /tmp/contracts.tar.gz -C /tmp/contracts
+EOF
+
+WORKDIR /tmp/contracts/rollups-contracts-${CONTRACT_VERSION}
+
+RUN <<EOF
+    npx corepack install
+    npx corepack pnpm install --verbose
+    npm run build
+    nohup anvil&
+    PID=$!
+    npm run deploy:development
+    kill -9 $PID
+    npm cache clean --force
+    rm -rfv /tmp/contracts contracts.tar.gz
+EOF
+
+WORKDIR /mnt
