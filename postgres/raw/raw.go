@@ -10,6 +10,12 @@ import (
 	"runtime"
 )
 
+const (
+	DOCKER_COMPOSE_FILE     = "compose.yml"
+	DOCKER_COMPOSE_SERVICE  = "postgres-raw"
+	DOCKER_COMPOSE_LOGS_MAX = uint8(10)
+)
+
 func GetFilePath(name string) (string, error) {
 	_, xdir, _, ok := runtime.Caller(0)
 	if !ok {
@@ -17,25 +23,13 @@ func GetFilePath(name string) (string, error) {
 	}
 
 	dir := filepath.Dir(xdir)
-
-	slog.Debug("current directory", "dir", dir)
-
 	filePath := path.Join(dir, name)
-
-	slog.Debug("file path", "path", filePath)
 
 	return filePath, nil
 }
 
-func RunDockerCompose(ctx context.Context) error {
-	filePath, err := GetFilePath("compose.yml")
-	if err != nil {
-		return err
-	}
-
-	slog.Debug("docker compose file path", "path", filePath)
-
-	// check if docker compose command is available
+// check if docker compose command is available
+func CheckDockerCompose(ctx context.Context) error {
 	cmd := exec.CommandContext(ctx, "docker", "compose", "version")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -43,30 +37,67 @@ func RunDockerCompose(ctx context.Context) error {
 	}
 	slog.Debug("docker compose version", "output", string(output))
 
-	cmd = exec.CommandContext(ctx, "docker", "compose", "-f", filePath, "up", "--wait")
-	output, err = cmd.CombinedOutput()
+	return nil
+}
+
+func RunDockerCompose(stdCtx context.Context) error {
+	ctx, cancel := context.WithCancel(stdCtx)
+	defer cancel()
+
+	err := CheckDockerCompose(ctx)
+	if err != nil {
+		return err
+	}
+
+	filePath, err := GetFilePath(DOCKER_COMPOSE_FILE)
+	if err != nil {
+		return err
+	}
+	slog.Debug("docker compose file path", "path", filePath)
+
+	cmd := exec.CommandContext(ctx, "docker", "compose", "-f", filePath, "up", DOCKER_COMPOSE_SERVICE, "--wait", "--build", "--remove-orphans")
+	output, err := cmd.CombinedOutput()
 
 	if err != nil {
 		slog.Debug("docker compose up failed", "output", string(output))
+		_ = ShowDockerComposeLog(ctx, filePath)
 		return fmt.Errorf("docker compose up failed: %s", err)
 	}
 
 	return nil
 }
 
-func StopDockerCompose(ctx context.Context) error {
-	filePath, err := GetFilePath("compose.yml")
+func StopDockerCompose(stdCtx context.Context) error {
+	ctx, cancel := context.WithCancel(stdCtx)
+	defer cancel()
+
+	filePath, err := GetFilePath(DOCKER_COMPOSE_FILE)
 	if err != nil {
 		return err
 	}
 
-	cmd := exec.CommandContext(ctx, "docker", "compose", "-f", filePath, "down")
+	cmd := exec.CommandContext(ctx, "docker", "compose", "-f", filePath, "down", "--remove-orphans", "--volumes")
 
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		slog.Debug("docker compose down failed", "output", string(output))
+		_ = ShowDockerComposeLog(ctx, filePath)
 		return fmt.Errorf("docker compose down failed: %s", err)
 	}
+
+	return nil
+}
+
+func ShowDockerComposeLog(ctx context.Context, filePath string) error {
+	cmd := exec.CommandContext(ctx, "docker", "compose", "-f", filePath, "logs", DOCKER_COMPOSE_SERVICE, "--tail", string(DOCKER_COMPOSE_LOGS_MAX))
+	output, err := cmd.CombinedOutput()
+
+	if err != nil {
+		slog.Debug("docker compose logs failed", "output", string(output))
+		return fmt.Errorf("docker compose logs failed: %s", err)
+	}
+
+	slog.Debug("docker compose logs", "output", string(output))
 
 	return nil
 }

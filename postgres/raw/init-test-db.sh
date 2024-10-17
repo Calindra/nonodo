@@ -10,6 +10,6 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
 EOSQL
 
 # Run all SQL ignore errors
-for f in /docker-entrypoint-initdb.d/*.sql; do
+for f in /sql/*.sql; do
 	psql -v ON_ERROR_STOP=0 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" -f $f
 done
