@@ -38,10 +38,6 @@ func (s *SynchronizerNodeSuite) SetupTest() {
 	s.ctx, s.timeoutCancel = context.WithTimeout(context.Background(), timeout)
 	s.workerResult = make(chan error)
 
-	s.workerCtx, s.workerCancel = context.WithCancel(s.ctx)
-	wr := NewSynchronizerCreateWorker(s.container, dbRawUrl)
-	w.Workers = append(w.Workers, wr)
-
 	// Temp
 	tempDir, err := os.MkdirTemp("", "")
 	s.NoError(err)
@@ -52,6 +48,10 @@ func (s *SynchronizerNodeSuite) SetupTest() {
 
 	db := sqlx.MustConnect("sqlite3", sqliteFileName)
 	s.container = convenience.NewContainer(*db, false)
+
+	s.workerCtx, s.workerCancel = context.WithCancel(s.ctx)
+	wr := NewSynchronizerCreateWorker(s.container, dbRawUrl)
+	w.Workers = append(w.Workers, wr)
 
 	pgUp := commons.IsPortInUse(5432)
 	if !pgUp {
