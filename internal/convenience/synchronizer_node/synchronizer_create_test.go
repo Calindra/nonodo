@@ -24,7 +24,7 @@ type SynchronizerNodeSuite struct {
 	workerResult               chan error
 	inputRepository            *repository.InputRepository
 	inputRefRepository         *repository.RawInputRefRepository
-	dbFactory                  commons.DbFactory
+	dbFactory                  *commons.DbFactory
 }
 
 func (s *SynchronizerNodeSuite) SetupSuite() {
@@ -53,6 +53,7 @@ func (s *SynchronizerNodeSuite) SetupTest() {
 	s.tempDir = tempDir
 
 	// Database
+	s.dbFactory = commons.NewDbFactory()
 	db, err := s.dbFactory.CreateDbCtx(s.ctx, "input.sqlite3")
 	s.NoError(err)
 
@@ -94,7 +95,7 @@ func (s *SynchronizerNodeSuite) TearDownTest() {
 	s.workerCancel()
 }
 
-func XTestSynchronizerNodeSuite(t *testing.T) {
+func TestSynchronizerNodeSuite(t *testing.T) {
 	suite.Run(t, new(SynchronizerNodeSuite))
 }
 
