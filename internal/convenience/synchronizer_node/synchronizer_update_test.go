@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
@@ -99,20 +100,24 @@ func TestSynchronizerUpdateNodeSuiteSuite(t *testing.T) {
 	suite.Run(t, new(SynchronizerUpdateNodeSuite))
 }
 
-func (s *SynchronizerUpdateNodeSuite) TestSynchronizerUpdateInputStatus() {
+func (s *SynchronizerUpdateNodeSuite) TestGetNextInputBatch2Update() {
 	ctx := context.Background()
-	err := s.container.GetRawInputRepository().Create(
-		ctx, repository.RawInputRef{
-			ID:          "1", //our ID
-			RawID:       12,
-			InputIndex:  1,
+	for i := 0; i < 100; i++ {
+		err := s.container.GetRawInputRepository().Create(ctx, repository.RawInputRef{
+			ID:          strconv.FormatInt(int64(i), 10), // our ID
+			RawID:       uint64(i + 1),
+			InputIndex:  uint64(i),
 			AppContract: common.Address{}.Hex(),
 			Status:      "NONE",
 			ChainID:     "31337",
-		},
-	)
-	s.Require().NoError(err)
-	inputsStatusNone, err := s.synchronizerUpdateWorker.GetNextInputs2UpdateBatch(ctx)
+		})
+		s.Require().NoError(err)
+	}
+	batchSize := 50
+	s.synchronizerUpdateWorker.BatchSize = batchSize
+	inputsStatusNone, err := s.synchronizerUpdateWorker.GetNextInputBatch2Update(ctx)
 	s.NoError(err)
 	s.NotNil(inputsStatusNone)
+	s.Equal(batchSize, len(inputsStatusNone))
+	s.Equal("NONE", inputsStatusNone[0].Status)
 }

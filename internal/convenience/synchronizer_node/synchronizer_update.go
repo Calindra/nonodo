@@ -6,10 +6,13 @@ import (
 	"github.com/calindra/nonodo/internal/convenience/repository"
 )
 
+const DefaultBatchSize = 50
+
 type SynchronizerUpdateWorker struct {
 	DbRawUrl              string
 	DbRaw                 *RawNode
 	RawInputRefRepository *repository.RawInputRefRepository
+	BatchSize             int
 }
 
 // Start implements supervisor.Worker.
@@ -32,10 +35,13 @@ func (s SynchronizerUpdateWorker) String() string {
 }
 
 func NewSynchronizerUpdateWorker(container *repository.RawInputRefRepository, dbRawUrl string) SynchronizerUpdateWorker {
-	return SynchronizerUpdateWorker{DbRawUrl: dbRawUrl, RawInputRefRepository: container}
+	return SynchronizerUpdateWorker{
+		DbRawUrl:              dbRawUrl,
+		RawInputRefRepository: container,
+		BatchSize:             DefaultBatchSize,
+	}
 }
 
-func (s *SynchronizerUpdateWorker) GetNextInputs2UpdateBatch(ctx context.Context) (*[]repository.RawInputRef, error) {
-	batchSize := 10
-	return s.RawInputRefRepository.FindInputsByStatusNone(ctx, batchSize)
+func (s *SynchronizerUpdateWorker) GetNextInputBatch2Update(ctx context.Context) ([]repository.RawInputRef, error) {
+	return s.RawInputRefRepository.FindInputsByStatusNone(ctx, s.BatchSize)
 }

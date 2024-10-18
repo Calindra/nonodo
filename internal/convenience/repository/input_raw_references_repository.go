@@ -85,7 +85,7 @@ func (r *RawInputRefRepository) GetLatestRawId(ctx context.Context) (uint64, err
 	return rawId, err
 }
 
-func (r *RawInputRefRepository) FindInputsByStatusNone(ctx context.Context, limit int) (*[]RawInputRef, error) {
+func (r *RawInputRefRepository) FindInputsByStatusNone(ctx context.Context, limit int) ([]RawInputRef, error) {
 	query := `SELECT * FROM convenience_input_raw_references
 			WHERE status = 'NONE'
 			ORDER BY raw_id ASC LIMIT $1
@@ -104,5 +104,5 @@ func (r *RawInputRefRepository) FindInputsByStatusNone(ctx context.Context, limi
 		slog.Error("Select context error", "error", err)
 		return nil, err
 	}
-	return &rows, err
+	return rows, err
 }
