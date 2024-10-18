@@ -42,8 +42,9 @@ type inputRow struct {
 
 func (r *InputRepository) CreateTables() error {
 
+	// the ID is not unique anymore in a multi-dapp environment
 	schema := `CREATE TABLE IF NOT EXISTS convenience_inputs (
-		id 				text NOT NULL PRIMARY KEY,
+		id 				text NOT NULL,
 		input_index		integer,
 		app_contract    text,
 		status	 		text,
@@ -62,6 +63,7 @@ func (r *InputRepository) CreateTables() error {
 		cartesi_transaction_id text,
 		chain_id text);
 	CREATE INDEX IF NOT EXISTS idx_input_index ON convenience_inputs(input_index);
+	CREATE INDEX IF NOT EXISTS idx_input_id ON convenience_inputs(app_contract,id);
 	CREATE INDEX IF NOT EXISTS idx_status ON convenience_inputs(status);`
 	_, err := r.Db.Exec(schema)
 	if err == nil {

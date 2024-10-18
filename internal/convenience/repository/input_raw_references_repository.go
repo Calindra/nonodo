@@ -14,7 +14,7 @@ type RawInputRefRepository struct {
 }
 
 type RawInputRef struct {
-	// Input.ID
+	// refers to our Input.ID
 	ID          string `db:"id"`
 	RawID       uint64 `db:"raw_id"`
 	InputIndex  uint64 `db:"input_index"`
