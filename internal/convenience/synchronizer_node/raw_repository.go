@@ -2,6 +2,8 @@ package synchronizernode
 
 import (
 	"context"
+	"fmt"
+	"log/slog"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
@@ -45,12 +47,17 @@ type FilterOutput struct {
 	HaveTransactionHash bool
 }
 
+type Pagination struct {
+	Limit uint64
+	// Offset uint64
+}
+
 type FilterInput struct {
 	IDgt         uint64
 	IsStatusNone bool
 }
 
-const LIMIT = 50
+const LIMIT = uint64(50)
 
 type FilterID struct {
 	IDgt uint64
@@ -64,14 +71,39 @@ func (s *RawNode) Connect(ctx context.Context) (*sqlx.DB, error) {
 	return sqlx.ConnectContext(ctx, "postgres", s.connectionURL)
 }
 
-func (s *RawNode) FindAllInputsByFilter(ctx context.Context, filter FilterInput) ([]Input, error) {
+func (s *RawNode) FindAllInputsByFilter(ctx context.Context, filter FilterInput, pag *Pagination) ([]Input, error) {
 	inputs := []Input{}
 	conn, err := s.Connect(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	result, err := conn.QueryxContext(ctx, "SELECT * FROM input WHERE ID >= $1 LIMIT $2", filter.IDgt, LIMIT)
+	limit := LIMIT
+	if pag != nil {
+		limit = pag.Limit
+	}
+
+	bindvarIdx := 1
+	baseQuery := fmt.Sprintf("SELECT * FROM input WHERE ID >= $%d", bindvarIdx)
+	bindvarIdx++
+	args := []any{filter.IDgt}
+
+	additionalFilter := ""
+
+	if filter.IsStatusNone {
+		additionalFilter = fmt.Sprintf(" AND status = '$%d'", bindvarIdx)
+		bindvarIdx++
+		args = append(args, "NONE")
+	}
+
+	pagination := fmt.Sprintf(" LIMIT $%d", bindvarIdx)
+	// bindvarIdx += 2
+	args = append(args, limit)
+
+	query := baseQuery + additionalFilter + pagination
+	slog.Debug("Query", "query", query)
+
+	result, err := conn.QueryxContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}

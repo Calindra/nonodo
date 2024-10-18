@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/google/go-github/github"
 )
 
@@ -145,4 +146,36 @@ func GetAssetsFromLastReleaseGitHub(ctx context.Context, client *github.Client, 
 	}
 
 	return releaseAssets, nil
+}
+
+// Status on schema could be:
+// 'NONE',
+// 'ACCEPTED',
+// 'REJECTED',
+// 'EXCEPTION',
+// 'MACHINE_HALTED',
+// 'CYCLE_LIMIT_EXCEEDED',
+// 'TIME_LIMIT_EXCEEDED',
+// 'PAYLOAD_LENGTH_LIMIT_EXCEEDED'
+func ConvertStatusStringToCompletionStatus(status string) model.CompletionStatus {
+	switch status {
+	case "NONE":
+		return model.CompletionStatusUnprocessed
+	case "ACCEPTED":
+		return model.CompletionStatusAccepted
+	case "REJECTED":
+		return model.CompletionStatusRejected
+	case "EXCEPTION":
+		return model.CompletionStatusException
+	case "MACHINE_HALTED":
+		return model.CompletionStatusRejected
+	case "CYCLE_LIMIT_EXCEEDED":
+		return model.CompletionStatusRejected
+	case "TIME_LIMIT_EXCEEDED":
+		return model.CompletionStatusRejected
+	case "PAYLOAD_LENGTH_LIMIT_EXCEEDED":
+		return model.CompletionStatusRejected
+	default:
+		return model.CompletionStatusUnprocessed
+	}
 }
