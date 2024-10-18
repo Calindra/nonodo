@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"math/big"
 	"strconv"
 	"time"
 
@@ -52,6 +53,8 @@ func (s SynchronizerCreateWorker) GetDataRawData(abi *abi.ABI, rawData []byte) (
 
 	err = method.Inputs.UnpackIntoMap(data, rawData[4:])
 
+	slog.Debug("DecodedData", "map", data)
+
 	return data, err
 }
 
@@ -95,10 +98,9 @@ func (s SynchronizerCreateWorker) WatchNewInputs(stdCtx context.Context, db *sql
 							return
 						}
 
-						chainID, ok := data["chainID"].(string)
-
+						chainId, ok := data["chainId"].(*big.Int)
 						if !ok {
-							errCh <- fmt.Errorf("chainID not found")
+							errCh <- fmt.Errorf("chainId not found")
 							return
 						}
 
@@ -113,13 +115,13 @@ func (s SynchronizerCreateWorker) WatchNewInputs(stdCtx context.Context, db *sql
 							InputIndex:  input.Index,
 							AppContract: common.BytesToAddress(input.ApplicationAddress).Hex(),
 							Status:      input.Status,
-							ChainID:     chainID,
+							ChainID:     chainId.String(),
 						}
 						advanceInput := model.AdvanceInput{
 							Index:   int(input.Index),
 							Status:  commons.ConvertStatusStringToCompletionStatus(input.Status),
 							Payload: payload,
-							ChainId: chainID,
+							ChainId: chainId.String(),
 						}
 
 						err = s.inputRefRepository.Create(ctx, rawInputRef)
