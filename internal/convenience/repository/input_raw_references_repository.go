@@ -14,9 +14,8 @@ type RawInputRefRepository struct {
 }
 
 type RawInputRef struct {
-	// refers to our Input.ID
-	ID          string `db:"id"`
-	RawID       uint64 `db:"raw_id"`
+	ID          string `db:"id"`     // high level ID refers to our ConvenienceInput.ID
+	RawID       uint64 `db:"raw_id"` // low level id
 	InputIndex  uint64 `db:"input_index"`
 	AppContract string `db:"app_contract"`
 	Status      string `db:"status"`
