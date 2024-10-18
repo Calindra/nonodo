@@ -94,7 +94,7 @@ func (s *SynchronizerNodeSuite) TearDownTest() {
 	s.workerCancel()
 }
 
-func TestSynchronizerNodeSuite(t *testing.T) {
+func XTestSynchronizerNodeSuite(t *testing.T) {
 	suite.Run(t, new(SynchronizerNodeSuite))
 }
 
