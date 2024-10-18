@@ -63,7 +63,7 @@ func (s *RawNodeSuite) TearDownTest() {
 
 func TestRawNodeSuite(t *testing.T) {
 	// nolint
-	// TODO: enable when Bruno finish his branch
+	// TODO: enable when Brunodo finish his branch
 	// suite.Run(t, new(RawNodeSuite))
 }
 

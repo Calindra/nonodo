@@ -7,8 +7,10 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/contracts"
 	"github.com/calindra/nonodo/internal/convenience"
+	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/calindra/nonodo/internal/supervisor"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -37,7 +39,7 @@ func (s SynchronizerCreateWorker) Start(ctx context.Context, ready chan<- struct
 	return s.WatchNewInputs(ctx, db)
 }
 
-func (s SynchronizerCreateWorker) GetChainRawData(abi *abi.ABI, rawData []byte) (map[string]any, error) {
+func (s SynchronizerCreateWorker) GetDataRawData(abi *abi.ABI, rawData []byte) (map[string]any, error) {
 	data := make(map[string]any)
 
 	methodId := rawData[:4]
@@ -57,6 +59,7 @@ func (s SynchronizerCreateWorker) WatchNewInputs(stdCtx context.Context, db *sql
 	defer cancel()
 
 	rawInputRep := s.Container.GetRawInputRepository()
+	inputRep := s.Container.GetInputRepository()
 	latestRawID, err := rawInputRep.GetLatestRawId(ctx)
 
 	if err != nil {
@@ -88,7 +91,7 @@ func (s SynchronizerCreateWorker) WatchNewInputs(stdCtx context.Context, db *sql
 					}
 
 					for _, input := range inputs {
-						data, err := s.GetChainRawData(abi, input.RawData)
+						data, err := s.GetDataRawData(abi, input.RawData)
 
 						if err != nil {
 							errCh <- err
@@ -102,6 +105,12 @@ func (s SynchronizerCreateWorker) WatchNewInputs(stdCtx context.Context, db *sql
 							return
 						}
 
+						payload, ok := data["payload"].([]byte)
+						if !ok {
+							errCh <- fmt.Errorf("payload not found")
+							return
+						}
+
 						rawInputRef := repository.RawInputRef{
 							RawID:       uint64(input.ID),
 							InputIndex:  input.Index,
@@ -109,8 +118,20 @@ func (s SynchronizerCreateWorker) WatchNewInputs(stdCtx context.Context, db *sql
 							Status:      input.Status,
 							ChainID:     chainID,
 						}
+						advanceInput := model.AdvanceInput{
+							Index:   int(input.Index),
+							Status:  commons.ConvertStatusStringToCompletionStatus(input.Status),
+							Payload: payload,
+							ChainId: chainID,
+						}
 
 						err = rawInputRep.Create(ctx, rawInputRef)
+						if err != nil {
+							errCh <- err
+							return
+						}
+
+						_, err = inputRep.Create(ctx, advanceInput)
 						if err != nil {
 							errCh <- err
 							return

@@ -40,6 +40,7 @@ func LoadMapEnvFile() (map[string]string, error) {
 
 // check if docker compose command is available
 func CheckDockerCompose(ctx context.Context) error {
+	slog.Debug("checking docker compose")
 	cmd := exec.CommandContext(ctx, "docker", "compose", "version")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
@@ -51,6 +52,7 @@ func CheckDockerCompose(ctx context.Context) error {
 }
 
 func RunDockerCompose(stdCtx context.Context) error {
+	slog.Debug("running docker compose")
 	ctx, cancel := context.WithCancel(stdCtx)
 	defer cancel()
 
@@ -80,6 +82,7 @@ func RunDockerCompose(stdCtx context.Context) error {
 }
 
 func StopDockerCompose(stdCtx context.Context) error {
+	slog.Debug("stopping docker compose")
 	ctx, cancel := context.WithCancel(stdCtx)
 	defer cancel()
 
