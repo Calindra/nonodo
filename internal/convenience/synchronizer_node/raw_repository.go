@@ -3,7 +3,6 @@ package synchronizernode
 import (
 	"context"
 	"fmt"
-	"log/slog"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
@@ -101,7 +100,6 @@ func (s *RawNode) FindAllInputsByFilter(ctx context.Context, filter FilterInput,
 	args = append(args, limit)
 
 	query := baseQuery + additionalFilter + pagination
-	slog.Debug("Query", "query", query)
 
 	result, err := conn.QueryxContext(ctx, query, args...)
 	if err != nil {

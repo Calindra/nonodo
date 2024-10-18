@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math/big"
+	"strconv"
 	"time"
 
 	"github.com/calindra/nonodo/internal/commons"
@@ -26,7 +27,7 @@ type SynchronizerCreateWorker struct {
 	DbRaw              *RawNode
 }
 
-const DEFAULT_TIMEOUT = 1 * time.Second
+const DEFAULT_DELAY = 1 * time.Second
 
 // Start implements supervisor.Worker.
 func (s SynchronizerCreateWorker) Start(ctx context.Context, ready chan<- struct{}) error {
@@ -84,7 +85,9 @@ func (s SynchronizerCreateWorker) GetAdvanceInputFromMap(data map[string]any, in
 	}
 
 	return &model.AdvanceInput{
-		ID:             "RAW",
+		// nolint
+		// TODO: check if the ID is correct
+		ID:             strconv.FormatUint(input.ID, 10),
 		Index:          int(input.Index),
 		Status:         commons.ConvertStatusStringToCompletionStatus(input.Status),
 		MsgSender:      msgSender,
@@ -153,7 +156,6 @@ func (s SynchronizerCreateWorker) WatchNewInputs(stdCtx context.Context, db *sql
 				case <-ctx.Done():
 					errCh <- ctx.Err()
 					return
-				case <-time.After(DEFAULT_TIMEOUT):
 				default:
 					inputs, err := s.DbRaw.FindAllInputsByFilter(ctx, FilterInput{IDgt: latestRawID}, page)
 					if err != nil {
@@ -167,7 +169,8 @@ func (s SynchronizerCreateWorker) WatchNewInputs(stdCtx context.Context, db *sql
 							errCh <- err
 							return
 						}
-						latestRawID = rawInputRefID
+						latestRawID = rawInputRefID + 1
+						<-time.After(DEFAULT_DELAY)
 					}
 				}
 			}
