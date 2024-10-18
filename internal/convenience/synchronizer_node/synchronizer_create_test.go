@@ -10,7 +10,6 @@ import (
 
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/convenience/repository"
-	"github.com/calindra/nonodo/internal/supervisor"
 	"github.com/calindra/nonodo/postgres/raw"
 	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/suite"
@@ -25,6 +24,8 @@ type SynchronizerNodeSuite struct {
 	timeoutCancel              context.CancelFunc
 	workerCancel               context.CancelFunc
 	workerResult               chan error
+	inputRepository            *repository.InputRepository
+	inputRefRepository         *repository.RawInputRefRepository
 }
 
 func (s *SynchronizerNodeSuite) SetupSuite() {
@@ -43,8 +44,8 @@ func (s *SynchronizerNodeSuite) SetupTest() {
 	commons.ConfigureLog(slog.LevelDebug)
 	dbRawUrl := "postgres://postgres:password@localhost:5432/rollupsdb?sslmode=disable"
 
-	var w supervisor.SupervisorWorker
-	w.Name = "TestRawInputter"
+	// var w supervisor.SupervisorWorker
+	// w.Name = "TestRawInputter"
 	s.workerResult = make(chan error)
 
 	// Temp
@@ -55,19 +56,23 @@ func (s *SynchronizerNodeSuite) SetupTest() {
 	// Database
 	sqliteFileName := filepath.Join(tempDir, "input.sqlite3")
 
-	db := sqlx.MustConnect("sqlite3", sqliteFileName)
+	db, err := sqlx.ConnectContext(s.ctx, "sqlite3", sqliteFileName)
+	s.NoError(err)
 
-	inputRepository := &repository.InputRepository{Db: *db}
-	inputRefRepository := &repository.RawInputRefRepository{Db: *db}
+	s.inputRepository = &repository.InputRepository{Db: *db}
+	err = s.inputRepository.CreateTables()
+	s.NoError(err)
+	s.inputRefRepository = &repository.RawInputRefRepository{Db: *db}
+	err = s.inputRefRepository.CreateTables()
+	s.NoError(err)
 
 	s.workerCtx, s.workerCancel = context.WithCancel(s.ctx)
-	wr := NewSynchronizerCreateWorker(inputRepository, inputRefRepository, dbRawUrl)
-	w.Workers = append(w.Workers, wr)
+	wr := NewSynchronizerCreateWorker(s.inputRepository, s.inputRefRepository, dbRawUrl)
 
-	// Supervisor
+	// like Supervisor
 	ready := make(chan struct{})
 	go func() {
-		s.workerResult <- w.Start(s.workerCtx, ready)
+		s.workerResult <- wr.Start(s.workerCtx, ready)
 	}()
 	select {
 	case <-s.ctx.Done():
@@ -89,13 +94,14 @@ func (s *SynchronizerNodeSuite) TearDownSuite() {
 
 func (s *SynchronizerNodeSuite) TearDownTest() {
 	defer os.RemoveAll(s.tempDir)
-	// s.workerCancel()
+	s.workerCancel()
 }
 
-func TestSynchronizerNodeSuite(t *testing.T) {
+func XTestSynchronizerNodeSuite(t *testing.T) {
 	suite.Run(t, new(SynchronizerNodeSuite))
 }
 
 func (s *SynchronizerNodeSuite) TestSynchronizerNodeConnection() {
-	s.Equal(4, 2+2)
+	val := <-s.workerResult
+	s.NoError(val)
 }

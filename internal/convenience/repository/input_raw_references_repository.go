@@ -2,6 +2,8 @@ package repository
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"log/slog"
 
 	"github.com/jmoiron/sqlx"
@@ -70,5 +72,12 @@ func (r *RawInputRefRepository) Create(ctx context.Context, rawInput RawInputRef
 func (r *RawInputRefRepository) GetLatestRawId(ctx context.Context) (uint64, error) {
 	var rawId uint64
 	err := r.Db.GetContext(ctx, &rawId, `SELECT raw_id FROM convenience_input_raw_references ORDER BY raw_id DESC LIMIT 1`)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, nil
+		}
+		return 0, err
+	}
 	return rawId, err
 }

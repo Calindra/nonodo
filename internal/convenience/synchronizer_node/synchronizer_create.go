@@ -82,7 +82,7 @@ func (s SynchronizerCreateWorker) WatchNewInputs(stdCtx context.Context, db *sql
 					return
 				case <-time.After(DEFAULT_TIMEOUT):
 				default:
-					inputs, err := s.DbRaw.FindAllInputsByFilter(ctx, FilterInput{IDgt: latestRawID, IsStatusNone: true}, page)
+					inputs, err := s.DbRaw.FindAllInputsByFilter(ctx, FilterInput{IDgt: latestRawID}, page)
 					if err != nil {
 						errCh <- err
 						return

@@ -91,7 +91,7 @@ func (s *RawNode) FindAllInputsByFilter(ctx context.Context, filter FilterInput,
 	additionalFilter := ""
 
 	if filter.IsStatusNone {
-		additionalFilter = fmt.Sprintf(" AND status = '$%d'", bindvarIdx)
+		additionalFilter = fmt.Sprintf(" AND status = \"$%d\"", bindvarIdx)
 		bindvarIdx++
 		args = append(args, "NONE")
 	}
@@ -107,6 +107,7 @@ func (s *RawNode) FindAllInputsByFilter(ctx context.Context, filter FilterInput,
 	if err != nil {
 		return nil, err
 	}
+	defer result.Close()
 
 	for result.Next() {
 		var input Input
