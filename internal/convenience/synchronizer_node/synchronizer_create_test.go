@@ -4,14 +4,12 @@ import (
 	"context"
 	"log/slog"
 	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/calindra/nonodo/postgres/raw"
-	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -26,6 +24,7 @@ type SynchronizerNodeSuite struct {
 	workerResult               chan error
 	inputRepository            *repository.InputRepository
 	inputRefRepository         *repository.RawInputRefRepository
+	dbFactory                  commons.DbFactory
 }
 
 func (s *SynchronizerNodeSuite) SetupSuite() {
@@ -54,9 +53,7 @@ func (s *SynchronizerNodeSuite) SetupTest() {
 	s.tempDir = tempDir
 
 	// Database
-	sqliteFileName := filepath.Join(tempDir, "input.sqlite3")
-
-	db, err := sqlx.ConnectContext(s.ctx, "sqlite3", sqliteFileName)
+	db, err := s.dbFactory.CreateDbCtx(s.ctx, "input.sqlite3")
 	s.NoError(err)
 
 	s.inputRepository = &repository.InputRepository{Db: *db}
@@ -97,7 +94,7 @@ func (s *SynchronizerNodeSuite) TearDownTest() {
 	s.workerCancel()
 }
 
-func XTestSynchronizerNodeSuite(t *testing.T) {
+func TestSynchronizerNodeSuite(t *testing.T) {
 	suite.Run(t, new(SynchronizerNodeSuite))
 }
 
