@@ -233,7 +233,7 @@ func (r *InputRepository) FindByStatus(ctx context.Context, status model.Complet
 			app_contract,
 			espresso_block_number,
 			espresso_block_timestamp,
-			input_box_index, 
+			input_box_index,
 			avail_block_number,
 			avail_block_timestamp,
 			type,
@@ -300,7 +300,7 @@ func (r *InputRepository) queryByIdAndAppContract(
 ) (*sqlx.Rows, error) {
 	if appContract != nil {
 		return r.Db.QueryxContext(ctx, `
-			SELECT 
+			SELECT
 				id,
 				input_index,
 				status,
@@ -313,7 +313,7 @@ func (r *InputRepository) queryByIdAndAppContract(
 				app_contract,
 				espresso_block_number,
 				espresso_block_timestamp,
-				input_box_index, 
+				input_box_index,
 				avail_block_number,
 				avail_block_timestamp,
 				type,
@@ -325,7 +325,7 @@ func (r *InputRepository) queryByIdAndAppContract(
 		)
 	} else {
 		return r.Db.QueryxContext(ctx, `
-			SELECT 
+			SELECT
 				id,
 				input_index,
 				status,
@@ -338,7 +338,7 @@ func (r *InputRepository) queryByIdAndAppContract(
 				app_contract,
 				espresso_block_number,
 				espresso_block_timestamp,
-				input_box_index, 
+				input_box_index,
 				avail_block_number,
 				avail_block_timestamp,
 				type,
@@ -357,7 +357,7 @@ func (r *InputRepository) queryByIndexAndAppContract(
 ) (*sqlx.Rows, error) {
 	if appContract != nil {
 		return r.Db.QueryxContext(ctx, `
-			SELECT 
+			SELECT
 				id,
 				input_index,
 				status,
@@ -370,7 +370,7 @@ func (r *InputRepository) queryByIndexAndAppContract(
 				app_contract,
 				espresso_block_number,
 				espresso_block_timestamp,
-				input_box_index, 
+				input_box_index,
 				avail_block_number,
 				avail_block_timestamp,
 				type,
@@ -382,7 +382,7 @@ func (r *InputRepository) queryByIndexAndAppContract(
 		)
 	} else {
 		return r.Db.QueryxContext(ctx, `
-			SELECT 
+			SELECT
 				id,
 				input_index,
 				status,
@@ -395,7 +395,7 @@ func (r *InputRepository) queryByIndexAndAppContract(
 				app_contract,
 				espresso_block_number,
 				espresso_block_timestamp,
-				input_box_index, 
+				input_box_index,
 				avail_block_number,
 				avail_block_timestamp,
 				type,
@@ -460,7 +460,7 @@ func (c *InputRepository) FindAll(
 			app_contract,
 			espresso_block_number,
 			espresso_block_timestamp,
-			input_box_index, 
+			input_box_index,
 			avail_block_number,
 			avail_block_timestamp,
 			type,

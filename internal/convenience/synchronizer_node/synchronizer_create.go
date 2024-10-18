@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	"math/big"
-	"strconv"
 	"time"
 
 	"github.com/calindra/nonodo/internal/commons"
@@ -42,7 +41,7 @@ func (s SynchronizerCreateWorker) Start(ctx context.Context, ready chan<- struct
 	return s.WatchNewInputs(ctx, db)
 }
 
-func (s SynchronizerCreateWorker) GetDataRawData(abi *abi.ABI, rawData []byte) (map[string]any, error) {
+func (s SynchronizerCreateWorker) GetMapRaw(abi *abi.ABI, rawData []byte) (map[string]any, error) {
 	data := make(map[string]any)
 
 	methodId := rawData[:4]
@@ -56,6 +55,77 @@ func (s SynchronizerCreateWorker) GetDataRawData(abi *abi.ABI, rawData []byte) (
 	slog.Debug("DecodedData", "map", data)
 
 	return data, err
+}
+
+func (s SynchronizerCreateWorker) GetAdvanceInputFromMap(data map[string]any, input Input) (*model.AdvanceInput, error) {
+	chainId, ok := data["chainId"].(*big.Int)
+	if !ok {
+		return nil, fmt.Errorf("chainId not found")
+	}
+
+	payload, ok := data["payload"].([]byte)
+	if !ok {
+		return nil, fmt.Errorf("payload not found")
+	}
+
+	msgSender, ok := data["msgSender"].(common.Address)
+	if !ok {
+		return nil, fmt.Errorf("msgSender not found")
+	}
+
+	blockNumber, ok := data["blockNumber"].(*big.Int)
+	if !ok {
+		return nil, fmt.Errorf("blockNumber not found")
+	}
+
+	blockTimestamp, ok := data["blockTimestamp"].(*big.Int)
+	if !ok {
+		return nil, fmt.Errorf("blockTimestamp not found")
+	}
+
+	return &model.AdvanceInput{
+		ID:             "RAW",
+		Index:          int(input.Index),
+		Status:         commons.ConvertStatusStringToCompletionStatus(input.Status),
+		MsgSender:      msgSender,
+		BlockNumber:    blockNumber.Uint64(),
+		BlockTimestamp: time.Unix(0, blockTimestamp.Int64()),
+		Payload:        payload,
+		ChainId:        chainId.String(),
+	}, nil
+
+}
+
+func (s SynchronizerCreateWorker) HandleInput(ctx context.Context, abi *abi.ABI, input Input) (id uint64, err error) {
+	data, err := s.GetMapRaw(abi, input.RawData)
+	if err != nil {
+		return 0, err
+	}
+
+	advanceInput, err := s.GetAdvanceInputFromMap(data, input)
+	if err != nil {
+		return 0, err
+	}
+
+	inputBox, err := s.inputRepository.Create(ctx, *advanceInput)
+	if err != nil {
+		return 0, err
+	}
+
+	rawInputRef := repository.RawInputRef{
+		ID:          inputBox.ID,
+		RawID:       uint64(input.ID),
+		InputIndex:  input.Index,
+		AppContract: common.BytesToAddress(input.ApplicationAddress).Hex(),
+		Status:      input.Status,
+		ChainID:     advanceInput.ChainId,
+	}
+	err = s.inputRefRepository.Create(ctx, rawInputRef)
+	if err != nil {
+		return 0, err
+	}
+
+	return rawInputRef.RawID, nil
 }
 
 func (s SynchronizerCreateWorker) WatchNewInputs(stdCtx context.Context, db *sqlx.DB) error {
@@ -92,51 +162,7 @@ func (s SynchronizerCreateWorker) WatchNewInputs(stdCtx context.Context, db *sql
 					}
 
 					for _, input := range inputs {
-						data, err := s.GetDataRawData(abi, input.RawData)
-						if err != nil {
-							errCh <- err
-							return
-						}
-
-						chainId, ok := data["chainId"].(*big.Int)
-						if !ok {
-							errCh <- fmt.Errorf("chainId not found")
-							return
-						}
-
-						payload, ok := data["payload"].([]byte)
-						if !ok {
-							errCh <- fmt.Errorf("payload not found")
-							return
-						}
-
-						rawInputRef := repository.RawInputRef{
-							RawID:       uint64(input.ID),
-							InputIndex:  input.Index,
-							AppContract: common.BytesToAddress(input.ApplicationAddress).Hex(),
-							Status:      input.Status,
-							ChainID:     chainId.String(),
-						}
-						advanceInput := model.AdvanceInput{
-							Index:   int(input.Index),
-							Status:  commons.ConvertStatusStringToCompletionStatus(input.Status),
-							Payload: payload,
-							ChainId: chainId.String(),
-						}
-
-						err = s.inputRefRepository.Create(ctx, rawInputRef)
-						if err != nil {
-							errCh <- err
-							return
-						}
-
-						_, err = s.inputRepository.Create(ctx, advanceInput)
-						if err != nil {
-							errCh <- err
-							return
-						}
-
-						rawInputRefID, err := strconv.ParseUint(rawInputRef.ID, 10, 64)
+						rawInputRefID, err := s.HandleInput(ctx, abi, input)
 						if err != nil {
 							errCh <- err
 							return

@@ -14,7 +14,7 @@ type RawNode struct {
 }
 
 type Input struct {
-	ID                 int64  `db:"id"`
+	ID                 uint64 `db:"id"`
 	Index              uint64 `db:"index"` // numeric(20,0)
 	RawData            []byte `db:"raw_data"`
 	BlockNumber        uint64 `db:"block_number"` // numeric(20,0)
@@ -22,7 +22,7 @@ type Input struct {
 	MachineHash        []byte `db:"machine_hash,omitempty"`
 	OutputsHash        []byte `db:"outputs_hash,omitempty"`
 	ApplicationAddress []byte `db:"application_address"`
-	EpochID            int64  `db:"epoch_id"`
+	EpochID            uint64 `db:"epoch_id"`
 }
 
 type Report struct {

@@ -3,7 +3,6 @@ package synchronizernode
 import (
 	"context"
 	"log/slog"
-	"os"
 	"testing"
 	"time"
 
@@ -17,7 +16,6 @@ type SynchronizerNodeSuite struct {
 	suite.Suite
 	ctx                        context.Context
 	dockerComposeStartedByTest bool
-	tempDir                    string
 	workerCtx                  context.Context
 	timeoutCancel              context.CancelFunc
 	workerCancel               context.CancelFunc
@@ -43,14 +41,7 @@ func (s *SynchronizerNodeSuite) SetupTest() {
 	commons.ConfigureLog(slog.LevelDebug)
 	dbRawUrl := "postgres://postgres:password@localhost:5432/rollupsdb?sslmode=disable"
 
-	// var w supervisor.SupervisorWorker
-	// w.Name = "TestRawInputter"
 	s.workerResult = make(chan error)
-
-	// Temp
-	tempDir, err := os.MkdirTemp("", "")
-	s.NoError(err)
-	s.tempDir = tempDir
 
 	// Database
 	s.dbFactory = commons.NewDbFactory()
@@ -91,7 +82,7 @@ func (s *SynchronizerNodeSuite) TearDownSuite() {
 }
 
 func (s *SynchronizerNodeSuite) TearDownTest() {
-	defer os.RemoveAll(s.tempDir)
+	s.dbFactory.Cleanup()
 	s.workerCancel()
 }
 
