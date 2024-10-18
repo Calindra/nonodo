@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/contracts"
@@ -21,61 +22,61 @@ type RawNodeSuite struct {
 	node                       RawNode
 	ctx                        context.Context
 	dockerComposeStartedByTest bool
+	DefaultTimeout             time.Duration
 }
 
-func (s *RawNodeSuite) SetupTest() {
-	commons.ConfigureLog(slog.LevelDebug)
+func (s *RawNodeSuite) SetupSuite() {
+	s.DefaultTimeout = 1 * time.Minute
 	s.ctx = context.Background()
-	envMap, err := raw.LoadMapEnvFile()
-	s.NoError(err)
 	pgUp := commons.IsPortInUse(5432)
 	if !pgUp {
-		err = raw.RunDockerCompose(s.ctx)
+		err := raw.RunDockerCompose(s.ctx)
 		s.NoError(err)
 		s.dockerComposeStartedByTest = true
 	}
 
+	envMap, err := raw.LoadMapEnvFile()
+	s.NoError(err)
 	dbName := "rollupsdb"
 	dbPass := "password"
-
 	if _, ok := envMap["POSTGRES_PASSWORD"]; ok {
 		dbPass = envMap["POSTGRES_PASSWORD"]
 	}
-
 	if _, ok := envMap["POSTGRES_DB"]; ok {
 		dbName = envMap["POSTGRES_DB"]
 	}
-
 	uri := fmt.Sprintf("postgres://postgres:%s@localhost:5432/%s?sslmode=disable", dbPass, dbName)
-
 	slog.Info("Raw Input URI", "uri", uri)
-
 	s.node = RawNode{
 		connectionURL: uri,
 	}
 }
-func (s *RawNodeSuite) TearDownTest() {
+
+func (s *RawNodeSuite) SetupTest() {
+	commons.ConfigureLog(slog.LevelDebug)
+}
+func (s *RawNodeSuite) TearDownSuite() {
 	if s.dockerComposeStartedByTest {
 		err := raw.StopDockerCompose(s.ctx)
 		s.NoError(err)
 	}
 }
 
+func (s *RawNodeSuite) TearDownTest() {}
+
 func TestRawNodeSuite(t *testing.T) {
-	// nolint
-	// TODO: enable when Brunodo finish his branch
-	// suite.Run(t, new(RawNodeSuite))
+	suite.Run(t, new(RawNodeSuite))
 }
 
 func (s *RawNodeSuite) TestSynchronizerNodeConnection() {
-	ctx, cancel := context.WithCancel(s.ctx)
+	ctx, cancel := context.WithTimeout(s.ctx, s.DefaultTimeout)
 	defer cancel()
 	_, err := s.node.Connect(ctx)
 	s.NoError(err)
 }
 
 func (s *RawNodeSuite) TestSynchronizerNodeListInputs() {
-	ctx, cancel := context.WithCancel(s.ctx)
+	ctx, cancel := context.WithTimeout(s.ctx, s.DefaultTimeout)
 	defer cancel()
 	conn, err := s.node.Connect(ctx)
 	s.NoError(err)
@@ -94,8 +95,6 @@ func (s *RawNodeSuite) TestSynchronizerNodeListInputs() {
 
 	firstInput := inputs[0]
 	s.Equal(firstInput.ID, int64(1))
-
-	slog.Info("Inputs", "inputs", inputs)
 
 	b := inputs[0].BlockNumber
 
@@ -118,8 +117,6 @@ func (s *RawNodeSuite) TestSynchronizerNodeInputByID() {
 	firstInput := inputs[0]
 	s.Equal(firstInput.ID, int64(2))
 
-	slog.Info("Inputs", "inputs", inputs)
-
 	b := inputs[0].BlockNumber
 
 	firstBlockNumber := big.NewInt(0).SetUint64(b)
@@ -140,8 +137,6 @@ func (s *RawNodeSuite) TestSynchronizerNodeReportByID() {
 	firstInput := reports[0]
 	s.Equal(firstInput.ID, int64(1))
 
-	slog.Info("Report", "reports", reports)
-
 	b := reports[0].InputID
 
 	firstInputID := big.NewInt(b)
@@ -159,8 +154,6 @@ func (s *RawNodeSuite) TestSynchronizerNodeOutputtByID() {
 	s.NoError(err)
 	firstInput := outputs[0]
 	s.Equal(firstInput.ID, uint64(1))
-
-	slog.Info("Output", "outputs", outputs)
 
 	b := outputs[0].InputID
 
@@ -191,4 +184,6 @@ func (s *RawNodeSuite) TestDecodeChainIDFromInputbox() {
 	s.NoError(err)
 	s.NotEmpty(dataDecoded)
 	s.Equal(big.NewInt(31337), dataDecoded["chainId"])
+	slog.Info("DataDecoded", "dataDecoded", dataDecoded)
+	// s.NotNil(nil)
 }

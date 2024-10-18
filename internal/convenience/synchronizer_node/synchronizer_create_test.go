@@ -28,14 +28,24 @@ type SynchronizerNodeSuite struct {
 	workerResult               chan error
 }
 
+func (s *SynchronizerNodeSuite) SetupSuite() {
+	timeout := 1 * time.Minute
+	s.ctx, s.timeoutCancel = context.WithTimeout(context.Background(), timeout)
+
+	pgUp := commons.IsPortInUse(5432)
+	if !pgUp {
+		err := raw.RunDockerCompose(s.ctx)
+		s.NoError(err)
+		s.dockerComposeStartedByTest = true
+	}
+}
+
 func (s *SynchronizerNodeSuite) SetupTest() {
 	commons.ConfigureLog(slog.LevelDebug)
 	dbRawUrl := "postgres://postgres:password@localhost:5432/rollupsdb?sslmode=disable"
 
 	var w supervisor.SupervisorWorker
 	w.Name = "TestRawInputter"
-	timeout := 1 * time.Minute
-	s.ctx, s.timeoutCancel = context.WithTimeout(context.Background(), timeout)
 	s.workerResult = make(chan error)
 
 	// Temp
@@ -53,13 +63,6 @@ func (s *SynchronizerNodeSuite) SetupTest() {
 	wr := NewSynchronizerCreateWorker(s.container, dbRawUrl)
 	w.Workers = append(w.Workers, wr)
 
-	pgUp := commons.IsPortInUse(5432)
-	if !pgUp {
-		err := raw.RunDockerCompose(s.ctx)
-		s.NoError(err)
-		s.dockerComposeStartedByTest = true
-	}
-
 	// Supervisor
 	ready := make(chan struct{})
 	go func() {
@@ -75,12 +78,17 @@ func (s *SynchronizerNodeSuite) SetupTest() {
 	}
 }
 
-func (s *SynchronizerNodeSuite) TearDownTest() {
-	defer os.RemoveAll(s.tempDir)
+func (s *SynchronizerNodeSuite) TearDownSuite() {
 	if s.dockerComposeStartedByTest {
 		err := raw.StopDockerCompose(s.ctx)
 		s.NoError(err)
 	}
+	s.timeoutCancel()
+}
+
+func (s *SynchronizerNodeSuite) TearDownTest() {
+	defer os.RemoveAll(s.tempDir)
+	s.workerCancel()
 }
 
 func TestSynchronizerNodeSuite(t *testing.T) {
