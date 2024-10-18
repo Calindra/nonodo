@@ -23,7 +23,7 @@ func (r *ReportRepository) CreateTables() error {
 		payload       text,
 		input_index   integer,
 		app_contract  text,
-		PRIMARY KEY (input_index, output_index));`
+		PRIMARY KEY (input_index, output_index, app_contract));`
 	_, err := r.Db.Exec(schema)
 	if err == nil {
 		slog.Debug("Reports table created")

@@ -14,6 +14,7 @@ type RawInputRefRepository struct {
 }
 
 type RawInputRef struct {
+	// Input.ID
 	ID          string `db:"id"`
 	RawID       uint64 `db:"raw_id"`
 	InputIndex  uint64 `db:"input_index"`
@@ -24,7 +25,7 @@ type RawInputRef struct {
 
 func (r *RawInputRefRepository) CreateTables() error {
 	schema := `CREATE TABLE IF NOT EXISTS convenience_input_raw_references (
-		id 				text NOT NULL PRIMARY KEY,
+		id 				text NOT NULL,
 		raw_id 			integer NOT NULL,
 		input_index		integer NOT NULL,
 		app_contract    text NOT NULL,
@@ -45,11 +46,13 @@ func (r *RawInputRefRepository) Create(ctx context.Context, rawInput RawInputRef
 	exec := DBExecutor{&r.Db}
 
 	result, err := exec.ExecContext(ctx, `INSERT INTO convenience_input_raw_references (
+		id,
 		raw_id,
 		input_index,
 		app_contract,
 		status,
-		chain_id) VALUES ($1, $2, $3, $4, $5)`,
+		chain_id) VALUES ($1, $2, $3, $4, $5, $6)`,
+		rawInput.ID,
 		rawInput.RawID,
 		rawInput.InputIndex,
 		rawInput.AppContract,
@@ -80,4 +83,26 @@ func (r *RawInputRefRepository) GetLatestRawId(ctx context.Context) (uint64, err
 		return 0, err
 	}
 	return rawId, err
+}
+
+func (r *RawInputRefRepository) FindInputsByStatusNone(ctx context.Context, limit int) (*[]RawInputRef, error) {
+	query := `SELECT * FROM convenience_input_raw_references
+			WHERE status = 'NONE'
+			ORDER BY raw_id ASC LIMIT $1
+	`
+	stmt, err := r.Db.PreparexContext(ctx, query)
+	if err != nil {
+		slog.Error("Find all by status none error", "error", err)
+		return nil, err
+	}
+	defer stmt.Close()
+	args := []interface{}{}
+	args = append(args, limit)
+	var rows []RawInputRef
+	err = stmt.SelectContext(ctx, &rows, args...)
+	if err != nil {
+		slog.Error("Select context error", "error", err)
+		return nil, err
+	}
+	return &rows, err
 }
