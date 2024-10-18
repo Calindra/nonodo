@@ -80,7 +80,7 @@ func (s *SynchronizerNodeSuite) SetupTest() {
 	case err := <-s.workerResult:
 		s.Fail("worker exited before being ready", err)
 	case <-ready:
-		s.T().Log("nonodo ready")
+		s.T().Log("worker ready")
 	}
 }
 
