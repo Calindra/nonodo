@@ -9,19 +9,21 @@ import (
 
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/contracts"
-	"github.com/calindra/nonodo/internal/convenience"
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/calindra/nonodo/internal/supervisor"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
+	_ "github.com/ncruces/go-sqlite3/driver"
+	_ "github.com/ncruces/go-sqlite3/embed"
 )
 
 type SynchronizerCreateWorker struct {
-	Container *convenience.Container
-	DbRawUrl  string
-	DbRaw     *RawNode
+	inputRepository    *repository.InputRepository
+	inputRefRepository *repository.RawInputRefRepository
+	DbRawUrl           string
+	DbRaw              *RawNode
 }
 
 const DEFAULT_TIMEOUT = 1 * time.Second
@@ -44,7 +46,6 @@ func (s SynchronizerCreateWorker) GetDataRawData(abi *abi.ABI, rawData []byte) (
 
 	methodId := rawData[:4]
 	method, err := abi.MethodById(methodId)
-
 	if err != nil {
 		return nil, err
 	}
@@ -58,10 +59,7 @@ func (s SynchronizerCreateWorker) WatchNewInputs(stdCtx context.Context, db *sql
 	ctx, cancel := context.WithCancel(stdCtx)
 	defer cancel()
 
-	rawInputRep := s.Container.GetRawInputRepository()
-	inputRep := s.Container.GetInputRepository()
-	latestRawID, err := rawInputRep.GetLatestRawId(ctx)
-
+	latestRawID, err := s.inputRefRepository.GetLatestRawId(ctx)
 	if err != nil {
 		return err
 	}
@@ -92,7 +90,6 @@ func (s SynchronizerCreateWorker) WatchNewInputs(stdCtx context.Context, db *sql
 
 					for _, input := range inputs {
 						data, err := s.GetDataRawData(abi, input.RawData)
-
 						if err != nil {
 							errCh <- err
 							return
@@ -125,13 +122,13 @@ func (s SynchronizerCreateWorker) WatchNewInputs(stdCtx context.Context, db *sql
 							ChainId: chainID,
 						}
 
-						err = rawInputRep.Create(ctx, rawInputRef)
+						err = s.inputRefRepository.Create(ctx, rawInputRef)
 						if err != nil {
 							errCh <- err
 							return
 						}
 
-						_, err = inputRep.Create(ctx, advanceInput)
+						_, err = s.inputRepository.Create(ctx, advanceInput)
 						if err != nil {
 							errCh <- err
 							return
@@ -163,6 +160,6 @@ func (s SynchronizerCreateWorker) String() string {
 	return "SynchronizerCreateWorker"
 }
 
-func NewSynchronizerCreateWorker(container *convenience.Container, dbRawUrl string) supervisor.Worker {
-	return SynchronizerCreateWorker{Container: container, DbRawUrl: dbRawUrl}
+func NewSynchronizerCreateWorker(inputRepository *repository.InputRepository, inputRefRepository *repository.RawInputRefRepository, dbRawUrl string) supervisor.Worker {
+	return SynchronizerCreateWorker{inputRepository: inputRepository, inputRefRepository: inputRefRepository, DbRawUrl: dbRawUrl}
 }

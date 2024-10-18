@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/calindra/nonodo/internal/commons"
-	"github.com/calindra/nonodo/internal/convenience"
+	"github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/calindra/nonodo/internal/supervisor"
 	"github.com/calindra/nonodo/postgres/raw"
 	"github.com/jmoiron/sqlx"
@@ -21,7 +21,6 @@ type SynchronizerNodeSuite struct {
 	ctx                        context.Context
 	dockerComposeStartedByTest bool
 	tempDir                    string
-	container                  *convenience.Container
 	workerCtx                  context.Context
 	timeoutCancel              context.CancelFunc
 	workerCancel               context.CancelFunc
@@ -57,10 +56,12 @@ func (s *SynchronizerNodeSuite) SetupTest() {
 	sqliteFileName := filepath.Join(tempDir, "input.sqlite3")
 
 	db := sqlx.MustConnect("sqlite3", sqliteFileName)
-	s.container = convenience.NewContainer(*db, false)
+
+	inputRepository := &repository.InputRepository{Db: *db}
+	inputRefRepository := &repository.RawInputRefRepository{Db: *db}
 
 	s.workerCtx, s.workerCancel = context.WithCancel(s.ctx)
-	wr := NewSynchronizerCreateWorker(s.container, dbRawUrl)
+	wr := NewSynchronizerCreateWorker(inputRepository, inputRefRepository, dbRawUrl)
 	w.Workers = append(w.Workers, wr)
 
 	// Supervisor
@@ -88,7 +89,7 @@ func (s *SynchronizerNodeSuite) TearDownSuite() {
 
 func (s *SynchronizerNodeSuite) TearDownTest() {
 	defer os.RemoveAll(s.tempDir)
-	s.workerCancel()
+	// s.workerCancel()
 }
 
 func TestSynchronizerNodeSuite(t *testing.T) {
