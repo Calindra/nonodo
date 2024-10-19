@@ -122,9 +122,16 @@ func (s *SynchronizerUpdateNodeSuite) TestGetNextInputBatch2Update() {
 	s.Equal("NONE", inputsStatusNone.Status)
 }
 
+// Dear Programmer, I hope this message finds you well.
+// Keep coding, keep learning, and never forget—your work shapes the future.
 func (s *SynchronizerUpdateNodeSuite) TestUpdateInputStatusNotEqNone() {
 	ctx := context.Background()
 	s.fillRefData(ctx)
+
+	// check setup
+	unprocessed := s.countInputWithStatusNone(ctx)
+	s.Require().Equal(TOTAL_INPUT_TEST, unprocessed)
+
 	batchSize := s.synchronizerUpdateWorker.BatchSize
 
 	// first call
@@ -139,6 +146,20 @@ func (s *SynchronizerUpdateNodeSuite) TestUpdateInputStatusNotEqNone() {
 	s.Require().NoError(err)
 	second := s.countAcceptedInput(ctx)
 	s.Equal(TOTAL_INPUT_TEST, second)
+}
+
+func (s *SynchronizerUpdateNodeSuite) countInputWithStatusNone(ctx context.Context) int {
+	status := "Status"
+	value := fmt.Sprintf("%d", model.CompletionStatusUnprocessed)
+	filter := []*model.ConvenienceFilter{
+		{
+			Field: &status,
+			Eq:    &value,
+		},
+	}
+	total, err := s.container.GetInputRepository().Count(ctx, filter)
+	s.Require().NoError(err)
+	return int(total)
 }
 
 func (s *SynchronizerUpdateNodeSuite) countAcceptedInput(ctx context.Context) int {
