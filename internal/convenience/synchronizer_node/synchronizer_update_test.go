@@ -22,6 +22,8 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
+const TOTAL_INPUT_TEST = 65
+
 type SynchronizerUpdateNodeSuite struct {
 	suite.Suite
 	ctx                        context.Context
@@ -124,11 +126,19 @@ func (s *SynchronizerUpdateNodeSuite) TestUpdateInputStatusNotEqNone() {
 	ctx := context.Background()
 	s.fillRefData(ctx)
 	batchSize := s.synchronizerUpdateWorker.BatchSize
+
+	// first call
 	err := s.synchronizerUpdateWorker.SyncInputStatus(ctx)
 	s.Require().NoError(err)
-	input := s.countAcceptedInput(ctx)
+	first := s.countAcceptedInput(ctx)
 	s.Equal(50, batchSize)
-	s.Equal(batchSize, input)
+	s.Equal(batchSize, first)
+
+	// second call
+	err = s.synchronizerUpdateWorker.SyncInputStatus(ctx)
+	s.Require().NoError(err)
+	second := s.countAcceptedInput(ctx)
+	s.Equal(TOTAL_INPUT_TEST, second)
 }
 
 func (s *SynchronizerUpdateNodeSuite) countAcceptedInput(ctx context.Context) int {
@@ -148,7 +158,7 @@ func (s *SynchronizerUpdateNodeSuite) countAcceptedInput(ctx context.Context) in
 func (s *SynchronizerUpdateNodeSuite) fillRefData(ctx context.Context) {
 	appContract := common.HexToAddress("0x5112cf49f2511ac7b13a032c4c62a48410fc28fb")
 	msgSender := common.HexToAddress(devnet.SenderAddress)
-	for i := 0; i < 65; i++ {
+	for i := 0; i < TOTAL_INPUT_TEST; i++ {
 		id := strconv.FormatInt(int64(i), 10) // our ID
 		err := s.container.GetRawInputRepository().Create(ctx, repository.RawInputRef{
 			ID:          id,

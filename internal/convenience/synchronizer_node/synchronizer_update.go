@@ -90,13 +90,13 @@ func (s *SynchronizerUpdateWorker) MapIds(rawInputs []RawInput) []string {
 	return ids
 }
 
-type StatusRef struct {
+type RosettaStatusRef struct {
 	RawStatus string
 	Status    model.CompletionStatus
 }
 
-func GetStatusRosetta() []StatusRef {
-	return []StatusRef{
+func GetStatusRosetta() []RosettaStatusRef {
+	return []RosettaStatusRef{
 		{
 			RawStatus: "ACCEPTED",
 			Status:    model.CompletionStatusAccepted,
@@ -128,6 +128,31 @@ func GetStatusRosetta() []StatusRef {
 	}
 }
 
+// if we have a real ID it could be just one sql command using `id in (?)`
+func (s *SynchronizerUpdateWorker) UpdateStatus(ctx context.Context, rawInputs []RawInput, status model.CompletionStatus) error {
+	for _, rawInput := range rawInputs {
+		appContract := common.BytesToAddress(rawInput.ApplicationAddress)
+		slog.Debug("Update", "appContract", appContract, "index", rawInput.Index)
+		err := s.InputRepository.UpdateStatus(ctx, appContract, rawInput.Index, status)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *SynchronizerUpdateWorker) UpdateManyInputAndRefsStatus(ctx context.Context, rawInputs []RawInput, rosetta RosettaStatusRef) error {
+	err := s.RawInputRefRepository.UpdateStatus(ctx, s.MapIds(rawInputs), rosetta.RawStatus)
+	if err != nil {
+		return err
+	}
+	err = s.UpdateStatus(ctx, rawInputs, rosetta.Status)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (s *SynchronizerUpdateWorker) SyncInputStatus(ctx context.Context) error {
 	ctxWithTx, err := s.StartTransaction(ctx)
 	if err != nil {
@@ -144,18 +169,9 @@ func (s *SynchronizerUpdateWorker) SyncInputStatus(ctx context.Context) error {
 			if err != nil {
 				return err
 			}
-			err = s.RawInputRefRepository.UpdateStatus(ctxWithTx, s.MapIds(rawInputs), rosetta.RawStatus)
+			err = s.UpdateManyInputAndRefsStatus(ctxWithTx, rawInputs, rosetta)
 			if err != nil {
 				return err
-			}
-			// if we have a real ID it could be just one sql command using id in
-			for _, rawInput := range rawInputs {
-				appContract := common.BytesToAddress(rawInput.ApplicationAddress)
-				slog.Debug("Update", "appContract", appContract, "index", rawInput.Index)
-				err := s.InputRepository.UpdateStatus(ctxWithTx, appContract, rawInput.Index, rosetta.Status)
-				if err != nil {
-					return err
-				}
 			}
 		}
 	}
