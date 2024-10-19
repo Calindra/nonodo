@@ -2,6 +2,7 @@ package synchronizernode
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -113,22 +114,35 @@ func (s *SynchronizerUpdateNodeSuite) TestGetNextInputBatch2Update() {
 	s.fillRefData(ctx)
 	batchSize := 50
 	s.synchronizerUpdateWorker.BatchSize = batchSize
-	inputsStatusNone, err := s.synchronizerUpdateWorker.GetNextInputBatch2Update(ctx)
+	inputsStatusNone, err := s.synchronizerUpdateWorker.GetFirstRefWithStatusNone(ctx)
 	s.NoError(err)
 	s.NotNil(inputsStatusNone)
-	s.Equal(batchSize, len(inputsStatusNone))
-	s.Equal("NONE", inputsStatusNone[0].Status)
+	s.Equal("NONE", inputsStatusNone.Status)
 }
 
 func (s *SynchronizerUpdateNodeSuite) TestUpdateInputStatusNotEqNone() {
 	ctx := context.Background()
 	s.fillRefData(ctx)
-	err := s.synchronizerUpdateWorker.UpdateInputStatusNotEqNone(ctx)
+	batchSize := s.synchronizerUpdateWorker.BatchSize
+	err := s.synchronizerUpdateWorker.SyncInputStatus(ctx)
 	s.Require().NoError(err)
+	input := s.countAcceptedInput(ctx)
+	s.Equal(50, batchSize)
+	s.Equal(batchSize, input)
+}
 
-	input, err := s.container.GetInputRepository().FindByStatus(ctx, model.CompletionStatusAccepted)
+func (s *SynchronizerUpdateNodeSuite) countAcceptedInput(ctx context.Context) int {
+	status := "Status"
+	value := fmt.Sprintf("%d", model.CompletionStatusAccepted)
+	filter := []*model.ConvenienceFilter{
+		{
+			Field: &status,
+			Eq:    &value,
+		},
+	}
+	total, err := s.container.GetInputRepository().Count(ctx, filter)
 	s.Require().NoError(err)
-	s.NotNil(input)
+	return int(total)
 }
 
 func (s *SynchronizerUpdateNodeSuite) fillRefData(ctx context.Context) {

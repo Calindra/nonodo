@@ -41,6 +41,25 @@ func (r *RawInputRefRepository) CreateTables() error {
 	return err
 }
 
+func (r *RawInputRefRepository) UpdateStatus(ctx context.Context, rawInputsIds []string, status string) error {
+	if len(rawInputsIds) == 0 {
+		return nil
+	}
+	exec := DBExecutor{&r.Db}
+	query, args, err := sqlx.In(`
+		UPDATE convenience_input_raw_references 
+			SET status = ?
+		WHERE raw_id IN (?)`, status, rawInputsIds)
+	if err != nil {
+		return err
+	}
+	_, err = exec.ExecContext(ctx, query, args...)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (r *RawInputRefRepository) Create(ctx context.Context, rawInput RawInputRef) error {
 	exec := DBExecutor{&r.Db}
 
@@ -84,7 +103,7 @@ func (r *RawInputRefRepository) GetLatestRawId(ctx context.Context) (uint64, err
 	return rawId, err
 }
 
-func (r *RawInputRefRepository) FindInputsByStatusNone(ctx context.Context, limit int) ([]RawInputRef, error) {
+func (r *RawInputRefRepository) FindFirstInputByStatusNone(ctx context.Context, limit int) (*RawInputRef, error) {
 	query := `SELECT * FROM convenience_input_raw_references
 			WHERE status = 'NONE'
 			ORDER BY raw_id ASC LIMIT $1
@@ -97,11 +116,11 @@ func (r *RawInputRefRepository) FindInputsByStatusNone(ctx context.Context, limi
 	defer stmt.Close()
 	args := []interface{}{}
 	args = append(args, limit)
-	var rows []RawInputRef
-	err = stmt.SelectContext(ctx, &rows, args...)
+	var row RawInputRef
+	err = stmt.GetContext(ctx, &row, args...)
 	if err != nil {
 		slog.Error("Select context error", "error", err)
 		return nil, err
 	}
-	return rows, err
+	return &row, err
 }

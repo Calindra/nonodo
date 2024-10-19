@@ -84,10 +84,10 @@ func (s *RawNodeSuite) TestSynchronizerNodeListInputs() {
 	result, err := conn.QueryxContext(ctx, "SELECT * FROM input")
 	s.NoError(err)
 
-	inputs := []Input{}
+	inputs := []RawInput{}
 
 	for result.Next() {
-		var input Input
+		var input RawInput
 		err := result.StructScan(&input)
 		s.NoError(err)
 		inputs = append(inputs, input)

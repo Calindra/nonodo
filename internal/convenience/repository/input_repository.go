@@ -161,16 +161,16 @@ func (r *InputRepository) rawCreate(ctx context.Context, input model.AdvanceInpu
 	return &input, nil
 }
 
-func (r *InputRepository) UpdateStatus(ctx context.Context, appContract common.Address, id string, status model.CompletionStatus) error {
+func (r *InputRepository) UpdateStatus(ctx context.Context, appContract common.Address, inputIndex uint64, status model.CompletionStatus) error {
 	sql := `UPDATE convenience_inputs
 	SET status = $1
-	WHERE id = $2 and app_contract = $3`
+	WHERE input_index = $2 and app_contract = $3`
 	exec := DBExecutor{&r.Db}
 	_, err := exec.ExecContext(
 		ctx,
 		sql,
 		status,
-		id,
+		inputIndex,
 		appContract.Hex(),
 	)
 	if err != nil {
@@ -563,6 +563,10 @@ func transformToInputQuery(
 			if filter.Ne != nil {
 				where = append(where, fmt.Sprintf("status <> $%d ", count))
 				args = append(args, *filter.Ne)
+				count += 1
+			} else if filter.Eq != nil {
+				where = append(where, fmt.Sprintf("status = $%d ", count))
+				args = append(args, *filter.Eq)
 				count += 1
 			} else {
 				return "", nil, 0, fmt.Errorf("operation not implemented")

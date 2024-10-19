@@ -58,7 +58,7 @@ func (s SynchronizerCreateWorker) GetMapRaw(abi *abi.ABI, rawData []byte) (map[s
 	return data, err
 }
 
-func (s SynchronizerCreateWorker) GetAdvanceInputFromMap(data map[string]any, input Input) (*model.AdvanceInput, error) {
+func (s SynchronizerCreateWorker) GetAdvanceInputFromMap(data map[string]any, input RawInput) (*model.AdvanceInput, error) {
 	chainId, ok := data["chainId"].(*big.Int)
 	if !ok {
 		return nil, fmt.Errorf("chainId not found")
@@ -99,7 +99,7 @@ func (s SynchronizerCreateWorker) GetAdvanceInputFromMap(data map[string]any, in
 
 }
 
-func (s SynchronizerCreateWorker) HandleInput(ctx context.Context, abi *abi.ABI, input Input) (id uint64, err error) {
+func (s SynchronizerCreateWorker) HandleInput(ctx context.Context, abi *abi.ABI, input RawInput) (id uint64, err error) {
 	data, err := s.GetMapRaw(abi, input.RawData)
 	if err != nil {
 		return 0, err

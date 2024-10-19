@@ -12,7 +12,7 @@ type RawNode struct {
 	connectionURL string
 }
 
-type Input struct {
+type RawInput struct {
 	ID                 uint64 `db:"id"`
 	Index              uint64 `db:"index"` // numeric(20,0)
 	RawData            []byte `db:"raw_data"`
@@ -54,7 +54,7 @@ type Pagination struct {
 type FilterInput struct {
 	IDgt         uint64
 	IsStatusNone bool
-	StatusNe     string
+	Status       string
 }
 
 const LIMIT = uint64(50)
@@ -71,8 +71,8 @@ func (s *RawNode) Connect(ctx context.Context) (*sqlx.DB, error) {
 	return sqlx.ConnectContext(ctx, "postgres", s.connectionURL)
 }
 
-func (s *RawNode) FindAllInputsByFilter(ctx context.Context, filter FilterInput, pag *Pagination) ([]Input, error) {
-	inputs := []Input{}
+func (s *RawNode) FindAllInputsByFilter(ctx context.Context, filter FilterInput, pag *Pagination) ([]RawInput, error) {
+	inputs := []RawInput{}
 	conn, err := s.Connect(ctx)
 	if err != nil {
 		return nil, err
@@ -96,10 +96,10 @@ func (s *RawNode) FindAllInputsByFilter(ctx context.Context, filter FilterInput,
 		args = append(args, "NONE")
 	}
 
-	if filter.StatusNe != "" {
-		additionalFilter = fmt.Sprintf(" AND status <> $%d", bindvarIdx)
+	if filter.Status != "" {
+		additionalFilter = fmt.Sprintf(" AND status = $%d", bindvarIdx)
 		bindvarIdx++
-		args = append(args, filter.StatusNe)
+		args = append(args, filter.Status)
 	}
 
 	pagination := fmt.Sprintf(" LIMIT $%d", bindvarIdx)
@@ -115,7 +115,7 @@ func (s *RawNode) FindAllInputsByFilter(ctx context.Context, filter FilterInput,
 	defer result.Close()
 
 	for result.Next() {
-		var input Input
+		var input RawInput
 		err := result.StructScan(&input)
 		if err != nil {
 			return nil, err
