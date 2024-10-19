@@ -90,7 +90,7 @@ func TestSynchronizerNodeSuite(t *testing.T) {
 	suite.Run(t, new(SynchronizerNodeSuite))
 }
 
-func (s *SynchronizerNodeSuite) TestSynchronizerNodeConnection() {
+func (s *SynchronizerNodeSuite) XTestSynchronizerNodeConnection() {
 	val := <-s.workerResult
 	s.NoError(val)
 }

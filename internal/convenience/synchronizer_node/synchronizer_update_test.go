@@ -11,7 +11,9 @@ import (
 
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/convenience"
+	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/convenience/repository"
+	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/calindra/nonodo/internal/supervisor"
 	"github.com/calindra/nonodo/postgres/raw"
 	"github.com/ethereum/go-ethereum/common"
@@ -30,6 +32,7 @@ type SynchronizerUpdateNodeSuite struct {
 	workerCancel               context.CancelFunc
 	workerResult               chan error
 	synchronizerUpdateWorker   SynchronizerUpdateWorker
+	rawNode                    *RawNode
 }
 
 func (s *SynchronizerUpdateNodeSuite) SetupSuite() {
@@ -64,8 +67,13 @@ func (s *SynchronizerUpdateNodeSuite) SetupTest() {
 	s.container = convenience.NewContainer(*db, false)
 
 	s.workerCtx, s.workerCancel = context.WithCancel(s.ctx)
+	s.rawNode = NewRawNode(dbRawUrl)
 	rawInputRepository := s.container.GetRawInputRepository()
-	s.synchronizerUpdateWorker = NewSynchronizerUpdateWorker(rawInputRepository, dbRawUrl)
+	s.synchronizerUpdateWorker = NewSynchronizerUpdateWorker(
+		rawInputRepository,
+		s.rawNode,
+		s.container.GetInputRepository(),
+	)
 	w.Workers = append(w.Workers, s.synchronizerUpdateWorker)
 
 	// Supervisor
@@ -102,17 +110,7 @@ func TestSynchronizerUpdateNodeSuiteSuite(t *testing.T) {
 
 func (s *SynchronizerUpdateNodeSuite) TestGetNextInputBatch2Update() {
 	ctx := context.Background()
-	for i := 0; i < 100; i++ {
-		err := s.container.GetRawInputRepository().Create(ctx, repository.RawInputRef{
-			ID:          strconv.FormatInt(int64(i), 10), // our ID
-			RawID:       uint64(i + 1),
-			InputIndex:  uint64(i),
-			AppContract: common.Address{}.Hex(),
-			Status:      "NONE",
-			ChainID:     "31337",
-		})
-		s.Require().NoError(err)
-	}
+	s.fillRefData(ctx)
 	batchSize := 50
 	s.synchronizerUpdateWorker.BatchSize = batchSize
 	inputsStatusNone, err := s.synchronizerUpdateWorker.GetNextInputBatch2Update(ctx)
@@ -120,4 +118,40 @@ func (s *SynchronizerUpdateNodeSuite) TestGetNextInputBatch2Update() {
 	s.NotNil(inputsStatusNone)
 	s.Equal(batchSize, len(inputsStatusNone))
 	s.Equal("NONE", inputsStatusNone[0].Status)
+}
+
+func (s *SynchronizerUpdateNodeSuite) TestUpdateInputStatusNotEqNone() {
+	ctx := context.Background()
+	s.fillRefData(ctx)
+	err := s.synchronizerUpdateWorker.UpdateInputStatusNotEqNone(ctx)
+	s.Require().NoError(err)
+
+	input, err := s.container.GetInputRepository().FindByStatus(ctx, model.CompletionStatusAccepted)
+	s.Require().NoError(err)
+	s.NotNil(input)
+}
+
+func (s *SynchronizerUpdateNodeSuite) fillRefData(ctx context.Context) {
+	appContract := common.HexToAddress("0x5112cf49f2511ac7b13a032c4c62a48410fc28fb")
+	msgSender := common.HexToAddress(devnet.SenderAddress)
+	for i := 0; i < 65; i++ {
+		id := strconv.FormatInt(int64(i), 10) // our ID
+		err := s.container.GetRawInputRepository().Create(ctx, repository.RawInputRef{
+			ID:          id,
+			RawID:       uint64(i + 1),
+			InputIndex:  uint64(i),
+			AppContract: appContract.Hex(),
+			Status:      "NONE",
+			ChainID:     "31337",
+		})
+		s.Require().NoError(err)
+		_, err = s.container.GetInputRepository().Create(ctx, model.AdvanceInput{
+			ID:          id,
+			Index:       i,
+			Status:      model.CompletionStatusUnprocessed,
+			AppContract: appContract,
+			MsgSender:   msgSender,
+		})
+		s.Require().NoError(err)
+	}
 }

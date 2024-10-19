@@ -161,6 +161,25 @@ func (r *InputRepository) rawCreate(ctx context.Context, input model.AdvanceInpu
 	return &input, nil
 }
 
+func (r *InputRepository) UpdateStatus(ctx context.Context, appContract common.Address, id string, status model.CompletionStatus) error {
+	sql := `UPDATE convenience_inputs
+	SET status = $1
+	WHERE id = $2 and app_contract = $3`
+	exec := DBExecutor{&r.Db}
+	_, err := exec.ExecContext(
+		ctx,
+		sql,
+		status,
+		id,
+		appContract.Hex(),
+	)
+	if err != nil {
+		slog.Error("Error updating input status", "Error", err)
+		return err
+	}
+	return nil
+}
+
 func (r *InputRepository) Update(ctx context.Context, input model.AdvanceInput) (*model.AdvanceInput, error) {
 	sql := `UPDATE convenience_inputs
 		SET status = $1, exception = $2
@@ -175,7 +194,7 @@ func (r *InputRepository) Update(ctx context.Context, input model.AdvanceInput) 
 		input.Index,
 	)
 	if err != nil {
-		slog.Error("Error updating voucher", "Error", err)
+		slog.Error("Error updating input", "Error", err)
 		return nil, err
 	}
 	return &input, nil

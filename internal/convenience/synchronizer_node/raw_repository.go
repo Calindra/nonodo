@@ -54,6 +54,7 @@ type Pagination struct {
 type FilterInput struct {
 	IDgt         uint64
 	IsStatusNone bool
+	StatusNe     string
 }
 
 const LIMIT = uint64(50)
@@ -93,6 +94,12 @@ func (s *RawNode) FindAllInputsByFilter(ctx context.Context, filter FilterInput,
 		additionalFilter = fmt.Sprintf(" AND status = \"$%d\"", bindvarIdx)
 		bindvarIdx++
 		args = append(args, "NONE")
+	}
+
+	if filter.StatusNe != "" {
+		additionalFilter = fmt.Sprintf(" AND status <> $%d", bindvarIdx)
+		bindvarIdx++
+		args = append(args, filter.StatusNe)
 	}
 
 	pagination := fmt.Sprintf(" LIMIT $%d", bindvarIdx)

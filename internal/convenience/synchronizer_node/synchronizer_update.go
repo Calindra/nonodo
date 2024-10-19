@@ -2,30 +2,27 @@ package synchronizernode
 
 import (
 	"context"
+	"log/slog"
+	"strconv"
 
+	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/convenience/repository"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 const DefaultBatchSize = 50
 
 type SynchronizerUpdateWorker struct {
 	DbRawUrl              string
-	DbRaw                 *RawNode
+	RawNode               *RawNode
 	RawInputRefRepository *repository.RawInputRefRepository
+	InputRepository       *repository.InputRepository
 	BatchSize             int
 }
 
 // Start implements supervisor.Worker.
 func (s SynchronizerUpdateWorker) Start(ctx context.Context, ready chan<- struct{}) error {
 	ready <- struct{}{}
-
-	s.DbRaw = NewRawNode(s.DbRawUrl)
-	db, err := s.DbRaw.Connect(ctx)
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-
 	return nil
 }
 
@@ -34,14 +31,47 @@ func (s SynchronizerUpdateWorker) String() string {
 	return "SynchronizerUpdateWorker"
 }
 
-func NewSynchronizerUpdateWorker(container *repository.RawInputRefRepository, dbRawUrl string) SynchronizerUpdateWorker {
+func NewSynchronizerUpdateWorker(
+	rawInputRefRepository *repository.RawInputRefRepository,
+	rawNode *RawNode,
+	inputRepository *repository.InputRepository,
+) SynchronizerUpdateWorker {
 	return SynchronizerUpdateWorker{
-		DbRawUrl:              dbRawUrl,
-		RawInputRefRepository: container,
+		RawNode:               rawNode,
+		RawInputRefRepository: rawInputRefRepository,
 		BatchSize:             DefaultBatchSize,
+		InputRepository:       inputRepository,
 	}
 }
 
 func (s *SynchronizerUpdateWorker) GetNextInputBatch2Update(ctx context.Context) ([]repository.RawInputRef, error) {
 	return s.RawInputRefRepository.FindInputsByStatusNone(ctx, s.BatchSize)
+}
+
+func (s *SynchronizerUpdateWorker) UpdateInputStatusNotEqNone(ctx context.Context) error {
+	refs, err := s.GetNextInputBatch2Update(ctx)
+	if err != nil {
+		return err
+	}
+	for _, inputRef := range refs {
+		inputs, err := s.RawNode.FindAllInputsByFilter(ctx, FilterInput{
+			IDgt:     inputRef.RawID,
+			StatusNe: "NONE",
+		}, &Pagination{
+			Limit: uint64(s.BatchSize),
+		})
+		if err != nil {
+			return err
+		}
+		for _, rawInput := range inputs {
+			appContract := common.BytesToAddress(rawInput.ApplicationAddress)
+			slog.Debug("Update", "appContract", appContract, "id", rawInput.ID)
+			txId := strconv.FormatUint(rawInput.ID, 10)
+			err := s.InputRepository.UpdateStatus(ctx, appContract, txId, model.CompletionStatusAccepted)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
