@@ -13,6 +13,7 @@ import (
 	"github.com/calindra/nonodo/internal/contracts"
 	"github.com/calindra/nonodo/postgres/raw"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/suite"
 )
@@ -47,8 +48,10 @@ func (s *RawNodeSuite) SetupSuite() {
 	}
 	uri := fmt.Sprintf("postgres://postgres:%s@localhost:5432/%s?sslmode=disable", dbPass, dbName)
 	slog.Info("Raw Input URI", "uri", uri)
+	dbNodeV2 := sqlx.MustConnect("postgres", uri)
 	s.node = RawRepository{
 		connectionURL: uri,
+		Db:            dbNodeV2,
 	}
 }
 
@@ -68,20 +71,11 @@ func TestRawNodeSuite(t *testing.T) {
 	suite.Run(t, new(RawNodeSuite))
 }
 
-func (s *RawNodeSuite) TestSynchronizerNodeConnection() {
-	ctx, cancel := context.WithTimeout(s.ctx, s.DefaultTimeout)
-	defer cancel()
-	_, err := s.node.Connect(ctx)
-	s.NoError(err)
-}
-
 func (s *RawNodeSuite) TestSynchronizerNodeListInputs() {
 	ctx, cancel := context.WithTimeout(s.ctx, s.DefaultTimeout)
 	defer cancel()
-	conn, err := s.node.Connect(ctx)
-	s.NoError(err)
 
-	result, err := conn.QueryxContext(ctx, "SELECT * FROM input")
+	result, err := s.node.Db.QueryxContext(ctx, "SELECT * FROM input")
 	s.NoError(err)
 
 	inputs := []RawInput{}
