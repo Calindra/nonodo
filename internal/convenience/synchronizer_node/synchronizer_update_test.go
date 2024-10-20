@@ -35,7 +35,7 @@ type SynchronizerUpdateNodeSuite struct {
 	workerCancel               context.CancelFunc
 	workerResult               chan error
 	synchronizerUpdateWorker   SynchronizerUpdateWorker
-	rawNode                    *RawNode
+	rawNode                    *RawRepository
 }
 
 func (s *SynchronizerUpdateNodeSuite) SetupSuite() {
@@ -70,10 +70,12 @@ func (s *SynchronizerUpdateNodeSuite) SetupTest() {
 	s.container = convenience.NewContainer(*db, false)
 
 	s.workerCtx, s.workerCancel = context.WithCancel(s.ctx)
-	s.rawNode = NewRawNode(dbRawUrl)
-	rawInputRepository := s.container.GetRawInputRepository()
+
+	dbNodeV2 := sqlx.MustConnect("postgres", dbRawUrl)
+	s.rawNode = NewRawNode(dbRawUrl, dbNodeV2)
+	rawInputRefRepository := s.container.GetRawInputRepository()
 	s.synchronizerUpdateWorker = NewSynchronizerUpdateWorker(
-		rawInputRepository,
+		rawInputRefRepository,
 		s.rawNode,
 		s.container.GetInputRepository(),
 	)

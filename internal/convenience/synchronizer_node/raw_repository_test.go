@@ -19,7 +19,7 @@ import (
 
 type RawNodeSuite struct {
 	suite.Suite
-	node                       RawNode
+	node                       RawRepository
 	ctx                        context.Context
 	dockerComposeStartedByTest bool
 	DefaultTimeout             time.Duration
@@ -47,7 +47,7 @@ func (s *RawNodeSuite) SetupSuite() {
 	}
 	uri := fmt.Sprintf("postgres://postgres:%s@localhost:5432/%s?sslmode=disable", dbPass, dbName)
 	slog.Info("Raw Input URI", "uri", uri)
-	s.node = RawNode{
+	s.node = RawRepository{
 		connectionURL: uri,
 	}
 }

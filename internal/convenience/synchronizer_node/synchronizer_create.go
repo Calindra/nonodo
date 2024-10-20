@@ -15,7 +15,6 @@ import (
 	"github.com/calindra/nonodo/internal/supervisor"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/jmoiron/sqlx"
 	_ "github.com/ncruces/go-sqlite3/driver"
 	_ "github.com/ncruces/go-sqlite3/embed"
 )
@@ -24,7 +23,7 @@ type SynchronizerCreateWorker struct {
 	inputRepository    *repository.InputRepository
 	inputRefRepository *repository.RawInputRefRepository
 	DbRawUrl           string
-	DbRaw              *RawNode
+	RawRepository      *RawRepository
 }
 
 const DEFAULT_DELAY = 1 * time.Second
@@ -32,14 +31,7 @@ const DEFAULT_DELAY = 1 * time.Second
 // Start implements supervisor.Worker.
 func (s SynchronizerCreateWorker) Start(ctx context.Context, ready chan<- struct{}) error {
 	ready <- struct{}{}
-	s.DbRaw = NewRawNode(s.DbRawUrl)
-	db, err := s.DbRaw.Connect(ctx)
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-
-	return s.WatchNewInputs(ctx, db)
+	return s.WatchNewInputs(ctx)
 }
 
 func (s SynchronizerCreateWorker) GetMapRaw(abi *abi.ABI, rawData []byte) (map[string]any, error) {
@@ -131,7 +123,7 @@ func (s SynchronizerCreateWorker) HandleInput(ctx context.Context, abi *abi.ABI,
 	return rawInputRef.RawID, nil
 }
 
-func (s SynchronizerCreateWorker) WatchNewInputs(stdCtx context.Context, db *sqlx.DB) error {
+func (s SynchronizerCreateWorker) WatchNewInputs(stdCtx context.Context) error {
 	ctx, cancel := context.WithCancel(stdCtx)
 	defer cancel()
 
@@ -157,7 +149,7 @@ func (s SynchronizerCreateWorker) WatchNewInputs(stdCtx context.Context, db *sql
 					errCh <- ctx.Err()
 					return
 				default:
-					inputs, err := s.DbRaw.FindAllInputsByFilter(ctx, FilterInput{IDgt: latestRawID}, page)
+					inputs, err := s.RawRepository.FindAllInputsByFilter(ctx, FilterInput{IDgt: latestRawID}, page)
 					if err != nil {
 						errCh <- err
 						return
@@ -191,6 +183,16 @@ func (s SynchronizerCreateWorker) String() string {
 	return "SynchronizerCreateWorker"
 }
 
-func NewSynchronizerCreateWorker(inputRepository *repository.InputRepository, inputRefRepository *repository.RawInputRefRepository, dbRawUrl string) supervisor.Worker {
-	return SynchronizerCreateWorker{inputRepository: inputRepository, inputRefRepository: inputRefRepository, DbRawUrl: dbRawUrl}
+func NewSynchronizerCreateWorker(
+	inputRepository *repository.InputRepository,
+	inputRefRepository *repository.RawInputRefRepository,
+	dbRawUrl string,
+	rawRepository *RawRepository,
+) supervisor.Worker {
+	return SynchronizerCreateWorker{
+		inputRepository:    inputRepository,
+		inputRefRepository: inputRefRepository,
+		DbRawUrl:           dbRawUrl,
+		RawRepository:      rawRepository,
+	}
 }

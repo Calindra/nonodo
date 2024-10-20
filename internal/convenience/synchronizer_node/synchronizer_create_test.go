@@ -9,6 +9,7 @@ import (
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/calindra/nonodo/postgres/raw"
+	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -56,7 +57,15 @@ func (s *SynchronizerNodeSuite) SetupTest() {
 	s.NoError(err)
 
 	s.workerCtx, s.workerCancel = context.WithCancel(s.ctx)
-	wr := NewSynchronizerCreateWorker(s.inputRepository, s.inputRefRepository, dbRawUrl)
+
+	dbNodeV2 := sqlx.MustConnect("postgres", dbRawUrl)
+	rawRepository := RawRepository{Db: dbNodeV2}
+	wr := NewSynchronizerCreateWorker(
+		s.inputRepository,
+		s.inputRefRepository,
+		dbRawUrl,
+		&rawRepository,
+	)
 
 	// like Supervisor
 	ready := make(chan struct{})

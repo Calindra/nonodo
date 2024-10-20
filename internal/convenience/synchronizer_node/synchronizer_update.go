@@ -14,7 +14,7 @@ const DefaultBatchSize = 50
 
 type SynchronizerUpdateWorker struct {
 	DbRawUrl              string
-	RawNode               *RawNode
+	RawNode               *RawRepository
 	RawInputRefRepository *repository.RawInputRefRepository
 	InputRepository       *repository.InputRepository
 	BatchSize             int
@@ -33,7 +33,7 @@ func (s SynchronizerUpdateWorker) String() string {
 
 func NewSynchronizerUpdateWorker(
 	rawInputRefRepository *repository.RawInputRefRepository,
-	rawNode *RawNode,
+	rawNode *RawRepository,
 	inputRepository *repository.InputRepository,
 ) SynchronizerUpdateWorker {
 	return SynchronizerUpdateWorker{

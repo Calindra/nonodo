@@ -232,7 +232,14 @@ func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 	}
 
 	if opts.RawEnabled {
-		rawSequencer := synchronizernode.NewSynchronizerCreateWorker(container.GetInputRepository(), container.GetRawInputRepository(), opts.DbRawUrl)
+		dbNodeV2 := sqlx.MustConnect("postgres", opts.DbRawUrl)
+		rawRepository := synchronizernode.NewRawNode(opts.DbRawUrl, dbNodeV2)
+		rawSequencer := synchronizernode.NewSynchronizerCreateWorker(
+			container.GetInputRepository(),
+			container.GetRawInputRepository(),
+			opts.DbRawUrl,
+			rawRepository,
+		)
 		w.Workers = append(w.Workers, rawSequencer)
 	}
 
@@ -429,8 +436,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	}
 
 	if opts.RawEnabled {
-		rawSequencer := synchronizernode.NewSynchronizerCreateWorker(container.GetInputRepository(), container.GetRawInputRepository(), opts.DbRawUrl)
-		w.Workers = append(w.Workers, rawSequencer)
+		panic("use the --high-level-graphql flag")
 	}
 
 	rollup.Register(re, modelInstance, sequencer, common.HexToAddress(opts.ApplicationAddress))

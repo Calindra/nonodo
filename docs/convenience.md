@@ -6,6 +6,7 @@ How to enable the node v2 synchronization
 go build . && \
     rm -rf db.sqlite3 && \
     ./nonodo --raw-enabled -d \
+        --high-level-graphql \
         --sqlite-file db.sqlite3
 ```
 
@@ -14,6 +15,8 @@ Run without cleaning the sqlite file
 ```
 go build . && \
     ./nonodo --raw-enabled -d \
+        --high-level-graphql \
+        --graphile-disable-sync \
         --sqlite-file db.sqlite3
 ```
 
