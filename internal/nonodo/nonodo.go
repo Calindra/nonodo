@@ -67,6 +67,8 @@ type NonodoOpts struct {
 	DisableDevnet bool
 	// If set, disables advances.
 	DisableAdvance bool
+	// If set, disables inspects.
+	DisableInspect bool
 	// If set, start application.
 	ApplicationArgs     []string
 	HLGraphQL           bool
@@ -124,6 +126,7 @@ func NewNonodoOpts() NonodoOpts {
 		EnableEcho:          false,
 		DisableDevnet:       false,
 		DisableAdvance:      false,
+		DisableInspect:      false,
 		ApplicationArgs:     nil,
 		HLGraphQL:           false,
 		SqliteFile:          "",
@@ -319,7 +322,9 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		ErrorMessage: "Request timed out",
 		Timeout:      opts.TimeoutInspect,
 	}))
-	inspect.Register(e, modelInstance)
+	if !opts.DisableInspect {
+		inspect.Register(e, modelInstance)
+	}
 	reader.Register(e, modelInstance, convenienceService, adapter)
 	health.Register(e)
 
@@ -360,72 +365,76 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		ApplicationAddress: common.HexToAddress(opts.ApplicationAddress),
 	}
 
-	if !opts.DisableAdvance && !opts.AvailEnabled {
-		if opts.Sequencer == "inputbox" {
-			sequencer = model.NewInputBoxSequencer(modelInstance)
-			w.Workers = append(w.Workers, inputter.InputterWorker{
-				Model:              modelInstance,
-				Provider:           opts.RpcUrl,
-				InputBoxAddress:    common.HexToAddress(opts.InputBoxAddress),
-				InputBoxBlock:      opts.InputBoxBlock,
-				ApplicationAddress: common.HexToAddress(opts.ApplicationAddress),
-			})
-		} else if opts.Sequencer == "espresso" {
-			sequencer = model.NewEspressoSequencer(modelInstance)
-			w.Workers = append(w.Workers, espresso.NewEspressoListener(
-				opts.EspressoUrl,
-				opts.Namespace,
+	if !opts.DisableAdvance {
+		if !opts.AvailEnabled {
+			if opts.Sequencer == "inputbox" {
+				sequencer = model.NewInputBoxSequencer(modelInstance)
+				w.Workers = append(w.Workers, inputter.InputterWorker{
+					Model:              modelInstance,
+					Provider:           opts.RpcUrl,
+					InputBoxAddress:    common.HexToAddress(opts.InputBoxAddress),
+					InputBoxBlock:      opts.InputBoxBlock,
+					ApplicationAddress: common.HexToAddress(opts.ApplicationAddress),
+				})
+			} else if opts.Sequencer == "espresso" {
+				sequencer = model.NewEspressoSequencer(modelInstance)
+				w.Workers = append(w.Workers, espresso.NewEspressoListener(
+					opts.EspressoUrl,
+					opts.Namespace,
+					modelInstance.GetInputRepository(),
+					opts.FromBlock,
+					inputterWorker,
+				))
+			} else if opts.Sequencer == "paio" {
+				panic("sequencer not supported yet")
+			} else {
+				panic("sequencer not supported")
+			}
+		}
+
+		paioSequencerBuilder := paio.NewPaioBuilder()
+		paioSequencerBuilder.WithInputRepository(container.GetInputRepository())
+		paioSequencerBuilder.WithRpcUrl(opts.RpcUrl)
+
+		if opts.AvailEnabled {
+			availClient, err := avail.NewAvailClient(
+				fmt.Sprintf("http://%s:%d", opts.HttpAddress, opts.HttpPort),
+				avail.DEFAULT_CHAINID_HARDHAT,
+				avail.DEFAULT_APP_ID,
+			)
+
+			if err != nil {
+				panic(err)
+			}
+			paioSequencerBuilder.WithPaioServerUrl(
+				opts.PaioServerUrl,
+			)
+			paioSequencerBuilder.WithAvalClient(availClient)
+		}
+		if opts.Sequencer == "espresso" {
+			paioSequencerBuilder = paioSequencerBuilder.WithEspressoUrl(opts.EspressoUrl)
+		}
+		paioSequencer := paioSequencerBuilder.Build()
+		paio.Register(e, paioSequencer)
+
+		if opts.AvailEnabled {
+			// Check if paio decoder is installed
+			paioLocation, err := paiodecoder.DownloadPaioDecoderExecutableAsNeeded()
+			if err != nil {
+				panic(err)
+			}
+			slog.Debug("AvailEnabled", "paioLocation", paioLocation)
+			w.Workers = append(w.Workers, avail.NewAvailListener(
+				opts.AvailFromBlock,
 				modelInstance.GetInputRepository(),
-				opts.FromBlock,
 				inputterWorker,
+				opts.FromBlock,
+				paioLocation,
+				opts.ApplicationAddress,
 			))
-		} else if opts.Sequencer == "paio" {
-			panic("sequencer not supported yet")
-		} else {
-			panic("sequencer not supported")
+			sequencer = model.NewInputBoxSequencer(modelInstance)
 		}
-	}
-
-	paioSequencerBuilder := paio.NewPaioBuilder()
-	paioSequencerBuilder.WithInputRepository(container.GetInputRepository())
-	paioSequencerBuilder.WithRpcUrl(opts.RpcUrl)
-
-	if opts.AvailEnabled {
-		availClient, err := avail.NewAvailClient(
-			fmt.Sprintf("http://%s:%d", opts.HttpAddress, opts.HttpPort),
-			avail.DEFAULT_CHAINID_HARDHAT,
-			avail.DEFAULT_APP_ID,
-		)
-
-		if err != nil {
-			panic(err)
-		}
-		paioSequencerBuilder.WithPaioServerUrl(
-			opts.PaioServerUrl,
-		)
-		paioSequencerBuilder.WithAvalClient(availClient)
-	}
-	if opts.Sequencer == "espresso" {
-		paioSequencerBuilder = paioSequencerBuilder.WithEspressoUrl(opts.EspressoUrl)
-	}
-	paioSequencer := paioSequencerBuilder.Build()
-	paio.Register(e, paioSequencer)
-
-	if opts.AvailEnabled {
-		// Check if paio decoder is installed
-		paioLocation, err := paiodecoder.DownloadPaioDecoderExecutableAsNeeded()
-		if err != nil {
-			panic(err)
-		}
-		slog.Debug("AvailEnabled", "paioLocation", paioLocation)
-		w.Workers = append(w.Workers, avail.NewAvailListener(
-			opts.AvailFromBlock,
-			modelInstance.GetInputRepository(),
-			inputterWorker,
-			opts.FromBlock,
-			paioLocation,
-			opts.ApplicationAddress,
-		))
+	} else {
 		sequencer = model.NewInputBoxSequencer(modelInstance)
 	}
 
@@ -435,6 +444,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	}
 
 	rollup.Register(re, modelInstance, sequencer, common.HexToAddress(opts.ApplicationAddress))
+
 	w.Workers = append(w.Workers, supervisor.HttpWorker{
 		Address: fmt.Sprintf("%v:%v", opts.HttpAddress, opts.HttpRollupsPort),
 		Handler: re,
