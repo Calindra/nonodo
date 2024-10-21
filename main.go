@@ -497,7 +497,6 @@ func init() {
 		"If set, nonodo won't start the inputter to get inputs from the local chain")
 	cmd.Flags().BoolVar(&opts.DisableInspect, "disable-inspect", opts.DisableInspect,
 		"If set, nonodo won't accept inspect inputs")
-	
 
 	// http-*
 	cmd.Flags().StringVar(&opts.HttpAddress, "http-address", opts.HttpAddress,
