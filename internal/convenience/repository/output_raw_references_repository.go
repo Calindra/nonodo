@@ -7,11 +7,11 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-type RawNoticeRefRepository struct {
+type RawOutputRefRepository struct {
 	Db sqlx.DB
 }
 
-type RawNoticeRef struct {
+type RawOutputRef struct {
 	ID          string `db:"id"`
 	OutputIndex uint64 `db:"output_index"`
 	InputIndex  uint64 `db:"input_index"`
@@ -19,7 +19,7 @@ type RawNoticeRef struct {
 	Type        string `db:"type"`
 }
 
-func (r *RawNoticeRefRepository) CreateTable() error {
+func (r *RawOutputRefRepository) CreateTable() error {
 	schema := `CREATE TABLE IF NOT EXISTS convenience_output_raw_references (
 		id 				text NOT NULL,
 		input_index		integer NOT NULL,
@@ -36,7 +36,7 @@ func (r *RawNoticeRefRepository) CreateTable() error {
 	return err
 }
 
-func (r *RawNoticeRefRepository) Create(ctx context.Context, rawOutput RawNoticeRef) error {
+func (r *RawOutputRefRepository) Create(ctx context.Context, rawOutput RawOutputRef) error {
 	exec := DBExecutor{&r.Db}
 
 	result, err := exec.ExecContext(ctx, `INSERT INTO convenience_output_raw_references (

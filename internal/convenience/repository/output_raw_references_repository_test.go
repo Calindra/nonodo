@@ -9,85 +9,85 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-type RawNoticeRefSuite struct {
+type RawOutputRefSuite struct {
 	suite.Suite
 	noticeRepository       *NoticeRepository
-	rawNoticeRefRepository *RawNoticeRefRepository
+	rawOutputRefRepository *RawOutputRefRepository
 	dbFactory              *commons.DbFactory
 }
 
-func (s *RawNoticeRefSuite) TearDownTest() {
+func (s *RawOutputRefSuite) TearDownTest() {
 	defer s.dbFactory.Cleanup()
 }
 
-func TestRawRefNoticeSuite(t *testing.T) {
-	suite.Run(t, new(RawNoticeRefSuite))
+func TestRawRefOutputSuite(t *testing.T) {
+	suite.Run(t, new(RawOutputRefSuite))
 }
 
-func (s *RawNoticeRefSuite) SetupTest() {
+func (s *RawOutputRefSuite) SetupTest() {
 	commons.ConfigureLog(slog.LevelDebug)
 	s.dbFactory = commons.NewDbFactory()
 	db := s.dbFactory.CreateDb("input.sqlite3")
 	s.noticeRepository = &NoticeRepository{
 		Db: *db,
 	}
-	s.rawNoticeRefRepository = &RawNoticeRefRepository{
+	s.rawOutputRefRepository = &RawOutputRefRepository{
 		Db: *db,
 	}
 
 	err := s.noticeRepository.CreateTables()
 	s.NoError(err)
-	err = s.rawNoticeRefRepository.CreateTable()
+	err = s.rawOutputRefRepository.CreateTable()
 	s.NoError(err)
 }
 
-func (s *RawNoticeRefSuite) TestRawRefNoticeCreateTables() {
-	err := s.rawNoticeRefRepository.CreateTable()
+func (s *RawOutputRefSuite) TestRawRefOutputCreateTables() {
+	err := s.rawOutputRefRepository.CreateTable()
 	s.NoError(err)
 }
 
-func (s *RawNoticeRefSuite) TestRawRefNoticeShouldThrowAnErrorWhenThereIsNoTypeAttribute() {
+func (s *RawOutputRefSuite) TestRawRefOutputShouldThrowAnErrorWhenThereIsNoTypeAttribute() {
 	ctx := context.Background()
 
-	rawNotice := RawNoticeRef{
+	rawNotice := RawOutputRef{
 		InputIndex:  1,
 		AppContract: "0x123456789abcdef",
 		OutputIndex: 2,
 	}
 
-	err := s.rawNoticeRefRepository.Create(ctx, rawNotice)
+	err := s.rawOutputRefRepository.Create(ctx, rawNotice)
 	s.ErrorContains(err, "sqlite3: constraint failed: CHECK constraint failed: type IN ('voucher', 'notice')")
 }
 
-func (s *RawNoticeRefSuite) TestRawRefNoticeShouldThrowAnErrorWhenTypeAttributeIsDiffFromVoucherOrNotice() {
+func (s *RawOutputRefSuite) TestRawRefOutputShouldThrowAnErrorWhenTypeAttributeIsDiffFromVoucherOrNotice() {
 	ctx := context.Background()
 
-	rawNotice := RawNoticeRef{
+	rawNotice := RawOutputRef{
 		InputIndex:  1,
 		AppContract: "0x123456789abcdef",
 		OutputIndex: 2,
 		Type:        "report",
 	}
 
-	err := s.rawNoticeRefRepository.Create(ctx, rawNotice)
+	err := s.rawOutputRefRepository.Create(ctx, rawNotice)
 	s.ErrorContains(err, "sqlite3: constraint failed: CHECK constraint failed: type IN ('voucher', 'notice')")
 }
 
-func (s *RawNoticeRefSuite) TestRawRefNoticeCreate() {
+func (s *RawOutputRefSuite) TestRawRefOutputCreate() {
 	ctx := context.Background()
 
-	rawNotice := RawNoticeRef{
+	rawNotice := RawOutputRef{
 		InputIndex:  1,
 		AppContract: "0x123456789abcdef",
 		OutputIndex: 2,
 		Type:        "notice",
 	}
 
-	err := s.rawNoticeRefRepository.Create(ctx, rawNotice)
+	err := s.rawOutputRefRepository.Create(ctx, rawNotice)
 	s.NoError(err)
 
 	var count int
-	err = s.rawNoticeRefRepository.Db.QueryRow(`SELECT COUNT(*) FROM convenience_output_raw_references WHERE input_index = ? AND app_contract = ? AND output_index = ?`,
+	err = s.rawOutputRefRepository.Db.QueryRow(`SELECT COUNT(*) FROM convenience_output_raw_references WHERE input_index = ? AND app_contract = ? AND output_index = ?`,
 		rawNotice.InputIndex, rawNotice.AppContract, rawNotice.OutputIndex).Scan(&count)
 
 	s.NoError(err)
