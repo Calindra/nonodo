@@ -36,11 +36,11 @@ func (s *RawNoticeRefSuite) SetupTest() {
 
 	err := s.noticeRepository.CreateTables()
 	s.NoError(err)
-	err = s.rawNoticeRefRepository.CreateTables()
+	err = s.rawNoticeRefRepository.CreateTable()
 	s.NoError(err)
 }
 
 func (s *RawNoticeRefSuite) TestRawRefNoticeCreateTables() {
-	err := s.rawNoticeRefRepository.CreateTables()
+	err := s.rawNoticeRefRepository.CreateTable()
 	s.NoError(err)
 }
