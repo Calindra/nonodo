@@ -19,10 +19,11 @@ type RawNoticeRef struct {
 func (r *RawNoticeRefRepository) CreateTable() error {
 	schema := `CREATE TABLE IF NOT EXISTS convenience_notice_raw_references (
 		id 				text NOT NULL PRIMARY KEY,
-		output_index		integer NOT NULL,
+		input_index		integer NOT NULL,
 		app_contract    text NOT NULL,
-		FOREIGN KEY (output_index, app_contract) REFERENCES notices (output_index, app_contract) ON DELETE CASCADE);
-	CREATE INDEX IF NOT EXISTS idx_output_index ON convenience_notice_raw_references(output_index,app_contract);`
+		output_index		integer NOT NULL,
+		FOREIGN KEY (input_index, app_contract) REFERENCES convenience_inputs (input_index, app_contract) ON DELETE CASCADE, 
+		FOREIGN KEY (output_index) REFERENCES notices (output_index) ON DELETE CASCADE);`
 	_, err := r.Db.Exec(schema)
 	if err == nil {
 		slog.Debug("Raw Notices table created")
