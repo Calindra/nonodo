@@ -162,8 +162,8 @@ func (s SynchronizerCreateWorker) WatchNewInputs(stdCtx context.Context) error {
 							return
 						}
 						latestRawID = rawInputRefID + 1
-						<-time.After(DEFAULT_DELAY)
 					}
+					<-time.After(DEFAULT_DELAY)
 				}
 			}
 		}()

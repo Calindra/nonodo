@@ -7,6 +7,7 @@ go build . && \
     rm -rf db.sqlite3 && \
     ./nonodo --raw-enabled -d \
         --high-level-graphql \
+        --graphile-disable-sync \
         --sqlite-file db.sqlite3
 ```
 
