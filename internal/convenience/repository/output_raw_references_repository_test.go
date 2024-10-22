@@ -51,6 +51,7 @@ func (s *RawOutputRefSuite) TestRawRefOutputShouldThrowAnErrorWhenThereIsNoTypeA
 
 	rawNotice := RawOutputRef{
 		InputIndex:  1,
+		RawID:       2,
 		AppContract: "0x123456789abcdef",
 		OutputIndex: 2,
 	}
@@ -64,6 +65,7 @@ func (s *RawOutputRefSuite) TestRawRefOutputShouldThrowAnErrorWhenTypeAttributeI
 
 	rawNotice := RawOutputRef{
 		InputIndex:  1,
+		RawID:       2,
 		AppContract: "0x123456789abcdef",
 		OutputIndex: 2,
 		Type:        "report",
@@ -78,6 +80,7 @@ func (s *RawOutputRefSuite) TestRawRefOutputCreate() {
 
 	rawOutput := RawOutputRef{
 		InputIndex:  1,
+		RawID:       2,
 		AppContract: "0x123456789abcdef",
 		OutputIndex: 2,
 		Type:        "notice",
@@ -99,6 +102,7 @@ func (s *RawOutputRefSuite) TestRawRefOutputGetLatestId() {
 
 	firstRawOutput := RawOutputRef{
 		ID:          001,
+		RawID:       1,
 		InputIndex:  1,
 		AppContract: "0x123456789abcdef",
 		OutputIndex: 2,
@@ -110,6 +114,7 @@ func (s *RawOutputRefSuite) TestRawRefOutputGetLatestId() {
 
 	lastRawOutput := RawOutputRef{
 		ID:          002,
+		RawID:       2,
 		InputIndex:  2,
 		AppContract: "0x123456789abcdef",
 		OutputIndex: 23,

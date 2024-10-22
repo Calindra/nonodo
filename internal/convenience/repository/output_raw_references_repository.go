@@ -15,6 +15,7 @@ type RawOutputRefRepository struct {
 
 type RawOutputRef struct {
 	ID          uint64 `db:"id"`
+	RawID       uint64 `db:"raw_id"`
 	OutputIndex uint64 `db:"output_index"`
 	InputIndex  uint64 `db:"input_index"`
 	AppContract string `db:"app_contract"`
@@ -24,6 +25,7 @@ type RawOutputRef struct {
 func (r *RawOutputRefRepository) CreateTable() error {
 	schema := `CREATE TABLE IF NOT EXISTS convenience_output_raw_references (
 		id 				integer NOT NULL,
+		raw_id 			integer NOT NULL,
 		input_index		integer NOT NULL,
 		app_contract    text NOT NULL,
 		output_index	integer NOT NULL,
@@ -46,12 +48,14 @@ func (r *RawOutputRefRepository) Create(ctx context.Context, rawOutput RawOutput
 		input_index,
 		app_contract,
 		output_index,
-		type) VALUES ($1, $2, $3, $4, $5)`,
+		type,
+		raw_id) VALUES ($1, $2, $3, $4, $5, $6)`,
 		rawOutput.ID,
 		rawOutput.InputIndex,
 		rawOutput.AppContract,
 		rawOutput.OutputIndex,
 		rawOutput.Type,
+		rawOutput.RawID,
 	)
 
 	if err != nil {
