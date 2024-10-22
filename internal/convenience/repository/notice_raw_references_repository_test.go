@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"log/slog"
 	"testing"
 
@@ -43,4 +44,28 @@ func (s *RawNoticeRefSuite) SetupTest() {
 func (s *RawNoticeRefSuite) TestRawRefNoticeCreateTables() {
 	err := s.rawNoticeRefRepository.CreateTable()
 	s.NoError(err)
+}
+
+func (s *RawNoticeRefSuite) TestRawRefNoticeCreate() {
+	// Define o contexto
+	ctx := context.Background()
+
+	// Cria um RawNoticeRef com valores de exemplo
+	rawNotice := RawNoticeRef{
+		InputIndex:  1,
+		AppContract: "0x123456789abcdef",
+		OutputIndex: 2,
+	}
+
+	// Insere o RawNoticeRef no banco de dados
+	err := s.rawNoticeRefRepository.Create(ctx, rawNotice)
+	s.NoError(err)
+
+	// Verifica se os dados foram inseridos corretamente
+	var count int
+	err = s.rawNoticeRefRepository.Db.QueryRow(`SELECT COUNT(*) FROM convenience_notice_raw_references WHERE input_index = ? AND app_contract = ? AND output_index = ?`,
+		rawNotice.InputIndex, rawNotice.AppContract, rawNotice.OutputIndex).Scan(&count)
+
+	s.NoError(err)
+	s.Equal(1, count, "Expected one record to be inserted")
 }
