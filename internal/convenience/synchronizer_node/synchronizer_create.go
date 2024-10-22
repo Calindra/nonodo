@@ -123,6 +123,22 @@ func (s SynchronizerCreateWorker) HandleInput(ctx context.Context, abi *abi.ABI,
 	return rawInputRef.RawID, nil
 }
 
+func (s SynchronizerCreateWorker) SyncInputs(ctx context.Context, latestRawID uint64, page *Pagination, abi *abi.ABI) (uint64, error) {
+	inputs, err := s.RawRepository.FindAllInputsByFilter(ctx, FilterInput{IDgt: latestRawID}, page)
+	if err != nil {
+		return latestRawID, err
+	}
+
+	for _, input := range inputs {
+		rawInputRefID, err := s.HandleInput(ctx, abi, input)
+		if err != nil {
+			return latestRawID, err
+		}
+		latestRawID = rawInputRefID + 1
+	}
+	return latestRawID, nil
+}
+
 func (s SynchronizerCreateWorker) WatchNewInputs(stdCtx context.Context) error {
 	ctx, cancel := context.WithCancel(stdCtx)
 	defer cancel()
@@ -149,19 +165,10 @@ func (s SynchronizerCreateWorker) WatchNewInputs(stdCtx context.Context) error {
 					errCh <- ctx.Err()
 					return
 				default:
-					inputs, err := s.RawRepository.FindAllInputsByFilter(ctx, FilterInput{IDgt: latestRawID}, page)
+					latestRawID, err = s.SyncInputs(ctx, latestRawID, page, abi)
 					if err != nil {
 						errCh <- err
 						return
-					}
-
-					for _, input := range inputs {
-						rawInputRefID, err := s.HandleInput(ctx, abi, input)
-						if err != nil {
-							errCh <- err
-							return
-						}
-						latestRawID = rawInputRefID + 1
 					}
 					<-time.After(DEFAULT_DELAY)
 				}

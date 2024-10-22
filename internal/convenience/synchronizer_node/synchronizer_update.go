@@ -12,7 +12,7 @@ import (
 
 const DefaultBatchSize = 50
 
-type SynchronizerUpdateWorker struct {
+type SynchronizerUpdate struct {
 	DbRawUrl              string
 	RawNode               *RawRepository
 	RawInputRefRepository *repository.RawInputRefRepository
@@ -20,23 +20,12 @@ type SynchronizerUpdateWorker struct {
 	BatchSize             int
 }
 
-// Start implements supervisor.Worker.
-func (s SynchronizerUpdateWorker) Start(ctx context.Context, ready chan<- struct{}) error {
-	ready <- struct{}{}
-	return nil
-}
-
-// String implements supervisor.Worker.
-func (s SynchronizerUpdateWorker) String() string {
-	return "SynchronizerUpdateWorker"
-}
-
-func NewSynchronizerUpdateWorker(
+func NewSynchronizerUpdate(
 	rawInputRefRepository *repository.RawInputRefRepository,
 	rawNode *RawRepository,
 	inputRepository *repository.InputRepository,
-) SynchronizerUpdateWorker {
-	return SynchronizerUpdateWorker{
+) SynchronizerUpdate {
+	return SynchronizerUpdate{
 		RawNode:               rawNode,
 		RawInputRefRepository: rawInputRefRepository,
 		BatchSize:             DefaultBatchSize,
@@ -44,11 +33,11 @@ func NewSynchronizerUpdateWorker(
 	}
 }
 
-func (s *SynchronizerUpdateWorker) GetFirstRefWithStatusNone(ctx context.Context) (*repository.RawInputRef, error) {
+func (s *SynchronizerUpdate) getFirstRefWithStatusNone(ctx context.Context) (*repository.RawInputRef, error) {
 	return s.RawInputRefRepository.FindFirstInputByStatusNone(ctx, s.BatchSize)
 }
 
-func (s *SynchronizerUpdateWorker) FindFirst50RawInputsAfterRefWithStatus(
+func (s *SynchronizerUpdate) findFirst50RawInputsAfterRefWithStatus(
 	ctx context.Context,
 	inputRef repository.RawInputRef,
 	status string,
@@ -61,11 +50,7 @@ func (s *SynchronizerUpdateWorker) FindFirst50RawInputsAfterRefWithStatus(
 	})
 }
 
-func (s *SynchronizerUpdateWorker) FindAllRefsFor(ctx context.Context) {
-
-}
-
-func (s *SynchronizerUpdateWorker) StartTransaction(ctx context.Context) (context.Context, error) {
+func (s *SynchronizerUpdate) startTransaction(ctx context.Context) (context.Context, error) {
 	db := s.RawInputRefRepository.Db
 	ctxWithTx, err := repository.StartTransaction(ctx, &db)
 	if err != nil {
@@ -74,7 +59,7 @@ func (s *SynchronizerUpdateWorker) StartTransaction(ctx context.Context) (contex
 	return ctxWithTx, nil
 }
 
-func (s *SynchronizerUpdateWorker) CommitTransaction(ctx context.Context) error {
+func (s *SynchronizerUpdate) commitTransaction(ctx context.Context) error {
 	tx, hasTx := repository.GetTransaction(ctx)
 	if hasTx && tx != nil {
 		return tx.Commit()
@@ -82,7 +67,18 @@ func (s *SynchronizerUpdateWorker) CommitTransaction(ctx context.Context) error 
 	return nil
 }
 
-func (s *SynchronizerUpdateWorker) MapIds(rawInputs []RawInput) []string {
+func (s *SynchronizerUpdate) rollbackTransaction(ctx context.Context) {
+	tx, hasTx := repository.GetTransaction(ctx)
+	if hasTx && tx != nil {
+		err := tx.Rollback()
+		if err != nil {
+			slog.Error("transaction rollback error", "err", err)
+			panic(err)
+		}
+	}
+}
+
+func (s *SynchronizerUpdate) mapIds(rawInputs []RawInput) []string {
 	ids := make([]string, len(rawInputs))
 	for i, input := range rawInputs {
 		ids[i] = strconv.FormatUint(input.ID, 10)
@@ -129,7 +125,7 @@ func GetStatusRosetta() []RosettaStatusRef {
 }
 
 // if we have a real ID it could be just one sql command using `id in (?)`
-func (s *SynchronizerUpdateWorker) UpdateStatus(ctx context.Context, rawInputs []RawInput, status model.CompletionStatus) error {
+func (s *SynchronizerUpdate) updateStatus(ctx context.Context, rawInputs []RawInput, status model.CompletionStatus) error {
 	for _, rawInput := range rawInputs {
 		appContract := common.BytesToAddress(rawInput.ApplicationAddress)
 		slog.Debug("Update", "appContract", appContract, "index", rawInput.Index)
@@ -141,41 +137,43 @@ func (s *SynchronizerUpdateWorker) UpdateStatus(ctx context.Context, rawInputs [
 	return nil
 }
 
-func (s *SynchronizerUpdateWorker) UpdateManyInputAndRefsStatus(ctx context.Context, rawInputs []RawInput, rosetta RosettaStatusRef) error {
-	err := s.RawInputRefRepository.UpdateStatus(ctx, s.MapIds(rawInputs), rosetta.RawStatus)
+func (s *SynchronizerUpdate) updateManyInputAndRefsStatus(ctx context.Context, rawInputs []RawInput, rosetta RosettaStatusRef) error {
+	err := s.RawInputRefRepository.UpdateStatus(ctx, s.mapIds(rawInputs), rosetta.RawStatus)
 	if err != nil {
 		return err
 	}
-	err = s.UpdateStatus(ctx, rawInputs, rosetta.Status)
+	err = s.updateStatus(ctx, rawInputs, rosetta.Status)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (s *SynchronizerUpdateWorker) SyncInputStatus(ctx context.Context) error {
-	ctxWithTx, err := s.StartTransaction(ctx)
+func (s *SynchronizerUpdate) SyncInputStatus(ctx context.Context) error {
+	ctxWithTx, err := s.startTransaction(ctx)
 	if err != nil {
 		return err
 	}
-	inputRef, err := s.GetFirstRefWithStatusNone(ctxWithTx)
+	inputRef, err := s.getFirstRefWithStatusNone(ctxWithTx)
 	if err != nil {
 		return err
 	}
 	if inputRef != nil {
 		rosettaStone := GetStatusRosetta()
 		for _, rosetta := range rosettaStone {
-			rawInputs, err := s.FindFirst50RawInputsAfterRefWithStatus(ctx, *inputRef, rosetta.RawStatus)
+			rawInputs, err := s.findFirst50RawInputsAfterRefWithStatus(ctx, *inputRef, rosetta.RawStatus)
 			if err != nil {
+				s.rollbackTransaction(ctxWithTx)
 				return err
 			}
-			err = s.UpdateManyInputAndRefsStatus(ctxWithTx, rawInputs, rosetta)
+			err = s.updateManyInputAndRefsStatus(ctxWithTx, rawInputs, rosetta)
 			if err != nil {
+				s.rollbackTransaction(ctxWithTx)
 				return err
 			}
 		}
 	}
-	err = s.CommitTransaction(ctxWithTx)
+	err = s.commitTransaction(ctxWithTx)
 	if err != nil {
 		return err
 	}

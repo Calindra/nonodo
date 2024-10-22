@@ -34,7 +34,7 @@ type SynchronizerUpdateNodeSuite struct {
 	timeoutCancel              context.CancelFunc
 	workerCancel               context.CancelFunc
 	workerResult               chan error
-	synchronizerUpdateWorker   SynchronizerUpdateWorker
+	synchronizerUpdate         SynchronizerUpdate
 	rawNode                    *RawRepository
 }
 
@@ -74,12 +74,11 @@ func (s *SynchronizerUpdateNodeSuite) SetupTest() {
 	dbNodeV2 := sqlx.MustConnect("postgres", dbRawUrl)
 	s.rawNode = NewRawNode(dbRawUrl, dbNodeV2)
 	rawInputRefRepository := s.container.GetRawInputRepository()
-	s.synchronizerUpdateWorker = NewSynchronizerUpdateWorker(
+	s.synchronizerUpdate = NewSynchronizerUpdate(
 		rawInputRefRepository,
 		s.rawNode,
 		s.container.GetInputRepository(),
 	)
-	w.Workers = append(w.Workers, s.synchronizerUpdateWorker)
 
 	// Supervisor
 	ready := make(chan struct{})
@@ -113,12 +112,12 @@ func TestSynchronizerUpdateNodeSuiteSuite(t *testing.T) {
 	suite.Run(t, new(SynchronizerUpdateNodeSuite))
 }
 
-func (s *SynchronizerUpdateNodeSuite) TestGetNextInputBatch2Update() {
+func (s *SynchronizerUpdateNodeSuite) TestGetFirstRefWithStatusNone() {
 	ctx := context.Background()
 	s.fillRefData(ctx)
 	batchSize := 50
-	s.synchronizerUpdateWorker.BatchSize = batchSize
-	inputsStatusNone, err := s.synchronizerUpdateWorker.GetFirstRefWithStatusNone(ctx)
+	s.synchronizerUpdate.BatchSize = batchSize
+	inputsStatusNone, err := s.synchronizerUpdate.getFirstRefWithStatusNone(ctx)
 	s.NoError(err)
 	s.NotNil(inputsStatusNone)
 	s.Equal("NONE", inputsStatusNone.Status)
@@ -134,17 +133,17 @@ func (s *SynchronizerUpdateNodeSuite) TestUpdateInputStatusNotEqNone() {
 	unprocessed := s.countInputWithStatusNone(ctx)
 	s.Require().Equal(TOTAL_INPUT_TEST, unprocessed)
 
-	batchSize := s.synchronizerUpdateWorker.BatchSize
+	batchSize := s.synchronizerUpdate.BatchSize
 
 	// first call
-	err := s.synchronizerUpdateWorker.SyncInputStatus(ctx)
+	err := s.synchronizerUpdate.SyncInputStatus(ctx)
 	s.Require().NoError(err)
 	first := s.countAcceptedInput(ctx)
 	s.Equal(50, batchSize)
 	s.Equal(batchSize, first)
 
 	// second call
-	err = s.synchronizerUpdateWorker.SyncInputStatus(ctx)
+	err = s.synchronizerUpdate.SyncInputStatus(ctx)
 	s.Require().NoError(err)
 	second := s.countAcceptedInput(ctx)
 	s.Equal(TOTAL_INPUT_TEST, second)
