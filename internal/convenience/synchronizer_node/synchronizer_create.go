@@ -84,6 +84,16 @@ func (s SynchronizerCreateWorker) GetAdvanceInputFromMap(data map[string]any, in
 		return nil, fmt.Errorf("appContract not found")
 	}
 
+	prevRandao, ok := data["prevRandao"].(*big.Int)
+	if !ok {
+		return nil, fmt.Errorf("prevRandao not found")
+	}
+
+	inputBoxIndex, ok := data["index"].(*big.Int)
+	if !ok {
+		return nil, fmt.Errorf("inputBoxIndex not found")
+	}
+
 	slog.Debug("GetAdvanceInputFromMap", "chainId", chainId)
 	advanceInput := model.AdvanceInput{
 		// nolint
@@ -91,12 +101,14 @@ func (s SynchronizerCreateWorker) GetAdvanceInputFromMap(data map[string]any, in
 		ID:             strconv.FormatUint(input.ID, 10),
 		AppContract:    appContract,
 		Index:          int(input.Index),
+		InputBoxIndex:  int(inputBoxIndex.Int64()),
 		MsgSender:      msgSender,
 		BlockNumber:    blockNumber.Uint64(),
 		BlockTimestamp: time.Unix(0, blockTimestamp.Int64()),
 		Payload:        payload,
 		ChainId:        chainId.String(),
 		Status:         commons.ConvertStatusStringToCompletionStatus(input.Status),
+		PrevRandao:     "0x" + prevRandao.Text(16), // nolint
 	}
 	// advanceInput.Status = model.CompletionStatusUnprocessed
 	return &advanceInput, nil
