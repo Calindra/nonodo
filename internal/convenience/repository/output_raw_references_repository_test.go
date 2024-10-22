@@ -76,20 +76,50 @@ func (s *RawOutputRefSuite) TestRawRefOutputShouldThrowAnErrorWhenTypeAttributeI
 func (s *RawOutputRefSuite) TestRawRefOutputCreate() {
 	ctx := context.Background()
 
-	rawNotice := RawOutputRef{
+	rawOutput := RawOutputRef{
 		InputIndex:  1,
 		AppContract: "0x123456789abcdef",
 		OutputIndex: 2,
 		Type:        "notice",
 	}
 
-	err := s.rawOutputRefRepository.Create(ctx, rawNotice)
+	err := s.rawOutputRefRepository.Create(ctx, rawOutput)
 	s.NoError(err)
 
 	var count int
 	err = s.rawOutputRefRepository.Db.QueryRow(`SELECT COUNT(*) FROM convenience_output_raw_references WHERE input_index = ? AND app_contract = ? AND output_index = ?`,
-		rawNotice.InputIndex, rawNotice.AppContract, rawNotice.OutputIndex).Scan(&count)
+		rawOutput.InputIndex, rawOutput.AppContract, rawOutput.OutputIndex).Scan(&count)
 
 	s.NoError(err)
 	s.Equal(1, count, "Expected one record to be inserted")
+}
+
+func (s *RawOutputRefSuite) TestRawRefOutputGetLatestId() {
+	ctx := context.Background()
+
+	firstRawOutput := RawOutputRef{
+		ID:          "001",
+		InputIndex:  1,
+		AppContract: "0x123456789abcdef",
+		OutputIndex: 2,
+		Type:        "report",
+	}
+
+	err := s.rawOutputRefRepository.Create(ctx, firstRawOutput)
+	s.NoError(err)
+
+	lastRawOutput := RawOutputRef{
+		ID:          "002",
+		InputIndex:  2,
+		AppContract: "0x123456789abcdef",
+		OutputIndex: 23,
+		Type:        "report",
+	}
+
+	err = s.rawOutputRefRepository.Create(ctx, lastRawOutput)
+	s.NoError(err)
+
+	outputId, err := s.rawOutputRefRepository.GetLatestOutputId()
+	s.NoError(err)
+	s.Equal(lastRawOutput.ID, outputId)
 }
