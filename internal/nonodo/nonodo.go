@@ -232,7 +232,14 @@ func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 	}
 
 	if opts.RawEnabled {
-		rawSequencer := synchronizernode.NewSynchronizerCreateWorker(container, opts.DbRawUrl)
+		dbNodeV2 := sqlx.MustConnect("postgres", opts.DbRawUrl)
+		rawRepository := synchronizernode.NewRawNode(opts.DbRawUrl, dbNodeV2)
+		rawSequencer := synchronizernode.NewSynchronizerCreateWorker(
+			container.GetInputRepository(),
+			container.GetRawInputRepository(),
+			opts.DbRawUrl,
+			rawRepository,
+		)
 		w.Workers = append(w.Workers, rawSequencer)
 	}
 
@@ -352,7 +359,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	}
 
 	var sequencer model.Sequencer = nil
-	var inputterWorker = &inputter.InputterWorker{
+	inputterWorker := &inputter.InputterWorker{
 		Model:              modelInstance,
 		Provider:           opts.RpcUrl,
 		InputBoxAddress:    common.HexToAddress(opts.InputBoxAddress),
@@ -396,7 +403,6 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 			avail.DEFAULT_CHAINID_HARDHAT,
 			avail.DEFAULT_APP_ID,
 		)
-
 		if err != nil {
 			panic(err)
 		}
@@ -430,8 +436,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	}
 
 	if opts.RawEnabled {
-		rawSequencer := synchronizernode.NewSynchronizerCreateWorker(container, opts.DbRawUrl)
-		w.Workers = append(w.Workers, rawSequencer)
+		panic("use the --high-level-graphql flag")
 	}
 
 	rollup.Register(re, modelInstance, sequencer, common.HexToAddress(opts.ApplicationAddress))

@@ -3,14 +3,11 @@ package synchronizernode
 import (
 	"context"
 	"log/slog"
-	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/calindra/nonodo/internal/commons"
-	"github.com/calindra/nonodo/internal/convenience"
-	"github.com/calindra/nonodo/internal/supervisor"
+	"github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/calindra/nonodo/postgres/raw"
 	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/suite"
@@ -20,12 +17,13 @@ type SynchronizerNodeSuite struct {
 	suite.Suite
 	ctx                        context.Context
 	dockerComposeStartedByTest bool
-	tempDir                    string
-	container                  *convenience.Container
 	workerCtx                  context.Context
 	timeoutCancel              context.CancelFunc
 	workerCancel               context.CancelFunc
 	workerResult               chan error
+	inputRepository            *repository.InputRepository
+	inputRefRepository         *repository.RawInputRefRepository
+	dbFactory                  *commons.DbFactory
 }
 
 func (s *SynchronizerNodeSuite) SetupSuite() {
@@ -44,29 +42,35 @@ func (s *SynchronizerNodeSuite) SetupTest() {
 	commons.ConfigureLog(slog.LevelDebug)
 	dbRawUrl := "postgres://postgres:password@localhost:5432/rollupsdb?sslmode=disable"
 
-	var w supervisor.SupervisorWorker
-	w.Name = "TestRawInputter"
 	s.workerResult = make(chan error)
 
-	// Temp
-	tempDir, err := os.MkdirTemp("", "")
-	s.NoError(err)
-	s.tempDir = tempDir
-
 	// Database
-	sqliteFileName := filepath.Join(tempDir, "input.sqlite3")
+	s.dbFactory = commons.NewDbFactory()
+	db, err := s.dbFactory.CreateDbCtx(s.ctx, "input.sqlite3")
+	s.NoError(err)
 
-	db := sqlx.MustConnect("sqlite3", sqliteFileName)
-	s.container = convenience.NewContainer(*db, false)
+	s.inputRepository = &repository.InputRepository{Db: *db}
+	err = s.inputRepository.CreateTables()
+	s.NoError(err)
+	s.inputRefRepository = &repository.RawInputRefRepository{Db: *db}
+	err = s.inputRefRepository.CreateTables()
+	s.NoError(err)
 
 	s.workerCtx, s.workerCancel = context.WithCancel(s.ctx)
-	wr := NewSynchronizerCreateWorker(s.container, dbRawUrl)
-	w.Workers = append(w.Workers, wr)
 
-	// Supervisor
+	dbNodeV2 := sqlx.MustConnect("postgres", dbRawUrl)
+	rawRepository := RawRepository{Db: dbNodeV2}
+	wr := NewSynchronizerCreateWorker(
+		s.inputRepository,
+		s.inputRefRepository,
+		dbRawUrl,
+		&rawRepository,
+	)
+
+	// like Supervisor
 	ready := make(chan struct{})
 	go func() {
-		s.workerResult <- w.Start(s.workerCtx, ready)
+		s.workerResult <- wr.Start(s.workerCtx, ready)
 	}()
 	select {
 	case <-s.ctx.Done():
@@ -74,7 +78,7 @@ func (s *SynchronizerNodeSuite) SetupTest() {
 	case err := <-s.workerResult:
 		s.Fail("worker exited before being ready", err)
 	case <-ready:
-		s.T().Log("nonodo ready")
+		s.T().Log("worker ready")
 	}
 }
 
@@ -87,7 +91,7 @@ func (s *SynchronizerNodeSuite) TearDownSuite() {
 }
 
 func (s *SynchronizerNodeSuite) TearDownTest() {
-	defer os.RemoveAll(s.tempDir)
+	s.dbFactory.Cleanup()
 	s.workerCancel()
 }
 
@@ -95,6 +99,7 @@ func TestSynchronizerNodeSuite(t *testing.T) {
 	suite.Run(t, new(SynchronizerNodeSuite))
 }
 
-func (s *SynchronizerNodeSuite) TestSynchronizerNodeConnection() {
-	s.Equal(4, 2+2)
+func (s *SynchronizerNodeSuite) XTestSynchronizerNodeConnection() {
+	val := <-s.workerResult
+	s.NoError(val)
 }

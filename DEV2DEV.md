@@ -101,3 +101,9 @@ go build . && ./nonodo --avail-enabled -d \
     --rpc-url wss://ethereum-sepolia-rpc.publicnode.com \
     --contracts-input-box-block 6863007
 ```
+
+Clear database raw:
+
+```bash
+make clean-db-raw
+```

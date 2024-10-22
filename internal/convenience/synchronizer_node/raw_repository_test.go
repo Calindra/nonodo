@@ -13,13 +13,14 @@ import (
 	"github.com/calindra/nonodo/internal/contracts"
 	"github.com/calindra/nonodo/postgres/raw"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	"github.com/stretchr/testify/suite"
 )
 
 type RawNodeSuite struct {
 	suite.Suite
-	node                       RawNode
+	node                       RawRepository
 	ctx                        context.Context
 	dockerComposeStartedByTest bool
 	DefaultTimeout             time.Duration
@@ -47,8 +48,10 @@ func (s *RawNodeSuite) SetupSuite() {
 	}
 	uri := fmt.Sprintf("postgres://postgres:%s@localhost:5432/%s?sslmode=disable", dbPass, dbName)
 	slog.Info("Raw Input URI", "uri", uri)
-	s.node = RawNode{
+	dbNodeV2 := sqlx.MustConnect("postgres", uri)
+	s.node = RawRepository{
 		connectionURL: uri,
+		Db:            dbNodeV2,
 	}
 }
 
@@ -68,33 +71,24 @@ func TestRawNodeSuite(t *testing.T) {
 	suite.Run(t, new(RawNodeSuite))
 }
 
-func (s *RawNodeSuite) TestSynchronizerNodeConnection() {
-	ctx, cancel := context.WithTimeout(s.ctx, s.DefaultTimeout)
-	defer cancel()
-	_, err := s.node.Connect(ctx)
-	s.NoError(err)
-}
-
 func (s *RawNodeSuite) TestSynchronizerNodeListInputs() {
 	ctx, cancel := context.WithTimeout(s.ctx, s.DefaultTimeout)
 	defer cancel()
-	conn, err := s.node.Connect(ctx)
+
+	result, err := s.node.Db.QueryxContext(ctx, "SELECT * FROM input")
 	s.NoError(err)
 
-	result, err := conn.QueryxContext(ctx, "SELECT * FROM input")
-	s.NoError(err)
-
-	inputs := []Input{}
+	inputs := []RawInput{}
 
 	for result.Next() {
-		var input Input
+		var input RawInput
 		err := result.StructScan(&input)
 		s.NoError(err)
 		inputs = append(inputs, input)
 	}
 
 	firstInput := inputs[0]
-	s.Equal(firstInput.ID, int64(1))
+	s.Equal(firstInput.ID, uint64(1))
 
 	b := inputs[0].BlockNumber
 
@@ -115,7 +109,7 @@ func (s *RawNodeSuite) TestSynchronizerNodeInputByID() {
 	inputs, err := s.node.FindAllInputsByFilter(ctx, FilterInput{IDgt: 2, IsStatusNone: false}, nil)
 	s.NoError(err)
 	firstInput := inputs[0]
-	s.Equal(firstInput.ID, int64(2))
+	s.Equal(firstInput.ID, uint64(2))
 
 	b := inputs[0].BlockNumber
 

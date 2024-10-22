@@ -26,6 +26,10 @@ const (
 	CompletionStatusAccepted
 	CompletionStatusRejected
 	CompletionStatusException
+	CompletionStatusMachineHalted
+	CompletionStatusCycleLimitExceeded
+	CompletionStatusTimeLimitExceeded
+	CompletionStatusPayloadLengthLimitExceeded
 )
 
 type ConvenienceNotice struct {

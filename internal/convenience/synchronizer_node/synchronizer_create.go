@@ -4,64 +4,146 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"math/big"
 	"strconv"
 	"time"
 
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/contracts"
-	"github.com/calindra/nonodo/internal/convenience"
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/calindra/nonodo/internal/supervisor"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/jmoiron/sqlx"
+	_ "github.com/ncruces/go-sqlite3/driver"
+	_ "github.com/ncruces/go-sqlite3/embed"
 )
 
 type SynchronizerCreateWorker struct {
-	Container *convenience.Container
-	DbRawUrl  string
-	DbRaw     *RawNode
+	inputRepository    *repository.InputRepository
+	inputRefRepository *repository.RawInputRefRepository
+	DbRawUrl           string
+	RawRepository      *RawRepository
 }
 
-const DEFAULT_TIMEOUT = 1 * time.Second
+const DEFAULT_DELAY = 1 * time.Second
 
 // Start implements supervisor.Worker.
 func (s SynchronizerCreateWorker) Start(ctx context.Context, ready chan<- struct{}) error {
 	ready <- struct{}{}
-	s.DbRaw = NewRawNode(s.DbRawUrl)
-	db, err := s.DbRaw.Connect(ctx)
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-
-	return s.WatchNewInputs(ctx, db)
+	return s.WatchNewInputs(ctx)
 }
 
-func (s SynchronizerCreateWorker) GetDataRawData(abi *abi.ABI, rawData []byte) (map[string]any, error) {
+func (s SynchronizerCreateWorker) GetMapRaw(abi *abi.ABI, rawData []byte) (map[string]any, error) {
 	data := make(map[string]any)
 
 	methodId := rawData[:4]
 	method, err := abi.MethodById(methodId)
-
 	if err != nil {
 		return nil, err
 	}
 
 	err = method.Inputs.UnpackIntoMap(data, rawData[4:])
 
+	slog.Debug("DecodedData", "map", data)
+
 	return data, err
 }
 
-func (s SynchronizerCreateWorker) WatchNewInputs(stdCtx context.Context, db *sqlx.DB) error {
+func (s SynchronizerCreateWorker) GetAdvanceInputFromMap(data map[string]any, input RawInput) (*model.AdvanceInput, error) {
+	chainId, ok := data["chainId"].(*big.Int)
+	if !ok {
+		return nil, fmt.Errorf("chainId not found")
+	}
+
+	payload, ok := data["payload"].([]byte)
+	if !ok {
+		return nil, fmt.Errorf("payload not found")
+	}
+
+	msgSender, ok := data["msgSender"].(common.Address)
+	if !ok {
+		return nil, fmt.Errorf("msgSender not found")
+	}
+
+	blockNumber, ok := data["blockNumber"].(*big.Int)
+	if !ok {
+		return nil, fmt.Errorf("blockNumber not found")
+	}
+
+	blockTimestamp, ok := data["blockTimestamp"].(*big.Int)
+	if !ok {
+		return nil, fmt.Errorf("blockTimestamp not found")
+	}
+
+	return &model.AdvanceInput{
+		// nolint
+		// TODO: check if the ID is correct
+		ID:             strconv.FormatUint(input.ID, 10),
+		Index:          int(input.Index),
+		Status:         commons.ConvertStatusStringToCompletionStatus(input.Status),
+		MsgSender:      msgSender,
+		BlockNumber:    blockNumber.Uint64(),
+		BlockTimestamp: time.Unix(0, blockTimestamp.Int64()),
+		Payload:        payload,
+		ChainId:        chainId.String(),
+	}, nil
+
+}
+
+func (s SynchronizerCreateWorker) HandleInput(ctx context.Context, abi *abi.ABI, input RawInput) (id uint64, err error) {
+	data, err := s.GetMapRaw(abi, input.RawData)
+	if err != nil {
+		return 0, err
+	}
+
+	advanceInput, err := s.GetAdvanceInputFromMap(data, input)
+	if err != nil {
+		return 0, err
+	}
+
+	inputBox, err := s.inputRepository.Create(ctx, *advanceInput)
+	if err != nil {
+		return 0, err
+	}
+
+	rawInputRef := repository.RawInputRef{
+		ID:          inputBox.ID,
+		RawID:       uint64(input.ID),
+		InputIndex:  input.Index,
+		AppContract: common.BytesToAddress(input.ApplicationAddress).Hex(),
+		Status:      input.Status,
+		ChainID:     advanceInput.ChainId,
+	}
+	err = s.inputRefRepository.Create(ctx, rawInputRef)
+	if err != nil {
+		return 0, err
+	}
+
+	return rawInputRef.RawID, nil
+}
+
+func (s SynchronizerCreateWorker) SyncInputs(ctx context.Context, latestRawID uint64, page *Pagination, abi *abi.ABI) (uint64, error) {
+	inputs, err := s.RawRepository.FindAllInputsByFilter(ctx, FilterInput{IDgt: latestRawID}, page)
+	if err != nil {
+		return latestRawID, err
+	}
+
+	for _, input := range inputs {
+		rawInputRefID, err := s.HandleInput(ctx, abi, input)
+		if err != nil {
+			return latestRawID, err
+		}
+		latestRawID = rawInputRefID + 1
+	}
+	return latestRawID, nil
+}
+
+func (s SynchronizerCreateWorker) WatchNewInputs(stdCtx context.Context) error {
 	ctx, cancel := context.WithCancel(stdCtx)
 	defer cancel()
 
-	rawInputRep := s.Container.GetRawInputRepository()
-	inputRep := s.Container.GetInputRepository()
-	latestRawID, err := rawInputRep.GetLatestRawId(ctx)
-
+	latestRawID, err := s.inputRefRepository.GetLatestRawId(ctx)
 	if err != nil {
 		return err
 	}
@@ -82,68 +164,13 @@ func (s SynchronizerCreateWorker) WatchNewInputs(stdCtx context.Context, db *sql
 				case <-ctx.Done():
 					errCh <- ctx.Err()
 					return
-				case <-time.After(DEFAULT_TIMEOUT):
 				default:
-					inputs, err := s.DbRaw.FindAllInputsByFilter(ctx, FilterInput{IDgt: latestRawID, IsStatusNone: true}, page)
+					latestRawID, err = s.SyncInputs(ctx, latestRawID, page, abi)
 					if err != nil {
 						errCh <- err
 						return
 					}
-
-					for _, input := range inputs {
-						data, err := s.GetDataRawData(abi, input.RawData)
-
-						if err != nil {
-							errCh <- err
-							return
-						}
-
-						chainID, ok := data["chainID"].(string)
-
-						if !ok {
-							errCh <- fmt.Errorf("chainID not found")
-							return
-						}
-
-						payload, ok := data["payload"].([]byte)
-						if !ok {
-							errCh <- fmt.Errorf("payload not found")
-							return
-						}
-
-						rawInputRef := repository.RawInputRef{
-							RawID:       uint64(input.ID),
-							InputIndex:  input.Index,
-							AppContract: common.BytesToAddress(input.ApplicationAddress).Hex(),
-							Status:      input.Status,
-							ChainID:     chainID,
-						}
-						advanceInput := model.AdvanceInput{
-							Index:   int(input.Index),
-							Status:  commons.ConvertStatusStringToCompletionStatus(input.Status),
-							Payload: payload,
-							ChainId: chainID,
-						}
-
-						err = rawInputRep.Create(ctx, rawInputRef)
-						if err != nil {
-							errCh <- err
-							return
-						}
-
-						_, err = inputRep.Create(ctx, advanceInput)
-						if err != nil {
-							errCh <- err
-							return
-						}
-
-						rawInputRefID, err := strconv.ParseUint(rawInputRef.ID, 10, 64)
-						if err != nil {
-							errCh <- err
-							return
-						}
-						latestRawID = rawInputRefID
-					}
+					<-time.After(DEFAULT_DELAY)
 				}
 			}
 		}()
@@ -163,6 +190,16 @@ func (s SynchronizerCreateWorker) String() string {
 	return "SynchronizerCreateWorker"
 }
 
-func NewSynchronizerCreateWorker(container *convenience.Container, dbRawUrl string) supervisor.Worker {
-	return SynchronizerCreateWorker{Container: container, DbRawUrl: dbRawUrl}
+func NewSynchronizerCreateWorker(
+	inputRepository *repository.InputRepository,
+	inputRefRepository *repository.RawInputRefRepository,
+	dbRawUrl string,
+	rawRepository *RawRepository,
+) supervisor.Worker {
+	return SynchronizerCreateWorker{
+		inputRepository:    inputRepository,
+		inputRefRepository: inputRefRepository,
+		DbRawUrl:           dbRawUrl,
+		RawRepository:      rawRepository,
+	}
 }

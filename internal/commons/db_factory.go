@@ -1,9 +1,10 @@
 package commons
 
 import (
+	"context"
 	"log/slog"
 	"os"
-	"path"
+	"path/filepath"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -29,9 +30,15 @@ func NewDbFactory() *DbFactory {
 	}
 }
 
+func (d *DbFactory) CreateDbCtx(ctx context.Context, sqliteFileName string) (*sqlx.DB, error) {
+	sqlitePath := filepath.Join(d.TempDir, sqliteFileName)
+	slog.Info("Creating db (with ctx) attempting", "sqlitePath", sqlitePath)
+	return sqlx.ConnectContext(ctx, "sqlite3", sqlitePath)
+}
+
 func (d *DbFactory) CreateDb(sqliteFileName string) *sqlx.DB {
 	// db := sqlx.MustConnect("sqlite3", ":memory:")
-	sqlitePath := path.Join(d.TempDir, sqliteFileName)
+	sqlitePath := filepath.Join(d.TempDir, sqliteFileName)
 	slog.Info("Creating db attempting", "sqlitePath", sqlitePath)
 	return sqlx.MustConnect("sqlite3", sqlitePath)
 }

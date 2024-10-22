@@ -36,6 +36,10 @@ func (s *VoucherRepositorySuite) SetupTest() {
 	s.NoError(err)
 }
 
+func (s *VoucherRepositorySuite) TearDownTest() {
+	s.dbFactory.Cleanup()
+}
+
 func TestConvenienceRepositorySuite(t *testing.T) {
 	suite.Run(t, new(VoucherRepositorySuite))
 }
