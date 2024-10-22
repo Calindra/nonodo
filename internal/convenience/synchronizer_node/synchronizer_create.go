@@ -85,7 +85,7 @@ func (s SynchronizerCreateWorker) GetAdvanceInputFromMap(data map[string]any, in
 	}
 
 	slog.Debug("GetAdvanceInputFromMap", "chainId", chainId)
-	return &model.AdvanceInput{
+	advanceInput := model.AdvanceInput{
 		// nolint
 		// TODO: check if the ID is correct
 		ID:             strconv.FormatUint(input.ID, 10),
@@ -97,8 +97,9 @@ func (s SynchronizerCreateWorker) GetAdvanceInputFromMap(data map[string]any, in
 		Payload:        payload,
 		ChainId:        chainId.String(),
 		Status:         commons.ConvertStatusStringToCompletionStatus(input.Status),
-		// Status:         model.CompletionStatusUnprocessed,
-	}, nil
+	}
+	// advanceInput.Status = model.CompletionStatusUnprocessed
+	return &advanceInput, nil
 
 }
 
@@ -125,8 +126,8 @@ func (s SynchronizerCreateWorker) HandleInput(ctx context.Context, abi *abi.ABI,
 		AppContract: common.BytesToAddress(input.ApplicationAddress).Hex(),
 		Status:      input.Status,
 		ChainID:     advanceInput.ChainId,
-		// Status:  "NONE",
 	}
+	// rawInputRef.Status = "NONE"
 	err = s.inputRefRepository.Create(ctx, rawInputRef)
 	if err != nil {
 		return 0, err
