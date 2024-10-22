@@ -63,7 +63,7 @@ func (s *RawNoticeRefSuite) TestRawRefNoticeCreate() {
 
 	// Verifica se os dados foram inseridos corretamente
 	var count int
-	err = s.rawNoticeRefRepository.Db.QueryRow(`SELECT COUNT(*) FROM convenience_notice_raw_references WHERE input_index = ? AND app_contract = ? AND output_index = ?`,
+	err = s.rawNoticeRefRepository.Db.QueryRow(`SELECT COUNT(*) FROM convenience_output_raw_references WHERE input_index = ? AND app_contract = ? AND output_index = ?`,
 		rawNotice.InputIndex, rawNotice.AppContract, rawNotice.OutputIndex).Scan(&count)
 
 	s.NoError(err)
