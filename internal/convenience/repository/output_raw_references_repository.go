@@ -2,6 +2,8 @@ package repository
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"log/slog"
 
 	"github.com/jmoiron/sqlx"
@@ -12,7 +14,7 @@ type RawOutputRefRepository struct {
 }
 
 type RawOutputRef struct {
-	ID          string `db:"id"`
+	ID          uint64 `db:"id"`
 	OutputIndex uint64 `db:"output_index"`
 	InputIndex  uint64 `db:"input_index"`
 	AppContract string `db:"app_contract"`
@@ -21,7 +23,7 @@ type RawOutputRef struct {
 
 func (r *RawOutputRefRepository) CreateTable() error {
 	schema := `CREATE TABLE IF NOT EXISTS convenience_output_raw_references (
-		id 				text NOT NULL,
+		id 				integer NOT NULL,
 		input_index		integer NOT NULL,
 		app_contract    text NOT NULL,
 		output_index	integer NOT NULL,
@@ -63,4 +65,18 @@ func (r *RawOutputRefRepository) Create(ctx context.Context, rawOutput RawOutput
 	}
 
 	return err
+}
+
+func (r *RawOutputRefRepository) GetLatestOutputId(ctx context.Context) (uint64, error) {
+	var outputId uint64
+	err := r.Db.GetContext(ctx, &outputId, `SELECT id FROM convenience_output_raw_references ORDER BY id DESC LIMIT 1`)
+
+	if err != nil {
+		slog.Error("Failed to retrieve the last outputId from the database", "error", err)
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, nil
+		}
+		return 0, err
+	}
+	return outputId, err
 }
