@@ -16,6 +16,7 @@ type RawNoticeRef struct {
 	OutputIndex uint64 `db:"output_index"`
 	InputIndex  uint64 `db:"input_index"`
 	AppContract string `db:"app_contract"`
+	Type        string `db:"type"`
 }
 
 func (r *RawNoticeRefRepository) CreateTable() error {
@@ -23,11 +24,12 @@ func (r *RawNoticeRefRepository) CreateTable() error {
 		id 				text NOT NULL,
 		input_index		integer NOT NULL,
 		app_contract    text NOT NULL,
-		output_index		integer NOT NULL,
+		output_index	integer NOT NULL,
+		type            text NOT NULL CHECK (type IN ('voucher', 'notice')),
 		PRIMARY KEY (input_index, output_index, app_contract));`
 	_, err := r.Db.Exec(schema)
 	if err == nil {
-		slog.Debug("Raw Notices table created")
+		slog.Debug("Raw Outputs table created")
 	} else {
 		slog.Error("Create table error", "error", err)
 	}
@@ -41,11 +43,13 @@ func (r *RawNoticeRefRepository) Create(ctx context.Context, rawOutput RawNotice
 		id,
 		input_index,
 		app_contract,
-		output_index) VALUES ($1, $2, $3, $4)`,
+		output_index,
+		type) VALUES ($1, $2, $3, $4, $5)`,
 		rawOutput.ID,
 		rawOutput.InputIndex,
 		rawOutput.AppContract,
 		rawOutput.OutputIndex,
+		rawOutput.Type,
 	)
 
 	if err != nil {

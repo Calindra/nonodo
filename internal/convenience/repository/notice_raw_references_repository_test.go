@@ -46,22 +46,46 @@ func (s *RawNoticeRefSuite) TestRawRefNoticeCreateTables() {
 	s.NoError(err)
 }
 
-func (s *RawNoticeRefSuite) TestRawRefNoticeCreate() {
-	// Define o contexto
+func (s *RawNoticeRefSuite) TestRawRefNoticeShouldThrowAnErrorWhenThereIsNoTypeAttribute() {
 	ctx := context.Background()
 
-	// Cria um RawNoticeRef com valores de exemplo
 	rawNotice := RawNoticeRef{
 		InputIndex:  1,
 		AppContract: "0x123456789abcdef",
 		OutputIndex: 2,
 	}
 
-	// Insere o RawNoticeRef no banco de dados
+	err := s.rawNoticeRefRepository.Create(ctx, rawNotice)
+	s.ErrorContains(err, "sqlite3: constraint failed: CHECK constraint failed: type IN ('voucher', 'notice')")
+}
+
+func (s *RawNoticeRefSuite) TestRawRefNoticeShouldThrowAnErrorWhenTypeAttributeIsDiffFromVoucherOrNotice() {
+	ctx := context.Background()
+
+	rawNotice := RawNoticeRef{
+		InputIndex:  1,
+		AppContract: "0x123456789abcdef",
+		OutputIndex: 2,
+		Type:        "report",
+	}
+
+	err := s.rawNoticeRefRepository.Create(ctx, rawNotice)
+	s.ErrorContains(err, "sqlite3: constraint failed: CHECK constraint failed: type IN ('voucher', 'notice')")
+}
+
+func (s *RawNoticeRefSuite) TestRawRefNoticeCreate() {
+	ctx := context.Background()
+
+	rawNotice := RawNoticeRef{
+		InputIndex:  1,
+		AppContract: "0x123456789abcdef",
+		OutputIndex: 2,
+		Type:        "notice",
+	}
+
 	err := s.rawNoticeRefRepository.Create(ctx, rawNotice)
 	s.NoError(err)
 
-	// Verifica se os dados foram inseridos corretamente
 	var count int
 	err = s.rawNoticeRefRepository.Db.QueryRow(`SELECT COUNT(*) FROM convenience_output_raw_references WHERE input_index = ? AND app_contract = ? AND output_index = ?`,
 		rawNotice.InputIndex, rawNotice.AppContract, rawNotice.OutputIndex).Scan(&count)
