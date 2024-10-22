@@ -91,35 +91,41 @@ func (s *RawOutputRefSuite) TestRawRefOutputCreate() {
 		rawOutput.InputIndex, rawOutput.AppContract, rawOutput.OutputIndex).Scan(&count)
 
 	s.NoError(err)
-	s.Equal(1, count, "Expected one record to be inserted")
+	s.Equal(1, count)
 }
 
 func (s *RawOutputRefSuite) TestRawRefOutputGetLatestId() {
 	ctx := context.Background()
 
 	firstRawOutput := RawOutputRef{
-		ID:          "001",
+		ID:          001,
 		InputIndex:  1,
 		AppContract: "0x123456789abcdef",
 		OutputIndex: 2,
-		Type:        "report",
+		Type:        "notice",
 	}
 
 	err := s.rawOutputRefRepository.Create(ctx, firstRawOutput)
 	s.NoError(err)
 
 	lastRawOutput := RawOutputRef{
-		ID:          "002",
+		ID:          002,
 		InputIndex:  2,
 		AppContract: "0x123456789abcdef",
 		OutputIndex: 23,
-		Type:        "report",
+		Type:        "voucher",
 	}
 
 	err = s.rawOutputRefRepository.Create(ctx, lastRawOutput)
 	s.NoError(err)
 
-	outputId, err := s.rawOutputRefRepository.GetLatestOutputId()
+	var count int
+	err = s.rawOutputRefRepository.Db.QueryRow(`SELECT COUNT(*) FROM convenience_output_raw_references`).Scan(&count)
+	s.NoError(err)
+	//check if there are two records in the table.
+	s.Equal(2, count)
+
+	outputId, err := s.rawOutputRefRepository.GetLatestOutputId(ctx)
 	s.NoError(err)
 	s.Equal(lastRawOutput.ID, outputId)
 }
