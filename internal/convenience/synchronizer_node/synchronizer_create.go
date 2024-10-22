@@ -10,6 +10,7 @@ import (
 
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/contracts"
+	"github.com/calindra/nonodo/internal/convenience/decoder"
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/calindra/nonodo/internal/supervisor"
@@ -24,9 +25,11 @@ type SynchronizerCreateWorker struct {
 	inputRefRepository *repository.RawInputRefRepository
 	DbRawUrl           string
 	RawRepository      *RawRepository
+	SynchronizerUpdate *SynchronizerUpdate
+	Decoder            *decoder.OutputDecoder
 }
 
-const DEFAULT_DELAY = 1 * time.Second
+const DEFAULT_DELAY = 3 * time.Second
 
 // Start implements supervisor.Worker.
 func (s SynchronizerCreateWorker) Start(ctx context.Context, ready chan<- struct{}) error {
@@ -76,17 +79,25 @@ func (s SynchronizerCreateWorker) GetAdvanceInputFromMap(data map[string]any, in
 		return nil, fmt.Errorf("blockTimestamp not found")
 	}
 
+	appContract, ok := data["appContract"].(common.Address)
+	if !ok {
+		return nil, fmt.Errorf("appContract not found")
+	}
+
+	slog.Debug("GetAdvanceInputFromMap", "chainId", chainId)
 	return &model.AdvanceInput{
 		// nolint
 		// TODO: check if the ID is correct
 		ID:             strconv.FormatUint(input.ID, 10),
+		AppContract:    appContract,
 		Index:          int(input.Index),
-		Status:         commons.ConvertStatusStringToCompletionStatus(input.Status),
 		MsgSender:      msgSender,
 		BlockNumber:    blockNumber.Uint64(),
 		BlockTimestamp: time.Unix(0, blockTimestamp.Int64()),
 		Payload:        payload,
 		ChainId:        chainId.String(),
+		Status:         commons.ConvertStatusStringToCompletionStatus(input.Status),
+		// Status:         model.CompletionStatusUnprocessed,
 	}, nil
 
 }
@@ -114,6 +125,7 @@ func (s SynchronizerCreateWorker) HandleInput(ctx context.Context, abi *abi.ABI,
 		AppContract: common.BytesToAddress(input.ApplicationAddress).Hex(),
 		Status:      input.Status,
 		ChainID:     advanceInput.ChainId,
+		// Status:  "NONE",
 	}
 	err = s.inputRefRepository.Create(ctx, rawInputRef)
 	if err != nil {
@@ -123,7 +135,7 @@ func (s SynchronizerCreateWorker) HandleInput(ctx context.Context, abi *abi.ABI,
 	return rawInputRef.RawID, nil
 }
 
-func (s SynchronizerCreateWorker) SyncInputs(ctx context.Context, latestRawID uint64, page *Pagination, abi *abi.ABI) (uint64, error) {
+func (s SynchronizerCreateWorker) SyncInputCreation(ctx context.Context, latestRawID uint64, page *Pagination, abi *abi.ABI) (uint64, error) {
 	inputs, err := s.RawRepository.FindAllInputsByFilter(ctx, FilterInput{IDgt: latestRawID}, page)
 	if err != nil {
 		return latestRawID, err
@@ -165,7 +177,12 @@ func (s SynchronizerCreateWorker) WatchNewInputs(stdCtx context.Context) error {
 					errCh <- ctx.Err()
 					return
 				default:
-					latestRawID, err = s.SyncInputs(ctx, latestRawID, page, abi)
+					latestRawID, err = s.SyncInputCreation(ctx, latestRawID, page, abi)
+					if err != nil {
+						errCh <- err
+						return
+					}
+					err = s.SynchronizerUpdate.SyncInputStatus(ctx)
 					if err != nil {
 						errCh <- err
 						return
@@ -195,11 +212,15 @@ func NewSynchronizerCreateWorker(
 	inputRefRepository *repository.RawInputRefRepository,
 	dbRawUrl string,
 	rawRepository *RawRepository,
+	synchronizerUpdate *SynchronizerUpdate,
+	decoder *decoder.OutputDecoder,
 ) supervisor.Worker {
 	return SynchronizerCreateWorker{
 		inputRepository:    inputRepository,
 		inputRefRepository: inputRefRepository,
 		DbRawUrl:           dbRawUrl,
 		RawRepository:      rawRepository,
+		SynchronizerUpdate: synchronizerUpdate,
+		Decoder:            decoder,
 	}
 }

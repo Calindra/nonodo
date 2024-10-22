@@ -83,6 +83,7 @@
         "sqlx",
         "sslmode",
         "stretchr",
+        "synchronizernode",
         "syscoin",
         "tendermint",
         "trpc",

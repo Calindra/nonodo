@@ -166,7 +166,7 @@ func (r *InputRepository) UpdateStatus(ctx context.Context, appContract common.A
 	SET status = $1
 	WHERE input_index = $2 and app_contract = $3`
 	exec := DBExecutor{&r.Db}
-	_, err := exec.ExecContext(
+	res, err := exec.ExecContext(
 		ctx,
 		sql,
 		status,
@@ -176,6 +176,13 @@ func (r *InputRepository) UpdateStatus(ctx context.Context, appContract common.A
 	if err != nil {
 		slog.Error("Error updating input status", "Error", err)
 		return err
+	}
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("no rows updated")
 	}
 	return nil
 }

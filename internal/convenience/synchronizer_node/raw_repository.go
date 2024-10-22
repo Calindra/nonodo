@@ -64,7 +64,7 @@ type FilterID struct {
 	IDgt uint64
 }
 
-func NewRawNode(connectionURL string, db *sqlx.DB) *RawRepository {
+func NewRawRepository(connectionURL string, db *sqlx.DB) *RawRepository {
 	return &RawRepository{connectionURL, db}
 }
 

@@ -233,12 +233,19 @@ func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 
 	if opts.RawEnabled {
 		dbNodeV2 := sqlx.MustConnect("postgres", opts.DbRawUrl)
-		rawRepository := synchronizernode.NewRawNode(opts.DbRawUrl, dbNodeV2)
+		rawRepository := synchronizernode.NewRawRepository(opts.DbRawUrl, dbNodeV2)
+		synchronizerUpdate := synchronizernode.NewSynchronizerUpdate(
+			container.GetRawInputRepository(),
+			rawRepository,
+			container.GetInputRepository(),
+		)
 		rawSequencer := synchronizernode.NewSynchronizerCreateWorker(
 			container.GetInputRepository(),
 			container.GetRawInputRepository(),
 			opts.DbRawUrl,
 			rawRepository,
+			&synchronizerUpdate,
+			container.GetOutputDecoder(),
 		)
 		w.Workers = append(w.Workers, rawSequencer)
 	}

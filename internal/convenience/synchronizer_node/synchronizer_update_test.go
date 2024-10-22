@@ -22,7 +22,7 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-const TOTAL_INPUT_TEST = 65
+const TOTAL_INPUT_TEST = 100
 
 type SynchronizerUpdateNodeSuite struct {
 	suite.Suite
@@ -72,7 +72,7 @@ func (s *SynchronizerUpdateNodeSuite) SetupTest() {
 	s.workerCtx, s.workerCancel = context.WithCancel(s.ctx)
 
 	dbNodeV2 := sqlx.MustConnect("postgres", dbRawUrl)
-	s.rawNode = NewRawNode(dbRawUrl, dbNodeV2)
+	s.rawNode = NewRawRepository(dbRawUrl, dbNodeV2)
 	rawInputRefRepository := s.container.GetRawInputRepository()
 	s.synchronizerUpdate = NewSynchronizerUpdate(
 		rawInputRefRepository,

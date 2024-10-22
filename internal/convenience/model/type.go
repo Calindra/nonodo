@@ -127,6 +127,7 @@ type AdvanceInput struct {
 }
 
 type ConvertedInput struct {
+	ChainId        *big.Int       `json:"chainId"`
 	MsgSender      common.Address `json:"msgSender"`
 	AppContract    common.Address `json:"app_contract"`
 	BlockNumber    *big.Int       `json:"blockNumber"`

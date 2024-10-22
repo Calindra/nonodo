@@ -128,7 +128,7 @@ func GetStatusRosetta() []RosettaStatusRef {
 func (s *SynchronizerUpdate) updateStatus(ctx context.Context, rawInputs []RawInput, status model.CompletionStatus) error {
 	for _, rawInput := range rawInputs {
 		appContract := common.BytesToAddress(rawInput.ApplicationAddress)
-		slog.Debug("Update", "appContract", appContract, "index", rawInput.Index)
+		slog.Debug("Update", "appContract", appContract, "index", rawInput.Index, "status", status)
 		err := s.InputRepository.UpdateStatus(ctx, appContract, rawInput.Index, status)
 		if err != nil {
 			return err

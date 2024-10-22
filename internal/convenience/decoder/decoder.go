@@ -216,6 +216,32 @@ func (o *OutputDecoder) GetConvertedInput(input model.InputEdge) (model.Converte
 	return convertedInput, nil
 }
 
+func (o *OutputDecoder) ParseBytesToInput(data []byte) (model.ConvertedInput, error) {
+	var emptyConvertedInput model.ConvertedInput
+	abiParsed, err := contracts.InputsMetaData.GetAbi()
+	if err != nil {
+		slog.Error("Error parsing abi", "err", err)
+		return emptyConvertedInput, err
+	}
+	values, err := abiParsed.Methods["EvmAdvance"].Inputs.Unpack(data[4:])
+
+	if err != nil {
+		slog.Error("Error unpacking abi", "err", err)
+		return emptyConvertedInput, err
+	}
+	convertedInput := model.ConvertedInput{
+		ChainId:        values[0].(*big.Int),
+		MsgSender:      values[2].(common.Address),
+		Payload:        string(values[7].([]uint8)),
+		BlockNumber:    values[3].(*big.Int),
+		BlockTimestamp: values[4].(*big.Int).Int64(),
+		PrevRandao:     values[5].(*big.Int).String(),
+		AppContract:    values[1].(common.Address),
+		InputBoxIndex:  values[6].(*big.Int).Int64(),
+	}
+	return convertedInput, nil
+}
+
 func (o *OutputDecoder) RetrieveDestination(payload string) (common.Address, error) {
 	abiParsed, err := contracts.OutputsMetaData.GetAbi()
 

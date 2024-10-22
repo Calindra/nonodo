@@ -119,6 +119,9 @@ func (r *RawInputRefRepository) FindFirstInputByStatusNone(ctx context.Context, 
 	var row RawInputRef
 	err = stmt.GetContext(ctx, &row, args...)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
 		slog.Error("Select context error", "error", err)
 		return nil, err
 	}

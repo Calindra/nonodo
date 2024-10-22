@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/calindra/nonodo/internal/commons"
+	"github.com/calindra/nonodo/internal/convenience"
 	"github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/calindra/nonodo/postgres/raw"
 	"github.com/jmoiron/sqlx"
@@ -48,10 +49,8 @@ func (s *SynchronizerNodeSuite) SetupTest() {
 	s.dbFactory = commons.NewDbFactory()
 	db, err := s.dbFactory.CreateDbCtx(s.ctx, "input.sqlite3")
 	s.NoError(err)
-
-	s.inputRepository = &repository.InputRepository{Db: *db}
-	err = s.inputRepository.CreateTables()
-	s.NoError(err)
+	container := convenience.NewContainer(*db, false)
+	s.inputRepository = container.GetInputRepository()
 	s.inputRefRepository = &repository.RawInputRefRepository{Db: *db}
 	err = s.inputRefRepository.CreateTables()
 	s.NoError(err)
@@ -60,11 +59,18 @@ func (s *SynchronizerNodeSuite) SetupTest() {
 
 	dbNodeV2 := sqlx.MustConnect("postgres", dbRawUrl)
 	rawRepository := RawRepository{Db: dbNodeV2}
+	synchronizerUpdate := NewSynchronizerUpdate(
+		s.inputRefRepository,
+		&rawRepository,
+		s.inputRepository,
+	)
 	wr := NewSynchronizerCreateWorker(
 		s.inputRepository,
 		s.inputRefRepository,
 		dbRawUrl,
 		&rawRepository,
+		&synchronizerUpdate,
+		container.GetOutputDecoder(),
 	)
 
 	// like Supervisor
