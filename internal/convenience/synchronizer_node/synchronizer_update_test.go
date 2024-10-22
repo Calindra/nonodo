@@ -8,21 +8,17 @@ import (
 	"path/filepath"
 	"strconv"
 	"testing"
-	"time"
 
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/convenience"
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/calindra/nonodo/internal/devnet"
-	"github.com/calindra/nonodo/internal/supervisor"
 	"github.com/calindra/nonodo/postgres/raw"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/suite"
 )
-
-const TOTAL_INPUT_TEST = 100
 
 type SynchronizerUpdateNodeSuite struct {
 	suite.Suite
@@ -30,18 +26,11 @@ type SynchronizerUpdateNodeSuite struct {
 	dockerComposeStartedByTest bool
 	tempDir                    string
 	container                  *convenience.Container
-	workerCtx                  context.Context
-	timeoutCancel              context.CancelFunc
-	workerCancel               context.CancelFunc
-	workerResult               chan error
 	synchronizerUpdate         SynchronizerUpdate
 	rawNode                    *RawRepository
 }
 
 func (s *SynchronizerUpdateNodeSuite) SetupSuite() {
-	timeout := 1 * time.Minute
-	s.ctx, s.timeoutCancel = context.WithTimeout(context.Background(), timeout)
-
 	pgUp := commons.IsPortInUse(5432)
 	if !pgUp {
 		err := raw.RunDockerCompose(s.ctx)
@@ -52,11 +41,6 @@ func (s *SynchronizerUpdateNodeSuite) SetupSuite() {
 
 func (s *SynchronizerUpdateNodeSuite) SetupTest() {
 	commons.ConfigureLog(slog.LevelDebug)
-	dbRawUrl := "postgres://postgres:password@localhost:5432/rollupsdb?sslmode=disable"
-
-	var w supervisor.SupervisorWorker
-	w.Name = "TestRawInputter"
-	s.workerResult = make(chan error)
 
 	// Temp
 	tempDir, err := os.MkdirTemp("", "")
@@ -69,30 +53,14 @@ func (s *SynchronizerUpdateNodeSuite) SetupTest() {
 	db := sqlx.MustConnect("sqlite3", sqliteFileName)
 	s.container = convenience.NewContainer(*db, false)
 
-	s.workerCtx, s.workerCancel = context.WithCancel(s.ctx)
-
-	dbNodeV2 := sqlx.MustConnect("postgres", dbRawUrl)
-	s.rawNode = NewRawRepository(dbRawUrl, dbNodeV2)
+	dbNodeV2 := sqlx.MustConnect("postgres", RAW_DB_URL)
+	s.rawNode = NewRawRepository(RAW_DB_URL, dbNodeV2)
 	rawInputRefRepository := s.container.GetRawInputRepository()
 	s.synchronizerUpdate = NewSynchronizerUpdate(
 		rawInputRefRepository,
 		s.rawNode,
 		s.container.GetInputRepository(),
 	)
-
-	// Supervisor
-	ready := make(chan struct{})
-	go func() {
-		s.workerResult <- w.Start(s.workerCtx, ready)
-	}()
-	select {
-	case <-s.ctx.Done():
-		s.Fail("context error", s.ctx.Err())
-	case err := <-s.workerResult:
-		s.Fail("worker exited before being ready", err)
-	case <-ready:
-		s.T().Log("nonodo ready")
-	}
 }
 
 func (s *SynchronizerUpdateNodeSuite) TearDownSuite() {
@@ -100,12 +68,10 @@ func (s *SynchronizerUpdateNodeSuite) TearDownSuite() {
 		err := raw.StopDockerCompose(s.ctx)
 		s.NoError(err)
 	}
-	s.timeoutCancel()
 }
 
 func (s *SynchronizerUpdateNodeSuite) TearDownTest() {
 	defer os.RemoveAll(s.tempDir)
-	s.workerCancel()
 }
 
 func TestSynchronizerUpdateNodeSuiteSuite(t *testing.T) {
@@ -150,7 +116,7 @@ func (s *SynchronizerUpdateNodeSuite) TestUpdateInputStatusNotEqNone() {
 }
 
 func (s *SynchronizerUpdateNodeSuite) countInputWithStatusNone(ctx context.Context) int {
-	status := "Status"
+	status := model.STATUS_PROPERTY
 	value := fmt.Sprintf("%d", model.CompletionStatusUnprocessed)
 	filter := []*model.ConvenienceFilter{
 		{
@@ -164,7 +130,7 @@ func (s *SynchronizerUpdateNodeSuite) countInputWithStatusNone(ctx context.Conte
 }
 
 func (s *SynchronizerUpdateNodeSuite) countAcceptedInput(ctx context.Context) int {
-	status := "Status"
+	status := model.STATUS_PROPERTY
 	value := fmt.Sprintf("%d", model.CompletionStatusAccepted)
 	filter := []*model.ConvenienceFilter{
 		{

@@ -41,7 +41,6 @@ func (s *SynchronizerNodeSuite) SetupSuite() {
 
 func (s *SynchronizerNodeSuite) SetupTest() {
 	commons.ConfigureLog(slog.LevelDebug)
-	dbRawUrl := "postgres://postgres:password@localhost:5432/rollupsdb?sslmode=disable"
 
 	s.workerResult = make(chan error)
 
@@ -57,20 +56,25 @@ func (s *SynchronizerNodeSuite) SetupTest() {
 
 	s.workerCtx, s.workerCancel = context.WithCancel(s.ctx)
 
-	dbNodeV2 := sqlx.MustConnect("postgres", dbRawUrl)
+	dbNodeV2 := sqlx.MustConnect("postgres", RAW_DB_URL)
 	rawRepository := RawRepository{Db: dbNodeV2}
 	synchronizerUpdate := NewSynchronizerUpdate(
 		s.inputRefRepository,
 		&rawRepository,
 		s.inputRepository,
 	)
+	synchronizerReport := NewSynchronizerReport(
+		container.GetReportRepository(),
+		&rawRepository,
+	)
 	wr := NewSynchronizerCreateWorker(
 		s.inputRepository,
 		s.inputRefRepository,
-		dbRawUrl,
+		RAW_DB_URL,
 		&rawRepository,
 		&synchronizerUpdate,
 		container.GetOutputDecoder(),
+		synchronizerReport,
 	)
 
 	// like Supervisor

@@ -9,6 +9,7 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
+const STATUS_PROPERTY = "Status"
 const EXECUTED = "Executed"
 const FALSE = "false"
 const DESTINATION = "Destination"
@@ -99,6 +100,7 @@ type Report struct {
 	InputIndex  int
 	Payload     []byte
 	AppContract common.Address `json:"app_contract"`
+	RawID       uint64
 }
 
 // Rollups advance input type.
