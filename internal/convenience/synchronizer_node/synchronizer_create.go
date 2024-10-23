@@ -206,6 +206,12 @@ func (s SynchronizerCreateWorker) WatchNewInputs(stdCtx context.Context) error {
 						errCh <- err
 						return
 					}
+					// Catarino's code
+					// create outputs
+
+					// Oshiro's code
+					// update outputs
+
 					<-time.After(DEFAULT_DELAY)
 				}
 			}
