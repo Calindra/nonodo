@@ -17,7 +17,8 @@ func (c *DBExecutor) ExecContext(ctx context.Context, query string, args ...any)
 
 	if !isTxEnable {
 		slog.Debug("Using ExecContext without transaction.")
-		return c.db.ExecContext(ctx, query, args...)
+		// return c.db.ExecContext(ctx, query, args...)
+		panic("where is the transaction?")
 	} else {
 		// slog.Debug("Using ExecContext with transaction.")
 		return tx.ExecContext(ctx, query, args...)

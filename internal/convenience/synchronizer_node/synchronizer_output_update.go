@@ -39,9 +39,9 @@ func (s *SynchronizerOutputUpdate) SyncOutputs(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	err = s.syncOutputs(ctx)
+	err = s.syncOutputs(txCtx)
 	if err != nil {
-		s.rollbackTransaction(ctx)
+		s.rollbackTransaction(txCtx)
 		return err
 	}
 	err = s.commitTransaction(txCtx)
@@ -55,6 +55,9 @@ func (s *SynchronizerOutputUpdate) syncOutputs(ctx context.Context) error {
 	lastOutputIdWithoutProof, err := s.RawOutputRefRepository.GetFirstOutputIdWithoutProof(ctx)
 	if err != nil {
 		return err
+	}
+	if lastOutputIdWithoutProof == 0 {
+		return nil
 	}
 	slog.Debug("SyncOutputs", "lastOutputIdWithoutProof", lastOutputIdWithoutProof)
 	rawOutputs, err := s.RawNodeV2Repository.FindAllOutputsWithProof(ctx, FilterID{

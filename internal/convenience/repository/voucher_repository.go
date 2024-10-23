@@ -115,7 +115,7 @@ func (c *VoucherRepository) SetProof(
 		return err
 	}
 	if affected != 1 {
-		return fmt.Errorf("wrong number of rows affected")
+		return fmt.Errorf("wrong number of vouchers affected: %d; app_contract %v; output_index %d", affected, voucher.AppContract, voucher.OutputIndex)
 	}
 	return nil
 }

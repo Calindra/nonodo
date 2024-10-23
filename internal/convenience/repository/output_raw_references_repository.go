@@ -80,10 +80,10 @@ func (r *RawOutputRefRepository) GetLatestOutputRawId(ctx context.Context) (uint
 	err := r.Db.GetContext(ctx, &outputId, `SELECT raw_id FROM convenience_output_raw_references ORDER BY raw_id DESC LIMIT 1`)
 
 	if err != nil {
-		slog.Error("Failed to retrieve the last outputId from the database", "error", err)
 		if errors.Is(err, sql.ErrNoRows) {
 			return 0, nil
 		}
+		slog.Error("Failed to retrieve the last outputId from the database", "error", err)
 		return 0, err
 	}
 	return outputId, err
@@ -141,10 +141,10 @@ func (r *RawOutputRefRepository) GetFirstOutputIdWithoutProof(ctx context.Contex
 		ORDER BY raw_id ASC LIMIT 1`)
 
 	if err != nil {
-		slog.Error("Failed to retrieve the last outputId from the database", "error", err)
 		if errors.Is(err, sql.ErrNoRows) {
 			return 0, nil
 		}
+		slog.Error("Failed to retrieve the last outputId to update proofs", "error", err)
 		return 0, err
 	}
 	return outputId, err

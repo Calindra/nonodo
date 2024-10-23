@@ -13,7 +13,6 @@ import (
 	"github.com/calindra/nonodo/internal/convenience/decoder"
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/convenience/repository"
-	"github.com/calindra/nonodo/internal/convenience/services"
 	"github.com/calindra/nonodo/internal/supervisor"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -24,7 +23,6 @@ import (
 type SynchronizerCreateWorker struct {
 	inputRepository          *repository.InputRepository
 	inputRefRepository       *repository.RawInputRefRepository
-	convenienceService       *services.ConvenienceService
 	outputRefRepository      *repository.RawOutputRefRepository
 	SynchronizerReport       *SynchronizerReport
 	DbRawUrl                 string
@@ -173,11 +171,7 @@ func (s SynchronizerCreateWorker) HandleOutput(ctx context.Context, abi *abi.ABI
 }
 
 func (s SynchronizerCreateWorker) GetRawOutputRef(ctx context.Context, data map[string]any, output Output) (*repository.RawOutputRef, error) {
-	payload, ok := data["payload"].([]byte)
-	if !ok {
-		return nil, fmt.Errorf("payload not found")
-	}
-	var strPayload = string(payload)
+	var strPayload = "0x" + common.Bytes2Hex(output.RawData)
 
 	input, err := s.RawRepository.FindInputByOutput(ctx, FilterID{IDgt: output.InputID})
 	if err != nil {
@@ -188,46 +182,54 @@ func (s SynchronizerCreateWorker) GetRawOutputRef(ctx context.Context, data map[
 		fmt.Println("Erro ao converter string para inteiro:", err)
 	}
 
+	appContract := common.BytesToAddress(input.ApplicationAddress)
 	rawOutputRef := repository.RawOutputRef{
 		RawID:       uint64(output.ID),
 		InputIndex:  input.Index,
 		OutputIndex: uint64(outputIndex),
-		AppContract: common.BytesToAddress(input.ApplicationAddress).Hex(),
+		AppContract: appContract.Hex(),
 	}
 
 	if strPayload[2:10] == model.VOUCHER_SELECTOR {
-		destination, ok := data["destination"].([]byte)
+		destination, ok := data["destination"].(common.Address)
 		if !ok {
-			return nil, fmt.Errorf("destination not found")
+			return nil, fmt.Errorf("destination not found %v", data)
 		}
 
-		strDestination := string(destination)
+		voucherValue, ok := data["value"].(*big.Int)
+		if !ok {
+			return nil, fmt.Errorf("value not found %v", data)
+		}
+
 		cVoucher := model.ConvenienceVoucher{
-			Destination: common.HexToAddress(strDestination),
-			Payload:     s.RemoveSelector(strPayload),
+			Destination: destination,
+			Payload:     strPayload,
 			Executed:    false,
 			InputIndex:  input.Index,
 			OutputIndex: uint64(outputIndex),
+			AppContract: appContract,
+			Value:       voucherValue.String(),
 		}
 
-		_, err = s.convenienceService.CreateVoucher(ctx, &cVoucher)
+		_, err = s.SynchronizerOutputUpdate.VoucherRepository.CreateVoucher(ctx, &cVoucher)
 		if err != nil {
 			return nil, fmt.Errorf("voucher not created")
 		}
 
-		rawOutputRef.Type = "voucher"
+		rawOutputRef.Type = repository.RAW_VOUCHER_TYPE
 	} else {
 		cNotice := model.ConvenienceNotice{
-			Payload:     s.RemoveSelector(strPayload),
+			Payload:     strPayload,
 			OutputIndex: uint64(outputIndex),
 			InputIndex:  input.Index,
+			AppContract: appContract.Hex(),
 		}
 
-		_, err := s.convenienceService.CreateNotice(ctx, &cNotice)
+		_, err := s.SynchronizerOutputUpdate.NoticeRepository.Create(ctx, &cNotice)
 		if err != nil {
 			return nil, fmt.Errorf("notice not created")
 		}
-		rawOutputRef.Type = "voucher"
+		rawOutputRef.Type = repository.RAW_NOTICE_TYPE
 	}
 
 	return &rawOutputRef, nil
@@ -271,6 +273,23 @@ func (s SynchronizerCreateWorker) syncInputCreation(ctx context.Context, latestR
 }
 
 func (s SynchronizerCreateWorker) SyncOutputCreation(ctx context.Context, latestRawID uint64, abi *abi.ABI) (uint64, error) {
+	txCtx, err := s.startTransaction(ctx)
+	if err != nil {
+		return latestRawID, err
+	}
+	latestOutputRawID, err := s.syncOutputCreation(txCtx, latestRawID, abi)
+	if err != nil {
+		s.rollbackTransaction(txCtx)
+		return latestRawID, err
+	}
+	err = s.commitTransaction(txCtx)
+	if err != nil {
+		return latestRawID, err
+	}
+	return latestOutputRawID, nil
+}
+
+func (s SynchronizerCreateWorker) syncOutputCreation(ctx context.Context, latestRawID uint64, abi *abi.ABI) (uint64, error) {
 	outputs, err := s.RawRepository.FindAllOutputsByFilter(ctx, FilterID{IDgt: latestRawID})
 
 	if err != nil {

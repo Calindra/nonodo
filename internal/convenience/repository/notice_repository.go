@@ -90,7 +90,7 @@ func (c *NoticeRepository) Update(
 }
 
 func (c *NoticeRepository) SetProof(
-	ctx context.Context, voucher *model.ConvenienceNotice,
+	ctx context.Context, notice *model.ConvenienceNotice,
 ) error {
 	updateVoucher := `UPDATE notices SET 
 		output_hashes_siblings = $1
@@ -99,9 +99,9 @@ func (c *NoticeRepository) SetProof(
 	res, err := exec.ExecContext(
 		ctx,
 		updateVoucher,
-		voucher.OutputHashesSiblings,
-		common.HexToAddress(voucher.AppContract).Hex(),
-		voucher.OutputIndex,
+		notice.OutputHashesSiblings,
+		common.HexToAddress(notice.AppContract).Hex(),
+		notice.OutputIndex,
 	)
 	if err != nil {
 		return err
@@ -111,7 +111,9 @@ func (c *NoticeRepository) SetProof(
 		return err
 	}
 	if affected != 1 {
-		return fmt.Errorf("wrong number of rows affected")
+		return fmt.Errorf("wrong number of notices affected: %d; app_contract %v; output_index %d",
+			affected, notice.AppContract, notice.OutputIndex,
+		)
 	}
 	return nil
 }

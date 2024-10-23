@@ -26,6 +26,24 @@ func NewSynchronizerReport(
 }
 
 func (s *SynchronizerReport) SyncReports(ctx context.Context) error {
+	txCtx, err := s.startTransaction(ctx)
+	if err != nil {
+		return err
+	}
+	err = s.syncReports(txCtx)
+	if err != nil {
+		s.rollbackTransaction(txCtx)
+		return err
+	}
+	err = s.commitTransaction(txCtx)
+	if err != nil {
+		slog.Error("report commit transaction failed")
+		panic(err)
+	}
+	return nil
+}
+
+func (s *SynchronizerReport) syncReports(ctx context.Context) error {
 	lastRawId, err := s.ReportRepository.FindLastRawId(ctx)
 	if err != nil {
 		slog.Error("fail to find last report imported")
@@ -61,4 +79,32 @@ func (s *SynchronizerReport) SyncReports(ctx context.Context) error {
 		}
 	}
 	return nil
+}
+
+func (s *SynchronizerReport) startTransaction(ctx context.Context) (context.Context, error) {
+	db := s.ReportRepository.Db
+	ctxWithTx, err := repository.StartTransaction(ctx, db)
+	if err != nil {
+		return ctx, err
+	}
+	return ctxWithTx, nil
+}
+
+func (s *SynchronizerReport) commitTransaction(ctx context.Context) error {
+	tx, hasTx := repository.GetTransaction(ctx)
+	if hasTx && tx != nil {
+		return tx.Commit()
+	}
+	return nil
+}
+
+func (s *SynchronizerReport) rollbackTransaction(ctx context.Context) {
+	tx, hasTx := repository.GetTransaction(ctx)
+	if hasTx && tx != nil {
+		err := tx.Rollback()
+		if err != nil {
+			slog.Error("transaction rollback error", "err", err)
+			panic(err)
+		}
+	}
 }
