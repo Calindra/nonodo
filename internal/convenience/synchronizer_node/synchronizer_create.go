@@ -396,6 +396,7 @@ func NewSynchronizerCreateWorker(
 	decoder *decoder.OutputDecoder,
 	synchronizerReport *SynchronizerReport,
 	synchronizerOutputUpdate *SynchronizerOutputUpdate,
+	outputRefRepository *repository.RawOutputRefRepository,
 ) supervisor.Worker {
 	return SynchronizerCreateWorker{
 		inputRepository:          inputRepository,
@@ -406,6 +407,7 @@ func NewSynchronizerCreateWorker(
 		Decoder:                  decoder,
 		SynchronizerReport:       synchronizerReport,
 		SynchronizerOutputUpdate: synchronizerOutputUpdate,
+		outputRefRepository:      outputRefRepository,
 	}
 }
 

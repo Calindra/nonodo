@@ -146,7 +146,7 @@ func parseAndDecode(input string) ([]string, error) {
 
 func (s *SynchronizerOutputUpdate) startTransaction(ctx context.Context) (context.Context, error) {
 	db := s.RawOutputRefRepository.Db
-	ctxWithTx, err := repository.StartTransaction(ctx, &db)
+	ctxWithTx, err := repository.StartTransaction(ctx, db)
 	if err != nil {
 		return ctx, err
 	}

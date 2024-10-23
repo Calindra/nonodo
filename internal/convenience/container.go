@@ -121,11 +121,14 @@ func (c *Container) GetRawInputRepository() *repository.RawInputRefRepository {
 }
 
 func (c *Container) GetRawOutputRefRepository() *repository.RawOutputRefRepository {
+	if c.db == nil {
+		panic(fmt.Errorf("db cannot be nil"))
+	}
 	if c.rawOutputRefRepository != nil {
 		return c.rawOutputRefRepository
 	}
 	c.rawOutputRefRepository = &repository.RawOutputRefRepository{
-		Db: *c.db,
+		Db: c.db,
 	}
 	err := c.rawOutputRefRepository.CreateTable()
 	if err != nil {
