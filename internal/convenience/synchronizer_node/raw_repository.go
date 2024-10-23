@@ -161,15 +161,7 @@ func (s *RawRepository) FindInputIndexByOutput(ctx context.Context, filter Filte
 	inputs := []RawInput{}
 
 	result, err := s.Db.QueryxContext(ctx, `
-		SELECT
-			*
-		FROM 
-			input
-		INNER JOIN
-			output as o
-		ON
-			o.input_id = input.id
-		WHERE r.id = $1 LIMIT 1`, filter.IDgt)
+		SELECT * FROM input WHERE input.id = $1 LIMIT 1;`, filter.IDgt)
 
 	if err != nil {
 		return nil, err

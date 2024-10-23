@@ -181,3 +181,12 @@ func (s *RawNodeSuite) TestDecodeChainIDFromInputbox() {
 	slog.Info("DataDecoded", "dataDecoded", dataDecoded)
 	// s.NotNil(nil)
 }
+
+func (s *RawNodeSuite) TestSynchronizerNodeFindInputByOutput() {
+	ctx, cancel := context.WithCancel(s.ctx)
+	defer cancel()
+	inputs, err := s.node.FindInputIndexByOutput(ctx, FilterID{IDgt: 1})
+	s.NoError(err)
+	firstInput := inputs[0]
+	s.Equal(1, int(firstInput.ID))
+}
