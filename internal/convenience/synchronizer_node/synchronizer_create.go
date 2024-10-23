@@ -13,6 +13,7 @@ import (
 	"github.com/calindra/nonodo/internal/convenience/decoder"
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/convenience/repository"
+	"github.com/calindra/nonodo/internal/convenience/services"
 	"github.com/calindra/nonodo/internal/supervisor"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -21,14 +22,15 @@ import (
 )
 
 type SynchronizerCreateWorker struct {
-	inputRepository    *repository.InputRepository
-	inputRefRepository *repository.RawInputRefRepository
-	SynchronizerReport *SynchronizerReport
-	// outputRefRepository *repository.RawOutputRefRepository
-	DbRawUrl           string
-	RawRepository      *RawRepository
-	SynchronizerUpdate *SynchronizerUpdate
-	Decoder            *decoder.OutputDecoder
+	inputRepository     *repository.InputRepository
+	inputRefRepository  *repository.RawInputRefRepository
+	convenienceService  *services.ConvenienceService
+	outputRefRepository *repository.RawOutputRefRepository
+	SynchronizerReport  *SynchronizerReport
+	DbRawUrl            string
+	RawRepository       *RawRepository
+	SynchronizerUpdate  *SynchronizerUpdate
+	Decoder             *decoder.OutputDecoder
 }
 
 const DEFAULT_DELAY = 3 * time.Second
@@ -150,28 +152,32 @@ func (s SynchronizerCreateWorker) HandleInput(ctx context.Context, abi *abi.ABI,
 	return rawInputRef.RawID, nil
 }
 
-// func (s SynchronizerCreateWorker) HandleOutput(ctx context.Context, abi *abi.ABI, output Output) (id uint64, err error) {
-// 	data, err := s.GetMapRaw(abi, output.RawData)
-// 	if err != nil {
-// 		return 0, err
-// 	}
+func (s SynchronizerCreateWorker) HandleOutput(ctx context.Context, abi *abi.ABI, output Output) (id uint64, err error) {
+	data, err := s.GetMapRaw(abi, output.RawData)
+	if err != nil {
+		return 0, err
+	}
 
-// 	convenienceOutput, err := s.GetConvenienceOutput(data, output)
-// 	if err != nil {
-// 		return 0, err
-// 	}
-// }
+	rawOutputRef, err := s.GetRawOutputRef(ctx, data, output)
+	if err != nil {
+		return 0, err
+	}
 
-func (s SynchronizerCreateWorker) GetConvenienceOutput(ctx context.Context, data map[string]any, output Output) (*model.ProcessOutputData, error) {
+	err = s.outputRefRepository.Create(ctx, *rawOutputRef)
+	if err != nil {
+		return 0, fmt.Errorf("rawOutputRef not created")
+	}
+
+	return rawOutputRef.RawID, nil
+}
+
+func (s SynchronizerCreateWorker) GetRawOutputRef(ctx context.Context, data map[string]any, output Output) (*repository.RawOutputRef, error) {
 	payload, ok := data["payload"].([]byte)
 	if !ok {
 		return nil, fmt.Errorf("payload not found")
 	}
+	var strPayload = string(payload)
 
-	destination, err := s.RetrieveDestination(string(payload))
-	if err != nil {
-		return nil, fmt.Errorf("destination not found")
-	}
 	input, err := s.RawRepository.FindInputByOutput(ctx, FilterID{IDgt: output.InputID})
 	if err != nil {
 		return nil, fmt.Errorf("input not found")
@@ -181,16 +187,51 @@ func (s SynchronizerCreateWorker) GetConvenienceOutput(ctx context.Context, data
 		fmt.Println("Erro ao converter string para inteiro:", err)
 	}
 
-	// slog.Debug("GetAdvanceInputFromMap", "chainId", chainId)
-	advanceInput := model.ProcessOutputData{
-		Destination: destination.Hex(),
-		Payload:     string(payload),
-		OutputIndex: uint64(outputIndex),
+	rawOutputRef := repository.RawOutputRef{
+		RawID:       uint64(output.ID),
 		InputIndex:  input.Index,
+		OutputIndex: uint64(outputIndex),
+		AppContract: common.BytesToAddress(input.ApplicationAddress).Hex(),
 	}
-	// advanceInput.Status = model.CompletionStatusUnprocessed
-	return &advanceInput, nil
 
+	if strPayload[2:10] == model.VOUCHER_SELECTOR {
+		destination, err := s.RetrieveDestination(strPayload)
+		if err != nil {
+			return nil, fmt.Errorf("destination not found")
+		}
+		cVoucher := model.ConvenienceVoucher{
+			Destination: destination,
+			Payload:     s.RemoveSelector(strPayload),
+			Executed:    false,
+			InputIndex:  input.Index,
+			OutputIndex: uint64(outputIndex),
+		}
+
+		_, err = s.convenienceService.CreateVoucher(ctx, &cVoucher)
+		if err != nil {
+			return nil, fmt.Errorf("voucher not created")
+		}
+
+		rawOutputRef.Type = "voucher"
+	} else {
+		cNotice := model.ConvenienceNotice{
+			Payload:     s.RemoveSelector(strPayload),
+			OutputIndex: uint64(outputIndex),
+			InputIndex:  input.Index,
+		}
+
+		_, err := s.convenienceService.CreateNotice(ctx, &cNotice)
+		if err != nil {
+			return nil, fmt.Errorf("notice not created")
+		}
+		rawOutputRef.Type = "voucher"
+	}
+
+	return &rawOutputRef, nil
+}
+
+func (s SynchronizerCreateWorker) RemoveSelector(payload string) string {
+	return fmt.Sprintf("0x%s", payload[10:])
 }
 
 func (s SynchronizerCreateWorker) RetrieveDestination(payload string) (common.Address, error) {
@@ -227,23 +268,23 @@ func (s SynchronizerCreateWorker) SyncInputCreation(ctx context.Context, latestR
 	return latestRawID, nil
 }
 
-// func (s SynchronizerCreateWorker) SyncOutputCreation(ctx context.Context, latestRawID uint64, abi *abi.ABI) (uint64, error) {
-// 	outputs, err := s.RawRepository.FindAllOutputsByFilter(ctx, FilterID{IDgt: latestRawID})
+func (s SynchronizerCreateWorker) SyncOutputCreation(ctx context.Context, latestRawID uint64, abi *abi.ABI) (uint64, error) {
+	outputs, err := s.RawRepository.FindAllOutputsByFilter(ctx, FilterID{IDgt: latestRawID})
 
-// 	if err != nil {
-// 		return latestRawID, err
-// 	}
+	if err != nil {
+		return latestRawID, err
+	}
 
-// 	for _, output := range outputs {
-// 		rawInputRefID, err := s.HandleOutput(ctx, abi, output)
-// 		if err != nil {
-// 			return latestRawID, err
-// 		}
-// 		latestRawID = rawInputRefID + 1
-// 	}
+	for _, output := range outputs {
+		rawInputRefID, err := s.HandleOutput(ctx, abi, output)
+		if err != nil {
+			return latestRawID, err
+		}
+		latestRawID = rawInputRefID + 1
+	}
 
-// 	return latestRawID, nil
-// }
+	return latestRawID, nil
+}
 
 func (s SynchronizerCreateWorker) WatchNewInputs(stdCtx context.Context) error {
 	ctx, cancel := context.WithCancel(stdCtx)
@@ -259,11 +300,14 @@ func (s SynchronizerCreateWorker) WatchNewInputs(stdCtx context.Context) error {
 		return err
 	}
 
-	// latestOutputRawId, err := s.outputRefRepository.GetLatestOutputRawId(ctx)
-	// outputAbi, err = contracts.OutputsMetaData.GetAbi()
-	// if err != nil {
-	// 	return err
-	// }
+	latestOutputRawId, err := s.outputRefRepository.GetLatestOutputRawId(ctx)
+	if err != nil {
+		return err
+	}
+	outputAbi, err := contracts.OutputsMetaData.GetAbi()
+	if err != nil {
+		return err
+	}
 
 	page := &Pagination{Limit: LIMIT}
 
@@ -292,8 +336,12 @@ func (s SynchronizerCreateWorker) WatchNewInputs(stdCtx context.Context) error {
 						errCh <- err
 						return
 					}
-					// Catarino's code
-					// create outputs
+
+					latestOutputRawId, err = s.SyncOutputCreation(ctx, latestOutputRawId, outputAbi)
+					if err != nil {
+						errCh <- err
+						return
+					}
 
 					// Oshiro's code
 					// update outputs
