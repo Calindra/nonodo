@@ -22,15 +22,16 @@ import (
 )
 
 type SynchronizerCreateWorker struct {
-	inputRepository     *repository.InputRepository
-	inputRefRepository  *repository.RawInputRefRepository
-	convenienceService  *services.ConvenienceService
-	outputRefRepository *repository.RawOutputRefRepository
-	SynchronizerReport  *SynchronizerReport
-	DbRawUrl            string
-	RawRepository       *RawRepository
-	SynchronizerUpdate  *SynchronizerUpdate
-	Decoder             *decoder.OutputDecoder
+	inputRepository          *repository.InputRepository
+	inputRefRepository       *repository.RawInputRefRepository
+	convenienceService       *services.ConvenienceService
+	outputRefRepository      *repository.RawOutputRefRepository
+	SynchronizerReport       *SynchronizerReport
+	DbRawUrl                 string
+	RawRepository            *RawRepository
+	SynchronizerUpdate       *SynchronizerUpdate
+	Decoder                  *decoder.OutputDecoder
+	SynchronizerOutputUpdate *SynchronizerOutputUpdate
 }
 
 const DEFAULT_DELAY = 3 * time.Second
@@ -360,8 +361,11 @@ func (s SynchronizerCreateWorker) WatchNewInputs(stdCtx context.Context) error {
 						return
 					}
 
-					// Oshiro's code
-					// update outputs
+					err = s.SynchronizerOutputUpdate.SyncOutputs(ctx)
+					if err != nil {
+						errCh <- err
+						return
+					}
 
 					<-time.After(DEFAULT_DELAY)
 				}
@@ -391,15 +395,17 @@ func NewSynchronizerCreateWorker(
 	synchronizerUpdate *SynchronizerUpdate,
 	decoder *decoder.OutputDecoder,
 	synchronizerReport *SynchronizerReport,
+	synchronizerOutputUpdate *SynchronizerOutputUpdate,
 ) supervisor.Worker {
 	return SynchronizerCreateWorker{
-		inputRepository:    inputRepository,
-		inputRefRepository: inputRefRepository,
-		DbRawUrl:           dbRawUrl,
-		RawRepository:      rawRepository,
-		SynchronizerUpdate: synchronizerUpdate,
-		Decoder:            decoder,
-		SynchronizerReport: synchronizerReport,
+		inputRepository:          inputRepository,
+		inputRefRepository:       inputRefRepository,
+		DbRawUrl:                 dbRawUrl,
+		RawRepository:            rawRepository,
+		SynchronizerUpdate:       synchronizerUpdate,
+		Decoder:                  decoder,
+		SynchronizerReport:       synchronizerReport,
+		SynchronizerOutputUpdate: synchronizerOutputUpdate,
 	}
 }
 
