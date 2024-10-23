@@ -109,22 +109,37 @@ func (s *SynchronizerOutputUpdateSuite) fillRefData(ctx context.Context) {
 	// msgSender := common.HexToAddress(devnet.SenderAddress)
 	for i := 0; i < TOTAL_INPUT_TEST*2; i++ {
 		// id := strconv.FormatInt(int64(i), 10) // our ID
+		outputType := repository.RAW_VOUCHER_TYPE
+		if i%2 == 0 {
+			outputType = "notice"
+		}
 		err := s.container.GetRawOutputRefRepository().Create(ctx, repository.RawOutputRef{
 			ID:          uint64(i + 1),
 			InputIndex:  uint64(i),
 			OutputIndex: uint64(i),
 			AppContract: appContract.Hex(),
-			Type:        "voucher",
+			Type:        outputType,
 			HasProof:    false,
 		})
 		s.Require().NoError(err)
-		_, err = s.container.GetVoucherRepository().CreateVoucher(
-			ctx, &model.ConvenienceVoucher{
-				AppContract: appContract,
-				OutputIndex: uint64(i),
-				InputIndex:  uint64(i),
-			},
-		)
-		s.Require().NoError(err)
+		if outputType == repository.RAW_VOUCHER_TYPE {
+			_, err = s.container.GetVoucherRepository().CreateVoucher(
+				ctx, &model.ConvenienceVoucher{
+					AppContract: appContract,
+					OutputIndex: uint64(i),
+					InputIndex:  uint64(i),
+				},
+			)
+			s.Require().NoError(err)
+		} else {
+			_, err = s.container.GetNoticeRepository().Create(
+				ctx, &model.ConvenienceNotice{
+					AppContract: appContract.Hex(),
+					OutputIndex: uint64(i),
+					InputIndex:  uint64(i),
+				},
+			)
+			s.Require().NoError(err)
+		}
 	}
 }

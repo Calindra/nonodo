@@ -10,6 +10,9 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
+const RAW_VOUCHER_TYPE = "voucher"
+const RAW_NOTICE_TYPE = "notice"
+
 type RawOutputRefRepository struct {
 	Db sqlx.DB
 }

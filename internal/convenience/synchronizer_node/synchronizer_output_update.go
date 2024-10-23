@@ -97,7 +97,7 @@ func (s *SynchronizerOutputUpdate) UpdateProof(
 	if err != nil {
 		return err
 	}
-	if ref.Type == "voucher" {
+	if ref.Type == repository.RAW_VOUCHER_TYPE {
 		err = s.VoucherRepository.SetProof(ctx,
 			&model.ConvenienceVoucher{
 				AppContract:          common.HexToAddress(ref.AppContract),
@@ -107,8 +107,18 @@ func (s *SynchronizerOutputUpdate) UpdateProof(
 		if err != nil {
 			return err
 		}
+	} else if ref.Type == repository.RAW_NOTICE_TYPE {
+		err = s.NoticeRepository.SetProof(ctx,
+			&model.ConvenienceNotice{
+				AppContract:          ref.AppContract,
+				OutputIndex:          ref.OutputIndex,
+				OutputHashesSiblings: string(jsonSiblings),
+			})
+		if err != nil {
+			return err
+		}
 	} else {
-		return fmt.Errorf("wrong output type")
+		return fmt.Errorf("unexpected output type: %s", ref.Type)
 	}
 	err = s.RawOutputRefRepository.SetHasProofToTrue(ctx, ref)
 	if err != nil {
