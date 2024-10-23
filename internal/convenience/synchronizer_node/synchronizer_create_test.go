@@ -82,6 +82,7 @@ func (s *SynchronizerNodeSuite) SetupTest() {
 		container.GetOutputDecoder(),
 		synchronizerReport,
 		synchronizerOutputUpdate,
+		container.GetRawOutputRefRepository(),
 	)
 
 	// like Supervisor

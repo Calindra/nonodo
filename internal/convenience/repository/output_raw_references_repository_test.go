@@ -32,7 +32,7 @@ func (s *RawOutputRefSuite) SetupTest() {
 		Db: *db,
 	}
 	s.rawOutputRefRepository = &RawOutputRefRepository{
-		Db: *db,
+		Db: db,
 	}
 
 	err := s.noticeRepository.CreateTables()

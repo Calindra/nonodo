@@ -258,6 +258,7 @@ func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 			container.GetOutputDecoder(),
 			synchronizerReport,
 			synchronizerOutputUpdate,
+			container.GetRawOutputRefRepository(),
 		)
 		w.Workers = append(w.Workers, rawSequencer)
 	}

@@ -14,7 +14,7 @@ const RAW_VOUCHER_TYPE = "voucher"
 const RAW_NOTICE_TYPE = "notice"
 
 type RawOutputRefRepository struct {
-	Db sqlx.DB
+	Db *sqlx.DB
 }
 
 type RawOutputRef struct {
@@ -47,7 +47,7 @@ func (r *RawOutputRefRepository) CreateTable() error {
 }
 
 func (r *RawOutputRefRepository) Create(ctx context.Context, rawOutput RawOutputRef) error {
-	exec := DBExecutor{&r.Db}
+	exec := DBExecutor{r.Db}
 
 	result, err := exec.ExecContext(ctx, `INSERT INTO convenience_output_raw_references (
 		id,
@@ -94,7 +94,7 @@ func (r *RawOutputRefRepository) GetLatestOutputRawId(ctx context.Context) (uint
 }
 
 func (r *RawOutputRefRepository) SetHasProofToTrue(ctx context.Context, rawOutputRef *RawOutputRef) error {
-	exec := DBExecutor{&r.Db}
+	exec := DBExecutor{r.Db}
 
 	result, err := exec.ExecContext(ctx, `
 		UPDATE convenience_output_raw_references
