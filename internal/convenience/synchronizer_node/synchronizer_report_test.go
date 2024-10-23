@@ -72,7 +72,7 @@ func TestSynchronizerReportSuiteSuite(t *testing.T) {
 
 // Dear Programmer, I hope this message finds you well.
 // Keep coding, keep learning, and never forget—your work shapes the future.
-func (s *SynchronizerReportSuite) TestUpdateInputStatusNotEqNone() {
+func (s *SynchronizerReportSuite) TestCreateAllReports() {
 	ctx := context.Background()
 
 	// check setup

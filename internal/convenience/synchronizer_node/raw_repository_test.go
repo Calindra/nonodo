@@ -20,7 +20,7 @@ import (
 
 type RawNodeSuite struct {
 	suite.Suite
-	node                       RawRepository
+	rawRepository              RawRepository
 	ctx                        context.Context
 	dockerComposeStartedByTest bool
 	DefaultTimeout             time.Duration
@@ -49,7 +49,7 @@ func (s *RawNodeSuite) SetupSuite() {
 	uri := fmt.Sprintf("postgres://postgres:%s@localhost:5432/%s?sslmode=disable", dbPass, dbName)
 	slog.Info("Raw Input URI", "uri", uri)
 	dbNodeV2 := sqlx.MustConnect("postgres", uri)
-	s.node = RawRepository{
+	s.rawRepository = RawRepository{
 		connectionURL: uri,
 		Db:            dbNodeV2,
 	}
@@ -75,7 +75,7 @@ func (s *RawNodeSuite) TestSynchronizerNodeListInputs() {
 	ctx, cancel := context.WithTimeout(s.ctx, s.DefaultTimeout)
 	defer cancel()
 
-	result, err := s.node.Db.QueryxContext(ctx, "SELECT * FROM input")
+	result, err := s.rawRepository.Db.QueryxContext(ctx, "SELECT * FROM input")
 	s.NoError(err)
 
 	inputs := []RawInput{}
@@ -95,18 +95,18 @@ func (s *RawNodeSuite) TestSynchronizerNodeListInputs() {
 	firstBlockNumber := big.NewInt(0).SetUint64(b)
 	slog.Info("First block number", "blockNumber", firstBlockNumber)
 
-	firstBlockNumberDB := big.NewInt(392)
+	firstBlockNumberDB := big.NewInt(122)
 
 	s.Equal(firstBlockNumberDB, firstBlockNumber)
 
-	s.Equal("0x5112cF49F2511ac7b13A032c4c62A48410FC28Fb", common.BytesToAddress(inputs[0].ApplicationAddress).Hex())
+	s.Equal("0xc812734eb42e12611CD2497569c451baD0f50A2d", common.BytesToAddress(inputs[0].ApplicationAddress).Hex())
 
 }
 
 func (s *RawNodeSuite) TestSynchronizerNodeInputByID() {
 	ctx, cancel := context.WithCancel(s.ctx)
 	defer cancel()
-	inputs, err := s.node.FindAllInputsByFilter(ctx, FilterInput{IDgt: 2, IsStatusNone: false}, nil)
+	inputs, err := s.rawRepository.FindAllInputsByFilter(ctx, FilterInput{IDgt: 2, IsStatusNone: false}, nil)
 	s.NoError(err)
 	firstInput := inputs[0]
 	s.Equal(firstInput.ID, uint64(2))
@@ -116,17 +116,17 @@ func (s *RawNodeSuite) TestSynchronizerNodeInputByID() {
 	firstBlockNumber := big.NewInt(0).SetUint64(b)
 	slog.Info("First block number", "blockNumber", firstBlockNumber)
 
-	firstBlockNumberDB := big.NewInt(615)
+	firstBlockNumberDB := big.NewInt(124)
 
 	s.Equal(firstBlockNumberDB, firstBlockNumber)
 
-	s.Equal("0x5112cF49F2511ac7b13A032c4c62A48410FC28Fb", common.BytesToAddress(inputs[0].ApplicationAddress).Hex())
+	s.Equal("0xc812734eb42e12611CD2497569c451baD0f50A2d", common.BytesToAddress(inputs[0].ApplicationAddress).Hex())
 }
 
 func (s *RawNodeSuite) TestSynchronizerNodeReportByID() {
 	ctx, cancel := context.WithCancel(s.ctx)
 	defer cancel()
-	reports, err := s.node.FindAllReportsByFilter(ctx, FilterID{IDgt: 1})
+	reports, err := s.rawRepository.FindAllReportsByFilter(ctx, FilterID{IDgt: 1})
 	s.NoError(err)
 	firstInput := reports[0]
 	s.Equal(firstInput.ID, int64(1))
@@ -144,17 +144,17 @@ func (s *RawNodeSuite) TestSynchronizerNodeReportByID() {
 func (s *RawNodeSuite) TestSynchronizerNodeOutputByID() {
 	ctx, cancel := context.WithCancel(s.ctx)
 	defer cancel()
-	outputs, err := s.node.FindAllOutputsByFilter(ctx, FilterID{IDgt: 1})
+	outputs, err := s.rawRepository.FindAllOutputsByFilter(ctx, FilterID{IDgt: 1})
 	s.NoError(err)
 	firstInput := outputs[0]
-	s.Equal(3, int(firstInput.ID))
+	s.Equal(1, int(firstInput.ID))
 
 	b := outputs[0].InputID
 
 	firstInputID := big.NewInt(0).SetUint64(b)
 	slog.Info("First Input ID", "firstInputID", firstInputID)
 
-	firstInputIdDB := big.NewInt(2)
+	firstInputIdDB := big.NewInt(1)
 
 	s.Equal(firstInputIdDB, firstInputID)
 }
@@ -185,7 +185,7 @@ func (s *RawNodeSuite) TestDecodeChainIDFromInputbox() {
 func (s *RawNodeSuite) TestSynchronizerNodeFindInputByOutput() {
 	ctx := context.Background()
 
-	input, err := s.node.FindInputByOutput(ctx, FilterID{IDgt: 1})
+	input, err := s.rawRepository.FindInputByOutput(ctx, FilterID{IDgt: 1})
 	s.NoError(err)
 	s.Equal(uint64(1), input.ID)
 }

@@ -107,7 +107,8 @@ func (s *RawRepository) FindAllInputsByFilter(ctx context.Context, filter Filter
 	// bindVarIdx += 2
 	args = append(args, limit)
 
-	query := baseQuery + additionalFilter + pagination
+	orderBy := " ORDER BY ID ASC "
+	query := baseQuery + additionalFilter + orderBy + pagination
 
 	result, err := s.Db.QueryxContext(ctx, query, args...)
 	if err != nil {
@@ -141,7 +142,10 @@ func (s *RawRepository) FindAllReportsByFilter(ctx context.Context, filter Filte
 			input as inp
 		ON
 			r.input_id = inp.id
-		WHERE r.id >= $1 LIMIT $2`, filter.IDgt, LIMIT)
+		WHERE r.id >= $1
+		ORDER BY r.id ASC
+		LIMIT $2
+		`, filter.IDgt, LIMIT)
 	if err != nil {
 		return nil, err
 	}
@@ -183,7 +187,11 @@ func (s *RawRepository) FindInputByOutput(ctx context.Context, filter FilterID) 
 func (s *RawRepository) FindAllOutputsByFilter(ctx context.Context, filter FilterID) ([]Output, error) {
 	outputs := []Output{}
 
-	result, err := s.Db.QueryxContext(ctx, "SELECT * FROM output WHERE ID >= $1 LIMIT $2", filter.IDgt, LIMIT)
+	result, err := s.Db.QueryxContext(ctx, `
+		SELECT * FROM output 
+		WHERE ID >= $1 
+		ORDER BY ID ASC
+		LIMIT $2`, filter.IDgt, LIMIT)
 	if err != nil {
 		return nil, err
 	}

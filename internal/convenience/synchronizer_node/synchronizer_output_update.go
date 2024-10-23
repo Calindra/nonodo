@@ -89,10 +89,10 @@ func (s *SynchronizerOutputUpdate) UpdateProof(
 		slog.Warn("We may need to wait for the reference to be created")
 		return nil
 	}
-	slog.Debug("Ref",
-		"appContract", ref.AppContract,
-		"OutputIndex", ref.OutputIndex,
-	)
+	// slog.Debug("Ref",
+	// 	"appContract", ref.AppContract,
+	// 	"OutputIndex", ref.OutputIndex,
+	// )
 	jsonSiblings, err := json.Marshal(hashes)
 	if err != nil {
 		return err

@@ -48,8 +48,8 @@ func (s *SynchronizerUpdateNodeSuite) SetupTest() {
 	s.tempDir = tempDir
 
 	// Database
-	sqliteFileName := filepath.Join(tempDir, "input.sqlite3")
-
+	sqliteFileName := filepath.Join(tempDir, "update_input.sqlite3")
+	slog.Debug("SetupTest", "sqliteFileName", sqliteFileName)
 	db := sqlx.MustConnect("sqlite3", sqliteFileName)
 	s.container = convenience.NewContainer(*db, false)
 
@@ -71,7 +71,7 @@ func (s *SynchronizerUpdateNodeSuite) TearDownSuite() {
 }
 
 func (s *SynchronizerUpdateNodeSuite) TearDownTest() {
-	defer os.RemoveAll(s.tempDir)
+	// defer os.RemoveAll(s.tempDir)
 }
 
 func TestSynchronizerUpdateNodeSuiteSuite(t *testing.T) {
@@ -144,11 +144,13 @@ func (s *SynchronizerUpdateNodeSuite) countAcceptedInput(ctx context.Context) in
 }
 
 func (s *SynchronizerUpdateNodeSuite) fillRefData(ctx context.Context) {
-	appContract := common.HexToAddress("0x5112cf49f2511ac7b13a032c4c62a48410fc28fb")
+	appContract := common.HexToAddress(DEFAULT_TEST_APP_CONTRACT)
 	msgSender := common.HexToAddress(devnet.SenderAddress)
+	txCtx, err := s.synchronizerUpdate.startTransaction(ctx)
+	s.Require().NoError(err)
 	for i := 0; i < TOTAL_INPUT_TEST; i++ {
 		id := strconv.FormatInt(int64(i), 10) // our ID
-		err := s.container.GetRawInputRepository().Create(ctx, repository.RawInputRef{
+		err := s.container.GetRawInputRepository().Create(txCtx, repository.RawInputRef{
 			ID:          id,
 			RawID:       uint64(i + 1),
 			InputIndex:  uint64(i),
@@ -157,13 +159,16 @@ func (s *SynchronizerUpdateNodeSuite) fillRefData(ctx context.Context) {
 			ChainID:     "31337",
 		})
 		s.Require().NoError(err)
-		_, err = s.container.GetInputRepository().Create(ctx, model.AdvanceInput{
+		_, err = s.container.GetInputRepository().Create(txCtx, model.AdvanceInput{
 			ID:          id,
 			Index:       i,
 			Status:      model.CompletionStatusUnprocessed,
 			AppContract: appContract,
 			MsgSender:   msgSender,
+			ChainId:     "31337",
 		})
 		s.Require().NoError(err)
 	}
+	err = s.synchronizerUpdate.commitTransaction(txCtx)
+	s.Require().NoError(err)
 }

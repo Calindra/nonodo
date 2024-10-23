@@ -103,7 +103,7 @@ func (s SynchronizerCreateWorker) GetAdvanceInputFromMap(data map[string]any, in
 	advanceInput := model.AdvanceInput{
 		// nolint
 		// TODO: check if the ID is correct
-		ID:             strconv.FormatUint(input.ID, 10),
+		ID:             common.Bytes2Hex(input.TransactionId),
 		AppContract:    appContract,
 		Index:          int(input.Index),
 		InputBoxIndex:  int(inputBoxIndex.Int64()),

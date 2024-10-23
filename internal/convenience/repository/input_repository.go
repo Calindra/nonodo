@@ -157,7 +157,6 @@ func (r *InputRepository) rawCreate(ctx context.Context, input model.AdvanceInpu
 	if err != nil {
 		return nil, err
 	}
-	slog.Debug("Input saved", "chainId", input.ChainId)
 	return &input, nil
 }
 
@@ -182,7 +181,7 @@ func (r *InputRepository) UpdateStatus(ctx context.Context, appContract common.A
 		return err
 	}
 	if rowsAffected == 0 {
-		return fmt.Errorf("no rows updated")
+		return fmt.Errorf("no input's status updated: input_index %d; app_contract %s", inputIndex, appContract.Hex())
 	}
 	return nil
 }

@@ -116,7 +116,7 @@ func (r *RawOutputRefRepository) SetHasProofToTrue(ctx context.Context, rawOutpu
 	if affected != 1 {
 		return fmt.Errorf("wrong rows updated")
 	}
-	slog.Debug("SetHasProofToTrue", "id", rawOutputRef.ID)
+	// slog.Debug("SetHasProofToTrue", "id", rawOutputRef.ID)
 	return err
 }
 
