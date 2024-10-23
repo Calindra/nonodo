@@ -31,6 +31,7 @@ type RawInput struct {
 type Report struct {
 	ID          int64  `db:"id"`
 	Index       string `db:"index"`
+	InputIndex  string `db:"input_index"`
 	RawData     []byte `db:"raw_data"`
 	InputID     int64  `db:"input_id"`
 	AppContract []byte `db:"app_contract"`
@@ -129,7 +130,9 @@ func (s *RawRepository) FindAllReportsByFilter(ctx context.Context, filter Filte
 
 	result, err := s.Db.QueryxContext(ctx, `
 		SELECT
-			r.id, r.index, r.raw_data, r.input_id, inp.application_address as app_contract
+			r.id, r.index, r.raw_data, r.input_id, 
+			inp.application_address as app_contract,
+			inp.index as input_index
 		FROM 
 			report as r
 		INNER JOIN
