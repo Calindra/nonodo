@@ -130,7 +130,7 @@ func (s *RawOutputRefSuite) TestRawRefOutputGetLatestId() {
 	//check if there are two records in the table.
 	s.Equal(2, count)
 
-	outputId, err := s.rawOutputRefRepository.GetLatestOutputId(ctx)
+	outputId, err := s.rawOutputRefRepository.GetLatestOutputRawId(ctx)
 	s.NoError(err)
-	s.Equal(lastRawOutput.ID, outputId)
+	s.Equal(lastRawOutput.RawID, outputId)
 }

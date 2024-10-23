@@ -157,6 +157,37 @@ func (s *RawRepository) FindAllReportsByFilter(ctx context.Context, filter Filte
 	return reports, nil
 }
 
+func (s *RawRepository) FindInputIndexByOutput(ctx context.Context, filter FilterID) ([]RawInput, error) {
+	inputs := []RawInput{}
+
+	result, err := s.Db.QueryxContext(ctx, `
+		SELECT
+			*
+		FROM 
+			input
+		INNER JOIN
+			output as o
+		ON
+			o.input_id = input.id
+		WHERE r.id = $1 LIMIT 1`, filter.IDgt)
+
+	if err != nil {
+		return nil, err
+	}
+	defer result.Close()
+
+	for result.Next() {
+		var input RawInput
+		err := result.StructScan(&input)
+		if err != nil {
+			return nil, err
+		}
+		inputs = append(inputs, input)
+	}
+
+	return inputs, nil
+}
+
 func (s *RawRepository) FindAllOutputsByFilter(ctx context.Context, filter FilterID) ([]Output, error) {
 	outputs := []Output{}
 

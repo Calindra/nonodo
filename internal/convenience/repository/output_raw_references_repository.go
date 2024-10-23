@@ -71,9 +71,9 @@ func (r *RawOutputRefRepository) Create(ctx context.Context, rawOutput RawOutput
 	return err
 }
 
-func (r *RawOutputRefRepository) GetLatestOutputId(ctx context.Context) (uint64, error) {
+func (r *RawOutputRefRepository) GetLatestOutputRawId(ctx context.Context) (uint64, error) {
 	var outputId uint64
-	err := r.Db.GetContext(ctx, &outputId, `SELECT id FROM convenience_output_raw_references ORDER BY id DESC LIMIT 1`)
+	err := r.Db.GetContext(ctx, &outputId, `SELECT raw_id FROM convenience_output_raw_references ORDER BY id DESC LIMIT 1`)
 
 	if err != nil {
 		slog.Error("Failed to retrieve the last outputId from the database", "error", err)
