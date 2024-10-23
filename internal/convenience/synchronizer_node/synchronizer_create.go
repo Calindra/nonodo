@@ -196,12 +196,14 @@ func (s SynchronizerCreateWorker) GetRawOutputRef(ctx context.Context, data map[
 	}
 
 	if strPayload[2:10] == model.VOUCHER_SELECTOR {
-		destination, err := s.RetrieveDestination(strPayload)
-		if err != nil {
+		destination, ok := data["destination"].([]byte)
+		if !ok {
 			return nil, fmt.Errorf("destination not found")
 		}
+
+		strDestination := string(destination)
 		cVoucher := model.ConvenienceVoucher{
-			Destination: destination,
+			Destination: common.HexToAddress(strDestination),
 			Payload:     s.RemoveSelector(strPayload),
 			Executed:    false,
 			InputIndex:  input.Index,
@@ -233,24 +235,6 @@ func (s SynchronizerCreateWorker) GetRawOutputRef(ctx context.Context, data map[
 
 func (s SynchronizerCreateWorker) RemoveSelector(payload string) string {
 	return fmt.Sprintf("0x%s", payload[10:])
-}
-
-func (s SynchronizerCreateWorker) RetrieveDestination(payload string) (common.Address, error) {
-	abiParsed, err := contracts.OutputsMetaData.GetAbi()
-
-	if err != nil {
-		slog.Error("Error parsing abi", "err", err)
-		return common.Address{}, err
-	}
-
-	values, err := abiParsed.Methods["Voucher"].Inputs.Unpack(common.Hex2Bytes(payload[10:]))
-
-	if err != nil {
-		slog.Error("Error unpacking abi", "err", err)
-		return common.Address{}, err
-	}
-
-	return values[0].(common.Address), nil
 }
 
 func (s SynchronizerCreateWorker) SyncInputCreation(ctx context.Context, latestRawID uint64, page *Pagination, abi *abi.ABI) (uint64, error) {
