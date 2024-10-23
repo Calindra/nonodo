@@ -53,6 +53,9 @@ func CheckDockerCompose(ctx context.Context) error {
 
 func RunDockerCompose(stdCtx context.Context) error {
 	slog.Debug("running docker compose")
+	if stdCtx == nil {
+		stdCtx = context.Background()
+	}
 	ctx, cancel := context.WithCancel(stdCtx)
 	defer cancel()
 

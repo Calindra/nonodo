@@ -37,7 +37,7 @@ func (r *ReportRepository) CreateTables() error {
 }
 
 func (r *ReportRepository) CreateReport(ctx context.Context, report cModel.Report) (cModel.Report, error) {
-	slog.Debug("CreateReport", "payload", report.Payload)
+	// slog.Debug("CreateReport", "payload", report.Payload)
 	if r.AutoCount {
 		count, err := r.Count(ctx, nil)
 		if err != nil {
@@ -68,10 +68,10 @@ func (r *ReportRepository) CreateReport(ctx context.Context, report cModel.Repor
 		slog.Error("database error", "err", err)
 		return cModel.Report{}, err
 	}
-	slog.Debug("Report created",
-		"outputIndex", report.Index,
-		"inputIndex", report.InputIndex,
-	)
+	// slog.Debug("Report created",
+	// 	"outputIndex", report.Index,
+	// 	"inputIndex", report.InputIndex,
+	// )
 	return report, nil
 }
 

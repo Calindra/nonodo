@@ -16,22 +16,23 @@ import (
 // what is the best DI/IoC framework for go?
 
 type Container struct {
-	db                    *sqlx.DB
-	outputDecoder         *decoder.OutputDecoder
-	convenienceService    *services.ConvenienceService
-	outputRepository      *repository.OutputRepository
-	repository            *repository.VoucherRepository
-	syncRepository        *repository.SynchronizerRepository
-	graphQLSynchronizer   *synchronizer.Synchronizer
-	voucherFetcher        *synchronizer.VoucherFetcher
-	noticeRepository      *repository.NoticeRepository
-	graphileFetcher       *synchronizer.GraphileFetcher
-	graphileSynchronizer  *synchronizer.GraphileSynchronizer
-	graphileClient        graphile.GraphileClient
-	inputRepository       *repository.InputRepository
-	reportRepository      *repository.ReportRepository
-	AutoCount             bool
-	rawInputRefRepository *repository.RawInputRefRepository
+	db                     *sqlx.DB
+	outputDecoder          *decoder.OutputDecoder
+	convenienceService     *services.ConvenienceService
+	outputRepository       *repository.OutputRepository
+	repository             *repository.VoucherRepository
+	syncRepository         *repository.SynchronizerRepository
+	graphQLSynchronizer    *synchronizer.Synchronizer
+	voucherFetcher         *synchronizer.VoucherFetcher
+	noticeRepository       *repository.NoticeRepository
+	graphileFetcher        *synchronizer.GraphileFetcher
+	graphileSynchronizer   *synchronizer.GraphileSynchronizer
+	graphileClient         graphile.GraphileClient
+	inputRepository        *repository.InputRepository
+	reportRepository       *repository.ReportRepository
+	AutoCount              bool
+	rawInputRefRepository  *repository.RawInputRefRepository
+	rawOutputRefRepository *repository.RawOutputRefRepository
 }
 
 func NewContainer(db sqlx.DB, autoCount bool) *Container {
@@ -56,10 +57,6 @@ func (c *Container) GetOutputRepository() *repository.OutputRepository {
 	c.outputRepository = &repository.OutputRepository{
 		Db: *c.db,
 	}
-	// err := c.outputRepository.CreateTables()
-	// if err != nil {
-	// 	panic(err)
-	// }
 	return c.outputRepository
 }
 
@@ -121,6 +118,20 @@ func (c *Container) GetRawInputRepository() *repository.RawInputRefRepository {
 		panic(err)
 	}
 	return c.rawInputRefRepository
+}
+
+func (c *Container) GetRawOutputRefRepository() *repository.RawOutputRefRepository {
+	if c.rawOutputRefRepository != nil {
+		return c.rawOutputRefRepository
+	}
+	c.rawOutputRefRepository = &repository.RawOutputRefRepository{
+		Db: *c.db,
+	}
+	err := c.rawOutputRefRepository.CreateTable()
+	if err != nil {
+		panic(err)
+	}
+	return c.rawOutputRefRepository
 }
 
 func (c *Container) GetInputRepository() *repository.InputRepository {

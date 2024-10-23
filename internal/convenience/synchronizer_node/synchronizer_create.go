@@ -253,6 +253,23 @@ func (s SynchronizerCreateWorker) RetrieveDestination(payload string) (common.Ad
 }
 
 func (s SynchronizerCreateWorker) SyncInputCreation(ctx context.Context, latestRawID uint64, page *Pagination, abi *abi.ABI) (uint64, error) {
+	txCtx, err := s.startTransaction(ctx)
+	if err != nil {
+		return latestRawID, err
+	}
+	latestRawID, err = s.syncInputCreation(txCtx, latestRawID, page, abi)
+	if err != nil {
+		s.rollbackTransaction(txCtx)
+		return latestRawID, err
+	}
+	err = s.commitTransaction(txCtx)
+	if err != nil {
+		return latestRawID, err
+	}
+	return latestRawID, nil
+}
+
+func (s SynchronizerCreateWorker) syncInputCreation(ctx context.Context, latestRawID uint64, page *Pagination, abi *abi.ABI) (uint64, error) {
 	inputs, err := s.RawRepository.FindAllInputsByFilter(ctx, FilterInput{IDgt: latestRawID}, page)
 	if err != nil {
 		return latestRawID, err
@@ -383,5 +400,33 @@ func NewSynchronizerCreateWorker(
 		SynchronizerUpdate: synchronizerUpdate,
 		Decoder:            decoder,
 		SynchronizerReport: synchronizerReport,
+	}
+}
+
+func (s *SynchronizerCreateWorker) startTransaction(ctx context.Context) (context.Context, error) {
+	db := s.inputRepository.Db
+	ctxWithTx, err := repository.StartTransaction(ctx, &db)
+	if err != nil {
+		return ctx, err
+	}
+	return ctxWithTx, nil
+}
+
+func (s *SynchronizerCreateWorker) commitTransaction(ctx context.Context) error {
+	tx, hasTx := repository.GetTransaction(ctx)
+	if hasTx && tx != nil {
+		return tx.Commit()
+	}
+	return nil
+}
+
+func (s *SynchronizerCreateWorker) rollbackTransaction(ctx context.Context) {
+	tx, hasTx := repository.GetTransaction(ctx)
+	if hasTx && tx != nil {
+		err := tx.Rollback()
+		if err != nil {
+			slog.Error("transaction rollback error", "err", err)
+			panic(err)
+		}
 	}
 }

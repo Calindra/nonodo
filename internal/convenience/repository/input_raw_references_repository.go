@@ -83,7 +83,7 @@ func (r *RawInputRefRepository) Create(ctx context.Context, rawInput RawInputRef
 	}
 
 	id, err := result.LastInsertId()
-	if err == nil {
+	if err == nil && false {
 		slog.Debug("Raw Input saved", "id", id)
 	}
 
