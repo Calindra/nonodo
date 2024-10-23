@@ -183,10 +183,9 @@ func (s *RawNodeSuite) TestDecodeChainIDFromInputbox() {
 }
 
 func (s *RawNodeSuite) TestSynchronizerNodeFindInputByOutput() {
-	ctx, cancel := context.WithCancel(s.ctx)
-	defer cancel()
-	inputs, err := s.node.FindInputIndexByOutput(ctx, FilterID{IDgt: 1})
+	ctx := context.Background()
+
+	input, err := s.node.FindInputByOutput(ctx, FilterID{IDgt: 1})
 	s.NoError(err)
-	firstInput := inputs[0]
-	s.Equal(1, int(firstInput.ID))
+	s.Equal(uint64(1), input.ID)
 }

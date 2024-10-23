@@ -2,6 +2,8 @@ package synchronizernode
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -157,27 +159,25 @@ func (s *RawRepository) FindAllReportsByFilter(ctx context.Context, filter Filte
 	return reports, nil
 }
 
-func (s *RawRepository) FindInputIndexByOutput(ctx context.Context, filter FilterID) ([]RawInput, error) {
-	inputs := []RawInput{}
+func (s *RawRepository) FindInputByOutput(ctx context.Context, filter FilterID) (*RawInput, error) {
 
-	result, err := s.Db.QueryxContext(ctx, `
-		SELECT * FROM input WHERE input.id = $1 LIMIT 1;`, filter.IDgt)
-
+	query := `SELECT * FROM input WHERE input.id = $1 LIMIT 1`
+	stmt, err := s.Db.Preparex(query)
 	if err != nil {
 		return nil, err
 	}
-	defer result.Close()
+	defer stmt.Close()
 
-	for result.Next() {
-		var input RawInput
-		err := result.StructScan(&input)
-		if err != nil {
-			return nil, err
+	var input RawInput
+	err = stmt.GetContext(ctx, &input, filter.IDgt)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
 		}
-		inputs = append(inputs, input)
+		return nil, err
 	}
-
-	return inputs, nil
+	return &input, nil
 }
 
 func (s *RawRepository) FindAllOutputsByFilter(ctx context.Context, filter FilterID) ([]Output, error) {

@@ -21,13 +21,14 @@ import (
 )
 
 type SynchronizerCreateWorker struct {
-	inputRepository     *repository.InputRepository
-	inputRefRepository  *repository.RawInputRefRepository
-	outputRefRepository *repository.RawOutputRefRepository
-	DbRawUrl            string
-	RawRepository       *RawRepository
-	SynchronizerUpdate  *SynchronizerUpdate
-	Decoder             *decoder.OutputDecoder
+	inputRepository    *repository.InputRepository
+	inputRefRepository *repository.RawInputRefRepository
+	SynchronizerReport *SynchronizerReport
+	// outputRefRepository *repository.RawOutputRefRepository
+	DbRawUrl           string
+	RawRepository      *RawRepository
+	SynchronizerUpdate *SynchronizerUpdate
+	Decoder            *decoder.OutputDecoder
 }
 
 const DEFAULT_DELAY = 3 * time.Second
@@ -161,50 +162,54 @@ func (s SynchronizerCreateWorker) HandleInput(ctx context.Context, abi *abi.ABI,
 // 	}
 // }
 
-// func (s SynchronizerCreateWorker) GetConvenienceOutput(data map[string]any, output Output) (*model.ProcessOutputData, error) {
-// 	payload, ok := data["payload"].([]byte)
-// 	if !ok {
-// 		return nil, fmt.Errorf("payload not found")
-// 	}
+func (s SynchronizerCreateWorker) GetConvenienceOutput(ctx context.Context, data map[string]any, output Output) (*model.ProcessOutputData, error) {
+	payload, ok := data["payload"].([]byte)
+	if !ok {
+		return nil, fmt.Errorf("payload not found")
+	}
 
-// 	destination, err := s.RetrieveDestination(string(payload))
-// 	if err != nil {
-// 		return nil, fmt.Errorf("destination not found")
-// 	}
-// 	//inputIndex eu preciso fazer um join
-// 	outputIndex, err := strconv.Atoi(output.Index)
-// 	if err != nil {
-//         fmt.Println("Erro ao converter string para inteiro:", err)
-//     }
+	destination, err := s.RetrieveDestination(string(payload))
+	if err != nil {
+		return nil, fmt.Errorf("destination not found")
+	}
+	input, err := s.RawRepository.FindInputByOutput(ctx, FilterID{IDgt: output.InputID})
+	if err != nil {
+		return nil, fmt.Errorf("input not found")
+	}
+	outputIndex, err := strconv.Atoi(output.Index)
+	if err != nil {
+		fmt.Println("Erro ao converter string para inteiro:", err)
+	}
 
-// 	// slog.Debug("GetAdvanceInputFromMap", "chainId", chainId)
-// 	advanceInput := model.ProcessOutputData{
-// 		Destination: destination.Hex(),
-// 		Payload:     string(payload),
-// 		OutputIndex: uint64(outputIndex),
-// 	}
-// 	// advanceInput.Status = model.CompletionStatusUnprocessed
-// 	return &advanceInput, nil
+	// slog.Debug("GetAdvanceInputFromMap", "chainId", chainId)
+	advanceInput := model.ProcessOutputData{
+		Destination: destination.Hex(),
+		Payload:     string(payload),
+		OutputIndex: uint64(outputIndex),
+		InputIndex:  input.Index,
+	}
+	// advanceInput.Status = model.CompletionStatusUnprocessed
+	return &advanceInput, nil
 
-// }
+}
 
-// func (s SynchronizerCreateWorker) RetrieveDestination(payload string) (common.Address, error) {
-// 	abiParsed, err := contracts.OutputsMetaData.GetAbi()
+func (s SynchronizerCreateWorker) RetrieveDestination(payload string) (common.Address, error) {
+	abiParsed, err := contracts.OutputsMetaData.GetAbi()
 
-// 	if err != nil {
-// 		slog.Error("Error parsing abi", "err", err)
-// 		return common.Address{}, err
-// 	}
+	if err != nil {
+		slog.Error("Error parsing abi", "err", err)
+		return common.Address{}, err
+	}
 
-// 	values, err := abiParsed.Methods["Voucher"].Inputs.Unpack(common.Hex2Bytes(payload[10:]))
+	values, err := abiParsed.Methods["Voucher"].Inputs.Unpack(common.Hex2Bytes(payload[10:]))
 
-// 	if err != nil {
-// 		slog.Error("Error unpacking abi", "err", err)
-// 		return common.Address{}, err
-// 	}
+	if err != nil {
+		slog.Error("Error unpacking abi", "err", err)
+		return common.Address{}, err
+	}
 
-// 	return values[0].(common.Address), nil
-// }
+	return values[0].(common.Address), nil
+}
 
 func (s SynchronizerCreateWorker) SyncInputCreation(ctx context.Context, latestRawID uint64, page *Pagination, abi *abi.ABI) (uint64, error) {
 	inputs, err := s.RawRepository.FindAllInputsByFilter(ctx, FilterInput{IDgt: latestRawID}, page)
@@ -282,11 +287,11 @@ func (s SynchronizerCreateWorker) WatchNewInputs(stdCtx context.Context) error {
 						errCh <- err
 						return
 					}
-					// err = s.SynchronizerReport.SyncReports(ctx)
-					// if err != nil {
-					// 	errCh <- err
-					// 	return
-					// }
+					err = s.SynchronizerReport.SyncReports(ctx)
+					if err != nil {
+						errCh <- err
+						return
+					}
 					// Catarino's code
 					// create outputs
 
@@ -320,6 +325,7 @@ func NewSynchronizerCreateWorker(
 	rawRepository *RawRepository,
 	synchronizerUpdate *SynchronizerUpdate,
 	decoder *decoder.OutputDecoder,
+	synchronizerReport *SynchronizerReport,
 ) supervisor.Worker {
 	return SynchronizerCreateWorker{
 		inputRepository:    inputRepository,
@@ -328,5 +334,6 @@ func NewSynchronizerCreateWorker(
 		RawRepository:      rawRepository,
 		SynchronizerUpdate: synchronizerUpdate,
 		Decoder:            decoder,
+		SynchronizerReport: synchronizerReport,
 	}
 }
