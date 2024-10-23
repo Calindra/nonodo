@@ -71,7 +71,7 @@ func (s *SynchronizerUpdateNodeSuite) TearDownSuite() {
 }
 
 func (s *SynchronizerUpdateNodeSuite) TearDownTest() {
-	// defer os.RemoveAll(s.tempDir)
+	defer os.RemoveAll(s.tempDir)
 }
 
 func TestSynchronizerUpdateNodeSuiteSuite(t *testing.T) {

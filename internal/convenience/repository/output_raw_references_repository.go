@@ -18,7 +18,6 @@ type RawOutputRefRepository struct {
 }
 
 type RawOutputRef struct {
-	ID          uint64 `db:"id"`
 	RawID       uint64 `db:"raw_id"`
 	OutputIndex uint64 `db:"output_index"`
 	InputIndex  uint64 `db:"input_index"`
@@ -29,7 +28,6 @@ type RawOutputRef struct {
 
 func (r *RawOutputRefRepository) CreateTable() error {
 	schema := `CREATE TABLE IF NOT EXISTS convenience_output_raw_references (
-		id 				integer NOT NULL,
 		raw_id 			integer NOT NULL,
 		input_index		integer NOT NULL,
 		app_contract    text NOT NULL,
@@ -50,14 +48,12 @@ func (r *RawOutputRefRepository) Create(ctx context.Context, rawOutput RawOutput
 	exec := DBExecutor{r.Db}
 
 	result, err := exec.ExecContext(ctx, `INSERT INTO convenience_output_raw_references (
-		id,
 		input_index,
 		app_contract,
 		output_index,
 		type,
 		raw_id,
-		has_proof) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-		rawOutput.ID,
+		has_proof) VALUES ($1, $2, $3, $4, $5, $6)`,
 		rawOutput.InputIndex,
 		rawOutput.AppContract,
 		rawOutput.OutputIndex,
@@ -81,7 +77,7 @@ func (r *RawOutputRefRepository) Create(ctx context.Context, rawOutput RawOutput
 
 func (r *RawOutputRefRepository) GetLatestOutputRawId(ctx context.Context) (uint64, error) {
 	var outputId uint64
-	err := r.Db.GetContext(ctx, &outputId, `SELECT raw_id FROM convenience_output_raw_references ORDER BY id DESC LIMIT 1`)
+	err := r.Db.GetContext(ctx, &outputId, `SELECT raw_id FROM convenience_output_raw_references ORDER BY raw_id DESC LIMIT 1`)
 
 	if err != nil {
 		slog.Error("Failed to retrieve the last outputId from the database", "error", err)
@@ -99,8 +95,8 @@ func (r *RawOutputRefRepository) SetHasProofToTrue(ctx context.Context, rawOutpu
 	result, err := exec.ExecContext(ctx, `
 		UPDATE convenience_output_raw_references
 		SET has_proof = 1
-		WHERE id = $1`,
-		rawOutputRef.ID,
+		WHERE raw_id = $1`,
+		rawOutputRef.RawID,
 	)
 
 	if err != nil {
@@ -116,7 +112,6 @@ func (r *RawOutputRefRepository) SetHasProofToTrue(ctx context.Context, rawOutpu
 	if affected != 1 {
 		return fmt.Errorf("wrong rows updated")
 	}
-	// slog.Debug("SetHasProofToTrue", "id", rawOutputRef.ID)
 	return err
 }
 
@@ -124,7 +119,7 @@ func (r *RawOutputRefRepository) FindByID(ctx context.Context, id uint64) (*RawO
 	var outputRef RawOutputRef
 	err := r.Db.GetContext(ctx, &outputRef, `
 		SELECT * FROM convenience_output_raw_references 
-		WHERE id = $1`, id)
+		WHERE raw_id = $1`, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
@@ -138,12 +133,12 @@ func (r *RawOutputRefRepository) GetFirstOutputIdWithoutProof(ctx context.Contex
 	var outputId uint64
 	err := r.Db.GetContext(ctx, &outputId, `
 		SELECT 
-			id 
+			raw_id 
 		FROM
 			convenience_output_raw_references 
 		WHERE
 			has_proof = false
-		ORDER BY id ASC LIMIT 1`)
+		ORDER BY raw_id ASC LIMIT 1`)
 
 	if err != nil {
 		slog.Error("Failed to retrieve the last outputId from the database", "error", err)

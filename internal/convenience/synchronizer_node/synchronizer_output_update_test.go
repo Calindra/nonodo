@@ -115,7 +115,7 @@ func (s *SynchronizerOutputUpdateSuite) fillRefData(ctx context.Context) {
 			outputType = "notice"
 		}
 		err := s.container.GetRawOutputRefRepository().Create(ctx, repository.RawOutputRef{
-			ID:          uint64(i + 1),
+			RawID:       uint64(i + 1),
 			InputIndex:  uint64(i),
 			OutputIndex: uint64(i),
 			AppContract: appContract.Hex(),
