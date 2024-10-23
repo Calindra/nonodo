@@ -37,6 +37,7 @@ func (s *SynchronizerOutputUpdateSuite) SetupSuite() {
 }
 
 func (s *SynchronizerOutputUpdateSuite) SetupTest() {
+	s.ctx = context.Background()
 	commons.ConfigureLog(slog.LevelDebug)
 
 	// Temp
