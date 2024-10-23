@@ -177,3 +177,29 @@ func (s *RawRepository) FindAllOutputsByFilter(ctx context.Context, filter Filte
 
 	return outputs, nil
 }
+
+func (s *RawRepository) FindAllOutputsWithProof(ctx context.Context, filter FilterID) ([]Output, error) {
+	outputs := []Output{}
+	result, err := s.Db.QueryxContext(ctx, `
+		SELECT * 
+		FROM output 
+		WHERE ID >= $1 and output_hashes_siblings IS NOT NULL
+		ORDER BY ID ASC
+		LIMIT $2
+	`, filter.IDgt, LIMIT)
+	if err != nil {
+		return nil, err
+	}
+	defer result.Close()
+
+	for result.Next() {
+		var report Output
+		err := result.StructScan(&report)
+		if err != nil {
+			return nil, err
+		}
+		outputs = append(outputs, report)
+	}
+
+	return outputs, nil
+}

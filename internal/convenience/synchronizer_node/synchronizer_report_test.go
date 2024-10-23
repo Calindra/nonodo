@@ -42,7 +42,7 @@ func (s *SynchronizerReportSuite) SetupTest() {
 	s.tempDir = tempDir
 
 	// Database
-	sqliteFileName := filepath.Join(tempDir, "input.sqlite3")
+	sqliteFileName := filepath.Join(tempDir, "report.sqlite3")
 
 	db := sqlx.MustConnect("sqlite3", sqliteFileName)
 	s.container = convenience.NewContainer(*db, false)
