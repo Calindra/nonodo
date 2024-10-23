@@ -101,7 +101,6 @@ func (s *RawOutputRefSuite) TestRawRefOutputGetLatestId() {
 	ctx := context.Background()
 
 	firstRawOutput := RawOutputRef{
-		ID:          001,
 		RawID:       1,
 		InputIndex:  1,
 		AppContract: "0x123456789abcdef",
@@ -113,7 +112,6 @@ func (s *RawOutputRefSuite) TestRawRefOutputGetLatestId() {
 	s.NoError(err)
 
 	lastRawOutput := RawOutputRef{
-		ID:          002,
 		RawID:       2,
 		InputIndex:  2,
 		AppContract: "0x123456789abcdef",
