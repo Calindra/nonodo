@@ -2,6 +2,7 @@ package synchronizernode
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
 	"log/slog"
 	"math/big"
@@ -56,6 +57,18 @@ func (s SynchronizerCreateWorker) GetMapRaw(abi *abi.ABI, rawData []byte) (map[s
 	return data, err
 }
 
+// nolint
+func FormatTransactionId(txId []byte) string {
+	if len(txId) <= 8 {
+		padded := make([]byte, 8)
+		copy(padded[8-len(txId):], txId)
+		n := binary.BigEndian.Uint64(padded)
+		return strconv.FormatUint(n, 10)
+	} else {
+		return "0x" + common.Bytes2Hex(txId)
+	}
+}
+
 func (s SynchronizerCreateWorker) GetAdvanceInputFromMap(data map[string]any, input RawInput) (*model.AdvanceInput, error) {
 	chainId, ok := data["chainId"].(*big.Int)
 	if !ok {
@@ -101,7 +114,7 @@ func (s SynchronizerCreateWorker) GetAdvanceInputFromMap(data map[string]any, in
 	advanceInput := model.AdvanceInput{
 		// nolint
 		// TODO: check if the ID is correct
-		ID:             common.Bytes2Hex(input.TransactionId),
+		ID:             FormatTransactionId(input.TransactionId),
 		AppContract:    appContract,
 		Index:          int(input.Index),
 		InputBoxIndex:  int(inputBoxIndex.Int64()),

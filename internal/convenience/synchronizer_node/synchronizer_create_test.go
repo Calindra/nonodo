@@ -10,6 +10,7 @@ import (
 	"github.com/calindra/nonodo/internal/convenience"
 	"github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/calindra/nonodo/postgres/raw"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/suite"
 )
@@ -120,4 +121,18 @@ func TestSynchronizerNodeSuite(t *testing.T) {
 func (s *SynchronizerNodeSuite) XTestSynchronizerNodeConnection() {
 	val := <-s.workerResult
 	s.NoError(val)
+}
+
+func (s *SynchronizerNodeSuite) TestFormatTransactionId() {
+	data := []byte{1, 1}
+	id := FormatTransactionId(data)
+	s.Equal("257", id)
+
+	data = []byte{17}
+	id = FormatTransactionId(data)
+	s.Equal("17", id)
+
+	data = crypto.Keccak256([]byte(data))
+	id = FormatTransactionId(data)
+	s.Equal("0x0552ab8dc52e1cf9328ddb97e0966b9c88de9cca97f48b0110d7800982596158", id)
 }
