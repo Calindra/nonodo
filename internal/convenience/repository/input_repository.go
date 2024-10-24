@@ -55,10 +55,10 @@ func (r *InputRepository) CreateTables() error {
 		prev_randao		text,
 		exception		text,
 		espresso_block_number	integer,
-		espresso_block_timestamp	integer,
+		espresso_block_timestamp	NUMERIC,
 		input_box_index integer,
 		avail_block_number integer,
-		avail_block_timestamp integer,
+		avail_block_timestamp NUMERIC,
 		type text,
 		cartesi_transaction_id text,
 		chain_id text);

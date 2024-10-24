@@ -114,17 +114,19 @@ func (s SynchronizerCreateWorker) GetAdvanceInputFromMap(data map[string]any, in
 	advanceInput := model.AdvanceInput{
 		// nolint
 		// TODO: check if the ID is correct
-		ID:             FormatTransactionId(input.TransactionId),
-		AppContract:    appContract,
-		Index:          int(input.Index),
-		InputBoxIndex:  int(inputBoxIndex.Int64()),
-		MsgSender:      msgSender,
-		BlockNumber:    blockNumber.Uint64(),
-		BlockTimestamp: time.Unix(0, blockTimestamp.Int64()),
-		Payload:        payload,
-		ChainId:        chainId.String(),
-		Status:         commons.ConvertStatusStringToCompletionStatus(input.Status),
-		PrevRandao:     "0x" + prevRandao.Text(16), // nolint
+		ID:                     FormatTransactionId(input.TransactionId),
+		AppContract:            appContract,
+		Index:                  int(input.Index),
+		InputBoxIndex:          int(inputBoxIndex.Int64()),
+		MsgSender:              msgSender,
+		BlockNumber:            blockNumber.Uint64(),
+		BlockTimestamp:         time.Unix(0, blockTimestamp.Int64()),
+		Payload:                payload,
+		ChainId:                chainId.String(),
+		Status:                 commons.ConvertStatusStringToCompletionStatus(input.Status),
+		PrevRandao:             "0x" + prevRandao.Text(16), // nolint
+		EspressoBlockTimestamp: time.Unix(-1, 0),
+		AvailBlockTimestamp:    time.Unix(-1, 0),
 	}
 	// advanceInput.Status = model.CompletionStatusUnprocessed
 	return &advanceInput, nil
