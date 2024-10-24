@@ -63,7 +63,7 @@ func (r *RawInputRefRepository) UpdateStatus(ctx context.Context, rawInputsIds [
 func (r *RawInputRefRepository) Create(ctx context.Context, rawInput RawInputRef) error {
 	exec := DBExecutor{&r.Db}
 
-	result, err := exec.ExecContext(ctx, `INSERT INTO convenience_input_raw_references (
+	_, err := exec.ExecContext(ctx, `INSERT INTO convenience_input_raw_references (
 		id,
 		raw_id,
 		input_index,
@@ -82,10 +82,10 @@ func (r *RawInputRefRepository) Create(ctx context.Context, rawInput RawInputRef
 		return err
 	}
 
-	id, err := result.LastInsertId()
-	if err == nil && false {
-		slog.Debug("Raw Input saved", "id", id)
-	}
+	// id, err := result.LastInsertId()
+	// if err == nil && false {
+	// 	slog.Debug("Raw Input saved", "id", id)
+	// }
 
 	return err
 }

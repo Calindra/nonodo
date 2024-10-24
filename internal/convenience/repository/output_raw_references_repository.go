@@ -47,7 +47,7 @@ func (r *RawOutputRefRepository) CreateTable() error {
 func (r *RawOutputRefRepository) Create(ctx context.Context, rawOutput RawOutputRef) error {
 	exec := DBExecutor{r.Db}
 
-	result, err := exec.ExecContext(ctx, `INSERT INTO convenience_output_raw_references (
+	_, err := exec.ExecContext(ctx, `INSERT INTO convenience_output_raw_references (
 		input_index,
 		app_contract,
 		output_index,
@@ -67,10 +67,10 @@ func (r *RawOutputRefRepository) Create(ctx context.Context, rawOutput RawOutput
 		return err
 	}
 
-	id, err := result.LastInsertId()
-	if err == nil {
-		slog.Debug("Raw Output saved", "id", id)
-	}
+	// id, err := result.LastInsertId()
+	// if err == nil {
+	// 	slog.Debug("Raw Output saved", "id", id)
+	// }
 
 	return err
 }
@@ -94,7 +94,7 @@ func (r *RawOutputRefRepository) SetHasProofToTrue(ctx context.Context, rawOutpu
 
 	result, err := exec.ExecContext(ctx, `
 		UPDATE convenience_output_raw_references
-		SET has_proof = 1
+		SET has_proof = true
 		WHERE raw_id = $1`,
 		rawOutputRef.RawID,
 	)

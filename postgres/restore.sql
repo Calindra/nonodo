@@ -283,15 +283,15 @@ ALTER TABLE ONLY public.vouchers
 INSERT INTO public.vouchers VALUES ('OX1223', 'OX1343', false, 1, 1);
 INSERT INTO public.vouchers VALUES ('OX1223', 'OX1343', false, 2, 2);
 
-CREATE TABLE IF NOT EXISTS public.notices (
-		payload 		text,
-		input_index		integer,
-		output_index	integer);
+-- CREATE TABLE IF NOT EXISTS public.notices (
+-- 		payload 		text,
+-- 		input_index		integer,
+-- 		output_index	integer);
 
-ALTER TABLE public.notices OWNER TO myuser;
+-- ALTER TABLE public.notices OWNER TO myuser;
 
-ALTER TABLE ONLY public.notices
-    ADD CONSTRAINT notices_pkey PRIMARY KEY (input_index, output_index);
+-- ALTER TABLE ONLY public.notices
+--     ADD CONSTRAINT notices_pkey PRIMARY KEY (input_index, output_index);
 
 
 INSERT INTO public.notices VALUES ('OX1223', 1, 1);
