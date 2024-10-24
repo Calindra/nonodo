@@ -189,7 +189,7 @@ func (s *RawRepository) FindAllOutputsByFilter(ctx context.Context, filter Filte
 
 	result, err := s.Db.QueryxContext(ctx, `
 		SELECT * FROM output 
-		WHERE ID >= $1 
+		WHERE ID > $1 
 		ORDER BY ID ASC
 		LIMIT $2`, filter.IDgt, LIMIT)
 	if err != nil {
