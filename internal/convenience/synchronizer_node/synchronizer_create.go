@@ -31,6 +31,7 @@ type SynchronizerCreateWorker struct {
 	SynchronizerUpdate       *SynchronizerUpdate
 	Decoder                  *decoder.OutputDecoder
 	SynchronizerOutputUpdate *SynchronizerOutputUpdate
+	SynchronizerOutputCreate *SynchronizerOutputCreate
 }
 
 const DEFAULT_DELAY = 3 * time.Second
@@ -336,15 +337,6 @@ func (s SynchronizerCreateWorker) WatchNewInputs(stdCtx context.Context) error {
 		return err
 	}
 
-	latestOutputRawId, err := s.outputRefRepository.GetLatestOutputRawId(ctx)
-	if err != nil {
-		return err
-	}
-	outputAbi, err := contracts.OutputsMetaData.GetAbi()
-	if err != nil {
-		return err
-	}
-
 	page := &Pagination{Limit: LIMIT}
 
 	for {
@@ -373,7 +365,7 @@ func (s SynchronizerCreateWorker) WatchNewInputs(stdCtx context.Context) error {
 						return
 					}
 
-					latestOutputRawId, err = s.SyncOutputCreation(ctx, latestOutputRawId, outputAbi)
+					err = s.SynchronizerOutputCreate.SyncOutputs(ctx)
 					if err != nil {
 						errCh <- err
 						return

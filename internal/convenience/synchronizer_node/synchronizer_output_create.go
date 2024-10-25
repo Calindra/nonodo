@@ -53,25 +53,36 @@ func (s *SynchronizerOutputCreate) SyncOutputs(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		if rawOutputRef.Type == repository.RAW_VOUCHER_TYPE {
-			cVoucher, err := s.GetConvenienceVoucher(rawOutput)
-			if err != nil {
-				return err
-			}
-			_, err = s.VoucherRepository.CreateVoucher(ctx, cVoucher)
-			if err != nil {
-				return err
-			}
-		} else if rawOutputRef.Type == repository.RAW_NOTICE_TYPE {
-			cNotice, err := s.GetConvenienceNotice(rawOutput)
-			if err != nil {
-				return err
-			}
-			_, err = s.NoticeRepository.Create(ctx, cNotice)
-			if err != nil {
-				return err
-			}
+
+		err = s.CreateOutput(ctx, rawOutputRef, rawOutput)
+		if err != nil {
+			return err
 		}
+	}
+	return nil
+}
+
+func (s *SynchronizerOutputCreate) CreateOutput(ctx context.Context, rawOutputRef *repository.RawOutputRef, rawOutput Output) error {
+	if rawOutputRef.Type == repository.RAW_VOUCHER_TYPE {
+		cVoucher, err := s.GetConvenienceVoucher(rawOutput)
+		if err != nil {
+			return err
+		}
+		_, err = s.VoucherRepository.CreateVoucher(ctx, cVoucher)
+		if err != nil {
+			return err
+		}
+	} else if rawOutputRef.Type == repository.RAW_NOTICE_TYPE {
+		cNotice, err := s.GetConvenienceNotice(rawOutput)
+		if err != nil {
+			return err
+		}
+		_, err = s.NoticeRepository.Create(ctx, cNotice)
+		if err != nil {
+			return err
+		}
+	} else {
+		return fmt.Errorf("unexpected output type")
 	}
 	return nil
 }
