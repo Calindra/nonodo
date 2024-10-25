@@ -199,7 +199,7 @@ func (s *RawRepository) FindAllOutputsByFilter(ctx context.Context, filter Filte
 	result, err := s.Db.QueryxContext(ctx, `
         SELECT o.id, o.index, o.raw_data, o.hash, 
 			o.output_hashes_siblings,
-			o.input_id, o.transaction_hash, o.updated_at,
+			o.input_id, o.transaction_hash,
 			i.application_address app_contract,
 			i.index input_index
 		FROM output o

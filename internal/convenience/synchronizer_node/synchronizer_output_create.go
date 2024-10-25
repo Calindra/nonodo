@@ -62,6 +62,15 @@ func (s *SynchronizerOutputCreate) SyncOutputs(ctx context.Context) error {
 			if err != nil {
 				return err
 			}
+		} else if rawOutputRef.Type == repository.RAW_NOTICE_TYPE {
+			cNotice, err := s.GetConvenienceNotice(rawOutput)
+			if err != nil {
+				return err
+			}
+			_, err = s.NoticeRepository.Create(ctx, cNotice)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -100,6 +109,26 @@ func (s *SynchronizerOutputCreate) GetConvenienceVoucher(rawOutput Output) (*mod
 		Value:       voucherValue.String(),
 	}
 	return &cVoucher, nil
+}
+
+func (s *SynchronizerOutputCreate) GetConvenienceNotice(rawOutput Output) (*model.ConvenienceNotice, error) {
+	outputIndex, err := strconv.ParseUint(rawOutput.Index, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	inputIndex, err := strconv.ParseUint(rawOutput.InputIndex, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	strPayload := "0x" + common.Bytes2Hex(rawOutput.RawData)
+	cNotice := model.ConvenienceNotice{
+		Payload:              strPayload,
+		InputIndex:           inputIndex,
+		OutputIndex:          outputIndex,
+		AppContract:          common.BytesToAddress(rawOutput.AppContract).Hex(),
+		OutputHashesSiblings: string(rawOutput.OutputHashesSiblings),
+	}
+	return &cNotice, nil
 }
 
 func (s *SynchronizerOutputCreate) GetRawOutputRef(rawOutput Output) (*repository.RawOutputRef, error) {

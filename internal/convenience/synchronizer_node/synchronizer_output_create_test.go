@@ -83,7 +83,7 @@ func TestSynchronizerOutputCreateSuiteSuite(t *testing.T) {
 
 // Dear Programmer, I hope this message finds you well.
 // Keep coding, keep learning, and never forget—your work shapes the future.
-func (s *SynchronizerOutputCreateSuite) XTestCreateOutputs() {
+func (s *SynchronizerOutputCreateSuite) TestCreateOutputs() {
 	ctx := context.Background()
 
 	// check setup
@@ -135,4 +135,18 @@ func (s *SynchronizerOutputCreateSuite) TestGetConvenienceVoucher() {
 	s.Equal(0, int(cVoucher.InputIndex))
 	s.Equal(0, int(cVoucher.OutputIndex))
 	s.Equal("3735928559", cVoucher.Value)
+}
+
+func (s *SynchronizerOutputCreateSuite) TestGetConvenienceNotice() {
+	outputs, err := s.rawNodeV2Repository.FindAllOutputsByFilter(s.ctx, FilterID{IDgt: 1})
+	s.Require().NoError(err)
+	rawOutput := outputs[0]
+	rawOutputRef, err := s.synchronizerOutputCreate.GetRawOutputRef(rawOutput)
+	s.Require().NoError(err)
+	s.Equal("notice", rawOutputRef.Type)
+	cNotice, err := s.synchronizerOutputCreate.GetConvenienceNotice(rawOutput)
+	s.Require().NoError(err)
+	s.Equal(DEFAULT_TEST_APP_CONTRACT, cNotice.AppContract)
+	s.Equal(0, int(cNotice.InputIndex))
+	s.Equal(1, int(cNotice.OutputIndex))
 }
