@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -104,7 +105,6 @@ func (s *RawRepository) FindAllInputsByFilter(ctx context.Context, filter Filter
 	}
 
 	pagination := fmt.Sprintf(" LIMIT $%d", bindVarIdx)
-	// bindVarIdx += 2
 	args = append(args, limit)
 
 	orderBy := " ORDER BY ID ASC "
@@ -112,6 +112,8 @@ func (s *RawRepository) FindAllInputsByFilter(ctx context.Context, filter Filter
 
 	result, err := s.Db.QueryxContext(ctx, query, args...)
 	if err != nil {
+		slog.Error("Failed to execute query in FindAllInputsByFilter",
+			"query", query, "args", args, "error", err)
 		return nil, err
 	}
 	defer result.Close()
@@ -120,6 +122,7 @@ func (s *RawRepository) FindAllInputsByFilter(ctx context.Context, filter Filter
 		var input RawInput
 		err := result.StructScan(&input)
 		if err != nil {
+			slog.Error("Failed to scan row into RawInput struct", "error", err)
 			return nil, err
 		}
 		inputs = append(inputs, input)
@@ -132,21 +135,22 @@ func (s *RawRepository) FindAllReportsByFilter(ctx context.Context, filter Filte
 	reports := []Report{}
 
 	result, err := s.Db.QueryxContext(ctx, `
-		SELECT
-			r.id, r.index, r.raw_data, r.input_id, 
-			inp.application_address as app_contract,
-			inp.index as input_index
-		FROM 
-			report as r
-		INNER JOIN
-			input as inp
-		ON
-			r.input_id = inp.id
-		WHERE r.id >= $1
-		ORDER BY r.id ASC
-		LIMIT $2
-		`, filter.IDgt, LIMIT)
+        SELECT
+            r.id, r.index, r.raw_data, r.input_id, 
+            inp.application_address as app_contract,
+            inp.index as input_index
+        FROM 
+            report as r
+        INNER JOIN
+            input as inp
+        ON
+            r.input_id = inp.id
+        WHERE r.id >= $1
+        ORDER BY r.id ASC
+        LIMIT $2
+        `, filter.IDgt, LIMIT)
 	if err != nil {
+		slog.Error("Failed to execute query in FindAllReportsByFilter", "error", err)
 		return nil, err
 	}
 	defer result.Close()
@@ -155,6 +159,7 @@ func (s *RawRepository) FindAllReportsByFilter(ctx context.Context, filter Filte
 		var report Report
 		err := result.StructScan(&report)
 		if err != nil {
+			slog.Error("Failed to scan row into Report struct", "error", err)
 			return nil, err
 		}
 		reports = append(reports, report)
@@ -164,10 +169,10 @@ func (s *RawRepository) FindAllReportsByFilter(ctx context.Context, filter Filte
 }
 
 func (s *RawRepository) FindInputByOutput(ctx context.Context, filter FilterID) (*RawInput, error) {
-
 	query := `SELECT * FROM input WHERE input.id = $1 LIMIT 1`
 	stmt, err := s.Db.Preparex(query)
 	if err != nil {
+		slog.Error("Failed to prepare statement in FindInputByOutput", "query", query, "error", err)
 		return nil, err
 	}
 	defer stmt.Close()
@@ -177,8 +182,10 @@ func (s *RawRepository) FindInputByOutput(ctx context.Context, filter FilterID) 
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
+			slog.Warn("No input found for given output", "input_id", filter.IDgt)
 			return nil, nil
 		}
+		slog.Error("Failed to get context for input in FindInputByOutput", "error", err)
 		return nil, err
 	}
 	return &input, nil
@@ -188,11 +195,12 @@ func (s *RawRepository) FindAllOutputsByFilter(ctx context.Context, filter Filte
 	outputs := []Output{}
 
 	result, err := s.Db.QueryxContext(ctx, `
-		SELECT * FROM output 
-		WHERE ID > $1 
-		ORDER BY ID ASC
-		LIMIT $2`, filter.IDgt, LIMIT)
+        SELECT * FROM output 
+        WHERE ID > $1 
+        ORDER BY ID ASC
+        LIMIT $2`, filter.IDgt, LIMIT)
 	if err != nil {
+		slog.Error("Failed to execute query in FindAllOutputsByFilter", "error", err)
 		return nil, err
 	}
 	defer result.Close()
@@ -201,6 +209,7 @@ func (s *RawRepository) FindAllOutputsByFilter(ctx context.Context, filter Filte
 		var report Output
 		err := result.StructScan(&report)
 		if err != nil {
+			slog.Error("Failed to scan row into Output struct", "error", err)
 			return nil, err
 		}
 		outputs = append(outputs, report)
@@ -212,13 +221,14 @@ func (s *RawRepository) FindAllOutputsByFilter(ctx context.Context, filter Filte
 func (s *RawRepository) FindAllOutputsWithProof(ctx context.Context, filter FilterID) ([]Output, error) {
 	outputs := []Output{}
 	result, err := s.Db.QueryxContext(ctx, `
-		SELECT * 
-		FROM output 
-		WHERE ID >= $1 and output_hashes_siblings IS NOT NULL
-		ORDER BY ID ASC
-		LIMIT $2
-	`, filter.IDgt, LIMIT)
+        SELECT * 
+        FROM output 
+        WHERE ID >= $1 and output_hashes_siblings IS NOT NULL
+        ORDER BY ID ASC
+        LIMIT $2
+    `, filter.IDgt, LIMIT)
 	if err != nil {
+		slog.Error("Failed to execute query in FindAllOutputsWithProof", "error", err)
 		return nil, err
 	}
 	defer result.Close()
@@ -227,6 +237,7 @@ func (s *RawRepository) FindAllOutputsWithProof(ctx context.Context, filter Filt
 		var report Output
 		err := result.StructScan(&report)
 		if err != nil {
+			slog.Error("Failed to scan row into Output struct", "error", err)
 			return nil, err
 		}
 		outputs = append(outputs, report)

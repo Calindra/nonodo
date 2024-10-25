@@ -36,10 +36,10 @@ func (r *RawOutputRefRepository) CreateTable() error {
 		type            text NOT NULL CHECK (type IN ('voucher', 'notice')),
 		PRIMARY KEY (input_index, output_index, app_contract));`
 	_, err := r.Db.Exec(schema)
-	if err == nil {
-		slog.Debug("Raw Outputs table created")
+	if err != nil {
+		slog.Error("Failed to create Raw Outputs table", "error", err)
 	} else {
-		slog.Error("Create table error", "error", err)
+		slog.Debug("Raw Outputs table created successfully")
 	}
 	return err
 }
@@ -63,14 +63,9 @@ func (r *RawOutputRefRepository) Create(ctx context.Context, rawOutput RawOutput
 	)
 
 	if err != nil {
-		slog.Error("Error creating output", "Error", err)
+		slog.Error("Error creating output", "error", err)
 		return err
 	}
-
-	// id, err := result.LastInsertId()
-	// if err == nil {
-	// 	slog.Debug("Raw Output saved", "id", id)
-	// }
 
 	return err
 }
@@ -83,7 +78,7 @@ func (r *RawOutputRefRepository) GetLatestOutputRawId(ctx context.Context) (uint
 		if errors.Is(err, sql.ErrNoRows) {
 			return 0, nil
 		}
-		slog.Error("Failed to retrieve the last outputId from the database", "error", err)
+		slog.Error("Failed to retrieve the latest output ID", "error", err)
 		return 0, err
 	}
 	return outputId, err
@@ -95,24 +90,24 @@ func (r *RawOutputRefRepository) SetHasProofToTrue(ctx context.Context, rawOutpu
 	result, err := exec.ExecContext(ctx, `
 		UPDATE convenience_output_raw_references
 		SET has_proof = true
-		WHERE raw_id = $1`,
-		rawOutputRef.RawID,
-	)
+		WHERE raw_id = $1`, rawOutputRef.RawID)
 
 	if err != nil {
-		slog.Error("Error updating output", "Error", err)
+		slog.Error("Error updating output proof", "error", err)
 		return err
 	}
 
 	affected, err := result.RowsAffected()
 	if err != nil {
+		slog.Error("Error fetching rows affected", "error", err)
 		return err
 	}
 
 	if affected != 1 {
-		return fmt.Errorf("wrong rows updated")
+		return fmt.Errorf("unexpected number of rows updated: %d", affected)
 	}
-	return err
+
+	return nil
 }
 
 func (r *RawOutputRefRepository) FindByID(ctx context.Context, id uint64) (*RawOutputRef, error) {
@@ -120,10 +115,13 @@ func (r *RawOutputRefRepository) FindByID(ctx context.Context, id uint64) (*RawO
 	err := r.Db.GetContext(ctx, &outputRef, `
 		SELECT * FROM convenience_output_raw_references 
 		WHERE raw_id = $1`, id)
+
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
+			slog.Debug("Output reference not found", "raw_id", id)
 			return nil, nil
 		}
+		slog.Error("Error finding output reference by ID", "error", err, "raw_id", id)
 		return nil, err
 	}
 	return &outputRef, nil
@@ -142,9 +140,10 @@ func (r *RawOutputRefRepository) GetFirstOutputIdWithoutProof(ctx context.Contex
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
+			slog.Debug("No output ID without proof found")
 			return 0, nil
 		}
-		slog.Error("Failed to retrieve the last outputId to update proofs", "error", err)
+		slog.Error("Failed to retrieve output ID without proof", "error", err)
 		return 0, err
 	}
 	return outputId, err
