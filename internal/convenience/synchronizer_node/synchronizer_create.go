@@ -316,7 +316,7 @@ func (s SynchronizerCreateWorker) syncOutputCreation(ctx context.Context, latest
 		if err != nil {
 			return latestRawID, err
 		}
-		latestRawID = rawInputRefID + 1
+		latestRawID = rawInputRefID
 	}
 
 	return latestRawID, nil
