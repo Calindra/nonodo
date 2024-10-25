@@ -43,12 +43,14 @@ type Report struct {
 type Output struct {
 	ID                   uint64    `db:"id"`
 	Index                string    `db:"index"`
+	InputIndex           string    `db:"input_index"`
 	RawData              []byte    `db:"raw_data"`
 	Hash                 []byte    `db:"hash,omitempty"`
 	OutputHashesSiblings []byte    `db:"output_hashes_siblings,omitempty"`
 	InputID              uint64    `db:"input_id"`
 	TransactionHash      []byte    `db:"transaction_hash,omitempty"`
 	UpdatedAt            time.Time `db:"updated_at"`
+	AppContract          []byte    `db:"app_contract"`
 }
 
 type FilterOutput struct {
@@ -195,9 +197,17 @@ func (s *RawRepository) FindAllOutputsByFilter(ctx context.Context, filter Filte
 	outputs := []Output{}
 
 	result, err := s.Db.QueryxContext(ctx, `
-        SELECT * FROM output 
-        WHERE ID > $1 
-        ORDER BY ID ASC
+        SELECT o.id, o.index, o.raw_data, o.hash, 
+			o.output_hashes_siblings,
+			o.input_id, o.transaction_hash, o.updated_at,
+			i.application_address app_contract,
+			i.index input_index
+		FROM output o
+		INNER JOIN
+			input i
+			ON i.id = o.input_id
+        WHERE o.id > $1 
+        ORDER BY o.id ASC
         LIMIT $2`, filter.IDgt, LIMIT)
 	if err != nil {
 		slog.Error("Failed to execute query in FindAllOutputsByFilter", "error", err)

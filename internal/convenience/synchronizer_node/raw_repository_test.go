@@ -99,7 +99,7 @@ func (s *RawNodeSuite) TestSynchronizerNodeListInputs() {
 
 	s.Equal(firstBlockNumberDB, firstBlockNumber)
 
-	s.Equal("0xc812734eb42e12611CD2497569c451baD0f50A2d", common.BytesToAddress(inputs[0].ApplicationAddress).Hex())
+	s.Equal(DEFAULT_TEST_APP_CONTRACT, common.BytesToAddress(inputs[0].ApplicationAddress).Hex())
 
 }
 
@@ -120,7 +120,7 @@ func (s *RawNodeSuite) TestSynchronizerNodeInputByID() {
 
 	s.Equal(firstBlockNumberDB, firstBlockNumber)
 
-	s.Equal("0xc812734eb42e12611CD2497569c451baD0f50A2d", common.BytesToAddress(inputs[0].ApplicationAddress).Hex())
+	s.Equal(DEFAULT_TEST_APP_CONTRACT, common.BytesToAddress(inputs[0].ApplicationAddress).Hex())
 }
 
 func (s *RawNodeSuite) TestSynchronizerNodeReportByID() {
@@ -157,6 +157,8 @@ func (s *RawNodeSuite) TestSynchronizerNodeOutputByID() {
 	firstInputIdDB := big.NewInt(1)
 
 	s.Equal(firstInputIdDB, firstInputID)
+	s.Equal(DEFAULT_TEST_APP_CONTRACT, common.BytesToAddress(outputs[0].AppContract).Hex())
+	s.Equal("1", outputs[1].InputIndex)
 }
 
 func (s *RawNodeSuite) TestDecodeChainIDFromInputbox() {
