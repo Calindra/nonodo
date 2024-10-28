@@ -6,6 +6,7 @@ import (
 	"errors"
 	"log/slog"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -70,7 +71,17 @@ func (r *RawInputRefRepository) UpdateStatus(ctx context.Context, rawInputsIds [
 func (r *RawInputRefRepository) Create(ctx context.Context, rawInput RawInputRef) error {
 	exec := DBExecutor{&r.Db}
 
-	_, err := exec.ExecContext(ctx, `INSERT INTO convenience_input_raw_references (
+	appContract := common.HexToAddress(rawInput.AppContract)
+	exist, err := r.FindByRawIdAndAppContract(ctx, rawInput.RawID, &appContract)
+	if err != nil {
+		return err
+	}
+	if exist != nil {
+		slog.Warn("Raw input already exists. Skipping creation")
+		return nil
+	}
+
+	_, err = exec.ExecContext(ctx, `INSERT INTO convenience_input_raw_references (
 		id, raw_id, input_index, app_contract, status, chain_id) 
 		VALUES ($1, $2, $3, $4, $5, $6)`,
 		rawInput.ID, rawInput.RawID, rawInput.InputIndex,
@@ -131,4 +142,50 @@ func (r *RawInputRefRepository) FindFirstInputByStatusNone(ctx context.Context, 
 
 	slog.Debug("First input with status NONE fetched", "row", row)
 	return &row, nil
+}
+
+func (r *RawInputRefRepository) FindByRawIdAndAppContract(ctx context.Context, rawId uint64, appContract *common.Address) (*RawInputRef, error) {
+
+	res, err := r.Db.QueryxContext(ctx,
+		`SELECT 
+			id,
+		 	raw_id,
+		 	input_index,
+		 	app_contract,	
+		 	status,
+		 	chain_id
+		FROM convenience_input_raw_references 
+		WHERE raw_id = $1 and app_contract = $2
+		LIMIT 1`, rawId, appContract.Hex())
+
+	if err != nil {
+		return nil, err
+	}
+	defer res.Close()
+	if res.Next() {
+		input, err := parseRawInput(res)
+		if err != nil {
+			return nil, err
+		}
+		return input, nil
+	}
+	return nil, nil
+}
+
+func parseRawInput(res *sqlx.Rows) (*RawInputRef, error) {
+	var (
+		input RawInputRef
+	)
+	err := res.Scan(
+		&input.ID,
+		&input.RawID,
+		&input.InputIndex,
+		&input.AppContract,
+		&input.Status,
+		&input.ChainID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &input, nil
 }

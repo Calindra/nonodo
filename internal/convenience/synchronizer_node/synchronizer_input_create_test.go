@@ -104,8 +104,11 @@ func (s *SynchronizerInputCreate) TestCreateInputs() {
 	// second call
 	err = s.synchronizerInputCreate.SyncInputs(ctx)
 	s.Require().NoError(err)
+
+	err = s.synchronizerInputCreate.SyncInputs(ctx)
+	s.Require().NoError(err)
 	second := s.countInputs(ctx)
-	s.Equal(TOTAL_INPUT_TEST-1, second)
+	s.Equal(TOTAL_INPUT_TEST+1, second)
 }
 
 func (s *SynchronizerInputCreate) countInputs(ctx context.Context) int {
