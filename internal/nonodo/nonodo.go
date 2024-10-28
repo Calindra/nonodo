@@ -16,6 +16,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/calindra/nonodo/internal/contracts"
 	"github.com/calindra/nonodo/internal/convenience"
 	"github.com/calindra/nonodo/internal/convenience/synchronizer"
 	synchronizernode "github.com/calindra/nonodo/internal/convenience/synchronizer_node"
@@ -33,6 +34,7 @@ import (
 	"github.com/calindra/nonodo/internal/sequencers/inputter"
 	"github.com/calindra/nonodo/internal/sequencers/paiodecoder"
 	"github.com/calindra/nonodo/internal/supervisor"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
@@ -250,6 +252,20 @@ func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 			rawRepository,
 			container.GetRawOutputRefRepository(),
 		)
+
+		abi, err := contracts.OutputsMetaData.GetAbi()
+		if err != nil {
+			panic(err)
+		}
+		abiDecoder := synchronizernode.NewAbiDecoder(abi)
+
+		synchronizerOutputCreate := synchronizernode.NewSynchronizerOutputCreate(
+			container.GetVoucherRepository(),
+			container.GetNoticeRepository(),
+			rawRepository,
+			container.GetRawOutputRefRepository(),
+			abiDecoder,
+		)
 		rawSequencer := synchronizernode.NewSynchronizerCreateWorker(
 			container.GetInputRepository(),
 			container.GetRawInputRepository(),
@@ -260,6 +276,7 @@ func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 			synchronizerReport,
 			synchronizerOutputUpdate,
 			container.GetRawOutputRefRepository(),
+			synchronizerOutputCreate,
 		)
 		w.Workers = append(w.Workers, rawSequencer)
 	}
@@ -269,6 +286,10 @@ func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 
 	slog.Info("Listening", "port", opts.HttpPort)
 	return w
+}
+
+func NewAbiDecoder(abi *abi.ABI) {
+	panic("unimplemented")
 }
 
 func CreateDBInstance(opts NonodoOpts) *sqlx.DB {

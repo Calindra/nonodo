@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/calindra/nonodo/internal/commons"
+	"github.com/calindra/nonodo/internal/contracts"
 	"github.com/calindra/nonodo/internal/convenience"
 	"github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/calindra/nonodo/postgres/raw"
@@ -74,6 +75,20 @@ func (s *SynchronizerNodeSuite) SetupTest() {
 		&rawRepository,
 		container.GetRawOutputRefRepository(),
 	)
+
+	abi, err := contracts.OutputsMetaData.GetAbi()
+	if err != nil {
+		panic(err)
+	}
+	abiDecoder := NewAbiDecoder(abi)
+
+	synchronizerOutputCreate := NewSynchronizerOutputCreate(
+		container.GetVoucherRepository(),
+		container.GetNoticeRepository(),
+		&rawRepository,
+		container.GetRawOutputRefRepository(),
+		abiDecoder,
+	)
 	wr := NewSynchronizerCreateWorker(
 		s.inputRepository,
 		s.inputRefRepository,
@@ -84,6 +99,7 @@ func (s *SynchronizerNodeSuite) SetupTest() {
 		synchronizerReport,
 		synchronizerOutputUpdate,
 		container.GetRawOutputRefRepository(),
+		synchronizerOutputCreate,
 	)
 
 	// like Supervisor
