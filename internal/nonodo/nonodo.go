@@ -265,6 +265,14 @@ func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 			container.GetRawOutputRefRepository(),
 			abiDecoder,
 		)
+
+		synchronizerInputCreate := synchronizernode.NewSynchronizerCreateInput(
+			container.GetInputRepository(),
+			container.GetRawInputRepository(),
+			rawRepository,
+			abiDecoder,
+		)
+
 		rawSequencer := synchronizernode.NewSynchronizerCreateWorker(
 			container.GetInputRepository(),
 			container.GetRawInputRepository(),
@@ -276,6 +284,7 @@ func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 			synchronizerOutputUpdate,
 			container.GetRawOutputRefRepository(),
 			synchronizerOutputCreate,
+			synchronizerInputCreate,
 		)
 		w.Workers = append(w.Workers, rawSequencer)
 	}

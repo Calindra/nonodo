@@ -89,6 +89,13 @@ func (s *SynchronizerNodeSuite) SetupTest() {
 		container.GetRawOutputRefRepository(),
 		abiDecoder,
 	)
+
+	synchronizerCreateInput := NewSynchronizerCreateInput(
+		container.GetInputRepository(),
+		container.GetRawInputRepository(),
+		&rawRepository,
+		abiDecoder,
+	)
 	wr := NewSynchronizerCreateWorker(
 		s.inputRepository,
 		s.inputRefRepository,
@@ -100,6 +107,7 @@ func (s *SynchronizerNodeSuite) SetupTest() {
 		synchronizerOutputUpdate,
 		container.GetRawOutputRefRepository(),
 		synchronizerOutputCreate,
+		synchronizerCreateInput,
 	)
 
 	// like Supervisor

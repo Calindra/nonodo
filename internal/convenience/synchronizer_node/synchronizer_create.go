@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/calindra/nonodo/internal/commons"
-	"github.com/calindra/nonodo/internal/contracts"
 	"github.com/calindra/nonodo/internal/convenience/decoder"
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/convenience/repository"
@@ -32,6 +31,7 @@ type SynchronizerCreateWorker struct {
 	Decoder                  *decoder.OutputDecoder
 	SynchronizerOutputUpdate *SynchronizerOutputUpdate
 	SynchronizerOutputCreate *SynchronizerOutputCreate
+	SynchronizerCreateInput  *SynchronizerCreateInput
 }
 
 const DEFAULT_DELAY = 3 * time.Second
@@ -327,17 +327,17 @@ func (s SynchronizerCreateWorker) WatchNewInputs(stdCtx context.Context) error {
 	ctx, cancel := context.WithCancel(stdCtx)
 	defer cancel()
 
-	latestRawID, err := s.inputRefRepository.GetLatestRawId(ctx)
-	if err != nil {
-		return err
-	}
+	// latestRawID, err := s.inputRefRepository.GetLatestRawId(ctx)
+	// if err != nil {
+	// 	return err
+	// }
 
-	abi, err := contracts.InputsMetaData.GetAbi()
-	if err != nil {
-		return err
-	}
+	// abi, err := contracts.InputsMetaData.GetAbi()
+	// if err != nil {
+	// 	return err
+	// }
 
-	page := &Pagination{Limit: LIMIT}
+	// page := &Pagination{Limit: LIMIT}
 
 	for {
 		errCh := make(chan error)
@@ -349,7 +349,7 @@ func (s SynchronizerCreateWorker) WatchNewInputs(stdCtx context.Context) error {
 					errCh <- ctx.Err()
 					return
 				default:
-					latestRawID, err = s.SyncInputCreation(ctx, latestRawID, page, abi)
+					err := s.SynchronizerCreateInput.syncInputs(ctx)
 					if err != nil {
 						errCh <- err
 						return
@@ -408,6 +408,7 @@ func NewSynchronizerCreateWorker(
 	synchronizerOutputUpdate *SynchronizerOutputUpdate,
 	outputRefRepository *repository.RawOutputRefRepository,
 	synchronizerOutputCreate *SynchronizerOutputCreate,
+	synchronizerCreateInput *SynchronizerCreateInput,
 ) supervisor.Worker {
 	return SynchronizerCreateWorker{
 		inputRepository:          inputRepository,
@@ -420,6 +421,7 @@ func NewSynchronizerCreateWorker(
 		SynchronizerOutputUpdate: synchronizerOutputUpdate,
 		outputRefRepository:      outputRefRepository,
 		SynchronizerOutputCreate: synchronizerOutputCreate,
+		SynchronizerCreateInput:  synchronizerCreateInput,
 	}
 }
 
