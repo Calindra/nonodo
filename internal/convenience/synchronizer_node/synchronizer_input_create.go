@@ -13,20 +13,20 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-type SynchronizerCreateInput struct {
+type SynchronizerInputCreator struct {
 	InputRepository       *repository.InputRepository
 	RawInputRefRepository *repository.RawInputRefRepository
 	RawNodeV2Repository   *RawRepository
 	AbiDecoder            *AbiDecoder
 }
 
-func NewSynchronizerCreateInput(
+func NewSynchronizerInputCreator(
 	inputRepository *repository.InputRepository,
 	rawInputRefRepository *repository.RawInputRefRepository,
 	rawRepository *RawRepository,
 	abiDecoder *AbiDecoder,
-) *SynchronizerCreateInput {
-	return &SynchronizerCreateInput{
+) *SynchronizerInputCreator {
+	return &SynchronizerInputCreator{
 		InputRepository:       inputRepository,
 		RawInputRefRepository: rawInputRefRepository,
 		RawNodeV2Repository:   rawRepository,
@@ -34,7 +34,7 @@ func NewSynchronizerCreateInput(
 	}
 }
 
-func (s SynchronizerCreateInput) SyncInputs(ctx context.Context) error {
+func (s SynchronizerInputCreator) SyncInputs(ctx context.Context) error {
 	txCtx, err := s.startTransaction(ctx)
 	if err != nil {
 		return err
@@ -51,7 +51,7 @@ func (s SynchronizerCreateInput) SyncInputs(ctx context.Context) error {
 	return nil
 }
 
-func (s *SynchronizerCreateInput) startTransaction(ctx context.Context) (context.Context, error) {
+func (s *SynchronizerInputCreator) startTransaction(ctx context.Context) (context.Context, error) {
 	db := s.InputRepository.Db
 	ctxWithTx, err := repository.StartTransaction(ctx, &db)
 	if err != nil {
@@ -60,7 +60,7 @@ func (s *SynchronizerCreateInput) startTransaction(ctx context.Context) (context
 	return ctxWithTx, nil
 }
 
-func (s *SynchronizerCreateInput) rollbackTransaction(ctx context.Context) {
+func (s *SynchronizerInputCreator) rollbackTransaction(ctx context.Context) {
 	tx, hasTx := repository.GetTransaction(ctx)
 	if hasTx && tx != nil {
 		err := tx.Rollback()
@@ -71,7 +71,7 @@ func (s *SynchronizerCreateInput) rollbackTransaction(ctx context.Context) {
 	}
 }
 
-func (s *SynchronizerCreateInput) commitTransaction(ctx context.Context) error {
+func (s *SynchronizerInputCreator) commitTransaction(ctx context.Context) error {
 	tx, hasTx := repository.GetTransaction(ctx)
 	if hasTx && tx != nil {
 		return tx.Commit()
@@ -79,7 +79,7 @@ func (s *SynchronizerCreateInput) commitTransaction(ctx context.Context) error {
 	return nil
 }
 
-func (s *SynchronizerCreateInput) syncInputs(ctx context.Context) error {
+func (s *SynchronizerInputCreator) syncInputs(ctx context.Context) error {
 	latestRawID, err := s.RawInputRefRepository.GetLatestRawId(ctx)
 	if err != nil {
 		return err
@@ -103,7 +103,7 @@ func (s *SynchronizerCreateInput) syncInputs(ctx context.Context) error {
 	return nil
 }
 
-func (s *SynchronizerCreateInput) CreateInputs(ctx context.Context, rawInput RawInput) error {
+func (s *SynchronizerInputCreator) CreateInputs(ctx context.Context, rawInput RawInput) error {
 	advanceInput, err := s.GetAdvanceInputFromMap(rawInput)
 	if err != nil {
 		return err
@@ -130,7 +130,7 @@ func (s *SynchronizerCreateInput) CreateInputs(ctx context.Context, rawInput Raw
 	return nil
 }
 
-func (s *SynchronizerCreateInput) GetAdvanceInputFromMap(rawInput RawInput) (*model.AdvanceInput, error) {
+func (s *SynchronizerInputCreator) GetAdvanceInputFromMap(rawInput RawInput) (*model.AdvanceInput, error) {
 	decodedData, err := s.AbiDecoder.GetMapRaw(rawInput.RawData)
 	if err != nil {
 		return nil, err

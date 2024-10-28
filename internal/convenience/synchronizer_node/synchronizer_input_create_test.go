@@ -21,7 +21,7 @@ type SynchronizerInputCreate struct {
 	dockerComposeStartedByTest bool
 	tempDir                    string
 	container                  *convenience.Container
-	synchronizerInputCreate    *SynchronizerCreateInput
+	synchronizerInputCreate    *SynchronizerInputCreator
 	rawNodeV2Repository        *RawRepository
 }
 
@@ -57,7 +57,7 @@ func (s *SynchronizerInputCreate) SetupTest() {
 		s.Require().NoError(err)
 	}
 	abiDecoder := NewAbiDecoder(abi)
-	s.synchronizerInputCreate = NewSynchronizerCreateInput(
+	s.synchronizerInputCreate = NewSynchronizerInputCreator(
 		s.container.GetInputRepository(),
 		s.container.GetRawInputRepository(),
 		s.rawNodeV2Repository,

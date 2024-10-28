@@ -90,7 +90,7 @@ func (s *SynchronizerNodeSuite) SetupTest() {
 		abiDecoder,
 	)
 
-	synchronizerCreateInput := NewSynchronizerCreateInput(
+	synchronizerCreateInput := NewSynchronizerInputCreator(
 		container.GetInputRepository(),
 		container.GetRawInputRepository(),
 		&rawRepository,

@@ -274,7 +274,7 @@ func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 			abiDecoder,
 		)
 
-		synchronizerInputCreate := synchronizernode.NewSynchronizerCreateInput(
+		synchronizerInputCreate := synchronizernode.NewSynchronizerInputCreator(
 			container.GetInputRepository(),
 			container.GetRawInputRepository(),
 			rawRepository,

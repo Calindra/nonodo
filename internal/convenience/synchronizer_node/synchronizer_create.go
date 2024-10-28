@@ -26,7 +26,7 @@ type SynchronizerCreateWorker struct {
 	Decoder                  *decoder.OutputDecoder
 	SynchronizerOutputUpdate *SynchronizerOutputUpdate
 	SynchronizerOutputCreate *SynchronizerOutputCreate
-	SynchronizerCreateInput  *SynchronizerCreateInput
+	SynchronizerCreateInput  *SynchronizerInputCreator
 }
 
 const DEFAULT_DELAY = 3 * time.Second
@@ -122,7 +122,7 @@ func NewSynchronizerCreateWorker(
 	synchronizerOutputUpdate *SynchronizerOutputUpdate,
 	outputRefRepository *repository.RawOutputRefRepository,
 	synchronizerOutputCreate *SynchronizerOutputCreate,
-	synchronizerCreateInput *SynchronizerCreateInput,
+	synchronizerCreateInput *SynchronizerInputCreator,
 ) supervisor.Worker {
 	return SynchronizerCreateWorker{
 		inputRepository:          inputRepository,

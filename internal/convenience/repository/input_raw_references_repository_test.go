@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/calindra/nonodo/internal/commons"
+	configtest "github.com/calindra/nonodo/internal/convenience/config_test"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/suite"
 )
@@ -44,7 +45,7 @@ func (s *RawInputRefSuite) SetupTest() {
 
 func (s *RawInputRefSuite) TestNoDuplicateInputs() {
 	ctx := context.Background()
-	appContract := common.HexToAddress("0xc812734eb42e12611CD2497569c451baD0f50A2d")
+	appContract := common.HexToAddress(configtest.DEFAULT_TEST_APP_CONTRACT)
 	err := s.RawInputRefRepository.Create(ctx, RawInputRef{
 		ID:          "001",
 		RawID:       uint64(1),
@@ -76,7 +77,7 @@ func (s *RawInputRefSuite) TestNoDuplicateInputs() {
 
 func (s *RawInputRefSuite) TestSaveDifferentsInputs() {
 	ctx := context.Background()
-	appContract := common.HexToAddress("0xc812734eb42e12611CD2497569c451baD0f50A2d")
+	appContract := common.HexToAddress(configtest.DEFAULT_TEST_APP_CONTRACT)
 	err := s.RawInputRefRepository.Create(ctx, RawInputRef{
 		ID:          "001",
 		RawID:       uint64(1),
@@ -107,7 +108,7 @@ func (s *RawInputRefSuite) TestSaveDifferentsInputs() {
 
 func (s *RawInputRefSuite) TestFindByRawIdAndAppContract() {
 	ctx := context.Background()
-	appContract := common.HexToAddress("0xc812734eb42e12611CD2497569c451baD0f50A2d")
+	appContract := common.HexToAddress(configtest.DEFAULT_TEST_APP_CONTRACT)
 	err := s.RawInputRefRepository.Create(ctx, RawInputRef{
 		ID:          "001",
 		RawID:       uint64(1),

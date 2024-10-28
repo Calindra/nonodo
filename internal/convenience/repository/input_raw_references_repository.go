@@ -145,47 +145,18 @@ func (r *RawInputRefRepository) FindFirstInputByStatusNone(ctx context.Context, 
 }
 
 func (r *RawInputRefRepository) FindByRawIdAndAppContract(ctx context.Context, rawId uint64, appContract *common.Address) (*RawInputRef, error) {
-
-	res, err := r.Db.QueryxContext(ctx,
-		`SELECT 
-			id,
-		 	raw_id,
-		 	input_index,
-		 	app_contract,	
-		 	status,
-		 	chain_id
-		FROM convenience_input_raw_references 
+	var inputRef RawInputRef
+	err := r.Db.GetContext(ctx, &inputRef, `
+		SELECT * FROM convenience_input_raw_references 
 		WHERE raw_id = $1 and app_contract = $2
 		LIMIT 1`, rawId, appContract.Hex())
-
 	if err != nil {
-		return nil, err
-	}
-	defer res.Close()
-	if res.Next() {
-		input, err := parseRawInput(res)
-		if err != nil {
-			return nil, err
+		if errors.Is(err, sql.ErrNoRows) {
+			slog.Debug("Input reference not found", "raw_id", rawId)
+			return nil, nil
 		}
-		return input, nil
-	}
-	return nil, nil
-}
-
-func parseRawInput(res *sqlx.Rows) (*RawInputRef, error) {
-	var (
-		input RawInputRef
-	)
-	err := res.Scan(
-		&input.ID,
-		&input.RawID,
-		&input.InputIndex,
-		&input.AppContract,
-		&input.Status,
-		&input.ChainID,
-	)
-	if err != nil {
+		slog.Error("Error finding input reference by RAW_ID", "error", err, "raw_id", rawId)
 		return nil, err
 	}
-	return &input, nil
+	return &inputRef, nil
 }
