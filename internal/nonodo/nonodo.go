@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"strconv"
 	"time"
 
 	"github.com/calindra/nonodo/internal/contracts"
@@ -307,10 +308,36 @@ func CreateDBInstance(opts NonodoOpts) *sqlx.DB {
 			postgresDataBase, postgresPassword)
 
 		db = sqlx.MustConnect("postgres", connectionString)
+		configureConnectionPool(db)
 	} else {
 		db = handleSQLite(opts)
 	}
 	return db
+}
+
+// nolint
+func configureConnectionPool(db *sqlx.DB) {
+	maxOpenConns := getEnvInt("DB_MAX_OPEN_CONNS", 25)
+	maxIdleConns := getEnvInt("DB_MAX_IDLE_CONNS", 10)
+	connMaxLifetime := getEnvInt("DB_CONN_MAX_LIFETIME", 1800) // 30 min
+	connMaxIdleTime := getEnvInt("DB_CONN_MAX_IDLE_TIME", 300) // 5 min
+	db.SetMaxOpenConns(maxOpenConns)
+	db.SetMaxIdleConns(maxIdleConns)
+	db.SetConnMaxLifetime(time.Duration(connMaxLifetime) * time.Second)
+	db.SetConnMaxIdleTime(time.Duration(connMaxIdleTime) * time.Second)
+}
+
+func getEnvInt(envName string, defaultValue int) int {
+	value, exists := os.LookupEnv(envName)
+	if !exists {
+		return defaultValue
+	}
+	intValue, err := strconv.Atoi(value)
+	if err != nil {
+		slog.Error("configuration error", "envName", envName, "value", value)
+		panic(err)
+	}
+	return intValue
 }
 
 func handleSQLite(opts NonodoOpts) *sqlx.DB {
