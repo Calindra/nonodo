@@ -258,6 +258,13 @@ func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 		}
 		abiDecoder := synchronizernode.NewAbiDecoder(abi)
 
+		inputAbi, err := contracts.InputsMetaData.GetAbi()
+		if err != nil {
+			panic(err)
+		}
+
+		inputAbiDecoder := synchronizernode.NewAbiDecoder(inputAbi)
+
 		synchronizerOutputCreate := synchronizernode.NewSynchronizerOutputCreate(
 			container.GetVoucherRepository(),
 			container.GetNoticeRepository(),
@@ -270,7 +277,7 @@ func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 			container.GetInputRepository(),
 			container.GetRawInputRepository(),
 			rawRepository,
-			abiDecoder,
+			inputAbiDecoder,
 		)
 
 		rawSequencer := synchronizernode.NewSynchronizerCreateWorker(
