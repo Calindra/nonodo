@@ -89,3 +89,27 @@ func (s *SynchronizerInputCreate) TestGetAdvanceInputFromMap() {
 	s.Equal("31337", advanceInput.ChainId)
 	s.Equal(commons.ConvertStatusStringToCompletionStatus("ACCEPTED"), advanceInput.Status)
 }
+
+func (s *SynchronizerInputCreate) TestCreateInputs() {
+	ctx := context.Background()
+
+	// check setup
+	proofCount := s.countInputs(ctx)
+	s.Require().Equal(0, proofCount)
+
+	// first call
+	err := s.synchronizerInputCreate.SyncInputs(ctx)
+	s.Require().NoError(err)
+
+	// second call
+	err = s.synchronizerInputCreate.SyncInputs(ctx)
+	s.Require().NoError(err)
+	second := s.countInputs(ctx)
+	s.Equal(TOTAL_INPUT_TEST-1, second)
+}
+
+func (s *SynchronizerInputCreate) countInputs(ctx context.Context) int {
+	total, err := s.container.GetInputRepository().Count(ctx, nil)
+	s.Require().NoError(err)
+	return int(total)
+}

@@ -1,6 +1,7 @@
 package synchronizernode
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"math/big"
@@ -31,6 +32,102 @@ func NewSynchronizerCreateInput(
 		RawNodeV2Repository:   rawRepository,
 		AbiDecoder:            abiDecoder,
 	}
+}
+
+func (s SynchronizerCreateInput) SyncInputs(ctx context.Context) error {
+	txCtx, err := s.startTransaction(ctx)
+	if err != nil {
+		return err
+	}
+	err = s.syncInputs(txCtx)
+	if err != nil {
+		s.rollbackTransaction(txCtx)
+		return err
+	}
+	err = s.commitTransaction(txCtx)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *SynchronizerCreateInput) startTransaction(ctx context.Context) (context.Context, error) {
+	db := s.InputRepository.Db
+	ctxWithTx, err := repository.StartTransaction(ctx, &db)
+	if err != nil {
+		return ctx, err
+	}
+	return ctxWithTx, nil
+}
+
+func (s *SynchronizerCreateInput) rollbackTransaction(ctx context.Context) {
+	tx, hasTx := repository.GetTransaction(ctx)
+	if hasTx && tx != nil {
+		err := tx.Rollback()
+		if err != nil {
+			slog.Error("transaction rollback error", "err", err)
+			panic(err)
+		}
+	}
+}
+
+func (s *SynchronizerCreateInput) commitTransaction(ctx context.Context) error {
+	tx, hasTx := repository.GetTransaction(ctx)
+	if hasTx && tx != nil {
+		return tx.Commit()
+	}
+	return nil
+}
+
+func (s *SynchronizerCreateInput) syncInputs(ctx context.Context) error {
+	latestRawID, err := s.RawInputRefRepository.GetLatestRawId(ctx)
+	if err != nil {
+		return err
+	}
+
+	page := &Pagination{Limit: LIMIT}
+
+	inputs, err := s.RawNodeV2Repository.FindAllInputsByFilter(ctx, FilterInput{IDgt: latestRawID}, page)
+	if err != nil {
+		return err
+	}
+
+	for _, input := range inputs {
+
+		err = s.CreateInputs(ctx, input)
+		if err != nil {
+			return err
+		}
+
+	}
+	return nil
+}
+
+func (s *SynchronizerCreateInput) CreateInputs(ctx context.Context, rawInput RawInput) error {
+	advanceInput, err := s.GetAdvanceInputFromMap(rawInput)
+	if err != nil {
+		return err
+	}
+
+	inputBox, err := s.InputRepository.Create(ctx, *advanceInput)
+	if err != nil {
+		return err
+	}
+
+	rawInputRef := repository.RawInputRef{
+		ID:          inputBox.ID,
+		RawID:       uint64(rawInput.ID),
+		InputIndex:  rawInput.Index,
+		AppContract: common.BytesToAddress(rawInput.ApplicationAddress).Hex(),
+		Status:      rawInput.Status,
+		ChainID:     advanceInput.ChainId,
+	}
+
+	err = s.RawInputRefRepository.Create(ctx, rawInputRef)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *SynchronizerCreateInput) GetAdvanceInputFromMap(rawInput RawInput) (*model.AdvanceInput, error) {
