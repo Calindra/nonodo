@@ -21,7 +21,7 @@ type SynchronizerInputCreate struct {
 	dockerComposeStartedByTest bool
 	tempDir                    string
 	container                  *convenience.Container
-	synchronizerOutputCreate   *SynchronizerOutputCreate
+	synchronizerInputCreate    *SynchronizerCreateInput
 	rawNodeV2Repository        *RawRepository
 }
 
@@ -57,11 +57,10 @@ func (s *SynchronizerInputCreate) SetupTest() {
 		s.Require().NoError(err)
 	}
 	abiDecoder := NewAbiDecoder(abi)
-	s.synchronizerOutputCreate = NewSynchronizerOutputCreate(
-		s.container.GetVoucherRepository(),
-		s.container.GetNoticeRepository(),
+	s.synchronizerInputCreate = NewSynchronizerCreateInput(
+		s.container.GetInputRepository(),
+		s.container.GetRawInputRepository(),
 		s.rawNodeV2Repository,
-		s.container.GetRawOutputRefRepository(),
 		abiDecoder,
 	)
 }
@@ -72,4 +71,21 @@ func (s *SynchronizerInputCreate) TearDownTest() {
 
 func TestSynchronizerInputCreateSuite(t *testing.T) {
 	suite.Run(t, new(SynchronizerInputCreate))
+}
+
+func (s *SynchronizerInputCreate) TestGetAdvanceInputFromMap() {
+	inputs, err := s.rawNodeV2Repository.FindAllInputsByFilter(s.ctx, FilterInput{IDgt: 1}, &Pagination{Limit: 1})
+	s.Require().NoError(err)
+
+	rawInput := inputs[0]
+	advanceInput, err := s.synchronizerInputCreate.GetAdvanceInputFromMap(rawInput)
+	s.Require().NoError(err)
+	s.Equal("0", advanceInput.ID)
+	s.Equal(DEFAULT_TEST_APP_CONTRACT, advanceInput.AppContract.Hex())
+	s.Equal(0, advanceInput.Index)
+	s.Equal(0, advanceInput.InputBoxIndex)
+	s.Equal("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", advanceInput.MsgSender.Hex())
+	s.Equal(uint64(0x7a), advanceInput.BlockNumber)
+	s.Equal("31337", advanceInput.ChainId)
+	s.Equal(commons.ConvertStatusStringToCompletionStatus("ACCEPTED"), advanceInput.Status)
 }
