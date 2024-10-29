@@ -200,7 +200,7 @@ func ConvertToVoucherConnectionV1(
 	return NewConnection(offset, total, convNodes), nil
 }
 
-func convertConvenientNoticeV1(cNotice cModel.ConvenienceNotice) *Notice {
+func ConvertConvenientNoticeV1(cNotice cModel.ConvenienceNotice) *Notice {
 	var outputHashesSiblings []string
 	err := json.Unmarshal([]byte(cNotice.OutputHashesSiblings), &outputHashesSiblings)
 	if err != nil {
@@ -223,7 +223,7 @@ func ConvertToNoticeConnectionV1(
 ) (*NoticeConnection, error) {
 	convNodes := make([]*Notice, len(notices))
 	for i := range notices {
-		convNodes[i] = convertConvenientNoticeV1(notices[i])
+		convNodes[i] = ConvertConvenientNoticeV1(notices[i])
 	}
 	return NewConnection(offset, total, convNodes), nil
 }
