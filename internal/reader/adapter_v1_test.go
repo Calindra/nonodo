@@ -69,6 +69,10 @@ func (s *AdapterSuite) SetupTest() {
 	}
 }
 
+func (s *AdapterSuite) TearDownTest() {
+	s.dbFactory.Cleanup()
+}
+
 func TestAdapterSuite(t *testing.T) {
 	suite.Run(t, new(AdapterSuite))
 }

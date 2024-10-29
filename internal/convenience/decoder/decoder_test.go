@@ -3,10 +3,16 @@ package decoder
 import (
 	"context"
 	"encoding/hex"
+	"fmt"
+	"log"
+	"math/big"
 	"testing"
 
+	"github.com/calindra/nonodo/internal/contracts"
+	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/calindra/nonodo/internal/convenience/services"
+	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/suite"
@@ -154,4 +160,72 @@ func (s *OutputDecoderSuite) TestDecode() {
 	abiMethod, err := abi.MethodById(selectorBytes)
 	s.NoError(err)
 	s.Equal("transfer", abiMethod.RawName)
+}
+
+func (s *OutputDecoderSuite) TestGetConvertedInput() {
+	blob := GenerateInputBlob()
+	edge := model.InputEdge{
+		Node: struct {
+			Index int    `json:"index"`
+			Blob  string `json:"blob"`
+		}{
+			Index: 0,
+			Blob:  blob,
+		},
+	}
+	cInput, err := s.decoder.GetConvertedInput(edge)
+	s.NoError(err)
+	s.NotNil(cInput)
+}
+
+func (s *OutputDecoderSuite) TestGetConvertedInputFromBytes() {
+	blob := GenerateInputBlob()
+	edge := model.InputEdge{
+		Node: struct {
+			Index int    `json:"index"`
+			Blob  string `json:"blob"`
+		}{
+			Index: 0,
+			Blob:  blob,
+		},
+	}
+	cInput, err := s.decoder.GetConvertedInput(edge)
+	s.NoError(err)
+	s.NotNil(cInput)
+}
+
+func (s *OutputDecoderSuite) TestParseBytesToInput() {
+	blob := GenerateInputBlob()
+	decodedInput, err := s.decoder.ParseBytesToInput(common.Hex2Bytes(blob[2:]))
+	s.Require().NoError(err)
+	s.Equal(common.HexToAddress(devnet.ApplicationAddress), decodedInput.AppContract)
+}
+
+func GenerateInputBlob() string {
+	// Parse the ABI JSON
+	abiParsed, err := contracts.InputsMetaData.GetAbi()
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	chainId := big.NewInt(1000000000000000000)
+	appContract := common.HexToAddress(devnet.ApplicationAddress)
+	blockNumber := big.NewInt(1000000000000000000)
+	blockTimestamp := big.NewInt(1720701841)
+	payload := common.Hex2Bytes("11223344556677889900")
+	prevRandao := big.NewInt(1000000000000000000)
+	index := big.NewInt(1000000000000000000)
+	msgSender := common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
+	inputData, _ := abiParsed.Pack("EvmAdvance",
+		chainId,
+		appContract,
+		msgSender,
+		blockNumber,
+		blockTimestamp,
+		prevRandao,
+		index,
+		payload,
+	)
+	return fmt.Sprintf("0x%s", common.Bytes2Hex(inputData))
 }

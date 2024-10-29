@@ -2,48 +2,56 @@ package synchronizernode
 
 import (
 	"context"
+	"encoding/binary"
 	"log/slog"
 	"strconv"
 	"time"
 
-	"github.com/calindra/nonodo/internal/convenience"
+	"github.com/calindra/nonodo/internal/convenience/decoder"
 	"github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/calindra/nonodo/internal/supervisor"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/jmoiron/sqlx"
+	_ "github.com/ncruces/go-sqlite3/driver"
+	_ "github.com/ncruces/go-sqlite3/embed"
 )
 
 type SynchronizerCreateWorker struct {
-	Container *convenience.Container
-	DbRawUrl  string
-	DbRaw     *RawNode
+	inputRepository          *repository.InputRepository
+	inputRefRepository       *repository.RawInputRefRepository
+	outputRefRepository      *repository.RawOutputRefRepository
+	SynchronizerReport       *SynchronizerReport
+	DbRawUrl                 string
+	RawRepository            *RawRepository
+	SynchronizerUpdate       *SynchronizerUpdate
+	Decoder                  *decoder.OutputDecoder
+	SynchronizerOutputUpdate *SynchronizerOutputUpdate
+	SynchronizerOutputCreate *SynchronizerOutputCreate
+	SynchronizerCreateInput  *SynchronizerInputCreator
 }
 
-const DEFAULT_TIMEOUT = 1 * time.Second
+const DEFAULT_DELAY = 3 * time.Second
 
 // Start implements supervisor.Worker.
 func (s SynchronizerCreateWorker) Start(ctx context.Context, ready chan<- struct{}) error {
 	ready <- struct{}{}
-	s.DbRaw = NewRawNode(s.DbRawUrl)
-	db, err := s.DbRaw.Connect(ctx)
-	if err != nil {
-		return err
-	}
-	defer db.Close()
-
-	return s.WatchNewInputs(ctx, db)
+	return s.WatchNewInputs(ctx)
 }
 
-func (s SynchronizerCreateWorker) WatchNewInputs(stdCtx context.Context, db *sqlx.DB) error {
+// nolint
+func FormatTransactionId(txId []byte) string {
+	if len(txId) <= 8 {
+		padded := make([]byte, 8)
+		copy(padded[8-len(txId):], txId)
+		n := binary.BigEndian.Uint64(padded)
+		return strconv.FormatUint(n, 10)
+	} else {
+		return "0x" + common.Bytes2Hex(txId)
+	}
+}
+
+func (s SynchronizerCreateWorker) WatchNewInputs(stdCtx context.Context) error {
 	ctx, cancel := context.WithCancel(stdCtx)
 	defer cancel()
-
-	rawInputRep := s.Container.GetRawInputRepository()
-	latestRawID, err := rawInputRep.GetLatestRawId(ctx)
-
-	if err != nil {
-		return err
-	}
 
 	for {
 		errCh := make(chan error)
@@ -55,31 +63,35 @@ func (s SynchronizerCreateWorker) WatchNewInputs(stdCtx context.Context, db *sql
 					errCh <- ctx.Err()
 					return
 				default:
-					inputs, err := s.DbRaw.FindAllInputsByFilter(ctx, FilterInput{IDgt: latestRawID})
+					err := s.SynchronizerCreateInput.SyncInputs(ctx)
 					if err != nil {
 						errCh <- err
+						return
+					}
+					err = s.SynchronizerUpdate.SyncInputStatus(ctx)
+					if err != nil {
+						errCh <- err
+						return
+					}
+					err = s.SynchronizerReport.SyncReports(ctx)
+					if err != nil {
+						errCh <- err
+						return
 					}
 
-					for _, input := range inputs {
-						rawInputRef := repository.RawInputRef{
-							RawID:       uint64(input.ID),
-							InputIndex:  input.Index,
-							AppContract: common.BytesToAddress(input.ApplicationAddress).Hex(),
-							Status:      input.Status,
-							ChainID:     "",
-						}
-
-						err := rawInputRep.Create(ctx, rawInputRef)
-						if err != nil {
-							errCh <- err
-						}
-
-						rawInputRefID, err := strconv.ParseUint(rawInputRef.ID, 10, 64)
-						if err != nil {
-							errCh <- err
-						}
-						latestRawID = rawInputRefID
+					err = s.SynchronizerOutputCreate.SyncOutputs(ctx)
+					if err != nil {
+						errCh <- err
+						return
 					}
+
+					err = s.SynchronizerOutputUpdate.SyncOutputs(ctx)
+					if err != nil {
+						errCh <- err
+						return
+					}
+
+					<-time.After(DEFAULT_DELAY)
 				}
 			}
 		}()
@@ -91,7 +103,6 @@ func (s SynchronizerCreateWorker) WatchNewInputs(stdCtx context.Context, db *sql
 		}
 
 		slog.Debug("Retrying to fetch new inputs")
-		time.Sleep(DEFAULT_TIMEOUT)
 	}
 }
 
@@ -100,6 +111,30 @@ func (s SynchronizerCreateWorker) String() string {
 	return "SynchronizerCreateWorker"
 }
 
-func NewSynchronizerCreateWorker(container *convenience.Container, dbRawUrl string) supervisor.Worker {
-	return SynchronizerCreateWorker{Container: container, DbRawUrl: dbRawUrl}
+func NewSynchronizerCreateWorker(
+	inputRepository *repository.InputRepository,
+	inputRefRepository *repository.RawInputRefRepository,
+	dbRawUrl string,
+	rawRepository *RawRepository,
+	synchronizerUpdate *SynchronizerUpdate,
+	decoder *decoder.OutputDecoder,
+	synchronizerReport *SynchronizerReport,
+	synchronizerOutputUpdate *SynchronizerOutputUpdate,
+	outputRefRepository *repository.RawOutputRefRepository,
+	synchronizerOutputCreate *SynchronizerOutputCreate,
+	synchronizerCreateInput *SynchronizerInputCreator,
+) supervisor.Worker {
+	return SynchronizerCreateWorker{
+		inputRepository:          inputRepository,
+		inputRefRepository:       inputRefRepository,
+		DbRawUrl:                 dbRawUrl,
+		RawRepository:            rawRepository,
+		SynchronizerUpdate:       synchronizerUpdate,
+		Decoder:                  decoder,
+		SynchronizerReport:       synchronizerReport,
+		SynchronizerOutputUpdate: synchronizerOutputUpdate,
+		outputRefRepository:      outputRefRepository,
+		SynchronizerOutputCreate: synchronizerOutputCreate,
+		SynchronizerCreateInput:  synchronizerCreateInput,
+	}
 }

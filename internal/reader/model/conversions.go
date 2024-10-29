@@ -28,6 +28,14 @@ func convertCompletionStatus(status cModel.CompletionStatus) (CompletionStatus, 
 		return CompletionStatusRejected, nil
 	case cModel.CompletionStatusException:
 		return CompletionStatusException, nil
+	case cModel.CompletionStatusMachineHalted:
+		return CompletionStatusMachineHalted, nil
+	case cModel.CompletionStatusCycleLimitExceeded:
+		return CompletionStatusCycleLimitExceeded, nil
+	case cModel.CompletionStatusTimeLimitExceeded:
+		return CompletionStatusTimeLimitExceeded, nil
+	case cModel.CompletionStatusPayloadLengthLimitExceeded:
+		return CompletionStatusPayloadLengthLimitExceeded, nil
 	default:
 		return "", errors.New("invalid completion status")
 	}

@@ -9,6 +9,7 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
+const STATUS_PROPERTY = "Status"
 const EXECUTED = "Executed"
 const FALSE = "false"
 const DESTINATION = "Destination"
@@ -26,6 +27,10 @@ const (
 	CompletionStatusAccepted
 	CompletionStatusRejected
 	CompletionStatusException
+	CompletionStatusMachineHalted
+	CompletionStatusCycleLimitExceeded
+	CompletionStatusTimeLimitExceeded
+	CompletionStatusPayloadLengthLimitExceeded
 )
 
 type ConvenienceNotice struct {
@@ -95,6 +100,7 @@ type Report struct {
 	InputIndex  int
 	Payload     []byte
 	AppContract common.Address `json:"app_contract"`
+	RawID       uint64
 }
 
 // Rollups advance input type.
@@ -123,6 +129,7 @@ type AdvanceInput struct {
 }
 
 type ConvertedInput struct {
+	ChainId        *big.Int       `json:"chainId"`
 	MsgSender      common.Address `json:"msgSender"`
 	AppContract    common.Address `json:"app_contract"`
 	BlockNumber    *big.Int       `json:"blockNumber"`

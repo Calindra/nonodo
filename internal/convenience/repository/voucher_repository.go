@@ -93,6 +93,33 @@ func (c *VoucherRepository) CreateVoucher(
 	return voucher, nil
 }
 
+func (c *VoucherRepository) SetProof(
+	ctx context.Context, voucher *model.ConvenienceVoucher,
+) error {
+	updateVoucher := `UPDATE vouchers SET 
+		output_hashes_siblings = $1
+		WHERE app_contract = $2 and output_index = $3`
+	exec := DBExecutor{&c.Db}
+	res, err := exec.ExecContext(
+		ctx,
+		updateVoucher,
+		voucher.OutputHashesSiblings,
+		voucher.AppContract.Hex(),
+		voucher.OutputIndex,
+	)
+	if err != nil {
+		return err
+	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected != 1 {
+		return fmt.Errorf("wrong number of vouchers affected: %d; app_contract %v; output_index %d", affected, voucher.AppContract, voucher.OutputIndex)
+	}
+	return nil
+}
+
 func (c *VoucherRepository) UpdateVoucher(
 	ctx context.Context, voucher *model.ConvenienceVoucher,
 ) (*model.ConvenienceVoucher, error) {

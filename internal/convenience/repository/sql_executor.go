@@ -19,7 +19,7 @@ func (c *DBExecutor) ExecContext(ctx context.Context, query string, args ...any)
 		slog.Debug("Using ExecContext without transaction.")
 		return c.db.ExecContext(ctx, query, args...)
 	} else {
-		slog.Debug("Using ExecContext with transaction.")
+		// slog.Debug("Using ExecContext with transaction.")
 		return tx.ExecContext(ctx, query, args...)
 	}
 }
