@@ -29,11 +29,11 @@ function testVoucherNotFound() {
     };
 
     const response = http.post(GRAPHQL_ENDPOINT, payload, params);
-    
+
     check(response, {
         'testVoucherNotFound is status 200': (r) => r.status === 200,
         'testVoucherNotFound response body contains expected content': (r) => assertStringContains(r.body, 'voucher not found'),
-        
+
     });
 }
 
@@ -191,6 +191,82 @@ function testInputs() {
     });
 }
 
+function testGetManyInputs() {
+    const payload = JSON.stringify({
+        query: `query { inputs {
+        edges {
+        node {
+        id
+        index
+        payload
+        reports {
+        edges {
+        node {
+        payload
+              index
+    }
+          }
+        }
+        notices {
+          edges {
+            node {
+            payload
+            index
+        }
+    }
+}
+        vouchers {
+          edges {
+            node {
+            payload
+            index
+        }
+    }
+}
+      }
+    }
+  }
+}`
+    })
+
+    const params = {
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    };
+
+    const response = http.post(GRAPHQL_ENDPOINT, payload, params);
+
+    check(response, {
+        'testGetManyInputs is status 200': (r) => r.status === 200,
+        'testGetManyInputs response body contains expected content': (r) => {
+            if (!r.body || typeof r.body != "string") {
+                return false
+            }
+
+            const body = JSON.parse(r.body)
+            
+            const inputWithError = body.data.inputs.edges.find(input => {
+                const notices = input.node.notices.edges
+                const reports = input.node.reports.edges
+                const vouchers = input.node.vouchers.edges
+
+                if (notices.length != 1 || reports.length != 1 || vouchers.length != 1) {
+                    return true
+                }
+
+                return false
+            })
+
+            if (inputWithError) {
+                return false
+            }
+
+            return true
+        },
+    });
+}
+
 export default function () {
     testVoucherNotFound()
     testVoucherFound()
@@ -201,4 +277,5 @@ export default function () {
     testNotices()
     testReports()
     testInputs()
+    testGetManyInputs()
 }
