@@ -63,7 +63,7 @@ func (r *RawOutputRefRepository) Create(ctx context.Context, rawOutput RawOutput
 	)
 
 	if err != nil {
-		slog.Error("Error creating output", "error", err)
+		slog.Error("Error creating output reference", "error", err)
 		return err
 	}
 

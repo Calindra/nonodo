@@ -54,10 +54,10 @@ func (r *RawInputRefRepository) UpdateStatus(ctx context.Context, rawInputsIds [
 		SET status = ? 
 		WHERE raw_id IN (?)`, status, rawInputsIds)
 	if err != nil {
-		slog.Error("Failed to build query for status update", "error", err)
+		slog.Error("Failed to build query for status update", "query", query, "args", args, "error", err)
 		return err
 	}
-
+	query = sqlx.Rebind(sqlx.DOLLAR, query)
 	_, err = exec.ExecContext(ctx, query, args...)
 	if err != nil {
 		slog.Error("Failed to execute status update query", "query", query, "args", args, "error", err)
