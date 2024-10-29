@@ -58,7 +58,7 @@ func (c *NoticeRepository) Create(
 		data.Payload,
 		data.InputIndex,
 		data.OutputIndex,
-		data.AppContract,
+		common.HexToAddress(data.AppContract).Hex(),
 		data.OutputHashesSiblings,
 	)
 	if err != nil {
@@ -87,6 +87,35 @@ func (c *NoticeRepository) Update(
 		return nil, err
 	}
 	return data, nil
+}
+
+func (c *NoticeRepository) SetProof(
+	ctx context.Context, notice *model.ConvenienceNotice,
+) error {
+	updateVoucher := `UPDATE notices SET 
+		output_hashes_siblings = $1
+		WHERE app_contract = $2 and output_index = $3`
+	exec := DBExecutor{&c.Db}
+	res, err := exec.ExecContext(
+		ctx,
+		updateVoucher,
+		notice.OutputHashesSiblings,
+		common.HexToAddress(notice.AppContract).Hex(),
+		notice.OutputIndex,
+	)
+	if err != nil {
+		return err
+	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected != 1 {
+		return fmt.Errorf("wrong number of notices affected: %d; app_contract %v; output_index %d",
+			affected, notice.AppContract, notice.OutputIndex,
+		)
+	}
+	return nil
 }
 
 func (c *NoticeRepository) Count(

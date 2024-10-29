@@ -28,6 +28,14 @@ func convertCompletionStatus(status cModel.CompletionStatus) (CompletionStatus, 
 		return CompletionStatusRejected, nil
 	case cModel.CompletionStatusException:
 		return CompletionStatusException, nil
+	case cModel.CompletionStatusMachineHalted:
+		return CompletionStatusMachineHalted, nil
+	case cModel.CompletionStatusCycleLimitExceeded:
+		return CompletionStatusCycleLimitExceeded, nil
+	case cModel.CompletionStatusTimeLimitExceeded:
+		return CompletionStatusTimeLimitExceeded, nil
+	case cModel.CompletionStatusPayloadLengthLimitExceeded:
+		return CompletionStatusPayloadLengthLimitExceeded, nil
 	default:
 		return "", errors.New("invalid completion status")
 	}
@@ -192,7 +200,7 @@ func ConvertToVoucherConnectionV1(
 	return NewConnection(offset, total, convNodes), nil
 }
 
-func convertConvenientNoticeV1(cNotice cModel.ConvenienceNotice) *Notice {
+func ConvertConvenientNoticeV1(cNotice cModel.ConvenienceNotice) *Notice {
 	var outputHashesSiblings []string
 	err := json.Unmarshal([]byte(cNotice.OutputHashesSiblings), &outputHashesSiblings)
 	if err != nil {
@@ -215,7 +223,7 @@ func ConvertToNoticeConnectionV1(
 ) (*NoticeConnection, error) {
 	convNodes := make([]*Notice, len(notices))
 	for i := range notices {
-		convNodes[i] = convertConvenientNoticeV1(notices[i])
+		convNodes[i] = ConvertConvenientNoticeV1(notices[i])
 	}
 	return NewConnection(offset, total, convNodes), nil
 }

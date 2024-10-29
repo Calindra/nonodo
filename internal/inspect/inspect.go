@@ -112,6 +112,14 @@ func convertInput(input model.InspectInput) (InspectResult, error) {
 		status = Rejected
 	case cModel.CompletionStatusException:
 		status = Exception
+	case cModel.CompletionStatusMachineHalted:
+		status = MachineHalted
+	case cModel.CompletionStatusCycleLimitExceeded:
+		status = CycleLimitExceeded
+	case cModel.CompletionStatusTimeLimitExceeded:
+		status = TimeLimitExceeded
+	case cModel.CompletionStatusPayloadLengthLimitExceeded:
+		status = "PAYLOAD_LENGTH_LIMIT_EXCEEDED"
 	default:
 		return InspectResult{}, errors.New("invalid completion status")
 	}

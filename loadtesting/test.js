@@ -3,8 +3,8 @@ import { check } from 'k6';
 
 export let options = {
     stages: [
-        { duration: '30s', target: 1 },
-        { duration: '10s', target: 0 },
+        { duration: '3s', target: 1 },
+        { duration: '1s', target: 0 },
     ],
     thresholds: {
         checks: ['rate>0.9'],
@@ -19,7 +19,7 @@ function assertStringContains(s, substring) {
 
 function testVoucherNotFound() {
     const payload = JSON.stringify({
-        query: "query { voucher(voucherIndex: 0, inputIndex: 0) { index }}"
+        query: "query { voucher(outputIndex: 99999) { index }}"
     });
 
     const params = {
@@ -33,12 +33,13 @@ function testVoucherNotFound() {
     check(response, {
         'testVoucherNotFound is status 200': (r) => r.status === 200,
         'testVoucherNotFound response body contains expected content': (r) => assertStringContains(r.body, 'voucher not found'),
+
     });
 }
 
 function testVoucherFound() {
     const payload = JSON.stringify({
-        query: "query { voucher(voucherIndex: 1, inputIndex: 1) { index }}"
+        query: "query { voucher(outputIndex: 0) { index }}"
     });
 
     const params = {
@@ -51,14 +52,14 @@ function testVoucherFound() {
 
     check(response, {
         'testVoucherFound is status 200': (r) => r.status === 200,
-        'testVoucherFound response body contains expected content': (r) => assertStringContains(r.body, '{"data":{"voucher":{"index":1}}}'),
+        'testVoucherFound response body contains expected content': (r) => assertStringContains(r.body, '{"data":{"voucher":{"index":0}}}'),
     });
 }
 
 
 function testNoticeFound() {
     const payload = JSON.stringify({
-        query: "query { notice(noticeIndex: 1, inputIndex: 1) { index payload }}"
+        query: "query { notice(outputIndex: 1) { index payload }}"
     });
 
     const params = {
@@ -71,7 +72,7 @@ function testNoticeFound() {
 
     check(response, {
         'testNoticeFound is status 200': (r) => r.status === 200,
-        'testNoticeFound response body contains expected content': (r) => assertStringContains(r.body, '{"data":{"notice":{"index":1,"payload":"OX1223"}}}'),
+        'testNoticeFound response body contains expected content': (r) => assertStringContains(r.body, '{"data":{"notice":{"index":1,"payload":"0xc258d6e5'),
     });
 }
 
@@ -97,7 +98,7 @@ function testInputFound() {
 
 function testReportFound() {
     const payload = JSON.stringify({
-        query: "query { report(reportIndex: 2, inputIndex: 2) { index }}"
+        query: "query { report(reportIndex: 2) { index }}"
     });
 
     const params = {
@@ -129,7 +130,7 @@ function testReports() {
 
     check(response, {
         'testReports is status 200': (r) => r.status === 200,
-        'testReports response body contains expected content': (r) => assertStringContains(r.body, '{"data":{"reports":{"edges":[{"node":{"index":1}},{"node":{"index":2}}]}}}'),
+        'testReports response body contains expected content': (r) => assertStringContains(r.body, '{"data":{"reports":{"edges":[{"node":{"index":0}},{"node":{"index":1}}'),
     });
 }
 
@@ -148,7 +149,7 @@ function testVouchers() {
 
     check(response, {
         'testVouchers is status 200': (r) => r.status === 200,
-        'testVouchers response body contains expected content': (r) => assertStringContains(r.body, '{"data":{"vouchers":{"edges":[{"node":{"index":1}},{"node":{"index":2}}]}}}'),
+        'testVouchers response body contains expected content': (r) => assertStringContains(r.body, '{"data":{"vouchers":{"edges":[{"node":{"index":0}},{"node":{"index":2}}'),
     });
 }
 
@@ -167,7 +168,7 @@ function testNotices() {
 
     check(response, {
         'testNotices is status 200': (r) => r.status === 200,
-        'testNotices response body contains expected content': (r) => assertStringContains(r.body, '{"data":{"notices":{"edges":[{"node":{"index":1}},{"node":{"index":2}}]}}}'),
+        'testNotices response body contains expected content': (r) => assertStringContains(r.body, '{"data":{"notices":{"edges":[{"node":{"index":1}},{"node":{"index":3}}'),
     });
 }
 
@@ -186,18 +187,95 @@ function testInputs() {
 
     check(response, {
         'testInputs is status 200': (r) => r.status === 200,
-        'testInputs response body contains expected content': (r) => assertStringContains(r.body, '{"data":{"inputs":{"edges":[{"node":{"index":1}},{"node":{"index":2}}]}}}'),
+        'testInputs response body contains expected content': (r) => assertStringContains(r.body, '{"data":{"inputs":{"edges":[{"node":{"index":0}},{"node":{"index":1}}'),
+    });
+}
+
+function testGetManyInputs() {
+    const payload = JSON.stringify({
+        query: `query { inputs {
+        edges {
+        node {
+        id
+        index
+        payload
+        reports {
+        edges {
+        node {
+        payload
+              index
+    }
+          }
+        }
+        notices {
+          edges {
+            node {
+            payload
+            index
+        }
+    }
+}
+        vouchers {
+          edges {
+            node {
+            payload
+            index
+        }
+    }
+}
+      }
+    }
+  }
+}`
+    })
+
+    const params = {
+        headers: {
+            'Content-Type': 'application/json',
+        },
+    };
+
+    const response = http.post(GRAPHQL_ENDPOINT, payload, params);
+
+    check(response, {
+        'testGetManyInputs is status 200': (r) => r.status === 200,
+        'testGetManyInputs response body contains expected content': (r) => {
+            if (!r.body || typeof r.body != "string") {
+                return false
+            }
+
+            const body = JSON.parse(r.body)
+            
+            const inputWithError = body.data.inputs.edges.find(input => {
+                const notices = input.node.notices.edges
+                const reports = input.node.reports.edges
+                const vouchers = input.node.vouchers.edges
+
+                if (notices.length != 1 || reports.length != 1 || vouchers.length != 1) {
+                    return true
+                }
+
+                return false
+            })
+
+            if (inputWithError) {
+                return false
+            }
+
+            return true
+        },
     });
 }
 
 export default function () {
-    // testVoucherNotFound()
-    // testVoucherFound()
-    // testNoticeFound()
+    testVoucherNotFound()
+    testVoucherFound()
+    testNoticeFound()
     testInputFound()
-    // testReportFound()
-    // testVouchers()
-    // testNotices()
-    // testReports()
+    testReportFound()
+    testVouchers()
+    testNotices()
+    testReports()
     testInputs()
+    testGetManyInputs()
 }

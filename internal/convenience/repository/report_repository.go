@@ -2,6 +2,8 @@ package repository
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -23,7 +25,8 @@ func (r *ReportRepository) CreateTables() error {
 		payload       text,
 		input_index   integer,
 		app_contract  text,
-		PRIMARY KEY (input_index, output_index));`
+		raw_id        integer,
+		PRIMARY KEY (input_index, output_index, app_contract));`
 	_, err := r.Db.Exec(schema)
 	if err == nil {
 		slog.Debug("Reports table created")
@@ -34,7 +37,7 @@ func (r *ReportRepository) CreateTables() error {
 }
 
 func (r *ReportRepository) CreateReport(ctx context.Context, report cModel.Report) (cModel.Report, error) {
-	slog.Debug("CreateReport", "payload", report.Payload)
+	// slog.Debug("CreateReport", "payload", report.Payload)
 	if r.AutoCount {
 		count, err := r.Count(ctx, nil)
 		if err != nil {
@@ -47,7 +50,8 @@ func (r *ReportRepository) CreateReport(ctx context.Context, report cModel.Repor
 		output_index,
 		payload,
 		input_index,
-		app_contract) VALUES ($1, $2, $3, $4)`
+		app_contract,
+		raw_id) VALUES ($1, $2, $3, $4, $5)`
 
 	exec := DBExecutor{r.Db}
 	_, err := exec.ExecContext(
@@ -57,16 +61,17 @@ func (r *ReportRepository) CreateReport(ctx context.Context, report cModel.Repor
 		common.Bytes2Hex(report.Payload),
 		report.InputIndex,
 		report.AppContract.Hex(),
+		report.RawID,
 	)
 
 	if err != nil {
 		slog.Error("database error", "err", err)
 		return cModel.Report{}, err
 	}
-	slog.Debug("Report created",
-		"outputIndex", report.Index,
-		"inputIndex", report.InputIndex,
-	)
+	// slog.Debug("Report created",
+	// 	"outputIndex", report.Index,
+	// 	"inputIndex", report.InputIndex,
+	// )
 	return report, nil
 }
 
@@ -110,6 +115,19 @@ func (r *ReportRepository) queryByOutputIndexAndAppContract(
 			outputIndex,
 		)
 	}
+}
+
+func (r *ReportRepository) FindLastRawId(ctx context.Context) (uint64, error) {
+	var outputId uint64
+	err := r.Db.GetContext(ctx, &outputId, `SELECT raw_id FROM convenience_reports ORDER BY raw_id DESC LIMIT 1`)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, nil
+		}
+		slog.Error("Failed to retrieve the last raw_id from the database", "error", err)
+		return 0, err
+	}
+	return outputId, err
 }
 
 func (r *ReportRepository) FindByOutputIndexAndAppContract(

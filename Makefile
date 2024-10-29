@@ -8,7 +8,10 @@ build:
 .PHONY: test
 test:
 	go test -p 1 ./...
-
+clean-db-raw:
+	docker compose -f postgres/raw/compose.yml down --volumes --remove-orphans --rmi local
+up-db-raw:
+	docker compose -f postgres/raw/compose.yml up --wait
 .PHONY: lint
 lint:
 	golangci-lint run

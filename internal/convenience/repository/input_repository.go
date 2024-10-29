@@ -42,8 +42,9 @@ type inputRow struct {
 
 func (r *InputRepository) CreateTables() error {
 
+	// the ID is not unique anymore in a multi-dapp environment
 	schema := `CREATE TABLE IF NOT EXISTS convenience_inputs (
-		id 				text NOT NULL PRIMARY KEY,
+		id 				text NOT NULL,
 		input_index		integer,
 		app_contract    text,
 		status	 		text,
@@ -54,14 +55,15 @@ func (r *InputRepository) CreateTables() error {
 		prev_randao		text,
 		exception		text,
 		espresso_block_number	integer,
-		espresso_block_timestamp	integer,
+		espresso_block_timestamp	NUMERIC,
 		input_box_index integer,
 		avail_block_number integer,
-		avail_block_timestamp integer,
+		avail_block_timestamp NUMERIC,
 		type text,
 		cartesi_transaction_id text,
 		chain_id text);
 	CREATE INDEX IF NOT EXISTS idx_input_index ON convenience_inputs(input_index);
+	CREATE INDEX IF NOT EXISTS idx_input_id ON convenience_inputs(app_contract,id);
 	CREATE INDEX IF NOT EXISTS idx_status ON convenience_inputs(status);`
 	_, err := r.Db.Exec(schema)
 	if err == nil {
@@ -155,8 +157,33 @@ func (r *InputRepository) rawCreate(ctx context.Context, input model.AdvanceInpu
 	if err != nil {
 		return nil, err
 	}
-	slog.Debug("Input saved", "chainId", input.ChainId)
 	return &input, nil
+}
+
+func (r *InputRepository) UpdateStatus(ctx context.Context, appContract common.Address, inputIndex uint64, status model.CompletionStatus) error {
+	sql := `UPDATE convenience_inputs
+	SET status = $1
+	WHERE input_index = $2 and app_contract = $3`
+	exec := DBExecutor{&r.Db}
+	res, err := exec.ExecContext(
+		ctx,
+		sql,
+		status,
+		inputIndex,
+		appContract.Hex(),
+	)
+	if err != nil {
+		slog.Error("Error updating input status", "Error", err)
+		return err
+	}
+	rowsAffected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rowsAffected == 0 {
+		return fmt.Errorf("no input's status updated: input_index %d; app_contract %s", inputIndex, appContract.Hex())
+	}
+	return nil
 }
 
 func (r *InputRepository) Update(ctx context.Context, input model.AdvanceInput) (*model.AdvanceInput, error) {
@@ -173,7 +200,7 @@ func (r *InputRepository) Update(ctx context.Context, input model.AdvanceInput) 
 		input.Index,
 	)
 	if err != nil {
-		slog.Error("Error updating voucher", "Error", err)
+		slog.Error("Error updating input", "Error", err)
 		return nil, err
 	}
 	return &input, nil
@@ -231,7 +258,7 @@ func (r *InputRepository) FindByStatus(ctx context.Context, status model.Complet
 			app_contract,
 			espresso_block_number,
 			espresso_block_timestamp,
-			input_box_index, 
+			input_box_index,
 			avail_block_number,
 			avail_block_timestamp,
 			type,
@@ -298,7 +325,7 @@ func (r *InputRepository) queryByIdAndAppContract(
 ) (*sqlx.Rows, error) {
 	if appContract != nil {
 		return r.Db.QueryxContext(ctx, `
-			SELECT 
+			SELECT
 				id,
 				input_index,
 				status,
@@ -311,7 +338,7 @@ func (r *InputRepository) queryByIdAndAppContract(
 				app_contract,
 				espresso_block_number,
 				espresso_block_timestamp,
-				input_box_index, 
+				input_box_index,
 				avail_block_number,
 				avail_block_timestamp,
 				type,
@@ -323,7 +350,7 @@ func (r *InputRepository) queryByIdAndAppContract(
 		)
 	} else {
 		return r.Db.QueryxContext(ctx, `
-			SELECT 
+			SELECT
 				id,
 				input_index,
 				status,
@@ -336,7 +363,7 @@ func (r *InputRepository) queryByIdAndAppContract(
 				app_contract,
 				espresso_block_number,
 				espresso_block_timestamp,
-				input_box_index, 
+				input_box_index,
 				avail_block_number,
 				avail_block_timestamp,
 				type,
@@ -355,7 +382,7 @@ func (r *InputRepository) queryByIndexAndAppContract(
 ) (*sqlx.Rows, error) {
 	if appContract != nil {
 		return r.Db.QueryxContext(ctx, `
-			SELECT 
+			SELECT
 				id,
 				input_index,
 				status,
@@ -368,7 +395,7 @@ func (r *InputRepository) queryByIndexAndAppContract(
 				app_contract,
 				espresso_block_number,
 				espresso_block_timestamp,
-				input_box_index, 
+				input_box_index,
 				avail_block_number,
 				avail_block_timestamp,
 				type,
@@ -380,7 +407,7 @@ func (r *InputRepository) queryByIndexAndAppContract(
 		)
 	} else {
 		return r.Db.QueryxContext(ctx, `
-			SELECT 
+			SELECT
 				id,
 				input_index,
 				status,
@@ -393,7 +420,7 @@ func (r *InputRepository) queryByIndexAndAppContract(
 				app_contract,
 				espresso_block_number,
 				espresso_block_timestamp,
-				input_box_index, 
+				input_box_index,
 				avail_block_number,
 				avail_block_timestamp,
 				type,
@@ -458,7 +485,7 @@ func (c *InputRepository) FindAll(
 			app_contract,
 			espresso_block_number,
 			espresso_block_timestamp,
-			input_box_index, 
+			input_box_index,
 			avail_block_number,
 			avail_block_timestamp,
 			type,
@@ -542,6 +569,10 @@ func transformToInputQuery(
 			if filter.Ne != nil {
 				where = append(where, fmt.Sprintf("status <> $%d ", count))
 				args = append(args, *filter.Ne)
+				count += 1
+			} else if filter.Eq != nil {
+				where = append(where, fmt.Sprintf("status = $%d ", count))
+				args = append(args, *filter.Eq)
 				count += 1
 			} else {
 				return "", nil, 0, fmt.Errorf("operation not implemented")

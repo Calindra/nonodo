@@ -13,8 +13,10 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"strconv"
 	"time"
 
+	"github.com/calindra/nonodo/internal/contracts"
 	"github.com/calindra/nonodo/internal/convenience"
 	"github.com/calindra/nonodo/internal/convenience/synchronizer"
 	synchronizernode "github.com/calindra/nonodo/internal/convenience/synchronizer_node"
@@ -32,6 +34,7 @@ import (
 	"github.com/calindra/nonodo/internal/sequencers/inputter"
 	"github.com/calindra/nonodo/internal/sequencers/paiodecoder"
 	"github.com/calindra/nonodo/internal/supervisor"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
@@ -147,7 +150,7 @@ func NewNonodoOpts() NonodoOpts {
 		AvailEnabled:        false,
 		AutoCount:           false,
 		PaioServerUrl:       "https://cartesi-paio-avail-turing.fly.dev",
-		DbRawUrl:            "postgres://postgres:password@localhost:5432/test_rollupsdb?sslmode=disable",
+		DbRawUrl:            "postgres://postgres:password@localhost:5432/rollupsdb?sslmode=disable",
 		RawEnabled:          false,
 	}
 }
@@ -235,7 +238,65 @@ func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 	}
 
 	if opts.RawEnabled {
-		rawSequencer := synchronizernode.NewSynchronizerCreateWorker(container, opts.DbRawUrl)
+		dbNodeV2 := sqlx.MustConnect("postgres", opts.DbRawUrl)
+		rawRepository := synchronizernode.NewRawRepository(opts.DbRawUrl, dbNodeV2)
+		synchronizerUpdate := synchronizernode.NewSynchronizerUpdate(
+			container.GetRawInputRepository(),
+			rawRepository,
+			container.GetInputRepository(),
+		)
+		synchronizerReport := synchronizernode.NewSynchronizerReport(
+			container.GetReportRepository(),
+			rawRepository,
+		)
+		synchronizerOutputUpdate := synchronizernode.NewSynchronizerOutputUpdate(
+			container.GetVoucherRepository(),
+			container.GetNoticeRepository(),
+			rawRepository,
+			container.GetRawOutputRefRepository(),
+		)
+
+		abi, err := contracts.OutputsMetaData.GetAbi()
+		if err != nil {
+			panic(err)
+		}
+		abiDecoder := synchronizernode.NewAbiDecoder(abi)
+
+		inputAbi, err := contracts.InputsMetaData.GetAbi()
+		if err != nil {
+			panic(err)
+		}
+
+		inputAbiDecoder := synchronizernode.NewAbiDecoder(inputAbi)
+
+		synchronizerOutputCreate := synchronizernode.NewSynchronizerOutputCreate(
+			container.GetVoucherRepository(),
+			container.GetNoticeRepository(),
+			rawRepository,
+			container.GetRawOutputRefRepository(),
+			abiDecoder,
+		)
+
+		synchronizerInputCreate := synchronizernode.NewSynchronizerInputCreator(
+			container.GetInputRepository(),
+			container.GetRawInputRepository(),
+			rawRepository,
+			inputAbiDecoder,
+		)
+
+		rawSequencer := synchronizernode.NewSynchronizerCreateWorker(
+			container.GetInputRepository(),
+			container.GetRawInputRepository(),
+			opts.DbRawUrl,
+			rawRepository,
+			&synchronizerUpdate,
+			container.GetOutputDecoder(),
+			synchronizerReport,
+			synchronizerOutputUpdate,
+			container.GetRawOutputRefRepository(),
+			synchronizerOutputCreate,
+			synchronizerInputCreate,
+		)
 		w.Workers = append(w.Workers, rawSequencer)
 	}
 
@@ -244,6 +305,10 @@ func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 
 	slog.Info("Listening", "port", opts.HttpPort)
 	return w
+}
+
+func NewAbiDecoder(abi *abi.ABI) {
+	panic("unimplemented")
 }
 
 func CreateDBInstance(opts NonodoOpts) *sqlx.DB {
@@ -262,10 +327,36 @@ func CreateDBInstance(opts NonodoOpts) *sqlx.DB {
 			postgresDataBase, postgresPassword)
 
 		db = sqlx.MustConnect("postgres", connectionString)
+		configureConnectionPool(db)
 	} else {
 		db = handleSQLite(opts)
 	}
 	return db
+}
+
+// nolint
+func configureConnectionPool(db *sqlx.DB) {
+	maxOpenConns := getEnvInt("DB_MAX_OPEN_CONNS", 25)
+	maxIdleConns := getEnvInt("DB_MAX_IDLE_CONNS", 10)
+	connMaxLifetime := getEnvInt("DB_CONN_MAX_LIFETIME", 1800) // 30 min
+	connMaxIdleTime := getEnvInt("DB_CONN_MAX_IDLE_TIME", 300) // 5 min
+	db.SetMaxOpenConns(maxOpenConns)
+	db.SetMaxIdleConns(maxIdleConns)
+	db.SetConnMaxLifetime(time.Duration(connMaxLifetime) * time.Second)
+	db.SetConnMaxIdleTime(time.Duration(connMaxIdleTime) * time.Second)
+}
+
+func getEnvInt(envName string, defaultValue int) int {
+	value, exists := os.LookupEnv(envName)
+	if !exists {
+		return defaultValue
+	}
+	intValue, err := strconv.Atoi(value)
+	if err != nil {
+		slog.Error("configuration error", "envName", envName, "value", value)
+		panic(err)
+	}
+	return intValue
 }
 
 func handleSQLite(opts NonodoOpts) *sqlx.DB {
@@ -357,7 +448,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	}
 
 	var sequencer model.Sequencer = nil
-	var inputterWorker = &inputter.InputterWorker{
+	inputterWorker := &inputter.InputterWorker{
 		Model:              modelInstance,
 		Provider:           opts.RpcUrl,
 		InputBoxAddress:    common.HexToAddress(opts.InputBoxAddress),
@@ -402,7 +493,6 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 				avail.DEFAULT_CHAINID_HARDHAT,
 				avail.DEFAULT_APP_ID,
 			)
-
 			if err != nil {
 				panic(err)
 			}
@@ -432,15 +522,13 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 				paioLocation,
 				opts.ApplicationAddress,
 			))
-			sequencer = model.NewInputBoxSequencer(modelInstance)
 		}
 	} else {
 		sequencer = model.NewInputBoxSequencer(modelInstance)
 	}
 
 	if opts.RawEnabled {
-		rawSequencer := synchronizernode.NewSynchronizerCreateWorker(container, opts.DbRawUrl)
-		w.Workers = append(w.Workers, rawSequencer)
+		panic("use the --high-level-graphql flag")
 	}
 
 	rollup.Register(re, modelInstance, sequencer, common.HexToAddress(opts.ApplicationAddress))
