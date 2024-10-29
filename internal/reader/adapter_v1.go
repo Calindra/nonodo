@@ -97,13 +97,7 @@ func (a AdapterV1) GetVoucher(ctx context.Context, outputIndex int) (*graphql.Vo
 	if voucher == nil {
 		return nil, fmt.Errorf("voucher not found")
 	}
-	return &graphql.Voucher{
-		Index:       outputIndex,
-		InputIndex:  int(voucher.InputIndex),
-		Destination: voucher.Destination.Hex(),
-		Payload:     voucher.Payload,
-		Value:       voucher.Value,
-	}, nil
+	return graphql.ConvertConvenientVoucherV1(*voucher), nil
 }
 
 func getAppContractFromContext(ctx context.Context) (*common.Address, error) {
@@ -194,11 +188,7 @@ func (a AdapterV1) GetNotice(ctx context.Context, outputIndex int) (*graphql.Not
 	if notice == nil {
 		return nil, fmt.Errorf("notice not found")
 	}
-	return &graphql.Notice{
-		Index:      outputIndex,
-		InputIndex: int(notice.InputIndex),
-		Payload:    notice.Payload,
-	}, nil
+	return graphql.ConvertConvenientNoticeV1(*notice), nil
 }
 
 func (a AdapterV1) GetReport(
