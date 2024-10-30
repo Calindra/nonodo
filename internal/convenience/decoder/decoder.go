@@ -139,7 +139,7 @@ func (o *OutputDecoder) HandleReport(
 	_, err := o.convenienceService.CreateReport(ctx, &model.Report{
 		Index:      outputIndex,
 		InputIndex: index,
-		Payload:    []byte(payload),
+		Payload:    payload,
 	})
 	return err
 }

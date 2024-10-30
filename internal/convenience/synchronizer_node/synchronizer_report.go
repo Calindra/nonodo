@@ -70,7 +70,7 @@ func (s *SynchronizerReport) syncReports(ctx context.Context) error {
 			AppContract: appContract,
 			Index:       int(index),
 			InputIndex:  int(inputIndex),
-			Payload:     rawReport.RawData,
+			Payload:     string(rawReport.RawData),
 			RawID:       uint64(rawReport.ID),
 		})
 		if err != nil {

@@ -7,7 +7,6 @@ import (
 
 	"github.com/calindra/nonodo/internal/commons"
 	cModel "github.com/calindra/nonodo/internal/convenience/model"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/ncruces/go-sqlite3/driver"
 	_ "github.com/ncruces/go-sqlite3/embed"
@@ -47,7 +46,7 @@ func (s *ReportRepositorySuite) TestCreateReport() {
 	_, err := s.reportRepository.CreateReport(ctx, cModel.Report{
 		Index:      1,
 		InputIndex: 2,
-		Payload:    common.Hex2Bytes("1122"),
+		Payload:    "1122",
 	})
 	s.NoError(err)
 }
@@ -57,7 +56,7 @@ func (s *ReportRepositorySuite) TestCreateReportAndFind() {
 	_, err := s.reportRepository.CreateReport(ctx, cModel.Report{
 		InputIndex: 1,
 		Index:      2,
-		Payload:    common.Hex2Bytes("1122"),
+		Payload:    "1122",
 	})
 	s.NoError(err)
 	report, err := s.reportRepository.FindByInputAndOutputIndex(
@@ -66,7 +65,7 @@ func (s *ReportRepositorySuite) TestCreateReportAndFind() {
 		uint64(2),
 	)
 	s.NoError(err)
-	s.Equal("1122", common.Bytes2Hex(report.Payload))
+	s.Equal("1122", report.Payload)
 }
 
 func (s *ReportRepositorySuite) TestReportNotFound() {
@@ -89,7 +88,7 @@ func (s *ReportRepositorySuite) TestCreateReportAndFindAll() {
 				cModel.Report{
 					InputIndex: i,
 					Index:      j,
-					Payload:    common.Hex2Bytes("1122"),
+					Payload:    "1122",
 				})
 			s.NoError(err)
 		}
@@ -116,5 +115,5 @@ func (s *ReportRepositorySuite) TestCreateReportAndFindAll() {
 	s.Equal(0, reports.Rows[0].Index)
 	s.Equal(1, reports.Rows[len(reports.Rows)-1].InputIndex)
 	s.Equal(3, reports.Rows[len(reports.Rows)-1].Index)
-	s.Equal("1122", common.Bytes2Hex(reports.Rows[0].Payload))
+	s.Equal("1122", reports.Rows[0].Payload)
 }
