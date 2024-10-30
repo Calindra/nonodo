@@ -141,7 +141,7 @@ func (s *SynchronizerInputCreator) GetAdvanceInputFromMap(rawInput RawInput) (*m
 		return nil, fmt.Errorf("chainId not found")
 	}
 
-	payload, ok := decodedData["payload"].(string)
+	payload, ok := decodedData["payload"].([]byte)
 	if !ok {
 		return nil, fmt.Errorf("payload not found")
 	}
@@ -187,7 +187,7 @@ func (s *SynchronizerInputCreator) GetAdvanceInputFromMap(rawInput RawInput) (*m
 		MsgSender:              msgSender,
 		BlockNumber:            blockNumber.Uint64(),
 		BlockTimestamp:         time.Unix(0, blockTimestamp.Int64()),
-		Payload:                payload,
+		Payload:                string(payload),
 		ChainId:                chainId.String(),
 		Status:                 commons.ConvertStatusStringToCompletionStatus(rawInput.Status),
 		PrevRandao:             "0x" + prevRandao.Text(16), // nolint
