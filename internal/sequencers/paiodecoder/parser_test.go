@@ -99,5 +99,5 @@ func (s *ParserSuite) TestParsePaioBatchToInputsWeirdSignature() {
 	// so hash changed and then public key also changed
 	s.Equal("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", inputs[0].MsgSender.Hex())
 	s.Equal("0xab7528bb862fB57E8A2BCd567a2e929a0Be56a5e", inputs[0].AppContract.Hex())
-	s.Equal("deadbeefa7", common.Bytes2Hex(inputs[0].Payload))
+	s.Equal("deadbeefa7", inputs[0].Payload)
 }

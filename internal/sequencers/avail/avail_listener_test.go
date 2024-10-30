@@ -164,7 +164,7 @@ func (s *AvailListenerSuite) TestTableTennis() {
 
 	// check the input from InputBox
 	s.Equal("0", savedInputs.Rows[0].ID)
-	s.Equal("deadbeef11", common.Bytes2Hex(savedInputs.Rows[0].Payload))
+	s.Equal("deadbeef11", savedInputs.Rows[0].Payload)
 
 	// check the input from Avail
 	s.Equal("0x4adf75e71bb8831739bfccd25958f03ca057d5df8b93a50e3fb7dae1e540faa7",

@@ -368,7 +368,7 @@ func (w InputterWorker) FindAllInputsByBlockAndTimestampLT(
 			appContract := values[1].(common.Address)
 			msgSender := values[2].(common.Address)
 			prevRandao := fmt.Sprintf("0x%s", common.Bytes2Hex(values[5].(*big.Int).Bytes()))
-			payload := values[7].([]uint8)
+			payload := values[7].(string)
 			inputIndex := int(it.Event.Index.Int64())
 
 			input := cModel.AdvanceInput{

@@ -259,7 +259,7 @@ func (a AvailListener) TableTennis(ctx context.Context,
 					"appContract", inputs[i].AppContract.Hex(),
 					"expected", a.ApplicationAddress.Hex(),
 					"msgSender", inputs[i].MsgSender.Hex(),
-					"payload", common.Bytes2Hex(inputs[i].Payload),
+					"payload", inputs[i].Payload,
 				)
 				continue
 			}
@@ -273,7 +273,7 @@ func (a AvailListener) TableTennis(ctx context.Context,
 				"index", inputs[i].Index,
 				"appContract", inputs[i].AppContract.Hex(),
 				"msgSender", inputs[i].MsgSender.Hex(),
-				"payload", common.Bytes2Hex(inputs[i].Payload),
+				"payload", inputs[i].Payload,
 			)
 		}
 	}

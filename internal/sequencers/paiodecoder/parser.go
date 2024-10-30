@@ -142,7 +142,7 @@ func ParsePaioBatchToInputs(jsonStr string, chainId *big.Int) ([]cModel.AdvanceI
 			Index:               int(0),
 			ID:                  txId,
 			MsgSender:           msgSender,
-			Payload:             tx.Data,
+			Payload:             string(tx.Data),
 			AppContract:         common.HexToAddress(tx.App),
 			AvailBlockNumber:    0,
 			AvailBlockTimestamp: time.Unix(0, 0),
@@ -159,7 +159,7 @@ func ParsePaioFrom712Message(typedData apitypes.TypedData) (PaioMessage, error) 
 		App:         typedData.Message["app"].(string),
 		Nonce:       typedData.Message["nonce"].(string),
 		MaxGasPrice: typedData.Message["max_gas_price"].(string),
-		Payload:     []byte(typedData.Message["data"].(string)),
+		Payload:     typedData.Message["data"].(string),
 	}
 	return message, nil
 }
