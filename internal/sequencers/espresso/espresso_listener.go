@@ -124,7 +124,8 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 				//		 })
 				msgSender, typedData, signature, err := commons.ExtractSigAndData(string(transaction))
 				if err != nil {
-					return err
+					slog.Warn("Ignoring transaction", "blockHeight", currentBlockHeight, "transactionIndex", i, "error", err)
+					continue
 				}
 				// type EspressoMessage struct {
 				// 	nonce   uint32 `json:"nonce"`
