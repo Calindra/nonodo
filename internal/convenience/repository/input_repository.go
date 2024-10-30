@@ -140,7 +140,7 @@ func (r *InputRepository) rawCreate(ctx context.Context, input model.AdvanceInpu
 		input.Index,
 		input.Status,
 		input.MsgSender.Hex(),
-		common.Bytes2Hex(input.Payload),
+		input.Payload,
 		input.BlockNumber,
 		input.BlockTimestamp.UnixMilli(),
 		input.PrevRandao,
@@ -631,7 +631,7 @@ func parseRowInput(row inputRow) model.AdvanceInput {
 		Index:                  row.Index,
 		Status:                 model.CompletionStatus(row.Status),
 		MsgSender:              common.HexToAddress(row.MsgSender),
-		Payload:                common.Hex2Bytes(row.Payload),
+		Payload:                row.Payload,
 		BlockNumber:            uint64(row.BlockNumber),
 		BlockTimestamp:         time.UnixMilli(int64(row.BlockTimestamp)),
 		PrevRandao:             row.PrevRandao,
@@ -682,7 +682,7 @@ func parseInput(res *sqlx.Rows) (*model.AdvanceInput, error) {
 	if err != nil {
 		return nil, err
 	}
-	input.Payload = common.Hex2Bytes(payload)
+	input.Payload = payload
 	input.MsgSender = common.HexToAddress(msgSender)
 	input.BlockTimestamp = time.UnixMilli(blockTimestamp)
 	input.PrevRandao = prevRandao

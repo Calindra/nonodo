@@ -48,7 +48,7 @@ func (s *InputRepositorySuite) TestCreateInput() {
 		Index:          0,
 		Status:         convenience.CompletionStatusUnprocessed,
 		MsgSender:      common.Address{},
-		Payload:        common.Hex2Bytes("0x1122"),
+		Payload:        "0x1122",
 		BlockNumber:    1,
 		BlockTimestamp: time.Now(),
 	})
@@ -62,7 +62,7 @@ func (s *InputRepositorySuite) TestFixCreateInputDuplicated() {
 		Index:          0,
 		Status:         convenience.CompletionStatusUnprocessed,
 		MsgSender:      common.Address{},
-		Payload:        common.Hex2Bytes("0x1122"),
+		Payload:        "0x1122",
 		BlockNumber:    1,
 		BlockTimestamp: time.Now(),
 	})
@@ -72,7 +72,7 @@ func (s *InputRepositorySuite) TestFixCreateInputDuplicated() {
 		Index:          0,
 		Status:         convenience.CompletionStatusUnprocessed,
 		MsgSender:      common.Address{},
-		Payload:        common.Hex2Bytes("0x1122"),
+		Payload:        "0x1122",
 		BlockNumber:    1,
 		BlockTimestamp: time.Now(),
 	})
@@ -90,7 +90,7 @@ func (s *InputRepositorySuite) TestCreateAndFindInputByID() {
 		Index:          123,
 		Status:         convenience.CompletionStatusUnprocessed,
 		MsgSender:      common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
-		Payload:        common.Hex2Bytes("1122"),
+		Payload:        "1122",
 		BlockNumber:    1,
 		BlockTimestamp: time.Now(),
 	})
@@ -102,7 +102,7 @@ func (s *InputRepositorySuite) TestCreateAndFindInputByID() {
 	s.Equal("123", input.ID)
 	s.Equal(input.Status, input2.Status)
 	s.Equal("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", input.MsgSender.Hex())
-	s.Equal("1122", common.Bytes2Hex(input.Payload))
+	s.Equal("1122", input.Payload)
 	s.Equal(1, int(input2.BlockNumber))
 	s.Equal(input.BlockTimestamp.UnixMilli(), input2.BlockTimestamp.UnixMilli())
 }
@@ -114,7 +114,7 @@ func (s *InputRepositorySuite) TestCreateInputAndUpdateStatus() {
 		Index:          2222,
 		Status:         convenience.CompletionStatusUnprocessed,
 		MsgSender:      common.Address{},
-		Payload:        common.Hex2Bytes("0x1122"),
+		Payload:        "0x1122",
 		BlockNumber:    1,
 		BlockTimestamp: time.Now(),
 		AppContract:    common.HexToAddress("0x70997970C51812dc3A010C7d01b50e0d17dc79C8"),
@@ -138,7 +138,7 @@ func (s *InputRepositorySuite) TestCreateInputFindByStatus() {
 		Index:          2222,
 		Status:         convenience.CompletionStatusUnprocessed,
 		MsgSender:      common.Address{},
-		Payload:        common.Hex2Bytes("0x1122"),
+		Payload:        "0x1122",
 		BlockNumber:    1,
 		PrevRandao:     "0xdeadbeef",
 		BlockTimestamp: time.Now(),
@@ -172,7 +172,7 @@ func (s *InputRepositorySuite) TestFindByIndexGt() {
 			Index:          i,
 			Status:         convenience.CompletionStatusUnprocessed,
 			MsgSender:      common.Address{},
-			Payload:        common.Hex2Bytes("0x1122"),
+			Payload:        "0x1122",
 			BlockNumber:    1,
 			BlockTimestamp: time.Now(),
 			AppContract:    common.Address{},
@@ -200,7 +200,7 @@ func (s *InputRepositorySuite) TestFindByIndexLt() {
 			Index:          i,
 			Status:         convenience.CompletionStatusUnprocessed,
 			MsgSender:      common.Address{},
-			Payload:        common.Hex2Bytes("0x1122"),
+			Payload:        "0x1122",
 			BlockNumber:    1,
 			BlockTimestamp: time.Now(),
 			AppContract:    common.Address{},
@@ -228,7 +228,7 @@ func (s *InputRepositorySuite) TestFindByMsgSender() {
 			Index:          i,
 			Status:         convenience.CompletionStatusUnprocessed,
 			MsgSender:      common.HexToAddress(fmt.Sprintf("000000000000000000000000000000000000000%d", i)),
-			Payload:        common.Hex2Bytes("0x1122"),
+			Payload:        "0x1122",
 			BlockNumber:    1,
 			BlockTimestamp: time.Now(),
 			AppContract:    common.Address{},
@@ -284,7 +284,7 @@ func (s *InputRepositorySuite) TestCreateInputAndCheckAppContract() {
 		Index:          2222,
 		Status:         convenience.CompletionStatusUnprocessed,
 		MsgSender:      common.Address{},
-		Payload:        common.Hex2Bytes("0x1122"),
+		Payload:        "0x1122",
 		BlockNumber:    1,
 		BlockTimestamp: time.Now(),
 		AppContract:    common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
