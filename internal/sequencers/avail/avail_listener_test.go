@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"math/big"
 	"os/exec"
+	"strings"
 	"testing"
 	"time"
 
@@ -72,7 +73,7 @@ func (s *AvailListenerSuite) TestReadInputsFromBlockZzzHui() {
 	s.NoError(err)
 	s.Equal(1, len(inputs))
 	s.Equal(common.HexToAddress("0xab7528bb862fb57e8a2bcd567a2e929a0be56a5e"), inputs[0].AppContract)
-	s.Equal("GM", string(inputs[0].Payload))
+	s.Equal("GM", inputs[0].Payload)
 	s.Equal(common.HexToAddress("0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"), inputs[0].MsgSender)
 }
 
@@ -164,12 +165,13 @@ func (s *AvailListenerSuite) TestTableTennis() {
 
 	// check the input from InputBox
 	s.Equal("0", savedInputs.Rows[0].ID)
-	s.Equal("deadbeef11", savedInputs.Rows[0].Payload)
+	s.Equal("0xdeadbeef11", savedInputs.Rows[0].Payload)
 
+	hexPayloadWithoutPrefix := strings.TrimPrefix(savedInputs.Rows[1].Payload, "0x")
 	// check the input from Avail
 	s.Equal("0x4adf75e71bb8831739bfccd25958f03ca057d5df8b93a50e3fb7dae1e540faa7",
 		savedInputs.Rows[1].ID)
-	s.Equal("Hello, World?", string(savedInputs.Rows[1].Payload))
+	s.Equal("Hello, World?", string(common.Hex2Bytes(hexPayloadWithoutPrefix)))
 }
 
 type FakeDecoder struct {

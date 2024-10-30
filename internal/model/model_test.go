@@ -109,7 +109,7 @@ func (s *ModelSuite) TestItAddsAndGetsAdvanceInputs() {
 		s.Equal(i, input.Index)
 		s.Equal(cModel.CompletionStatusUnprocessed, input.Status)
 		s.Equal(s.senders[i], input.MsgSender)
-		s.Equal(s.payloads[i], input.Payload)
+		s.Equal("0x"+s.payloads[i], input.Payload)
 		s.Equal(s.blockNumbers[i], input.BlockNumber)
 		s.Equal(s.timestamps[i].UnixMilli(), input.BlockTimestamp.UnixMilli())
 		s.Empty(input.Vouchers)
@@ -166,7 +166,7 @@ func (s *ModelSuite) TestItGetsFirstAdvanceInput() {
 	s.NotNil(convertedInput)
 	s.True(ok)
 	s.Equal(0, convertedInput.Index)
-	s.Equal(s.payloads[0], convertedInput.Payload)
+	s.Equal("0x"+s.payloads[0], convertedInput.Payload)
 }
 
 func (s *ModelSuite) TestItGetsFirstInspectInput() {
@@ -620,7 +620,7 @@ func (s *ModelSuite) TestItGetsAdvanceInputs() {
 		s.Equal(strconv.Itoa(i), input.ID)
 		s.Equal(cModel.CompletionStatusUnprocessed, input.Status)
 		s.Equal(s.senders[i], input.MsgSender)
-		s.Equal(s.payloads[i], input.Payload)
+		s.Equal("0x"+s.payloads[i], input.Payload)
 		s.Equal(s.blockNumbers[i], input.BlockNumber)
 		s.Equal(s.timestamps[i].UnixMilli(), input.BlockTimestamp.UnixMilli())
 	}

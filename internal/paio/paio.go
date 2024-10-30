@@ -5,7 +5,6 @@ import (
 	"context"
 	_ "embed"
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -292,14 +291,7 @@ func (p *PaioAPI) SaveTransaction(ctx echo.Context) error {
 		"payload", payload,
 	)
 
-	payloadBytes := []byte(payload)
-	if strings.HasPrefix(payload, "0x") {
-		payload = payload[2:] // remove 0x
-		payloadBytes, err = hex.DecodeString(payload)
-		if err != nil {
-			return err
-		}
-	}
+	payload = strings.TrimPrefix(payload, "0x")
 
 	inputCount, err := p.inputRepository.Count(stdCtx, nil)
 
@@ -313,7 +305,7 @@ func (p *PaioAPI) SaveTransaction(ctx echo.Context) error {
 		ID:            txId,
 		Index:         int(inputCount),
 		MsgSender:     msgSender,
-		Payload:       payloadBytes,
+		Payload:       payload,
 		AppContract:   common.HexToAddress(dappAddress),
 		InputBoxIndex: -2,
 		Type:          "Avail",
@@ -387,7 +379,7 @@ func (p *PaioAPI) SendCartesiTransaction(ctx echo.Context) error {
 		slog.Error("Error counting inputs:", "err", err)
 		return err
 	}
-	payload := common.Hex2Bytes(request.TypedData.Message.Data[2:])
+	payload := request.TypedData.Message.Data[2:]
 	_, err = p.inputRepository.Create(stdCtx, model.AdvanceInput{
 		ID:             txId,
 		Index:          int(inputCount),
@@ -410,7 +402,7 @@ func (p *PaioAPI) SendCartesiTransaction(ctx echo.Context) error {
 		"txId", txId,
 		"msgSender", msgSender,
 		"appContract", appContract.Hex(),
-		"data", common.Bytes2Hex(payload),
+		"data", payload,
 		"message", string(msg),
 	)
 	response := TransactionResponse{

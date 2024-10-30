@@ -132,6 +132,13 @@ func (r *InputRepository) rawCreate(ctx context.Context, input model.AdvanceInpu
 		typee = input.Type
 	}
 
+	var hexPayload string
+	if !strings.HasPrefix(input.Payload, "0x") {
+		hexPayload = "0x" + input.Payload
+	} else {
+		hexPayload = input.Payload
+	}
+
 	exec := DBExecutor{&r.Db}
 	_, err := exec.ExecContext(
 		ctx,
@@ -140,7 +147,7 @@ func (r *InputRepository) rawCreate(ctx context.Context, input model.AdvanceInpu
 		input.Index,
 		input.Status,
 		input.MsgSender.Hex(),
-		input.Payload,
+		hexPayload,
 		input.BlockNumber,
 		input.BlockTimestamp.UnixMilli(),
 		input.PrevRandao,

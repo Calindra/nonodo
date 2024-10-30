@@ -79,7 +79,7 @@ func (s *NonodoSuite) TestItProcessesAdvanceInputs() {
 
 	s.T().Log("verifying node state")
 	response, err := readerclient.State(s.ctx, s.graphqlClient)
-	s.NoError(err)
+	s.Require().NoError(err)
 	for i := 0; i < n; i++ {
 		input := response.Inputs.Edges[i].Node
 		s.Equal(i, input.Index)
