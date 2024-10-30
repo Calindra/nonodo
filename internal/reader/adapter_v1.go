@@ -75,6 +75,7 @@ func (a AdapterV1) GetNotices(
 		filters,
 	)
 	if err != nil {
+		slog.Error("Adapter GetNotices", "error", err)
 		return nil, err
 	}
 	return graphql.ConvertToNoticeConnectionV1(
@@ -163,6 +164,7 @@ func (a AdapterV1) GetVouchers(
 		filters,
 	)
 	if err != nil {
+		slog.Error("Adapter GetVouchers", "error", err)
 		return nil, err
 	}
 	return graphql.ConvertToVoucherConnectionV1(
