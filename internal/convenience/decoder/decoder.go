@@ -115,7 +115,7 @@ func (o *OutputDecoder) HandleInput(
 		Index:                  input.Node.Index,
 		Status:                 status,
 		MsgSender:              convertedInput.MsgSender,
-		Payload:                []byte(convertedInput.Payload),
+		Payload:                convertedInput.Payload,
 		BlockNumber:            convertedInput.BlockNumber.Uint64(),
 		BlockTimestamp:         time.Unix(convertedInput.BlockTimestamp, 0),
 		PrevRandao:             convertedInput.PrevRandao,
