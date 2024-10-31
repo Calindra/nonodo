@@ -37,17 +37,20 @@ var (
 	DEFAULT_NAMESPACE        = 10008
 )
 
+var inspectMessageText = `
+Inspect running at http://localhost:HTTP_PORT/inspect/`
+
 var startupMessage = `
 Http Rollups for development started at http://localhost:ROLLUPS_PORT
 GraphQL running at http://localhost:HTTP_PORT/graphql
-Inspect running at http://localhost:HTTP_PORT/inspect/
+INSPECT_MESSAGE
 Press Ctrl+C to stop the node
 `
 
 var startupMessageWithLambada = `
 Http Rollups for development started at http://localhost:ROLLUPS_PORT
 GraphQL running at http://localhost:HTTP_PORT/graphql
-Inspect running at http://localhost:HTTP_PORT/inspect/
+INSPECT_MESSAGE
 Lambada running at http://SALSA_URL
 Press Ctrl+C to stop the node
 `
@@ -481,6 +484,9 @@ func init() {
 
 	cmd.Flags().StringVar(&opts.Sequencer, "sequencer", opts.Sequencer,
 		"Set the sequencer (inputbox[default] or espresso)")
+	cmd.Flags().StringVar(&opts.EspressoUrl, "espresso-url", opts.EspressoUrl,
+		"Set the Espresso base url")
+
 	cmd.Flags().Uint64Var(&opts.Namespace, "namespace", opts.Namespace,
 		"Set the namespace for espresso")
 	cmd.Flags().DurationVar(&opts.TimeoutWorker, "timeout-worker", opts.TimeoutWorker, "Timeout for workers. Example: nonodo --timeout-worker 30s")
@@ -492,6 +498,8 @@ func init() {
 		"If set, nonodo won't start a local devnet")
 	cmd.Flags().BoolVar(&opts.DisableAdvance, "disable-advance", opts.DisableAdvance,
 		"If set, nonodo won't start the inputter to get inputs from the local chain")
+	cmd.Flags().BoolVar(&opts.DisableInspect, "disable-inspect", opts.DisableInspect,
+		"If set, nonodo won't accept inspect inputs")
 
 	// http-*
 	cmd.Flags().StringVar(&opts.HttpAddress, "http-address", opts.HttpAddress,
@@ -584,6 +592,11 @@ func run(cmd *cobra.Command, args []string) {
 		startMessage = startupMessage
 	}
 
+	var inspectMessage string
+	if !opts.DisableInspect {
+		inspectMessage = inspectMessageText
+	}
+
 	// start nonodo
 	ready := make(chan struct{}, 1)
 	go func() {
@@ -591,6 +604,10 @@ func run(cmd *cobra.Command, args []string) {
 		case <-ready:
 			msg := strings.Replace(
 				startMessage,
+				"\nINSPECT_MESSAGE",
+				inspectMessage, -1)
+			msg = strings.Replace(
+				msg,
 				"HTTP_PORT",
 				fmt.Sprint(opts.HttpPort), -1)
 			msg = strings.Replace(
