@@ -380,6 +380,7 @@ func (c *ReportRepository) BatchFindAllByInputIndexAndAppContract(
 	ctx context.Context,
 	filters []*BatchFilterItem,
 ) ([]*commons.PageResult[cModel.Report], []error) {
+	slog.Debug("BatchFindAllByInputIndexAndAppContract", "len", len(filters))
 	query := `SELECT 
 				input_index, output_index, payload, app_contract FROM convenience_reports
 		WHERE
@@ -388,7 +389,7 @@ func (c *ReportRepository) BatchFindAllByInputIndexAndAppContract(
 	where := []string{}
 	for i, filter := range filters {
 		// nolint
-		where = append(where, fmt.Sprintf(" (app_contract = $%d and input_index = $%d) ", i*2, i*2+1))
+		where = append(where, fmt.Sprintf(" (app_contract = $%d and input_index = $%d) ", i*2+1, i*2+2))
 		args = append(args, filter.AppContract.Hex())
 		args = append(args, filter.InputIndex)
 	}
@@ -398,6 +399,7 @@ func (c *ReportRepository) BatchFindAllByInputIndexAndAppContract(
 	results := []*commons.PageResult[cModel.Report]{}
 	stmt, err := c.Db.PreparexContext(ctx, query)
 	if err != nil {
+		slog.Error("BatchFind prepare context", "error", err)
 		return nil, errors
 	}
 	defer stmt.Close()
@@ -405,6 +407,7 @@ func (c *ReportRepository) BatchFindAllByInputIndexAndAppContract(
 	var reports []cModel.Report
 	rows, err := stmt.QueryxContext(ctx, args...)
 	if err != nil {
+		slog.Error("BatchFind query context", "error", err)
 		return nil, errors
 	}
 	defer rows.Close()
@@ -431,7 +434,7 @@ func (c *ReportRepository) BatchFindAllByInputIndexAndAppContract(
 	}
 	reportMap := make(map[string]*commons.PageResult[cModel.Report])
 	for _, report := range reports {
-		key := fmt.Sprintf("%s|%d", report.AppContract.Hex(), report.InputIndex)
+		key := GenerateBatchReportKey(&report.AppContract, report.InputIndex)
 		if reportMap[key] == nil {
 			reportMap[key] = &commons.PageResult[cModel.Report]{}
 		}
@@ -439,12 +442,17 @@ func (c *ReportRepository) BatchFindAllByInputIndexAndAppContract(
 		reportMap[key].Rows = append(reportMap[key].Rows, report)
 	}
 	for _, filter := range filters {
-		key := fmt.Sprintf("%s|%d", filter.AppContract.Hex(), filter.InputIndex)
+		key := GenerateBatchReportKey(filter.AppContract, filter.InputIndex)
 		reportsItem := reportMap[key]
 		if reportsItem == nil {
 			reportsItem = &commons.PageResult[cModel.Report]{}
 		}
 		results = append(results, reportsItem)
 	}
+	slog.Debug("BatchResult", "len", len(results))
 	return results, nil
+}
+
+func GenerateBatchReportKey(appContract *common.Address, inputIndex int) string {
+	return fmt.Sprintf("%s|%d", appContract.Hex(), inputIndex)
 }

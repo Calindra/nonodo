@@ -17,6 +17,11 @@ type Adapter interface {
 		first *int, last *int, after *string, before *string, inputIndex *int,
 	) (*graphql.ReportConnection, error)
 
+	GetAllReportsByInputIndex(
+		ctx context.Context,
+		inputIndex *int,
+	) (*graphql.ReportConnection, error)
+
 	GetInputs(
 		ctx context.Context,
 		first *int, last *int, after *string, before *string, where *graphql.InputFilter,

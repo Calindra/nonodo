@@ -6,8 +6,10 @@ import (
 	"log/slog"
 
 	cModel "github.com/calindra/nonodo/internal/convenience/model"
+	"github.com/calindra/nonodo/internal/convenience/repository"
 	cRepos "github.com/calindra/nonodo/internal/convenience/repository"
 	services "github.com/calindra/nonodo/internal/convenience/services"
+	"github.com/calindra/nonodo/internal/reader/loaders"
 	graphql "github.com/calindra/nonodo/internal/reader/model"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
@@ -246,6 +248,29 @@ func (a AdapterV1) GetReports(
 		int(reports.Offset),
 		int(reports.Total),
 	)
+}
+
+func (a AdapterV1) GetAllReportsByInputIndex(ctx context.Context, inputIndex *int) (*graphql.Connection[*graphql.Report], error) {
+	loaders := loaders.For(ctx)
+	if loaders == nil {
+		return a.GetReports(ctx, nil, nil, nil, nil, inputIndex)
+	} else {
+		appContract, err := getAppContractFromContext(ctx)
+		if err != nil {
+			return nil, err
+		}
+		key := repository.GenerateBatchReportKey(appContract, *inputIndex)
+		slog.Debug("ReportLoader", "key", key)
+		reports, err := loaders.ReportLoader.Load(ctx, key)
+		if err != nil {
+			return nil, err
+		}
+		return a.convertToReportConnection(
+			reports.Rows,
+			int(reports.Offset),
+			int(reports.Total),
+		)
+	}
 }
 
 func (a AdapterV1) convertToReportConnection(

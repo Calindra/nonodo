@@ -14,7 +14,7 @@ type ConvenienceService struct {
 	voucherRepository *repository.VoucherRepository
 	noticeRepository  *repository.NoticeRepository
 	inputRepository   *repository.InputRepository
-	reportRepository  *repository.ReportRepository
+	ReportRepository  *repository.ReportRepository
 }
 
 func NewConvenienceService(
@@ -27,7 +27,7 @@ func NewConvenienceService(
 		voucherRepository: voucherRepository,
 		noticeRepository:  noticeRepository,
 		inputRepository:   inputRepository,
-		reportRepository:  reportRepository,
+		ReportRepository:  reportRepository,
 	}
 }
 
@@ -97,7 +97,7 @@ func (s *ConvenienceService) CreateReport(
 	ctx context.Context,
 	report *model.Report,
 ) (*model.Report, error) {
-	reportInDb, err := s.reportRepository.FindByInputAndOutputIndex(ctx,
+	reportInDb, err := s.ReportRepository.FindByInputAndOutputIndex(ctx,
 		uint64(report.InputIndex),
 		uint64(report.Index),
 	)
@@ -110,9 +110,9 @@ func (s *ConvenienceService) CreateReport(
 			"inputIndex", report.InputIndex,
 			"outputIndex", report.Index,
 		)
-		return s.reportRepository.Update(ctx, *reportInDb)
+		return s.ReportRepository.Update(ctx, *reportInDb)
 	}
-	reportCreated, err := s.reportRepository.CreateReport(ctx, *report)
+	reportCreated, err := s.ReportRepository.CreateReport(ctx, *report)
 	if err != nil {
 		return nil, err
 	}
@@ -195,7 +195,7 @@ func (c *ConvenienceService) FindAllByInputIndex(
 	before *string,
 	inputIndex *int,
 ) (*commons.PageResult[model.Report], error) {
-	return c.reportRepository.FindAllByInputIndex(
+	return c.ReportRepository.FindAllByInputIndex(
 		ctx,
 		first,
 		last,

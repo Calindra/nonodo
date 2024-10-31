@@ -52,7 +52,7 @@ func (s *ConvenienceServiceSuite) SetupTest() {
 	s.service = &ConvenienceService{
 		voucherRepository: s.voucherRepository,
 		noticeRepository:  s.noticeRepository,
-		reportRepository:  s.reportRepository,
+		ReportRepository:  s.reportRepository,
 	}
 }
 

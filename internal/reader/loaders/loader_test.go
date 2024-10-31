@@ -13,7 +13,6 @@ import (
 	cModel "github.com/calindra/nonodo/internal/convenience/model"
 	cRepos "github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/calindra/nonodo/internal/devnet"
-	"github.com/calindra/nonodo/internal/reader/model"
 	"github.com/ethereum/go-ethereum/common"
 	_ "github.com/ncruces/go-sqlite3/driver"
 	_ "github.com/ncruces/go-sqlite3/embed"
@@ -69,23 +68,25 @@ func (s *LoaderSuite) TearDownTest() {
 func TestAdapterSuite(t *testing.T) {
 	suite.Run(t, new(LoaderSuite))
 }
-func (s *LoaderSuite) XTestGetReports() {
+func (s *LoaderSuite) TestGetReports() {
 	ctx := context.Background()
 	s.createTestData(ctx)
-	loaders := NewLoaders(s.reportRepository.Db)
-	rCtx := context.WithValue(ctx, loadersKey, loaders)
+	appContract := common.HexToAddress(devnet.ApplicationAddress)
+	loaders := NewLoaders(s.reportRepository)
+	rCtx := context.WithValue(ctx, LoadersKey, loaders)
 
 	var wg sync.WaitGroup
 	wg.Add(2) // We will be loading 2 reports in parallel
 
 	// Channel to capture the results
-	results := make(chan *model.Report, 2)
+	results := make(chan *commons.PageResult[cModel.Report], 2)
 	errs := make(chan error, 2)
 
 	// First report loader
 	go func() {
 		defer wg.Done()
-		report, err := loaders.ReportLoader.Load(rCtx, "1")
+		key := cRepos.GenerateBatchReportKey(&appContract, 1)
+		report, err := loaders.ReportLoader.Load(rCtx, key)
 		if err != nil {
 			errs <- err
 			return
@@ -96,7 +97,8 @@ func (s *LoaderSuite) XTestGetReports() {
 	// Second report loader
 	go func() {
 		defer wg.Done()
-		report, err := loaders.ReportLoader.Load(rCtx, "2")
+		key := cRepos.GenerateBatchReportKey(&appContract, 2)
+		report, err := loaders.ReportLoader.Load(rCtx, key)
 		if err != nil {
 			errs <- err
 			return
@@ -114,13 +116,13 @@ func (s *LoaderSuite) XTestGetReports() {
 		s.Require().NoError(err)
 	}
 
-	reports := make(map[string]*model.Report)
+	reports := make(map[string]*commons.PageResult[cModel.Report])
 	for r := range results {
-		reports[strconv.FormatInt(int64(r.Index), 10)] = r
+		reports[strconv.FormatInt(int64(r.Rows[0].InputIndex), 10)] = r
 	}
-	s.Equal(1, int(reports["1"].InputIndex))
-	s.Equal(2, int(reports["2"].InputIndex))
-	s.Fail("This failure is intentional ;-)")
+	s.Equal(1, int(reports["1"].Rows[0].InputIndex))
+	s.Equal(2, int(reports["2"].Rows[0].InputIndex))
+	// s.Fail("This failure is intentional ;-)")
 }
 
 func (s *LoaderSuite) createTestData(ctx context.Context) {
