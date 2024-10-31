@@ -370,3 +370,81 @@ func transformToReportQuery(
 	query += strings.Join(where, " and ")
 	return query, args, count, nil
 }
+
+type BatchFilterItem struct {
+	AppContract *common.Address
+	InputIndex  int
+}
+
+func (c *ReportRepository) BatchFindAllByInputIndexAndAppContract(
+	ctx context.Context,
+	filters []*BatchFilterItem,
+) ([]*commons.PageResult[cModel.Report], []error) {
+	query := `SELECT 
+				input_index, output_index, payload, app_contract FROM convenience_reports
+		WHERE
+	`
+	args := []interface{}{}
+	where := []string{}
+	for i, filter := range filters {
+		// nolint
+		where = append(where, fmt.Sprintf(" (app_contract = $%d and input_index = $%d) ", i*2, i*2+1))
+		args = append(args, filter.AppContract.Hex())
+		args = append(args, filter.InputIndex)
+	}
+	query += strings.Join(where, " or ")
+
+	errors := []error{}
+	results := []*commons.PageResult[cModel.Report]{}
+	stmt, err := c.Db.PreparexContext(ctx, query)
+	if err != nil {
+		return nil, errors
+	}
+	defer stmt.Close()
+
+	var reports []cModel.Report
+	rows, err := stmt.QueryxContext(ctx, args...)
+	if err != nil {
+		return nil, errors
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var payload string
+		var inputIndex int
+		var outputIndex int
+		var appContract string
+		if err := rows.Scan(&inputIndex, &outputIndex, &payload, &appContract); err != nil {
+			return nil, errors
+		}
+		report := &cModel.Report{
+			InputIndex:  inputIndex,
+			Index:       outputIndex,
+			Payload:     common.Hex2Bytes(payload),
+			AppContract: common.HexToAddress(appContract),
+		}
+		reports = append(reports, *report)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, errors
+	}
+	reportMap := make(map[string]*commons.PageResult[cModel.Report])
+	for _, report := range reports {
+		key := fmt.Sprintf("%s|%d", report.AppContract.Hex(), report.InputIndex)
+		if reportMap[key] == nil {
+			reportMap[key] = &commons.PageResult[cModel.Report]{}
+		}
+		reportMap[key].Total += 1
+		reportMap[key].Rows = append(reportMap[key].Rows, report)
+	}
+	for _, filter := range filters {
+		key := fmt.Sprintf("%s|%d", filter.AppContract.Hex(), filter.InputIndex)
+		reportsItem := reportMap[key]
+		if reportsItem == nil {
+			reportsItem = &commons.PageResult[cModel.Report]{}
+		}
+		results = append(results, reportsItem)
+	}
+	return results, nil
+}
