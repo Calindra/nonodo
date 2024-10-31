@@ -87,7 +87,7 @@ func (s *AdapterSuite) TestGetReport() {
 	reportSaved, err := s.reportRepository.CreateReport(ctx, cModel.Report{
 		InputIndex: 1,
 		Index:      999,
-		Payload:    common.Hex2Bytes("1122"),
+		Payload:    "1122",
 	})
 	s.NoError(err)
 	report, err := s.adapter.GetReport(ctx, reportSaved.Index)
@@ -371,7 +371,7 @@ func (s *AdapterSuite) createTestData(ctx context.Context) {
 			AppContract: appContract,
 			InputIndex:  i,
 			Index:       i, // now it's a global number for the dapp
-			Payload:     common.Hex2Bytes("1122"),
+			Payload:     "1122",
 		})
 		s.NoError(err)
 	}
