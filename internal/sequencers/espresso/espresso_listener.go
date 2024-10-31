@@ -2,7 +2,6 @@ package espresso
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"log/slog"
@@ -166,14 +165,7 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 					continue
 				}
 
-				payloadBytes := []byte(payload)
-				if strings.HasPrefix(payload, "0x") {
-					payload = payload[2:] // remove 0x
-					payloadBytes, err = hex.DecodeString(payload)
-					if err != nil {
-						return err
-					}
-				}
+				payload = strings.TrimPrefix(payload, "0x")
 
 				chainId := (*big.Int)(typedData.Domain.ChainId).String()
 				slog.Debug("TypedData", "typedData.Domain", typedData.Domain,
@@ -188,7 +180,7 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 					ID:                     common.Bytes2Hex(crypto.Keccak256(signature)),
 					Index:                  int(index),
 					MsgSender:              msgSender,
-					Payload:                payloadBytes,
+					Payload:                payload,
 					BlockNumber:            blockNumber,
 					BlockTimestamp:         e.getL1FinalizedTimestamp(currentBlockHeight),
 					AppContract:            e.InputterWorker.ApplicationAddress,

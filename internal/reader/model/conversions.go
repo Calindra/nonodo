@@ -11,7 +11,6 @@ import (
 	"strconv"
 
 	cModel "github.com/calindra/nonodo/internal/convenience/model"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
 //
@@ -71,7 +70,7 @@ func ConvertInput(input cModel.AdvanceInput) (*Input, error) {
 		MsgSender:           input.MsgSender.String(),
 		Timestamp:           timestamp,
 		BlockNumber:         fmt.Sprint(input.BlockNumber),
-		Payload:             hexutil.Encode(input.Payload),
+		Payload:             input.Payload,
 		EspressoTimestamp:   espressoBlockTimestampStr,
 		EspressoBlockNumber: espressoBlockNumberStr,
 		InputBoxIndex:       inputBoxIndexStr,

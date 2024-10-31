@@ -22,7 +22,7 @@ import (
 type Model interface {
 	AddAdvanceInput(
 		sender common.Address,
-		payload []byte,
+		payload string,
 		blockNumber uint64,
 		timestamp time.Time,
 		index int,
@@ -226,7 +226,7 @@ func (w InputterWorker) addInput(
 	chainId := values[0].(*big.Int).String()
 	msgSender := values[2].(common.Address)
 	prevRandao := fmt.Sprintf("0x%s", common.Bytes2Hex(values[5].(*big.Int).Bytes()))
-	payload := values[7].([]uint8)
+	payload := common.Bytes2Hex(values[7].([]uint8))
 	inputIndex := int(event.Index.Int64())
 
 	slog.Debug("inputter: read event",
@@ -368,7 +368,7 @@ func (w InputterWorker) FindAllInputsByBlockAndTimestampLT(
 			appContract := values[1].(common.Address)
 			msgSender := values[2].(common.Address)
 			prevRandao := fmt.Sprintf("0x%s", common.Bytes2Hex(values[5].(*big.Int).Bytes()))
-			payload := values[7].([]uint8)
+			payload := common.Bytes2Hex(values[7].([]uint8))
 			inputIndex := int(it.Event.Index.Int64())
 
 			input := cModel.AdvanceInput{

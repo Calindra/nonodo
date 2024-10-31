@@ -109,7 +109,7 @@ type AdvanceInput struct {
 	Index                  int              `db:"input_index"`
 	Status                 CompletionStatus `db:"status"`
 	MsgSender              common.Address   `db:"msg_sender"`
-	Payload                []byte           `db:"payload"`
+	Payload                string           `db:"payload"`
 	BlockNumber            uint64           `db:"block_number"`
 	BlockTimestamp         time.Time        `db:"block_timestamp"`
 	PrevRandao             string           `db:"prev_randao"`

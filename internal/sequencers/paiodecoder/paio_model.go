@@ -32,5 +32,5 @@ type PaioMessage struct {
 	App         string
 	Nonce       string
 	MaxGasPrice string
-	Payload     []byte
+	Payload     string
 }

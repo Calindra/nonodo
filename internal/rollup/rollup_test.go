@@ -224,7 +224,7 @@ func (s *RollupSuite) TestEncodeNotice() {
 func (s *RollupSuite) addNewAdvanceInput(inputBoxIndex int) {
 	destination := common.HexToAddress("0xab7528bb862fb57e8a2bcd567a2e929a0be56a5e")
 	payloadHex := "0xdeadbeef"
-	payload := common.Hex2Bytes(payloadHex[2:])
+	payload := payloadHex[2:]
 	err := s.model.AddAdvanceInput(
 		common.HexToAddress("0xab7528bb862fb57e8a2bcd567a2e929a0be56a5e"),
 		payload, uint64(1), time.Now(), inputBoxIndex, "0x", destination, "31337",
