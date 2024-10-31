@@ -238,7 +238,7 @@ func (s *rollupsStateAdvance) addReport(appAddress common.Address, payload []byt
 		AppContract: appAddress,
 		Index:       index,
 		InputIndex:  s.input.Index,
-		Payload:     payload,
+		Payload:     common.Bytes2Hex(payload),
 	}
 	s.reports = append(s.reports, report)
 	slog.Info("nonodo: added report", "index", index, "payload", hexutil.Encode(payload))

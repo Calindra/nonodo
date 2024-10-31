@@ -505,7 +505,7 @@ func (s *ModelSuite) TestItAddsReportWhenAdvancing() {
 	for i := 0; i < s.n; i++ {
 		s.Equal(0, page.Rows[i].InputIndex)
 		s.Equal(i, page.Rows[i].Index)
-		s.Equal([]byte(s.payloads[i]), page.Rows[i].Payload)
+		s.Equal("0x"+common.Bytes2Hex([]byte(s.payloads[i])), page.Rows[i].Payload)
 	}
 }
 
@@ -757,7 +757,7 @@ func (s *ModelSuite) TestItGetsReport() {
 			s.NoError(err)
 			s.Equal(j, report.Index)
 			s.Equal(i, report.InputIndex)
-			s.Equal([]byte(s.payloads[j]), report.Payload)
+			s.Equal("0x"+common.Bytes2Hex([]byte(s.payloads[j])), report.Payload)
 		}
 	}
 }
@@ -1321,7 +1321,7 @@ func (s *ModelSuite) TestItGetsReports() {
 			idx := s.n*i + j
 			s.Equal(j, page.Rows[idx].Index)
 			s.Equal(i, page.Rows[idx].InputIndex)
-			s.Equal([]byte(s.payloads[j]), page.Rows[idx].Payload)
+			s.Equal("0x"+common.Bytes2Hex([]byte(s.payloads[j])), page.Rows[idx].Payload)
 		}
 	}
 }
@@ -1347,7 +1347,7 @@ func (s *ModelSuite) TestItGetsReportsWithFilter() {
 	for i := 0; i < s.n; i++ {
 		s.Equal(i, page.Rows[i].Index)
 		s.Equal(inputIndex, page.Rows[i].InputIndex)
-		s.Equal([]byte(s.payloads[i]), page.Rows[i].Payload)
+		s.Equal("0x"+common.Bytes2Hex([]byte(s.payloads[i])), page.Rows[i].Payload)
 	}
 }
 

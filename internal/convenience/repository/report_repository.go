@@ -53,12 +53,19 @@ func (r *ReportRepository) CreateReport(ctx context.Context, report cModel.Repor
 		app_contract,
 		raw_id) VALUES ($1, $2, $3, $4, $5)`
 
+	var hexPayload string
+	if !strings.HasPrefix(report.Payload, "0x") {
+		hexPayload = "0x" + report.Payload
+	} else {
+		hexPayload = report.Payload
+	}
+
 	exec := DBExecutor{r.Db}
 	_, err := exec.ExecContext(
 		ctx,
 		insertSql,
 		report.Index,
-		common.Bytes2Hex(report.Payload),
+		hexPayload,
 		report.InputIndex,
 		report.AppContract.Hex(),
 		report.RawID,
@@ -84,7 +91,7 @@ func (r *ReportRepository) Update(ctx context.Context, report cModel.Report) (*c
 	_, err := exec.ExecContext(
 		ctx,
 		sql,
-		common.Bytes2Hex(report.Payload),
+		report.Payload,
 		report.InputIndex,
 		report.Index,
 	)
@@ -151,7 +158,7 @@ func (r *ReportRepository) FindByOutputIndexAndAppContract(
 		report := &cModel.Report{
 			InputIndex: inputIndex,
 			Index:      int(outputIndex),
-			Payload:    common.Hex2Bytes(payload),
+			Payload:    payload,
 		}
 		return report, nil
 	}
@@ -188,7 +195,7 @@ func (r *ReportRepository) FindByInputAndOutputIndex(
 		report := &cModel.Report{
 			InputIndex: int(inputIndex),
 			Index:      int(outputIndex),
-			Payload:    common.Hex2Bytes(payload),
+			Payload:    payload,
 		}
 		return report, nil
 	}
@@ -311,7 +318,7 @@ func (c *ReportRepository) FindAll(
 		report := &cModel.Report{
 			InputIndex: inputIndex,
 			Index:      outputIndex,
-			Payload:    common.Hex2Bytes(payload),
+			Payload:    payload,
 		}
 		reports = append(reports, *report)
 	}
