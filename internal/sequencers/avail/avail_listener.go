@@ -259,7 +259,7 @@ func (a AvailListener) TableTennis(ctx context.Context,
 					"appContract", inputs[i].AppContract.Hex(),
 					"expected", a.ApplicationAddress.Hex(),
 					"msgSender", inputs[i].MsgSender.Hex(),
-					"payload", common.Bytes2Hex(inputs[i].Payload),
+					"payload", inputs[i].Payload,
 				)
 				continue
 			}
@@ -273,7 +273,7 @@ func (a AvailListener) TableTennis(ctx context.Context,
 				"index", inputs[i].Index,
 				"appContract", inputs[i].AppContract.Hex(),
 				"msgSender", inputs[i].MsgSender.Hex(),
-				"payload", common.Bytes2Hex(inputs[i].Payload),
+				"payload", inputs[i].Payload,
 			)
 		}
 	}
@@ -342,7 +342,7 @@ func ReadInputsFromAvailBlockZzzHui(block *types.SignedBlock) ([]cModel.AdvanceI
 			Index:                int(0),
 			CartesiTransactionId: common.Bytes2Hex(crypto.Keccak256(signature)),
 			MsgSender:            msgSender,
-			Payload:              paioMessage.Payload,
+			Payload:              common.Bytes2Hex(paioMessage.Payload),
 			AppContract:          common.HexToAddress(paioMessage.App),
 			AvailBlockNumber:     int(block.Block.Header.Number),
 			AvailBlockTimestamp:  time.Unix(int64(timestamp)/ONE_SECOND_IN_MS, 0),

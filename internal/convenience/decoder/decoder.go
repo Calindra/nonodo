@@ -115,7 +115,7 @@ func (o *OutputDecoder) HandleInput(
 		Index:                  input.Node.Index,
 		Status:                 status,
 		MsgSender:              convertedInput.MsgSender,
-		Payload:                []byte(convertedInput.Payload),
+		Payload:                convertedInput.Payload,
 		BlockNumber:            convertedInput.BlockNumber.Uint64(),
 		BlockTimestamp:         time.Unix(convertedInput.BlockTimestamp, 0),
 		PrevRandao:             convertedInput.PrevRandao,
@@ -139,7 +139,7 @@ func (o *OutputDecoder) HandleReport(
 	_, err := o.convenienceService.CreateReport(ctx, &model.Report{
 		Index:      outputIndex,
 		InputIndex: index,
-		Payload:    []byte(payload),
+		Payload:    payload,
 	})
 	return err
 }
@@ -205,7 +205,7 @@ func (o *OutputDecoder) GetConvertedInput(input model.InputEdge) (model.Converte
 	}
 	convertedInput := model.ConvertedInput{
 		MsgSender:      values[2].(common.Address),
-		Payload:        string(values[7].([]uint8)),
+		Payload:        common.Bytes2Hex(values[7].([]uint8)),
 		BlockNumber:    values[3].(*big.Int),
 		BlockTimestamp: values[4].(*big.Int).Int64(),
 		PrevRandao:     values[5].(*big.Int).String(),
@@ -232,7 +232,7 @@ func (o *OutputDecoder) ParseBytesToInput(data []byte) (model.ConvertedInput, er
 	convertedInput := model.ConvertedInput{
 		ChainId:        values[0].(*big.Int),
 		MsgSender:      values[2].(common.Address),
-		Payload:        string(values[7].([]uint8)),
+		Payload:        common.Bytes2Hex(values[7].([]uint8)),
 		BlockNumber:    values[3].(*big.Int),
 		BlockTimestamp: values[4].(*big.Int).Int64(),
 		PrevRandao:     values[5].(*big.Int).String(),

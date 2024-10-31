@@ -137,12 +137,15 @@ func ParsePaioBatchToInputs(jsonStr string, chainId *big.Int) ([]cModel.AdvanceI
 			slog.Error("Error ExtractSigAndData message:", "err", err)
 			return inputs, err
 		}
+
+		strPayload := common.Bytes2Hex(tx.Data)
+
 		txId := fmt.Sprintf("0x%s", common.Bytes2Hex(crypto.Keccak256(signature)))
 		inputs = append(inputs, cModel.AdvanceInput{
 			Index:               int(0),
 			ID:                  txId,
 			MsgSender:           msgSender,
-			Payload:             tx.Data,
+			Payload:             strPayload,
 			AppContract:         common.HexToAddress(tx.App),
 			AvailBlockNumber:    0,
 			AvailBlockTimestamp: time.Unix(0, 0),

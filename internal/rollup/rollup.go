@@ -137,12 +137,14 @@ func (r *RollupAPI) AddVoucher(c echo.Context) error {
 	// parse body
 	var request AddVoucherJSONRequestBody
 	if err := c.Bind(&request); err != nil {
+		slog.Error("AddVoucher error", "error", err)
 		return err
 	}
 
 	// validate fields
 	destination, err := hexutil.Decode(request.Destination)
 	if err != nil {
+		slog.Error("invalid hex payload", "error", err)
 		return c.String(http.StatusBadRequest, "invalid hex payload")
 	}
 	if len(destination) != common.AddressLength {
@@ -150,6 +152,7 @@ func (r *RollupAPI) AddVoucher(c echo.Context) error {
 	}
 	payload, err := hexutil.Decode(request.Payload)
 	if err != nil {
+		slog.Error("invalid hex payload", "error", err)
 		return c.String(http.StatusBadRequest, "invalid hex payload")
 	}
 
@@ -166,11 +169,13 @@ func (r *RollupAPI) AddVoucher(c echo.Context) error {
 
 	value, ok := new(big.Int).SetString(request.Value[2:], 16) // nolint
 	if !ok {
+		slog.Error("wrong number format", "value", request.Value[2:])
 		return fmt.Errorf("wrong number format")
 	}
 	destinationContract := common.HexToAddress(request.Destination)
 	encodedPayload, err := abiParsed.Pack("Voucher", destinationContract, value, payload)
 	if err != nil {
+		slog.Error("encoded payload error", "err", err)
 		return err
 	}
 
@@ -195,7 +200,7 @@ func (r *RollupAPI) AddNotice(c echo.Context) error {
 	// parse body
 	var request AddNoticeJSONRequestBody
 	if err := c.Bind(&request); err != nil {
-		slog.Error("invalid notice body")
+		slog.Error("invalid notice body", "error", err)
 		return err
 	}
 
@@ -246,12 +251,14 @@ func (r *RollupAPI) AddReport(c echo.Context) error {
 	// validate fields
 	payload, err := hexutil.Decode(request.Payload)
 	if err != nil {
+		slog.Error("payload decoded error", "err", err)
 		return c.String(http.StatusBadRequest, "invalid hex payload")
 	}
 
 	// talk to model
 	err = r.model.AddReport(r.ApplicationAddress, payload)
 	if err != nil {
+		slog.Error("add report error", "err", err)
 		return c.String(http.StatusForbidden, err.Error())
 	}
 	return c.NoContent(http.StatusOK)
@@ -266,18 +273,21 @@ func (r *RollupAPI) RegisterException(c echo.Context) error {
 	// parse body
 	var request RegisterExceptionJSONRequestBody
 	if err := c.Bind(&request); err != nil {
+		slog.Error("parse body error", "err", err)
 		return err
 	}
 
 	// validate fields
 	payload, err := hexutil.Decode(request.Payload)
 	if err != nil {
+		slog.Error("payload decoded error", "err", err)
 		return c.String(http.StatusBadRequest, "invalid hex payload")
 	}
 
 	// talk to model
 	err = r.model.RegisterException(payload)
 	if err != nil {
+		slog.Error("register exception error", "err", err)
 		return c.String(http.StatusForbidden, err.Error())
 	}
 	return c.NoContent(http.StatusOK)
@@ -325,10 +335,11 @@ func convertInput(input cModel.Input) (RollupRequest, error) {
 				PrevRandao:     input.PrevRandao,
 				ChainId:        chainId.Uint64(),
 			},
-			Payload: hexutil.Encode(input.Payload),
+			Payload: input.Payload,
 		}
 		err = resp.Data.FromAdvance(advance)
 		if err != nil {
+			slog.Error("failed to convert advance", "err", err)
 			return RollupRequest{}, errors.New("failed to convert advance")
 		}
 		resp.RequestType = AdvanceState
@@ -338,6 +349,7 @@ func convertInput(input cModel.Input) (RollupRequest, error) {
 		}
 		err := resp.Data.FromInspect(inspect)
 		if err != nil {
+			slog.Error("failed to convert inspect", "err", err)
 			return RollupRequest{}, errors.New("failed to convert inspect")
 		}
 		resp.RequestType = InspectState
