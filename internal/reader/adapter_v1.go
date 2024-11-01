@@ -18,6 +18,7 @@ import (
 type AdapterV1 struct {
 	reportRepository   *cRepos.ReportRepository
 	inputRepository    *cRepos.InputRepository
+	voucherRepository  *cRepos.VoucherRepository
 	convenienceService *services.ConvenienceService
 }
 
@@ -40,9 +41,18 @@ func NewAdapterV1(
 	if err != nil {
 		panic(err)
 	}
+	voucherRepository := &cRepos.VoucherRepository{
+		Db: *db,
+	}
+	err = voucherRepository.CreateTables()
+	if err != nil {
+		panic(err)
+	}
+
 	return AdapterV1{
 		reportRepository:   reportRepository,
 		inputRepository:    inputRepository,
+		voucherRepository:  voucherRepository,
 		convenienceService: convenienceService,
 	}
 }
@@ -172,6 +182,29 @@ func (a AdapterV1) GetVouchers(
 		int(vouchers.Offset),
 		int(vouchers.Total),
 	)
+}
+
+func (a AdapterV1) GetAllVouchersByInputIndex(ctx context.Context, inputIndex *int, filter []*graphql.ConvenientFilter) (*graphql.Connection[*graphql.Voucher], error) {
+	loaders := loaders.For(ctx)
+	if loaders == nil {
+		return a.GetVouchers(ctx, nil, nil, nil, nil, inputIndex, filter)
+	} else {
+		appContract, err := getAppContractFromContext(ctx)
+		if err != nil {
+			return nil, err
+		}
+		key := repository.GenerateBatchVoucherKey(appContract, *inputIndex)
+		slog.Debug("VoucherLoader", "key", key)
+		vouchers, err := loaders.VoucherLoader.Load(ctx, key)
+		if err != nil {
+			return nil, err
+		}
+		return graphql.ConvertToVoucherConnectionV1(
+			vouchers.Rows,
+			int(vouchers.Offset),
+			int(vouchers.Total),
+		)
+	}
 }
 
 func (a AdapterV1) GetNotice(ctx context.Context, outputIndex int) (*graphql.Notice, error) {

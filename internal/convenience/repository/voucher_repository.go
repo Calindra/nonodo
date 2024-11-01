@@ -404,3 +404,7 @@ func transformToQuery(
 	query += strings.Join(where, " and ")
 	return query, args, count, nil
 }
+
+func GenerateBatchVoucherKey(appContract *common.Address, inputIndex int) string {
+	return fmt.Sprintf("%s|%d", appContract.Hex(), inputIndex)
+}

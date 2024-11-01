@@ -49,7 +49,8 @@ func (u *reportReader) getReports(ctx context.Context, reportsKeys []string) ([]
 
 // Loaders wrap your data loaders to inject via middleware
 type Loaders struct {
-	ReportLoader *dataloadgen.Loader[string, *commons.PageResult[cModel.Report]]
+	ReportLoader  *dataloadgen.Loader[string, *commons.PageResult[cModel.Report]]
+	VoucherLoader *dataloadgen.Loader[string, *commons.PageResult[cModel.ConvenienceVoucher]]
 }
 
 // NewLoaders instantiates data loaders for the middleware
