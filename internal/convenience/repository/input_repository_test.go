@@ -99,10 +99,10 @@ func (s *InputRepositorySuite) TestCreateAndFindInputByID() {
 
 	input2, err := s.inputRepository.FindByIDAndAppContract(ctx, "123", nil)
 	s.NoError(err)
-	s.Equal("123", input.ID)
+	s.Equal("123", input2.ID)
 	s.Equal(input.Status, input2.Status)
-	s.Equal("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", input.MsgSender.Hex())
-	s.Equal("1122", input.Payload)
+	s.Equal("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", input2.MsgSender.Hex())
+	s.Equal("0x1122", input2.Payload)
 	s.Equal(1, int(input2.BlockNumber))
 	s.Equal(input.BlockTimestamp.UnixMilli(), input2.BlockTimestamp.UnixMilli())
 }

@@ -202,6 +202,7 @@ func trimNonPrintablePrefix(s string) string {
 func ExtractSigAndData(raw string) (common.Address, apitypes.TypedData, []byte, error) {
 	var sigAndData SigAndData
 	if err := json.Unmarshal([]byte(trimNonPrintablePrefix(raw)), &sigAndData); err != nil {
+		slog.Error("unmarshal error", "error", err)
 		return common.HexToAddress("0x"), apitypes.TypedData{}, []byte{}, fmt.Errorf("unmarshal sigAndData: %w", err)
 	}
 
