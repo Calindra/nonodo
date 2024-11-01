@@ -405,6 +405,78 @@ func transformToQuery(
 	return query, args, count, nil
 }
 
+func (c *VoucherRepository) BatchFindAllByInputIndexAndAppContract(
+	ctx context.Context,
+	filters []*BatchFilterItem,
+) ([]*commons.PageResult[model.ConvenienceVoucher], []error) {
+	slog.Debug("BatchFindAllByInputIndexAndAppContract", "len", len(filters))
+	query := `SELECT * FROM vouchers WHERE `
+
+	args := []interface{}{}
+	where := []string{}
+	for i, filter := range filters {
+		// nolint
+		where = append(where, fmt.Sprintf(" (app_contract = $%d and input_index = $%d) ", i*2+1, i*2+2))
+		args = append(args, filter.AppContract.Hex())
+		args = append(args, filter.InputIndex)
+	}
+	query += strings.Join(where, " or ")
+
+	errors := []error{}
+	results := []*commons.PageResult[model.ConvenienceVoucher]{}
+	stmt, err := c.Db.PreparexContext(ctx, query)
+	if err != nil {
+		slog.Error("BatchFind prepare context", "error", err)
+		return nil, errors
+	}
+	defer stmt.Close()
+
+	rows, err := stmt.QueryxContext(ctx, args...)
+	if err != nil {
+		slog.Error("BatchFind query context", "error", err)
+		return nil, errors
+	}
+	defer rows.Close()
+
+	var voucherRows []voucherRow
+	err = stmt.SelectContext(ctx, &voucherRows, args...)
+	if err != nil {
+		return nil, errors
+	}
+
+	vouchers := make([]model.ConvenienceVoucher, len(voucherRows))
+
+	for i, row := range voucherRows {
+		vouchers[i] = convertToConvenienceVoucher(row)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, errors
+	}
+
+	voucherMap := make(map[string]*commons.PageResult[model.ConvenienceVoucher])
+
+	for _, voucher := range vouchers {
+		key := GenerateBatchVoucherKey(&voucher.AppContract, int(voucher.InputIndex))
+		if voucherMap[key] == nil {
+			voucherMap[key] = &commons.PageResult[model.ConvenienceVoucher]{}
+		}
+		voucherMap[key].Total += 1
+		voucherMap[key].Rows = append(voucherMap[key].Rows, voucher)
+	}
+
+	for _, filter := range filters {
+		key := GenerateBatchVoucherKey(filter.AppContract, filter.InputIndex)
+		reportsItem := voucherMap[key]
+		if reportsItem == nil {
+			reportsItem = &commons.PageResult[model.ConvenienceVoucher]{}
+		}
+		results = append(results, reportsItem)
+	}
+	slog.Debug("BatchVouchersResult", "len", len(results))
+	return results, nil
+}
+
 func GenerateBatchVoucherKey(appContract *common.Address, inputIndex int) string {
 	return fmt.Sprintf("%s|%d", appContract.Hex(), inputIndex)
 }

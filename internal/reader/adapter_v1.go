@@ -184,10 +184,10 @@ func (a AdapterV1) GetVouchers(
 	)
 }
 
-func (a AdapterV1) GetAllVouchersByInputIndex(ctx context.Context, inputIndex *int, filter []*graphql.ConvenientFilter) (*graphql.Connection[*graphql.Voucher], error) {
+func (a AdapterV1) GetAllVouchersByInputIndex(ctx context.Context, inputIndex *int) (*graphql.Connection[*graphql.Voucher], error) {
 	loaders := loaders.For(ctx)
 	if loaders == nil {
-		return a.GetVouchers(ctx, nil, nil, nil, nil, inputIndex, filter)
+		return a.GetVouchers(ctx, nil, nil, nil, nil, inputIndex, nil)
 	} else {
 		appContract, err := getAppContractFromContext(ctx)
 		if err != nil {

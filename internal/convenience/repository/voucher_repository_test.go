@@ -220,29 +220,34 @@ func (s *VoucherRepositorySuite) TestWrongAddress() {
 	s.Equal("wrong address value", err.Error())
 }
 
-func (s *ReportRepositorySuite) TestBatchFindAll() {
+func (s *VoucherRepositorySuite) TestBatchFindAllVouchers() {
 	ctx := context.Background()
 	appContract := common.HexToAddress(devnet.ApplicationAddress)
 	for i := 0; i < 3; i++ {
 		for j := 0; j < 4; j++ {
-			_, err := s.reportRepository.CreateReport(
+			_, err := s.voucherRepository.CreateVoucher(
 				ctx,
-				cModel.Report{
-					InputIndex:  i,
-					Index:       j,
-					Payload:     common.Hex2Bytes("1122"),
-					AppContract: appContract,
+				&cModel.ConvenienceVoucher{
+					Destination:          common.HexToAddress("0x26A61aF89053c847B4bd5084E2caFe7211874a29"),
+					Payload:              "0x1122",
+					InputIndex:           uint64(i),
+					OutputIndex:          uint64(j),
+					Executed:             false,
+					Value:                "0x1234",
+					AppContract:          appContract,
+					OutputHashesSiblings: `["0x01","0x02"]`,
 				})
 			s.Require().NoError(err)
 		}
 	}
+
 	filters := []*BatchFilterItem{
 		{
 			AppContract: &appContract,
 			InputIndex:  0,
 		},
 	}
-	results, err := s.reportRepository.BatchFindAllByInputIndexAndAppContract(
+	results, err := s.voucherRepository.BatchFindAllByInputIndexAndAppContract(
 		ctx, filters,
 	)
 	s.Require().Equal(0, len(err))
