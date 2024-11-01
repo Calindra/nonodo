@@ -143,19 +143,21 @@ func (s *LoaderSuite) createTestData(ctx context.Context) {
 			AppContract: appContract.Hex(),
 			OutputIndex: uint64(i),
 			InputIndex:  uint64(i),
+			Payload:     "0x123456",
 		})
 		s.Require().NoError(err)
 		_, err = s.voucherRepository.CreateVoucher(ctx, &cModel.ConvenienceVoucher{
 			AppContract: appContract,
 			OutputIndex: uint64(i),
 			InputIndex:  uint64(i),
+			Payload:     "0x1234",
 		})
 		s.Require().NoError(err)
 		_, err = s.reportRepository.CreateReport(ctx, cModel.Report{
 			AppContract: appContract,
 			InputIndex:  i,
 			Index:       i, // now it's a global number for the dapp
-			Payload:     common.Hex2Bytes("1122"),
+			Payload:     "0x1122",
 		})
 		s.NoError(err)
 	}

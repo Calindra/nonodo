@@ -98,7 +98,7 @@ type Input interface{}
 type Report struct {
 	Index       int
 	InputIndex  int
-	Payload     []byte
+	Payload     string
 	AppContract common.Address `json:"app_contract"`
 	RawID       uint64
 }

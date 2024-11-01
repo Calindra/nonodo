@@ -73,7 +73,7 @@ func (s *AvailListenerSuite) TestReadInputsFromBlockZzzHui() {
 	s.NoError(err)
 	s.Equal(1, len(inputs))
 	s.Equal(common.HexToAddress("0xab7528bb862fb57e8a2bcd567a2e929a0be56a5e"), inputs[0].AppContract)
-	s.Equal("GM", inputs[0].Payload)
+	s.Equal("GM", string(common.Hex2Bytes(inputs[0].Payload)))
 	s.Equal(common.HexToAddress("0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"), inputs[0].MsgSender)
 }
 

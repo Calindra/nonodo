@@ -290,7 +290,7 @@ func (a AdapterV1) convertToReport(
 	return &graphql.Report{
 		Index:      report.Index,
 		InputIndex: report.InputIndex,
-		Payload:    fmt.Sprintf("0x%s", common.Bytes2Hex(report.Payload)),
+		Payload:    report.Payload,
 	}
 }
 

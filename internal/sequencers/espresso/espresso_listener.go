@@ -123,7 +123,8 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 				//		 })
 				msgSender, typedData, signature, err := commons.ExtractSigAndData(string(transaction))
 				if err != nil {
-					return err
+					slog.Warn("Ignoring transaction", "blockHeight", currentBlockHeight, "transactionIndex", i, "error", err)
+					continue
 				}
 				// type EspressoMessage struct {
 				// 	nonce   uint32 `json:"nonce"`
@@ -157,11 +158,11 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 				// update nonce maps
 				// no need to consider node exits abruptly and restarts from where it left
 				// app has to start `nonce` from 1 and increment by 1 for each payload
-				if nonceMap[msgSender] == nonce-1 {
-					nonceMap[msgSender] = nonce
+				if nonceMap[msgSender] == nonce {
+					nonceMap[msgSender] = nonce + 1
 				} else {
 					// nonce repeated
-					slog.Debug("duplicated or incorrect nonce", "nonce", nonce)
+					slog.Debug("duplicated or incorrect nonce", "nonce", nonce, "expected", nonceMap[msgSender])
 					continue
 				}
 

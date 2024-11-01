@@ -256,7 +256,7 @@ func (s *ConvenienceServiceSuite) XTestCreateReportIdempotency() {
 	_, err = s.service.CreateReport(ctx, &model.Report{
 		InputIndex: 1,
 		Index:      2,
-		Payload:    common.Hex2Bytes("1122"),
+		Payload:    "1122",
 	})
 	s.NoError(err)
 	count, err = s.reportRepository.Count(ctx, nil)

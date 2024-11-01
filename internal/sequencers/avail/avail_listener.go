@@ -342,7 +342,7 @@ func ReadInputsFromAvailBlockZzzHui(block *types.SignedBlock) ([]cModel.AdvanceI
 			Index:                int(0),
 			CartesiTransactionId: common.Bytes2Hex(crypto.Keccak256(signature)),
 			MsgSender:            msgSender,
-			Payload:              paioMessage.Payload,
+			Payload:              common.Bytes2Hex(paioMessage.Payload),
 			AppContract:          common.HexToAddress(paioMessage.App),
 			AvailBlockNumber:     int(block.Block.Header.Number),
 			AvailBlockTimestamp:  time.Unix(int64(timestamp)/ONE_SECOND_IN_MS, 0),

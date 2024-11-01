@@ -162,7 +162,7 @@ func ParsePaioFrom712Message(typedData apitypes.TypedData) (PaioMessage, error) 
 		App:         typedData.Message["app"].(string),
 		Nonce:       typedData.Message["nonce"].(string),
 		MaxGasPrice: typedData.Message["max_gas_price"].(string),
-		Payload:     typedData.Message["data"].(string),
+		Payload:     []byte(typedData.Message["data"].(string)),
 	}
 	return message, nil
 }
