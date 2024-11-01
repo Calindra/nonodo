@@ -61,8 +61,9 @@ func (s *AdapterSuite) SetupTest() {
 	err = s.noticeRepository.CreateTables()
 	s.Require().NoError(err)
 	s.adapter = &AdapterV1{
-		reportRepository: s.reportRepository,
-		inputRepository:  s.inputRepository,
+		reportRepository:  s.reportRepository,
+		inputRepository:   s.inputRepository,
+		voucherRepository: s.voucherRepository,
 		convenienceService: services.NewConvenienceService(
 			s.voucherRepository, s.noticeRepository, nil, nil,
 		),

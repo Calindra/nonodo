@@ -14,6 +14,9 @@ import (
 
 // Vouchers is the resolver for the vouchers field.
 func (r *inputResolver) Vouchers(ctx context.Context, obj *model.Input, first *int, last *int, after *string, before *string) (*model.Connection[*model.Voucher], error) {
+	if first == nil && last == nil && after == nil && before == nil {
+		return r.adapter.GetAllVouchersByInputIndex(ctx, &obj.Index)
+	}
 	return r.adapter.GetVouchers(ctx, first, last, after, before, &obj.Index, nil)
 }
 

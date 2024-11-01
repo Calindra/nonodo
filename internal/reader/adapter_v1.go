@@ -6,7 +6,6 @@ import (
 	"log/slog"
 
 	cModel "github.com/calindra/nonodo/internal/convenience/model"
-	"github.com/calindra/nonodo/internal/convenience/repository"
 	cRepos "github.com/calindra/nonodo/internal/convenience/repository"
 	services "github.com/calindra/nonodo/internal/convenience/services"
 	"github.com/calindra/nonodo/internal/reader/loaders"
@@ -18,6 +17,7 @@ import (
 type AdapterV1 struct {
 	reportRepository   *cRepos.ReportRepository
 	inputRepository    *cRepos.InputRepository
+	voucherRepository  *cRepos.VoucherRepository
 	convenienceService *services.ConvenienceService
 }
 
@@ -40,9 +40,18 @@ func NewAdapterV1(
 	if err != nil {
 		panic(err)
 	}
+	voucherRepository := &cRepos.VoucherRepository{
+		Db: *db,
+	}
+	err = voucherRepository.CreateTables()
+	if err != nil {
+		panic(err)
+	}
+
 	return AdapterV1{
 		reportRepository:   reportRepository,
 		inputRepository:    inputRepository,
+		voucherRepository:  voucherRepository,
 		convenienceService: convenienceService,
 	}
 }
@@ -174,6 +183,28 @@ func (a AdapterV1) GetVouchers(
 	)
 }
 
+func (a AdapterV1) GetAllVouchersByInputIndex(ctx context.Context, inputIndex *int) (*graphql.Connection[*graphql.Voucher], error) {
+	loaders := loaders.For(ctx)
+	if loaders == nil {
+		return a.GetVouchers(ctx, nil, nil, nil, nil, inputIndex, nil)
+	} else {
+		appContract, err := getAppContractFromContext(ctx)
+		if err != nil {
+			return nil, err
+		}
+		key := cRepos.GenerateBatchVoucherKey(appContract, *inputIndex)
+		vouchers, err := loaders.VoucherLoader.Load(ctx, key)
+		if err != nil {
+			return nil, err
+		}
+		return graphql.ConvertToVoucherConnectionV1(
+			vouchers.Rows,
+			int(vouchers.Offset),
+			int(vouchers.Total),
+		)
+	}
+}
+
 func (a AdapterV1) GetNotice(ctx context.Context, outputIndex int) (*graphql.Notice, error) {
 	appContract, err := getAppContractFromContext(ctx)
 	if err != nil {
@@ -259,7 +290,7 @@ func (a AdapterV1) GetAllReportsByInputIndex(ctx context.Context, inputIndex *in
 		if err != nil {
 			return nil, err
 		}
-		key := repository.GenerateBatchReportKey(appContract, *inputIndex)
+		key := cRepos.GenerateBatchReportKey(appContract, *inputIndex)
 		slog.Debug("ReportLoader", "key", key)
 		reports, err := loaders.ReportLoader.Load(ctx, key)
 		if err != nil {

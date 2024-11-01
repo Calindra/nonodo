@@ -55,4 +55,9 @@ type Adapter interface {
 		first *int, last *int, after *string, before *string, inputIndex *int,
 		filter []*graphql.ConvenientFilter,
 	) (*graphql.VoucherConnection, error)
+
+	GetAllVouchersByInputIndex(
+		ctx context.Context,
+		inputIndex *int,
+	) (*graphql.VoucherConnection, error)
 }

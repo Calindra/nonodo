@@ -68,11 +68,12 @@ func (s *LoaderSuite) TearDownTest() {
 func TestAdapterSuite(t *testing.T) {
 	suite.Run(t, new(LoaderSuite))
 }
+
 func (s *LoaderSuite) TestGetReports() {
 	ctx := context.Background()
 	s.createTestData(ctx)
 	appContract := common.HexToAddress(devnet.ApplicationAddress)
-	loaders := NewLoaders(s.reportRepository)
+	loaders := NewLoaders(s.reportRepository, s.voucherRepository)
 	rCtx := context.WithValue(ctx, LoadersKey, loaders)
 
 	var wg sync.WaitGroup
@@ -122,6 +123,63 @@ func (s *LoaderSuite) TestGetReports() {
 	}
 	s.Equal(1, int(reports["1"].Rows[0].InputIndex))
 	s.Equal(2, int(reports["2"].Rows[0].InputIndex))
+	// s.Fail("This failure is intentional ;-)")
+}
+
+func (s *LoaderSuite) TestGetVouchers() {
+	ctx := context.Background()
+	s.createTestData(ctx)
+	appContract := common.HexToAddress(devnet.ApplicationAddress)
+	loaders := NewLoaders(s.reportRepository, s.voucherRepository)
+	vCtx := context.WithValue(ctx, LoadersKey, loaders)
+
+	var wg sync.WaitGroup
+	wg.Add(2) // We will be loading 2 vouchers in parallel
+
+	// Channel to capture the results
+	results := make(chan *commons.PageResult[cModel.ConvenienceVoucher], 2)
+	errs := make(chan error, 2)
+
+	// First voucher loader
+	go func() {
+		defer wg.Done()
+		key := cRepos.GenerateBatchVoucherKey(&appContract, 1)
+		voucher, err := loaders.VoucherLoader.Load(vCtx, key)
+		if err != nil {
+			errs <- err
+			return
+		}
+		results <- voucher
+	}()
+
+	// Second voucher loader
+	go func() {
+		defer wg.Done()
+		key := cRepos.GenerateBatchVoucherKey(&appContract, 2)
+		voucher, err := loaders.VoucherLoader.Load(vCtx, key)
+		if err != nil {
+			errs <- err
+			return
+		}
+		results <- voucher
+	}()
+
+	// Wait for all goroutines to complete
+	wg.Wait()
+	close(results)
+	close(errs)
+
+	// Collect and assert results
+	for err := range errs {
+		s.Require().NoError(err)
+	}
+
+	vouchers := make(map[string]*commons.PageResult[cModel.ConvenienceVoucher])
+	for v := range results {
+		vouchers[strconv.FormatInt(int64(v.Rows[0].InputIndex), 10)] = v
+	}
+	s.Equal(1, int(vouchers["1"].Rows[0].InputIndex))
+	s.Equal(2, int(vouchers["2"].Rows[0].InputIndex))
 	// s.Fail("This failure is intentional ;-)")
 }
 

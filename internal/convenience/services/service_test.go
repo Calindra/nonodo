@@ -50,8 +50,8 @@ func (s *ConvenienceServiceSuite) SetupTest() {
 	s.NoError(err)
 
 	s.service = &ConvenienceService{
-		voucherRepository: s.voucherRepository,
-		noticeRepository:  s.noticeRepository,
+		VoucherRepository: s.voucherRepository,
+		NoticeRepository:  s.noticeRepository,
 		ReportRepository:  s.reportRepository,
 	}
 }

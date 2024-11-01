@@ -2,7 +2,6 @@ package loaders
 
 import (
 	"context"
-	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -22,7 +21,8 @@ const (
 
 // reportReader reads Users from a database
 type reportReader struct {
-	reportRepository *repository.ReportRepository
+	reportRepository  *repository.ReportRepository
+	voucherRepository *repository.VoucherRepository
 }
 
 // getReports implements a batch function that can retrieve many users by ID,
@@ -47,31 +47,47 @@ func (u *reportReader) getReports(ctx context.Context, reportsKeys []string) ([]
 	return u.reportRepository.BatchFindAllByInputIndexAndAppContract(ctx, filters)
 }
 
+func (u *reportReader) getVouchers(ctx context.Context, voucherKeys []string) ([]*commons.PageResult[cModel.ConvenienceVoucher], []error) {
+	errors := []error{}
+	filters := []*repository.BatchFilterItem{}
+	for _, reportKey := range voucherKeys {
+		aux := strings.Split(reportKey, "|")
+		appContract := common.HexToAddress(aux[0])
+		inputIndex, err := strconv.Atoi(aux[1])
+		if err != nil {
+			return nil, errors
+		}
+		filter := repository.BatchFilterItem{
+			AppContract: &appContract,
+			InputIndex:  inputIndex,
+		}
+		filters = append(filters, &filter)
+	}
+
+	return u.voucherRepository.BatchFindAllByInputIndexAndAppContract(ctx, filters)
+}
+
 // Loaders wrap your data loaders to inject via middleware
 type Loaders struct {
-	ReportLoader *dataloadgen.Loader[string, *commons.PageResult[cModel.Report]]
+	ReportLoader  *dataloadgen.Loader[string, *commons.PageResult[cModel.Report]]
+	VoucherLoader *dataloadgen.Loader[string, *commons.PageResult[cModel.ConvenienceVoucher]]
+	NoticeLoader  *dataloadgen.Loader[string, *commons.PageResult[cModel.ConvenienceNotice]]
 }
 
 // NewLoaders instantiates data loaders for the middleware
-func NewLoaders(reportRepository *repository.ReportRepository) *Loaders {
+func NewLoaders(reportRepository *repository.ReportRepository, voucherRepository *repository.VoucherRepository) *Loaders {
 	// define the data loader
-	ur := &reportReader{reportRepository: reportRepository}
+	ur := &reportReader{reportRepository: reportRepository, voucherRepository: voucherRepository}
 	return &Loaders{
 		ReportLoader: dataloadgen.NewLoader(
 			ur.getReports,
 			dataloadgen.WithWait(time.Millisecond),
 		),
+		VoucherLoader: dataloadgen.NewLoader(
+			ur.getVouchers,
+			dataloadgen.WithWait(time.Millisecond),
+		),
 	}
-}
-
-// Middleware injects data loaders into the context
-func Middleware(reportRepository *repository.ReportRepository, next http.Handler) http.Handler {
-	// return a middleware that injects the loader to the request context
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		loader := NewLoaders(reportRepository)
-		r = r.WithContext(context.WithValue(r.Context(), LoadersKey, loader))
-		next.ServeHTTP(w, r)
-	})
 }
 
 // For returns the dataloader for a given context
