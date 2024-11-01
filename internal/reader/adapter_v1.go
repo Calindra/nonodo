@@ -6,7 +6,6 @@ import (
 	"log/slog"
 
 	cModel "github.com/calindra/nonodo/internal/convenience/model"
-	"github.com/calindra/nonodo/internal/convenience/repository"
 	cRepos "github.com/calindra/nonodo/internal/convenience/repository"
 	services "github.com/calindra/nonodo/internal/convenience/services"
 	"github.com/calindra/nonodo/internal/reader/loaders"
@@ -193,8 +192,7 @@ func (a AdapterV1) GetAllVouchersByInputIndex(ctx context.Context, inputIndex *i
 		if err != nil {
 			return nil, err
 		}
-		key := repository.GenerateBatchVoucherKey(appContract, *inputIndex)
-		slog.Debug("VoucherLoader", "key", key)
+		key := cRepos.GenerateBatchVoucherKey(appContract, *inputIndex)
 		vouchers, err := loaders.VoucherLoader.Load(ctx, key)
 		if err != nil {
 			return nil, err
@@ -292,7 +290,7 @@ func (a AdapterV1) GetAllReportsByInputIndex(ctx context.Context, inputIndex *in
 		if err != nil {
 			return nil, err
 		}
-		key := repository.GenerateBatchReportKey(appContract, *inputIndex)
+		key := cRepos.GenerateBatchReportKey(appContract, *inputIndex)
 		slog.Debug("ReportLoader", "key", key)
 		reports, err := loaders.ReportLoader.Load(ctx, key)
 		if err != nil {

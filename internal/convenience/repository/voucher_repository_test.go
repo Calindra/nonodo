@@ -8,7 +8,6 @@ import (
 
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/convenience/model"
-	cModel "github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/ethereum/go-ethereum/common"
 	_ "github.com/ncruces/go-sqlite3/driver"
@@ -227,7 +226,7 @@ func (s *VoucherRepositorySuite) TestBatchFindAllVouchers() {
 		for j := 0; j < 4; j++ {
 			_, err := s.voucherRepository.CreateVoucher(
 				ctx,
-				&cModel.ConvenienceVoucher{
+				&model.ConvenienceVoucher{
 					Destination:          common.HexToAddress("0x26A61aF89053c847B4bd5084E2caFe7211874a29"),
 					Payload:              "0x1122",
 					InputIndex:           uint64(i),
