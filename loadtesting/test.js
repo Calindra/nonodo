@@ -3,9 +3,9 @@ import http from 'k6/http'
 
 export let options = {
   stages: [
-    { duration: '1m', target: 100 },
-    { duration: '3m', target: 500 },
-    { duration: '30s', target: 0 },
+    { duration: '1s', target: 1 },
+    { duration: '3s', target: 50 },
+    { duration: '1s', target: 0 },
   ],
   thresholds: {
     http_req_failed: [{ threshold: 'rate<0.05', abortOnFail: true }],
@@ -276,14 +276,14 @@ function testGetManyInputs() {
 }
 
 export default function () {
-//   testVoucherNotFound()
-//   testVoucherFound()
-//   testNoticeFound()
-//   testInputFound()
-//   testReportFound()
-//   testVouchers()
-//   testNotices()
-//   testReports()
-//   testInputs()
+  testVoucherNotFound()
+  testVoucherFound()
+  testNoticeFound()
+  testInputFound()
+  testReportFound()
+  testVouchers()
+  testNotices()
+  testReports()
+  testInputs()
   testGetManyInputs()
 }
