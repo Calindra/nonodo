@@ -522,6 +522,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 				paioLocation,
 				opts.ApplicationAddress,
 			))
+			sequencer = model.NewInputBoxSequencer(modelInstance)
 		}
 	} else {
 		sequencer = model.NewInputBoxSequencer(modelInstance)
