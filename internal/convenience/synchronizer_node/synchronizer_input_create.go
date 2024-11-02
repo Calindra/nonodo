@@ -94,7 +94,7 @@ func (s *SynchronizerInputCreator) syncInputs(ctx context.Context) error {
 
 	for _, input := range inputs {
 
-		err = s.CreateInputs(ctx, input)
+		err = s.CreateInput(ctx, input)
 		if err != nil {
 			return err
 		}
@@ -103,7 +103,7 @@ func (s *SynchronizerInputCreator) syncInputs(ctx context.Context) error {
 	return nil
 }
 
-func (s *SynchronizerInputCreator) CreateInputs(ctx context.Context, rawInput RawInput) error {
+func (s *SynchronizerInputCreator) CreateInput(ctx context.Context, rawInput RawInput) error {
 	advanceInput, err := s.GetAdvanceInputFromMap(rawInput)
 	if err != nil {
 		return err
@@ -178,8 +178,6 @@ func (s *SynchronizerInputCreator) GetAdvanceInputFromMap(rawInput RawInput) (*m
 
 	slog.Debug("GetAdvanceInputFromMap", "chainId", chainId)
 	advanceInput := model.AdvanceInput{
-		// nolint
-		// TODO: check if the ID is correct
 		ID:                     FormatTransactionId(rawInput.TransactionId),
 		AppContract:            appContract,
 		Index:                  int(rawInput.Index),
