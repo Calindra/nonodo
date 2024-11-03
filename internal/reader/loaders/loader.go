@@ -23,6 +23,7 @@ const (
 type reportReader struct {
 	reportRepository  *repository.ReportRepository
 	voucherRepository *repository.VoucherRepository
+	noticeRepository  *repository.NoticeRepository
 }
 
 // getReports implements a batch function that can retrieve many users by ID,
@@ -67,6 +68,27 @@ func (u *reportReader) getVouchers(ctx context.Context, voucherKeys []string) ([
 	return u.voucherRepository.BatchFindAllByInputIndexAndAppContract(ctx, filters)
 }
 
+func (u reportReader) getNotices(ctx context.Context, noticesKeys []string) ([]*commons.PageResult[cModel.ConvenienceNotice], []error) {
+	errors := []error{}
+	filters := []*repository.BatchFilterItemForNotice{}
+	for _, noticeKey := range noticesKeys {
+		aux := strings.Split(noticeKey, "|")
+		appContract := common.HexToAddress(aux[0])
+		inputIndex, err := strconv.Atoi(aux[1])
+
+		if err != nil {
+			return nil, errors
+		}
+
+		filter := repository.BatchFilterItemForNotice{
+			AppContract: appContract.Hex(),
+			InputIndex:  inputIndex,
+		}
+		filters = append(filters, &filter)
+	}
+	return u.noticeRepository.BatchFindAllNoticesByInputIndexAndAppContract(ctx, filters)
+}
+
 // Loaders wrap your data loaders to inject via middleware
 type Loaders struct {
 	ReportLoader  *dataloadgen.Loader[string, *commons.PageResult[cModel.Report]]
@@ -75,9 +97,9 @@ type Loaders struct {
 }
 
 // NewLoaders instantiates data loaders for the middleware
-func NewLoaders(reportRepository *repository.ReportRepository, voucherRepository *repository.VoucherRepository) *Loaders {
+func NewLoaders(reportRepository *repository.ReportRepository, voucherRepository *repository.VoucherRepository, noticeRepository *repository.NoticeRepository) *Loaders {
 	// define the data loader
-	ur := &reportReader{reportRepository: reportRepository, voucherRepository: voucherRepository}
+	ur := &reportReader{reportRepository: reportRepository, voucherRepository: voucherRepository, noticeRepository: noticeRepository}
 	return &Loaders{
 		ReportLoader: dataloadgen.NewLoader(
 			ur.getReports,
@@ -85,6 +107,10 @@ func NewLoaders(reportRepository *repository.ReportRepository, voucherRepository
 		),
 		VoucherLoader: dataloadgen.NewLoader(
 			ur.getVouchers,
+			dataloadgen.WithWait(time.Millisecond),
+		),
+		NoticeLoader: dataloadgen.NewLoader(
+			ur.getNotices,
 			dataloadgen.WithWait(time.Millisecond),
 		),
 	}

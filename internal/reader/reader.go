@@ -46,7 +46,7 @@ func Register(
 		appContract := c.Param("appContract")
 		slog.Debug("path parameter received: ", "app_contract", appContract)
 		ctx := context.WithValue(c.Request().Context(), cModel.AppContractKey, appContract)
-		loader := loaders.NewLoaders(convenienceService.ReportRepository, convenienceService.VoucherRepository)
+		loader := loaders.NewLoaders(convenienceService.ReportRepository, convenienceService.VoucherRepository, convenienceService.NoticeRepository)
 		ctx = context.WithValue(ctx, loaders.LoadersKey, loader)
 		c.SetRequest(c.Request().WithContext(ctx))
 		graphqlHandler.ServeHTTP(c.Response(), c.Request())

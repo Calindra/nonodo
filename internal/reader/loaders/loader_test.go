@@ -73,7 +73,7 @@ func (s *LoaderSuite) TestGetReports() {
 	ctx := context.Background()
 	s.createTestData(ctx)
 	appContract := common.HexToAddress(devnet.ApplicationAddress)
-	loaders := NewLoaders(s.reportRepository, s.voucherRepository)
+	loaders := NewLoaders(s.reportRepository, s.voucherRepository, s.noticeRepository)
 	rCtx := context.WithValue(ctx, LoadersKey, loaders)
 
 	var wg sync.WaitGroup
@@ -130,7 +130,7 @@ func (s *LoaderSuite) TestGetVouchers() {
 	ctx := context.Background()
 	s.createTestData(ctx)
 	appContract := common.HexToAddress(devnet.ApplicationAddress)
-	loaders := NewLoaders(s.reportRepository, s.voucherRepository)
+	loaders := NewLoaders(s.reportRepository, s.voucherRepository, s.noticeRepository)
 	vCtx := context.WithValue(ctx, LoadersKey, loaders)
 
 	var wg sync.WaitGroup
@@ -180,6 +180,68 @@ func (s *LoaderSuite) TestGetVouchers() {
 	}
 	s.Equal(1, int(vouchers["1"].Rows[0].InputIndex))
 	s.Equal(2, int(vouchers["2"].Rows[0].InputIndex))
+	// s.Fail("This failure is intentional ;-)")
+}
+
+func (s *LoaderSuite) XTestGetNotices() {
+	ctx := context.Background()
+	s.createTestData(ctx)
+	appContract := common.HexToAddress(devnet.ApplicationAddress)
+	loaders := NewLoaders(s.reportRepository, s.voucherRepository, s.noticeRepository)
+	rCtx := context.WithValue(ctx, LoadersKey, loaders)
+
+	var wg sync.WaitGroup
+	wg.Add(2) // We will be loading 2 reports in parallel
+
+	// Channel to capture the results
+	results := make(chan *commons.PageResult[cModel.ConvenienceNotice], 2)
+	errs := make(chan error, 2)
+
+	// First notice loader
+	go func() {
+		defer wg.Done()
+		key := cRepos.GenerateBatchNoticeKey(appContract.Hex(), 1)
+		notice, err := loaders.NoticeLoader.Load(rCtx, key)
+		if err != nil {
+			errs <- err
+			return
+		}
+		results <- notice
+	}()
+
+	s.Require().Equal("jjjjj", appContract)
+	s.Require().Equal("[]", errs)
+	s.Require().Equal("RESULT", results)
+	s.Require().Equal("loaders", loaders)
+
+	// Second report loader
+	// go func() {
+	//  defer wg.Done()
+	//  key := cRepos.GenerateBatchReportKey(&appContract, 2)
+	//  report, err := loaders.ReportLoader.Load(rCtx, key)
+	//  if err != nil {
+	//      errs <- err
+	//      return
+	//  }
+	//  results <- report
+	// }()
+
+	// Wait for all goroutines to complete
+	// wg.Wait()
+	// close(results)
+	// close(errs)
+
+	// Collect and assert results
+	// for err := range errs {
+	//  s.Require().NoError(err)
+	// }
+
+	// reports := make(map[string]*commons.PageResult[cModel.Report])
+	// for r := range results {
+	//  reports[strconv.FormatInt(int64(r.Rows[0].InputIndex), 10)] = r
+	// }
+	// s.Equal(1, int(reports["1"].Rows[0].InputIndex))
+	// s.Equal(2, int(reports["2"].Rows[0].InputIndex))
 	// s.Fail("This failure is intentional ;-)")
 }
 
