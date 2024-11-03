@@ -183,7 +183,7 @@ func (s *LoaderSuite) TestGetVouchers() {
 	// s.Fail("This failure is intentional ;-)")
 }
 
-func (s *LoaderSuite) XTestGetNotices() {
+func (s *LoaderSuite) TestGetNotices() {
 	ctx := context.Background()
 	s.createTestData(ctx)
 	appContract := common.HexToAddress(devnet.ApplicationAddress)
@@ -209,39 +209,34 @@ func (s *LoaderSuite) XTestGetNotices() {
 		results <- notice
 	}()
 
-	s.Require().Equal("jjjjj", appContract)
-	s.Require().Equal("[]", errs)
-	s.Require().Equal("RESULT", results)
-	s.Require().Equal("loaders", loaders)
-
-	// Second report loader
-	// go func() {
-	//  defer wg.Done()
-	//  key := cRepos.GenerateBatchReportKey(&appContract, 2)
-	//  report, err := loaders.ReportLoader.Load(rCtx, key)
-	//  if err != nil {
-	//      errs <- err
-	//      return
-	//  }
-	//  results <- report
-	// }()
+	// Second notice loader
+	go func() {
+		defer wg.Done()
+		key := cRepos.GenerateBatchNoticeKey(appContract.Hex(), 2)
+		notice, err := loaders.NoticeLoader.Load(rCtx, key)
+		if err != nil {
+			errs <- err
+			return
+		}
+		results <- notice
+	}()
 
 	// Wait for all goroutines to complete
-	// wg.Wait()
-	// close(results)
-	// close(errs)
+	wg.Wait()
+	close(results)
+	close(errs)
 
 	// Collect and assert results
-	// for err := range errs {
-	//  s.Require().NoError(err)
-	// }
+	for err := range errs {
+		s.Require().NoError(err)
+	}
 
-	// reports := make(map[string]*commons.PageResult[cModel.Report])
-	// for r := range results {
-	//  reports[strconv.FormatInt(int64(r.Rows[0].InputIndex), 10)] = r
-	// }
-	// s.Equal(1, int(reports["1"].Rows[0].InputIndex))
-	// s.Equal(2, int(reports["2"].Rows[0].InputIndex))
+	notices := make(map[string]*commons.PageResult[cModel.ConvenienceNotice])
+	for r := range results {
+		notices[strconv.FormatInt(int64(r.Rows[0].InputIndex), 10)] = r
+	}
+	s.Equal(1, int(notices["1"].Rows[0].InputIndex))
+	s.Equal(2, int(notices["2"].Rows[0].InputIndex))
 	// s.Fail("This failure is intentional ;-)")
 }
 
