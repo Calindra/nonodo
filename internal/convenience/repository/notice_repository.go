@@ -301,3 +301,73 @@ func transformToNoticeQuery(
 	query += strings.Join(where, " and ")
 	return query, args, count, nil
 }
+
+type BatchFilterItemForNotice struct {
+	AppContract string
+	InputIndex  int
+}
+
+func (c *NoticeRepository) BatchFindAllNoticesByInputIndexAndAppContract(
+	ctx context.Context,
+	filters []*BatchFilterItemForNotice,
+) ([]*commons.PageResult[model.ConvenienceNotice], []error) {
+	slog.Debug("BatchFindAllNoticesByInputIndexAndAppContract", "len", len(filters))
+
+	query := `SELECT * FROM notices WHERE `
+
+	args := []interface{}{}
+	where := []string{}
+
+	for i, filter := range filters {
+		// nolint
+		where = append(where, fmt.Sprintf(" (app_contract = $%d and input_index = $%d) ", i*2+1, i*2+2))
+		args = append(args, filter.AppContract)
+		args = append(args, filter.InputIndex)
+	}
+
+	query += strings.Join(where, " or ")
+
+	errors := []error{}
+	results := []*commons.PageResult[model.ConvenienceNotice]{}
+	stmt, err := c.Db.PreparexContext(ctx, query)
+	if err != nil {
+		slog.Error("BatchFind prepare context", "error", err)
+		return nil, errors
+	}
+	defer stmt.Close()
+
+	var notices []model.ConvenienceNotice
+
+	err = stmt.SelectContext(ctx, &notices, args...)
+	if err != nil {
+		slog.Error("BatchFind", "error", err)
+		return nil, errors
+	}
+
+	noticeMap := make(map[string]*commons.PageResult[model.ConvenienceNotice])
+	for _, notice := range notices {
+		key := GenerateBatchNoticeKey(notice.AppContract, notice.InputIndex)
+
+		if noticeMap[key] == nil {
+			noticeMap[key] = &commons.PageResult[model.ConvenienceNotice]{}
+		}
+		noticeMap[key].Total += 1
+		noticeMap[key].Rows = append(noticeMap[key].Rows, notice)
+	}
+
+	for _, filter := range filters {
+		key := GenerateBatchNoticeKey(filter.AppContract, uint64(filter.InputIndex))
+		noticesItem := noticeMap[key]
+		if noticesItem == nil {
+			noticesItem = &commons.PageResult[model.ConvenienceNotice]{}
+		}
+		results = append(results, noticesItem)
+	}
+
+	slog.Debug("BatchResult", "results", results)
+	return results, nil
+}
+
+func GenerateBatchNoticeKey(appContract string, inputIndex uint64) string {
+	return fmt.Sprintf("%s|%d", appContract, inputIndex)
+}
