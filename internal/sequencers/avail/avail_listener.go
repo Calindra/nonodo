@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/calindra/nonodo/internal/commons"
@@ -36,6 +37,7 @@ type AvailListener struct {
 	AvailFromBlock     uint64
 	L1CurrentBlock     uint64
 	ApplicationAddress common.Address
+	L1ReadDelay        int
 }
 
 type PaioDecoder interface {
@@ -50,6 +52,16 @@ func NewAvailListener(availFromBlock uint64, repository *cRepos.InputRepository,
 	if binaryDecoderPathLocation != "" {
 		paioDecoder = paiodecoder.NewPaioDecoder(binaryDecoderPathLocation)
 	}
+	l1ReadDelay := FIVE_MINUTES
+	l1ReadDelayStr, ok := os.LookupEnv("L1_READ_DELAY_IN_SECONDS")
+	if ok {
+		aux, err := strconv.Atoi(l1ReadDelayStr)
+		if err != nil {
+			slog.Error("Configuration error: The L1_READ_DELAY_IN_SECONDS environment variable should be a numeric value.")
+			panic(err)
+		}
+		l1ReadDelay = aux
+	}
 	return AvailListener{
 		AvailFromBlock:     availFromBlock,
 		InputRepository:    repository,
@@ -57,6 +69,7 @@ func NewAvailListener(availFromBlock uint64, repository *cRepos.InputRepository,
 		PaioDecoder:        paioDecoder,
 		L1CurrentBlock:     fromBlock,
 		ApplicationAddress: common.HexToAddress(applicationAddress),
+		L1ReadDelay:        l1ReadDelay,
 	}
 }
 
@@ -238,7 +251,7 @@ func (a AvailListener) TableTennis(ctx context.Context,
 	}
 	inputsL1, err := a.InputterWorker.FindAllInputsByBlockAndTimestampLT(ctx,
 		ethClient, inputBox, startBlockNumber,
-		(availBlockTimestamp/ONE_SECOND_IN_MS)-FIVE_MINUTES,
+		(availBlockTimestamp/ONE_SECOND_IN_MS)-uint64(a.L1ReadDelay),
 	)
 	if err != nil {
 		return nil, err
