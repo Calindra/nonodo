@@ -17,6 +17,7 @@ import (
 	"github.com/calindra/nonodo/internal/convenience/services"
 	nonodomodel "github.com/calindra/nonodo/internal/model"
 	"github.com/calindra/nonodo/internal/reader/graph"
+	"github.com/calindra/nonodo/internal/reader/loaders"
 	"github.com/calindra/nonodo/internal/reader/model"
 	"github.com/labstack/echo/v4"
 )
@@ -45,6 +46,8 @@ func Register(
 		appContract := c.Param("appContract")
 		slog.Debug("path parameter received: ", "app_contract", appContract)
 		ctx := context.WithValue(c.Request().Context(), cModel.AppContractKey, appContract)
+		loader := loaders.NewLoaders(convenienceService.ReportRepository, convenienceService.VoucherRepository, convenienceService.NoticeRepository)
+		ctx = context.WithValue(ctx, loaders.LoadersKey, loader)
 		c.SetRequest(c.Request().WithContext(ctx))
 		graphqlHandler.ServeHTTP(c.Response(), c.Request())
 		return nil

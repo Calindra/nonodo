@@ -14,16 +14,25 @@ import (
 
 // Vouchers is the resolver for the vouchers field.
 func (r *inputResolver) Vouchers(ctx context.Context, obj *model.Input, first *int, last *int, after *string, before *string) (*model.Connection[*model.Voucher], error) {
+	if first == nil && last == nil && after == nil && before == nil {
+		return r.adapter.GetAllVouchersByInputIndex(ctx, &obj.Index)
+	}
 	return r.adapter.GetVouchers(ctx, first, last, after, before, &obj.Index, nil)
 }
 
 // Notices is the resolver for the notices field.
 func (r *inputResolver) Notices(ctx context.Context, obj *model.Input, first *int, last *int, after *string, before *string) (*model.Connection[*model.Notice], error) {
+	if first == nil && last == nil && after == nil && before == nil {
+		return r.adapter.GetAllNoticesByInputIndex(ctx, &obj.Index)
+	}
 	return r.adapter.GetNotices(ctx, first, last, after, before, &obj.Index)
 }
 
 // Reports is the resolver for the reports field.
 func (r *inputResolver) Reports(ctx context.Context, obj *model.Input, first *int, last *int, after *string, before *string) (*model.Connection[*model.Report], error) {
+	if first == nil && last == nil && after == nil && before == nil {
+		return r.adapter.GetAllReportsByInputIndex(ctx, &obj.Index)
+	}
 	return r.adapter.GetReports(ctx, first, last, after, before, &obj.Index)
 }
 
