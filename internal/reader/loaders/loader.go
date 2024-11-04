@@ -2,14 +2,11 @@ package loaders
 
 import (
 	"context"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/calindra/nonodo/internal/commons"
 	cModel "github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/convenience/repository"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/vikstrous/dataloadgen"
 )
 
@@ -18,96 +15,6 @@ type ctxKey string
 const (
 	LoadersKey = ctxKey("dataLoaders")
 )
-
-// dataReader reads Users from a database
-type dataReader struct {
-	reportRepository  *repository.ReportRepository
-	voucherRepository *repository.VoucherRepository
-	noticeRepository  *repository.NoticeRepository
-	inputRepository   *repository.InputRepository
-}
-
-// getReports implements a batch function that can retrieve many users by ID,
-// for use in a dataloader
-func (u *dataReader) getReports(ctx context.Context, reportsKeys []string) ([]*commons.PageResult[cModel.Report], []error) {
-	errors := []error{}
-	filters := []*repository.BatchFilterItem{}
-	for _, reportKey := range reportsKeys {
-		aux := strings.Split(reportKey, "|")
-		appContract := common.HexToAddress(aux[0])
-		inputIndex, err := strconv.Atoi(aux[1])
-		if err != nil {
-			return nil, errors
-		}
-		filter := repository.BatchFilterItem{
-			AppContract: &appContract,
-			InputIndex:  inputIndex,
-		}
-		filters = append(filters, &filter)
-	}
-
-	return u.reportRepository.BatchFindAllByInputIndexAndAppContract(ctx, filters)
-}
-
-func (u *dataReader) getVouchers(ctx context.Context, voucherKeys []string) ([]*commons.PageResult[cModel.ConvenienceVoucher], []error) {
-	errors := []error{}
-	filters := []*repository.BatchFilterItem{}
-	for _, reportKey := range voucherKeys {
-		aux := strings.Split(reportKey, "|")
-		appContract := common.HexToAddress(aux[0])
-		inputIndex, err := strconv.Atoi(aux[1])
-		if err != nil {
-			return nil, errors
-		}
-		filter := repository.BatchFilterItem{
-			AppContract: &appContract,
-			InputIndex:  inputIndex,
-		}
-		filters = append(filters, &filter)
-	}
-
-	return u.voucherRepository.BatchFindAllByInputIndexAndAppContract(ctx, filters)
-}
-
-func (u dataReader) getNotices(ctx context.Context, noticesKeys []string) ([]*commons.PageResult[cModel.ConvenienceNotice], []error) {
-	errors := []error{}
-	filters := []*repository.BatchFilterItemForNotice{}
-	for _, noticeKey := range noticesKeys {
-		aux := strings.Split(noticeKey, "|")
-		appContract := common.HexToAddress(aux[0])
-		inputIndex, err := strconv.Atoi(aux[1])
-
-		if err != nil {
-			return nil, errors
-		}
-
-		filter := repository.BatchFilterItemForNotice{
-			AppContract: appContract.Hex(),
-			InputIndex:  inputIndex,
-		}
-		filters = append(filters, &filter)
-	}
-	return u.noticeRepository.BatchFindAllNoticesByInputIndexAndAppContract(ctx, filters)
-}
-
-func (u dataReader) getInputs(ctx context.Context, inputsKeys []string) ([]*cModel.AdvanceInput, []error) {
-	errors := []error{}
-	filters := []*repository.BatchFilterItem{}
-	for _, inputKey := range inputsKeys {
-		aux := strings.Split(inputKey, "|")
-		appContract := common.HexToAddress(aux[0])
-		inputIndex, err := strconv.Atoi(aux[1])
-		if err != nil {
-			return nil, errors
-		}
-		filter := repository.BatchFilterItem{
-			AppContract: &appContract,
-			InputIndex:  inputIndex,
-		}
-		filters = append(filters, &filter)
-	}
-	return u.inputRepository.BatchFindInputByInputIndexAndAppContract(ctx, filters)
-}
 
 // Loaders wrap your data loaders to inject via middleware
 type Loaders struct {
