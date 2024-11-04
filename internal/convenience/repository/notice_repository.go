@@ -27,7 +27,10 @@ func (c *NoticeRepository) CreateTables() error {
 		output_index	integer,
 		app_contract    text,
 		output_hashes_siblings text,
-		PRIMARY KEY (input_index, output_index, app_contract));`
+		PRIMARY KEY (input_index, output_index, app_contract))
+		CREATE INDEX IF NOT EXISTS idx_app_contract_input_index ON notices(app_contract, input_index)
+		CREATE INDEX IF NOT EXISTS idx_app_contract_output_index ON notices(app_contract, output_index)
+		CREATE INDEX IF NOT EXISTS idx_input_index_output_index ON notices(input_index, output_index);`
 
 	// execute a query on the server
 	_, err := c.Db.Exec(schema)

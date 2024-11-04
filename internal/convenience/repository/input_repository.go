@@ -63,8 +63,10 @@ func (r *InputRepository) CreateTables() error {
 		cartesi_transaction_id text,
 		chain_id text);
 	CREATE INDEX IF NOT EXISTS idx_input_index ON convenience_inputs(input_index);
+	CREATE INDEX IF NOT EXISTS idx_status ON convenience_inputs(status);
 	CREATE INDEX IF NOT EXISTS idx_input_id ON convenience_inputs(app_contract,id);
-	CREATE INDEX IF NOT EXISTS idx_status ON convenience_inputs(status);`
+	CREATE INDEX IF NOT EXISTS idx_status_app_contract ON convenience_inputs(status, app_contract);
+	CREATE INDEX IF NOT EXISTS idx_input_index_app_contract ON convenience_inputs(input_index, app_contract);`
 	_, err := r.Db.Exec(schema)
 	if err == nil {
 		slog.Debug("Inputs table created")
@@ -290,6 +292,7 @@ func (r *InputRepository) FindByStatus(ctx context.Context, status model.Complet
 	}
 	return nil, nil
 }
+
 func (r *InputRepository) FindByIndexAndAppContract(ctx context.Context,
 	inputIndex int,
 	appContract *common.Address,
@@ -709,6 +712,7 @@ func (c *InputRepository) BatchFindInputByInputIndexAndAppContract(
 	query := `SELECT
 		id,
 		input_index,
+		app_contract,
 		status,
 		msg_sender,
 		payload,
@@ -716,7 +720,6 @@ func (c *InputRepository) BatchFindInputByInputIndexAndAppContract(
 		block_timestamp,
 		prev_randao,
 		exception,
-		app_contract,
 		espresso_block_number,
 		espresso_block_timestamp,
 		input_box_index,

@@ -26,7 +26,10 @@ func (r *ReportRepository) CreateTables() error {
 		input_index   integer,
 		app_contract  text,
 		raw_id        integer,
-		PRIMARY KEY (input_index, output_index, app_contract));`
+		PRIMARY KEY (input_index, output_index, app_contract))
+		CREATE INDEX IF NOT EXISTS idx_input_index_output_index ON convenience_reports(input_index, output_index)
+		CREATE INDEX IF NOT EXISTS idx_output_index_app_contract ON convenience_reports(output_index, app_contract)
+		CREATE INDEX IF NOT EXISTS idx_output_index_app_contract ON convenience_reports(output_index, app_contract);`
 	_, err := r.Db.Exec(schema)
 	if err == nil {
 		slog.Debug("Reports table created")

@@ -44,7 +44,11 @@ func (c *VoucherRepository) CreateTables() error {
 		value		           text,
 		output_hashes_siblings text,
 		app_contract           text,
-		PRIMARY KEY (input_index, output_index, app_contract));`
+		PRIMARY KEY (input_index, output_index, app_contract))
+		CREATE INDEX IF NOT EXISTS idx_input_index_output_index ON vouchers(input_index, output_index)
+		CREATE INDEX IF NOT EXISTS idx_app_contract_output_index ON vouchers(app_contract, output_index)
+		CREATE INDEX IF NOT EXISTS idx_app_contract_input_index ON vouchers(app_contract, input_index)
+		;`
 
 	// execute a query on the server
 	_, err := c.Db.Exec(schema)
