@@ -364,7 +364,7 @@ func (c *NoticeRepository) BatchFindAllNoticesByInputIndexAndAppContract(
 		results = append(results, noticesItem)
 	}
 
-	slog.Debug("BatchResult", "results", results)
+	slog.Debug("BatchResult", "results", len(results))
 	return results, nil
 }
 

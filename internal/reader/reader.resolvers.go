@@ -22,6 +22,9 @@ func (r *inputResolver) Vouchers(ctx context.Context, obj *model.Input, first *i
 
 // Notices is the resolver for the notices field.
 func (r *inputResolver) Notices(ctx context.Context, obj *model.Input, first *int, last *int, after *string, before *string) (*model.Connection[*model.Notice], error) {
+	if first == nil && last == nil && after == nil && before == nil {
+		return r.adapter.GetAllNoticesByInputIndex(ctx, &obj.Index)
+	}
 	return r.adapter.GetNotices(ctx, first, last, after, before, &obj.Index)
 }
 

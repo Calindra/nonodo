@@ -60,4 +60,9 @@ type Adapter interface {
 		ctx context.Context,
 		inputIndex *int,
 	) (*graphql.VoucherConnection, error)
+
+	GetAllNoticesByInputIndex(
+		ctx context.Context,
+		inputIndex *int,
+	) (*graphql.Connection[*graphql.Notice], error)
 }
