@@ -36,7 +36,10 @@ func (c *SynchronizerRepository) CreateTables() error {
 		end_input_cursor_after text,
 		ini_report_cursor_after text,
 		end_report_cursor_after text
-		);`, idType)
+		);
+		
+		CREATE INDEX IF NOT EXISTS idx_last_fetched_id ON synchronizer_fetch(id DESC);
+		`, idType)
 
 	// execute a query on the server
 	_, err := c.Db.Exec(schema)

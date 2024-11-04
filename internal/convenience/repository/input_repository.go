@@ -62,9 +62,10 @@ func (r *InputRepository) CreateTables() error {
 		type text,
 		cartesi_transaction_id text,
 		chain_id text);
+
 	CREATE INDEX IF NOT EXISTS idx_input_index ON convenience_inputs(input_index);
 	CREATE INDEX IF NOT EXISTS idx_status ON convenience_inputs(status);
-	CREATE INDEX IF NOT EXISTS idx_input_id ON convenience_inputs(app_contract,id);
+	CREATE INDEX IF NOT EXISTS idx_input_id ON convenience_inputs(app_contract, id);
 	CREATE INDEX IF NOT EXISTS idx_status_app_contract ON convenience_inputs(status, app_contract);
 	CREATE INDEX IF NOT EXISTS idx_input_index_app_contract ON convenience_inputs(input_index, app_contract);`
 	_, err := r.Db.Exec(schema)

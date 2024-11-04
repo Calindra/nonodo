@@ -30,7 +30,7 @@ func (r *ReportRepository) CreateTables() error {
 	);
 
 	CREATE INDEX IF NOT EXISTS idx_input_index_output_index ON convenience_reports(input_index, output_index);
-	CREATE INDEX IF NOT EXISTS idx_input_index_app_contract ON convenience_reports(input, app_contract);
+	CREATE INDEX IF NOT EXISTS idx_input_index_app_contract ON convenience_reports(input_index, app_contract);
 	CREATE INDEX IF NOT EXISTS idx_output_index_app_contract ON convenience_reports(output_index, app_contract);`
 	_, err := r.Db.Exec(schema)
 	if err == nil {

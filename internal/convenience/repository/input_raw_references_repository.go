@@ -32,6 +32,8 @@ func (r *RawInputRefRepository) CreateTables() error {
 		status	 		text,
 		chain_id        text);
 	CREATE INDEX IF NOT EXISTS idx_input_index ON convenience_input_raw_references(input_index, app_contract);
+	CREATE INDEX IF NOT EXISTS idx_input_index ON convenience_input_raw_references(raw_id, app_contract);
+	CREATE INDEX IF NOT EXISTS idx_convenience_input_raw_references_status_raw_id ON convenience_input_raw_references(status, raw_id);
 	CREATE INDEX IF NOT EXISTS idx_status ON convenience_input_raw_references(status);`
 
 	_, err := r.Db.Exec(schema)
