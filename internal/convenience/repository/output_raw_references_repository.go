@@ -34,7 +34,11 @@ func (r *RawOutputRefRepository) CreateTable() error {
 		output_index	integer NOT NULL,
 		has_proof		BOOLEAN,
 		type            text NOT NULL CHECK (type IN ('voucher', 'notice')),
-		PRIMARY KEY (input_index, output_index, app_contract));`
+		PRIMARY KEY (input_index, output_index, app_contract));
+		
+		CREATE INDEX IF NOT EXISTS idx_input_index ON convenience_output_raw_references(input_index, app_contract);
+		CREATE INDEX IF NOT EXISTS idx_convenience_output_raw_references_raw_id ON convenience_output_raw_references(raw_id);
+		CREATE INDEX IF NOT EXISTS idx_convenience_output_raw_references_has_proof_raw_id ON convenience_output_raw_references(has_proof, raw_id);`
 	_, err := r.Db.Exec(schema)
 	if err != nil {
 		slog.Error("Failed to create Raw Outputs table", "error", err)
