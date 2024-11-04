@@ -362,33 +362,27 @@ func (a AdapterV1) GetInputByIndex(
 		if err != nil {
 			return nil, err
 		}
-		if input == nil {
-			return nil, fmt.Errorf("input not found")
-		}
-		convertedInput, err := graphql.ConvertInput(*input)
-
-		if err != nil {
-			return nil, err
-		}
-
-		return convertedInput, nil
+		return getConvertedInputFromGraphql(input)
 	} else {
 		input, err := a.inputRepository.FindByIndexAndAppContract(ctx, inputIndex, appContract)
 		if err != nil {
 			return nil, err
 		}
-		if input == nil {
-			return nil, fmt.Errorf("input not found")
-		}
-
-		convertedInput, err := graphql.ConvertInput(*input)
-
-		if err != nil {
-			return nil, err
-		}
-
-		return convertedInput, nil
+		return getConvertedInputFromGraphql(input)
 	}
+}
+
+func getConvertedInputFromGraphql(input *cModel.AdvanceInput) (*graphql.Input, error) {
+	if input == nil {
+		return nil, fmt.Errorf("input not found")
+	}
+	convertedInput, err := graphql.ConvertInput(*input)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return convertedInput, nil
 }
 
 func (a AdapterV1) GetInput(
@@ -402,17 +396,7 @@ func (a AdapterV1) GetInput(
 	if err != nil {
 		return nil, err
 	}
-	if input == nil {
-		return nil, fmt.Errorf("input not found")
-	}
-
-	convertedInput, err := graphql.ConvertInput(*input)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return convertedInput, nil
+	return getConvertedInputFromGraphql(input)
 }
 
 func (a AdapterV1) GetInputs(
