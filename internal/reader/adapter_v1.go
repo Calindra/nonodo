@@ -355,21 +355,40 @@ func (a AdapterV1) GetInputByIndex(
 	if err != nil {
 		return nil, err
 	}
-	input, err := a.inputRepository.FindByIndexAndAppContract(ctx, inputIndex, appContract)
-	if err != nil {
-		return nil, err
-	}
-	if input == nil {
-		return nil, fmt.Errorf("input not found")
-	}
+	loaders := loaders.For(ctx)
+	if loaders != nil {
+		key := cRepos.GenerateBatchInputKey(appContract.Hex(), uint64(inputIndex))
+		input, err := loaders.InputLoader.Load(ctx, key)
+		if err != nil {
+			return nil, err
+		}
+		if input == nil {
+			return nil, fmt.Errorf("input not found")
+		}
+		convertedInput, err := graphql.ConvertInput(*input)
 
-	convertedInput, err := graphql.ConvertInput(*input)
+		if err != nil {
+			return nil, err
+		}
 
-	if err != nil {
-		return nil, err
+		return convertedInput, nil
+	} else {
+		input, err := a.inputRepository.FindByIndexAndAppContract(ctx, inputIndex, appContract)
+		if err != nil {
+			return nil, err
+		}
+		if input == nil {
+			return nil, fmt.Errorf("input not found")
+		}
+
+		convertedInput, err := graphql.ConvertInput(*input)
+
+		if err != nil {
+			return nil, err
+		}
+
+		return convertedInput, nil
 	}
-
-	return convertedInput, nil
 }
 
 func (a AdapterV1) GetInput(
