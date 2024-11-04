@@ -73,7 +73,12 @@ func (s *LoaderSuite) TestGetReports() {
 	ctx := context.Background()
 	s.createTestData(ctx)
 	appContract := common.HexToAddress(devnet.ApplicationAddress)
-	loaders := NewLoaders(s.reportRepository, s.voucherRepository, s.noticeRepository)
+	loaders := NewLoaders(
+		s.reportRepository,
+		s.voucherRepository,
+		s.noticeRepository,
+		s.inputRepository,
+	)
 	rCtx := context.WithValue(ctx, LoadersKey, loaders)
 
 	var wg sync.WaitGroup
@@ -130,7 +135,12 @@ func (s *LoaderSuite) TestGetVouchers() {
 	ctx := context.Background()
 	s.createTestData(ctx)
 	appContract := common.HexToAddress(devnet.ApplicationAddress)
-	loaders := NewLoaders(s.reportRepository, s.voucherRepository, s.noticeRepository)
+	loaders := NewLoaders(
+		s.reportRepository,
+		s.voucherRepository,
+		s.noticeRepository,
+		s.inputRepository,
+	)
 	vCtx := context.WithValue(ctx, LoadersKey, loaders)
 
 	var wg sync.WaitGroup
@@ -187,7 +197,12 @@ func (s *LoaderSuite) TestGetNotices() {
 	ctx := context.Background()
 	s.createTestData(ctx)
 	appContract := common.HexToAddress(devnet.ApplicationAddress)
-	loaders := NewLoaders(s.reportRepository, s.voucherRepository, s.noticeRepository)
+	loaders := NewLoaders(
+		s.reportRepository,
+		s.voucherRepository,
+		s.noticeRepository,
+		s.inputRepository,
+	)
 	rCtx := context.WithValue(ctx, LoadersKey, loaders)
 
 	var wg sync.WaitGroup

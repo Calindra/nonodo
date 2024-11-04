@@ -9,6 +9,7 @@ import (
 	"time"
 
 	convenience "github.com/calindra/nonodo/internal/convenience/model"
+	"github.com/calindra/nonodo/internal/devnet"
 
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/ethereum/go-ethereum/common"
@@ -295,6 +296,43 @@ func (s *InputRepositorySuite) TestCreateInputAndCheckAppContract() {
 	input2, err := s.inputRepository.FindByIDAndAppContract(ctx, "2222", nil)
 	s.NoError(err)
 	s.Equal("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", input2.AppContract.Hex())
+}
+
+func (s *InputRepositorySuite) TestBatchFindInput() {
+	ctx := context.Background()
+	appContract := common.HexToAddress(devnet.ApplicationAddress)
+	for i := 0; i < 5; i++ {
+		input, err := s.inputRepository.Create(ctx, convenience.AdvanceInput{
+			ID:             strconv.Itoa(i),
+			Index:          i,
+			Status:         convenience.CompletionStatusUnprocessed,
+			MsgSender:      common.Address{},
+			Payload:        "0x1122",
+			BlockNumber:    1,
+			BlockTimestamp: time.Now(),
+			AppContract:    appContract,
+		})
+		s.NoError(err)
+		s.Equal(i, input.Index)
+	}
+	res, err := s.inputRepository.FindAll(ctx, nil, nil, nil, nil, nil)
+	s.Require().NoError(err)
+	for _, input := range res.Rows {
+		slog.Debug("res",
+			"AppContract", input.AppContract.Hex(),
+			"Index", input.Index,
+		)
+	}
+	filters := []*BatchFilterItem{
+		{
+			AppContract: &appContract,
+			InputIndex:  2,
+		},
+	}
+	results, errors := s.inputRepository.BatchFindInputByInputIndexAndAppContract(ctx, filters)
+	s.Require().Equal(0, len(errors))
+	s.Equal(1, len(results))
+	s.Equal(2, results[0].Index)
 }
 
 func (s *InputRepositorySuite) TearDownTest() {

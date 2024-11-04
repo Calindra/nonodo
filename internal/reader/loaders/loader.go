@@ -19,16 +19,17 @@ const (
 	LoadersKey = ctxKey("dataLoaders")
 )
 
-// reportReader reads Users from a database
-type reportReader struct {
+// dataReader reads Users from a database
+type dataReader struct {
 	reportRepository  *repository.ReportRepository
 	voucherRepository *repository.VoucherRepository
 	noticeRepository  *repository.NoticeRepository
+	inputRepository   *repository.InputRepository
 }
 
 // getReports implements a batch function that can retrieve many users by ID,
 // for use in a dataloader
-func (u *reportReader) getReports(ctx context.Context, reportsKeys []string) ([]*commons.PageResult[cModel.Report], []error) {
+func (u *dataReader) getReports(ctx context.Context, reportsKeys []string) ([]*commons.PageResult[cModel.Report], []error) {
 	errors := []error{}
 	filters := []*repository.BatchFilterItem{}
 	for _, reportKey := range reportsKeys {
@@ -48,7 +49,7 @@ func (u *reportReader) getReports(ctx context.Context, reportsKeys []string) ([]
 	return u.reportRepository.BatchFindAllByInputIndexAndAppContract(ctx, filters)
 }
 
-func (u *reportReader) getVouchers(ctx context.Context, voucherKeys []string) ([]*commons.PageResult[cModel.ConvenienceVoucher], []error) {
+func (u *dataReader) getVouchers(ctx context.Context, voucherKeys []string) ([]*commons.PageResult[cModel.ConvenienceVoucher], []error) {
 	errors := []error{}
 	filters := []*repository.BatchFilterItem{}
 	for _, reportKey := range voucherKeys {
@@ -68,7 +69,7 @@ func (u *reportReader) getVouchers(ctx context.Context, voucherKeys []string) ([
 	return u.voucherRepository.BatchFindAllByInputIndexAndAppContract(ctx, filters)
 }
 
-func (u reportReader) getNotices(ctx context.Context, noticesKeys []string) ([]*commons.PageResult[cModel.ConvenienceNotice], []error) {
+func (u dataReader) getNotices(ctx context.Context, noticesKeys []string) ([]*commons.PageResult[cModel.ConvenienceNotice], []error) {
 	errors := []error{}
 	filters := []*repository.BatchFilterItemForNotice{}
 	for _, noticeKey := range noticesKeys {
@@ -89,17 +90,47 @@ func (u reportReader) getNotices(ctx context.Context, noticesKeys []string) ([]*
 	return u.noticeRepository.BatchFindAllNoticesByInputIndexAndAppContract(ctx, filters)
 }
 
+func (u dataReader) getInputs(ctx context.Context, inputsKeys []string) ([]*cModel.AdvanceInput, []error) {
+	errors := []error{}
+	filters := []*repository.BatchFilterItem{}
+	for _, inputKey := range inputsKeys {
+		aux := strings.Split(inputKey, "|")
+		appContract := common.HexToAddress(aux[0])
+		inputIndex, err := strconv.Atoi(aux[1])
+		if err != nil {
+			return nil, errors
+		}
+		filter := repository.BatchFilterItem{
+			AppContract: &appContract,
+			InputIndex:  inputIndex,
+		}
+		filters = append(filters, &filter)
+	}
+	return u.inputRepository.BatchFindInputByInputIndexAndAppContract(ctx, filters)
+}
+
 // Loaders wrap your data loaders to inject via middleware
 type Loaders struct {
 	ReportLoader  *dataloadgen.Loader[string, *commons.PageResult[cModel.Report]]
 	VoucherLoader *dataloadgen.Loader[string, *commons.PageResult[cModel.ConvenienceVoucher]]
 	NoticeLoader  *dataloadgen.Loader[string, *commons.PageResult[cModel.ConvenienceNotice]]
+	InputLoader   *dataloadgen.Loader[string, *cModel.AdvanceInput]
 }
 
 // NewLoaders instantiates data loaders for the middleware
-func NewLoaders(reportRepository *repository.ReportRepository, voucherRepository *repository.VoucherRepository, noticeRepository *repository.NoticeRepository) *Loaders {
+func NewLoaders(
+	reportRepository *repository.ReportRepository,
+	voucherRepository *repository.VoucherRepository,
+	noticeRepository *repository.NoticeRepository,
+	inputRepository *repository.InputRepository,
+) *Loaders {
 	// define the data loader
-	ur := &reportReader{reportRepository: reportRepository, voucherRepository: voucherRepository, noticeRepository: noticeRepository}
+	ur := &dataReader{
+		reportRepository:  reportRepository,
+		voucherRepository: voucherRepository,
+		noticeRepository:  noticeRepository,
+		inputRepository:   inputRepository,
+	}
 	return &Loaders{
 		ReportLoader: dataloadgen.NewLoader(
 			ur.getReports,
@@ -111,6 +142,10 @@ func NewLoaders(reportRepository *repository.ReportRepository, voucherRepository
 		),
 		NoticeLoader: dataloadgen.NewLoader(
 			ur.getNotices,
+			dataloadgen.WithWait(time.Millisecond),
+		),
+		InputLoader: dataloadgen.NewLoader(
+			ur.getInputs,
 			dataloadgen.WithWait(time.Millisecond),
 		),
 	}
