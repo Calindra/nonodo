@@ -88,6 +88,8 @@ func (s *SynchronizerInputCreate) TestGetAdvanceInputFromMap() {
 	s.Equal(uint64(0x7a), advanceInput.BlockNumber)
 	s.Equal("31337", advanceInput.ChainId)
 	s.Equal(commons.ConvertStatusStringToCompletionStatus("ACCEPTED"), advanceInput.Status)
+	expectedBlockTimestamp := int64(1729706123) // nolint
+	s.Equal(expectedBlockTimestamp, advanceInput.BlockTimestamp.Unix())
 }
 
 func (s *SynchronizerInputCreate) TestCreateInputs() {

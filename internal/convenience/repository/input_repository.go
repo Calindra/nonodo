@@ -51,7 +51,7 @@ func (r *InputRepository) CreateTables() error {
 		msg_sender	 	text,
 		payload			text,
 		block_number	integer,
-		block_timestamp	integer,
+		block_timestamp	NUMERIC,
 		prev_randao		text,
 		exception		text,
 		espresso_block_number	integer,

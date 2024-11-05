@@ -184,7 +184,7 @@ func (s *SynchronizerInputCreator) GetAdvanceInputFromMap(rawInput RawInput) (*m
 		InputBoxIndex:          int(inputBoxIndex.Int64()),
 		MsgSender:              msgSender,
 		BlockNumber:            blockNumber.Uint64(),
-		BlockTimestamp:         time.Unix(0, blockTimestamp.Int64()),
+		BlockTimestamp:         time.Unix(blockTimestamp.Int64(), 0),
 		Payload:                common.Bytes2Hex(payload),
 		ChainId:                chainId.String(),
 		Status:                 commons.ConvertStatusStringToCompletionStatus(rawInput.Status),
