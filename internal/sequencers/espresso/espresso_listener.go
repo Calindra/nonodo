@@ -32,14 +32,29 @@ type EspressoListener struct {
 	InputRepository *cRepos.InputRepository
 	fromBlock       uint64
 	InputterWorker  *inputter.InputterWorker
+	fromBlockL1     *uint64
 }
 
 func (e EspressoListener) String() string {
 	return "espresso_listener"
 }
 
-func NewEspressoListener(espressoUrl string, namespace uint64, repository *cRepos.InputRepository, fromBlock uint64, w *inputter.InputterWorker) *EspressoListener {
-	return &EspressoListener{espressoUrl: espressoUrl, namespace: namespace, InputRepository: repository, fromBlock: fromBlock, InputterWorker: w}
+func NewEspressoListener(
+	espressoUrl string,
+	namespace uint64,
+	repository *cRepos.InputRepository,
+	fromBlock uint64,
+	w *inputter.InputterWorker,
+	fromBlockL1 *uint64,
+) *EspressoListener {
+	return &EspressoListener{
+		espressoUrl:     espressoUrl,
+		namespace:       namespace,
+		InputRepository: repository,
+		fromBlock:       fromBlock,
+		InputterWorker:  w,
+		fromBlockL1:     fromBlockL1,
+	}
 }
 
 func (e EspressoListener) getBaseUrl() string {
@@ -66,7 +81,13 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 		slog.Info("Espresso: starting from latest block height", "lastEspressoBlockHeight", lastEspressoBlockHeight)
 	}
 	previousBlockHeight := currentBlockHeight
-	l1FinalizedPrevHeight := e.getL1FinalizedHeight(previousBlockHeight)
+	var l1FinalizedPrevHeight uint64
+	if e.fromBlockL1 != nil {
+		l1FinalizedPrevHeight = *e.fromBlockL1
+	} else {
+		l1FinalizedPrevHeight = e.getL1FinalizedHeight(previousBlockHeight)
+	}
+	slog.Info("Espresso: starting l1 block from", "blockNumber", l1FinalizedPrevHeight)
 
 	// keep track of msgSender -> nonce
 	nonceMap := make(map[common.Address]int64)

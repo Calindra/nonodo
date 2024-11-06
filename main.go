@@ -55,6 +55,8 @@ Lambada running at http://SALSA_URL
 Press Ctrl+C to stop the node
 `
 
+var tempFromBlockL1 uint64
+
 var cmd = &cobra.Command{
 	Use:     "nonodo [flags] [-- application [args]...]",
 	Short:   "nonodo is a development node for Cartesi Rollups",
@@ -524,6 +526,8 @@ func init() {
 	cmd.Flags().Uint64Var(&opts.FromBlock, "from-block", opts.FromBlock,
 		"The beginning of the queried range for events")
 
+	cmd.Flags().Uint64VarP(&tempFromBlockL1, "from-l1-block", "", 0, "The beginning of the queried range for events")
+
 	cmd.Flags().StringVar(&opts.DbImplementation, "db-implementation", opts.DbImplementation,
 		"DB to use. PostgreSQL or SQLite")
 
@@ -577,6 +581,9 @@ func run(cmd *cobra.Command, args []string) {
 	}
 	if opts.EnableEcho && len(args) > 0 {
 		exitf("can't use built-in echo with custom application")
+	}
+	if cmd.Flags().Changed("from-l1-block") {
+		opts.FromBlockL1 = &tempFromBlockL1
 	}
 	opts.ApplicationArgs = args
 
