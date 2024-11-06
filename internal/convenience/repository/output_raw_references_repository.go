@@ -38,7 +38,7 @@ func (r *RawOutputRefRepository) CreateTable() error {
 		has_proof		BOOLEAN,
 		type            text NOT NULL CHECK (type IN ('voucher', 'notice')),
 		executed        BOOLEAN,
-		updated_at      TIMESTAMP DEFAULT 0 NOT NULL,
+		updated_at      TIMESTAMP NOT NULL,
 		PRIMARY KEY (input_index, output_index, app_contract));
 		
 		CREATE INDEX IF NOT EXISTS idx_input_index ON convenience_output_raw_references(input_index, app_contract);
