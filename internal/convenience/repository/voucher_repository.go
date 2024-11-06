@@ -32,6 +32,7 @@ type voucherRow struct {
 	Value                string `db:"value"`
 	OutputHashesSiblings string `db:"output_hashes_siblings"`
 	AppContract          string `db:"app_contract"`
+	TransactionHash      string `db:"transaction_hash"`
 }
 
 func (c *VoucherRepository) CreateTables() error {
@@ -44,6 +45,7 @@ func (c *VoucherRepository) CreateTables() error {
 		value		           text,
 		output_hashes_siblings text,
 		app_contract           text,
+		transaction_hash       text DEFAULT '' NOT NULL,
 		PRIMARY KEY (input_index, output_index, app_contract)
 	);
 
@@ -110,6 +112,34 @@ func (c *VoucherRepository) SetProof(
 		ctx,
 		updateVoucher,
 		voucher.OutputHashesSiblings,
+		voucher.AppContract.Hex(),
+		voucher.OutputIndex,
+	)
+	if err != nil {
+		return err
+	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected != 1 {
+		return fmt.Errorf("wrong number of vouchers affected: %d; app_contract %v; output_index %d", affected, voucher.AppContract, voucher.OutputIndex)
+	}
+	return nil
+}
+
+func (c *VoucherRepository) SetExecuted(
+	ctx context.Context, voucher *model.ConvenienceVoucher,
+) error {
+	updateVoucher := `UPDATE vouchers SET 
+		transaction_hash = $1,
+		executed = true
+		WHERE app_contract = $2 and output_index = $3`
+	exec := DBExecutor{&c.Db}
+	res, err := exec.ExecContext(
+		ctx,
+		updateVoucher,
+		voucher.TransactionHash,
 		voucher.AppContract.Hex(),
 		voucher.OutputIndex,
 	)

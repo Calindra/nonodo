@@ -255,3 +255,31 @@ func (s *RawRepository) FindAllOutputsWithProof(ctx context.Context, filter Filt
 
 	return outputs, nil
 }
+
+func (s *RawRepository) FindAllOutputsExecutedAfter(ctx context.Context, afterUpdatedAt time.Time, rawId uint64) ([]Output, error) {
+	outputs := []Output{}
+	result, err := s.Db.QueryxContext(ctx, `
+        SELECT * 
+        FROM output 
+        WHERE updated_at >= $1 and id >= $2 and transaction_hash IS NOT NULL
+        ORDER BY updated_at ASC, id ASC
+        LIMIT $3
+    `, afterUpdatedAt, rawId, LIMIT)
+	if err != nil {
+		slog.Error("Failed to execute query in FindAllOutputsExecuted", "error", err)
+		return nil, err
+	}
+	defer result.Close()
+
+	for result.Next() {
+		var report Output
+		err := result.StructScan(&report)
+		if err != nil {
+			slog.Error("Failed to scan row into Output struct", "error", err)
+			return nil, err
+		}
+		outputs = append(outputs, report)
+	}
+
+	return outputs, nil
+}

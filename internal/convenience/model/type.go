@@ -51,6 +51,7 @@ type ConvenienceVoucher struct {
 	Value                string         `db:"value"`
 	AppContract          common.Address `db:"app_contract"`
 	OutputHashesSiblings string         `db:"output_hashes_siblings"`
+	TransactionHash      string         `db:"transaction_hash"`
 
 	// future improvements
 	// Contract        common.Address
