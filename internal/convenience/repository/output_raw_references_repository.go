@@ -204,7 +204,7 @@ func (r *RawOutputRefRepository) GetLastUpdatedAtNotExecuted(ctx context.Context
 			convenience_output_raw_references 
 		WHERE
 			executed = false and type = 'voucher'
-		ORDER BY updated_at DESC, raw_id ASC LIMIT 1`)
+		ORDER BY raw_id ASC, updated_at DESC LIMIT 1`)
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
