@@ -2,6 +2,7 @@ package espresso
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -69,17 +70,24 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 
 	// keep track of msgSender -> nonce
 	nonceMap := make(map[common.Address]int64)
+	var delay time.Duration = 800
 
 	// main polling loop
 	for {
 		slog.Debug("Espresso: fetchLatestBlockHeight...")
 		lastEspressoBlockHeight, err := e.espressoAPI.FetchLatestBlockHeight(ctx)
 		if err != nil {
-			return err
+			if errors.Is(err, context.Canceled) {
+				slog.Warn("Espresso: the context was canceled. stopping operation.")
+				return err
+			}
+			slog.Warn("Espresso: error fetching the latest block height. Retrying...", "error", err)
+			time.Sleep(delay * time.Millisecond)
+			continue
 		}
 		slog.Debug("Espresso:", "lastEspressoBlockHeight", lastEspressoBlockHeight)
+
 		if lastEspressoBlockHeight == currentBlockHeight {
-			var delay time.Duration = 800
 			time.Sleep(delay * time.Millisecond)
 			continue
 		}
@@ -87,7 +95,13 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 			slog.Debug("Espresso:", "currentBlockHeight", currentBlockHeight, "namespace", e.namespace)
 			transactions, err := e.espressoAPI.FetchTransactionsInBlock(ctx, currentBlockHeight, e.namespace)
 			if err != nil {
-				return err
+				if errors.Is(err, context.Canceled) {
+					slog.Warn("Espresso: the context was canceled. stopping operation.")
+					return err
+				}
+				slog.Warn("Espresso: error fetching transactions. Retrying...", "blockHeight", currentBlockHeight, "namespace", e.namespace, "error", err)
+				time.Sleep(delay * time.Millisecond)
+				continue
 			}
 			tot := len(transactions.Transactions)
 
