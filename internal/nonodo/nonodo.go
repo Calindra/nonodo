@@ -77,6 +77,7 @@ type NonodoOpts struct {
 	HLGraphQL           bool
 	SqliteFile          string
 	FromBlock           uint64
+	FromBlockL1         *uint64
 	DbImplementation    string
 	NodeVersion         string
 	LoadTestMode        bool
@@ -134,6 +135,7 @@ func NewNonodoOpts() NonodoOpts {
 		HLGraphQL:           false,
 		SqliteFile:          "",
 		FromBlock:           0,
+		FromBlockL1:         nil,
 		DbImplementation:    "sqlite",
 		NodeVersion:         "v1",
 		Sequencer:           "inputbox",
@@ -475,6 +477,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 					modelInstance.GetInputRepository(),
 					opts.FromBlock,
 					inputterWorker,
+					opts.FromBlockL1,
 				))
 			} else if opts.Sequencer == "paio" {
 				panic("sequencer not supported yet")
