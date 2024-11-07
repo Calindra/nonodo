@@ -377,6 +377,7 @@ func convertToConvenienceVoucher(row voucherRow) model.ConvenienceVoucher {
 		Value:                row.Value,
 		AppContract:          appContract,
 		OutputHashesSiblings: row.OutputHashesSiblings,
+		TransactionHash:      row.TransactionHash,
 	}
 	return voucher
 }
