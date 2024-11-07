@@ -261,7 +261,7 @@ func (s *RawRepository) FindAllOutputsExecutedAfter(ctx context.Context, afterUp
 	result, err := s.Db.QueryxContext(ctx, `
         SELECT * 
         FROM output 
-        WHERE updated_at >= $1 and id >= $2 and transaction_hash IS NOT NULL
+        WHERE ((updated_at > $1) or (updated_at = $1 and id > $2)) and transaction_hash IS NOT NULL
         ORDER BY updated_at ASC, id ASC
         LIMIT $3
     `, afterUpdatedAt, rawId, LIMIT)

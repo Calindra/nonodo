@@ -192,7 +192,7 @@ func (r *RawOutputRefRepository) GetFirstOutputIdWithoutProof(ctx context.Contex
 	return outputId, err
 }
 
-func (r *RawOutputRefRepository) GetLastUpdatedAtNotExecuted(ctx context.Context) (*time.Time, *uint64, error) {
+func (r *RawOutputRefRepository) GetLastUpdatedAtExecuted(ctx context.Context) (*time.Time, *uint64, error) {
 	var result struct {
 		LastUpdatedAt time.Time `db:"updated_at"`
 		RawID         uint64    `db:"raw_id"`
@@ -203,12 +203,12 @@ func (r *RawOutputRefRepository) GetLastUpdatedAtNotExecuted(ctx context.Context
 		FROM
 			convenience_output_raw_references 
 		WHERE
-			executed = false and type = 'voucher'
-		ORDER BY raw_id ASC, updated_at DESC LIMIT 1`)
+			executed = true and type = 'voucher'
+		ORDER BY updated_at DESC, raw_id DESC LIMIT 1`)
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			slog.Debug("No output ID executed = false")
+			slog.Debug("No output ID executed = true")
 			return nil, nil, nil
 		}
 		slog.Error("Failed to retrieve output ID not executed", "error", err)

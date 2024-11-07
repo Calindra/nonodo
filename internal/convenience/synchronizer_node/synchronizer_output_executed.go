@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/convenience/repository"
@@ -49,15 +50,18 @@ func (s *SynchronizerOutputExecuted) SyncOutputsExecution(ctx context.Context) e
 }
 
 func (s *SynchronizerOutputExecuted) syncOutputs(ctx context.Context) error {
-	lastUpdatedAtNotExecuted, lastId, err := s.RawOutputRefRepository.GetLastUpdatedAtNotExecuted(ctx)
+	lastUpdatedAtExecuted, lastId, err := s.RawOutputRefRepository.GetLastUpdatedAtExecuted(ctx)
 	if err != nil {
 		return err
 	}
-	if lastUpdatedAtNotExecuted == nil {
-		return nil
+	if lastUpdatedAtExecuted == nil && lastId == nil {
+		startTime := time.Unix(0, 0)
+		startId := uint64(0)
+		lastUpdatedAtExecuted = &startTime
+		lastId = &startId
 	}
-	slog.Debug("SyncOutputs", "lastUpdatedAtNotExecuted", lastUpdatedAtNotExecuted, "lastId", *lastId)
-	rawOutputs, err := s.RawNodeV2Repository.FindAllOutputsExecutedAfter(ctx, *lastUpdatedAtNotExecuted, *lastId)
+	slog.Debug("SyncOutputs", "lastUpdatedAtExecuted", lastUpdatedAtExecuted, "lastId", *lastId)
+	rawOutputs, err := s.RawNodeV2Repository.FindAllOutputsExecutedAfter(ctx, *lastUpdatedAtExecuted, *lastId)
 	if err != nil {
 		return err
 	}
