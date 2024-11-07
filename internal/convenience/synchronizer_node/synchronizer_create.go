@@ -16,17 +16,18 @@ import (
 )
 
 type SynchronizerCreateWorker struct {
-	inputRepository          *repository.InputRepository
-	inputRefRepository       *repository.RawInputRefRepository
-	outputRefRepository      *repository.RawOutputRefRepository
-	SynchronizerReport       *SynchronizerReport
-	DbRawUrl                 string
-	RawRepository            *RawRepository
-	SynchronizerUpdate       *SynchronizerUpdate
-	Decoder                  *decoder.OutputDecoder
-	SynchronizerOutputUpdate *SynchronizerOutputUpdate
-	SynchronizerOutputCreate *SynchronizerOutputCreate
-	SynchronizerCreateInput  *SynchronizerInputCreator
+	inputRepository            *repository.InputRepository
+	inputRefRepository         *repository.RawInputRefRepository
+	outputRefRepository        *repository.RawOutputRefRepository
+	SynchronizerReport         *SynchronizerReport
+	DbRawUrl                   string
+	RawRepository              *RawRepository
+	SynchronizerUpdate         *SynchronizerUpdate
+	Decoder                    *decoder.OutputDecoder
+	SynchronizerOutputUpdate   *SynchronizerOutputUpdate
+	SynchronizerOutputCreate   *SynchronizerOutputCreate
+	SynchronizerCreateInput    *SynchronizerInputCreator
+	SynchronizerOutputExecuted *SynchronizerOutputExecuted
 }
 
 const DEFAULT_DELAY = 3 * time.Second
@@ -91,6 +92,12 @@ func (s SynchronizerCreateWorker) WatchNewInputs(stdCtx context.Context) error {
 						return
 					}
 
+					err = s.SynchronizerOutputExecuted.SyncOutputsExecution(ctx)
+					if err != nil {
+						errCh <- err
+						return
+					}
+
 					<-time.After(DEFAULT_DELAY)
 				}
 			}
@@ -123,18 +130,20 @@ func NewSynchronizerCreateWorker(
 	outputRefRepository *repository.RawOutputRefRepository,
 	synchronizerOutputCreate *SynchronizerOutputCreate,
 	synchronizerCreateInput *SynchronizerInputCreator,
+	synchronizerOutputExecuted *SynchronizerOutputExecuted,
 ) supervisor.Worker {
 	return SynchronizerCreateWorker{
-		inputRepository:          inputRepository,
-		inputRefRepository:       inputRefRepository,
-		DbRawUrl:                 dbRawUrl,
-		RawRepository:            rawRepository,
-		SynchronizerUpdate:       synchronizerUpdate,
-		Decoder:                  decoder,
-		SynchronizerReport:       synchronizerReport,
-		SynchronizerOutputUpdate: synchronizerOutputUpdate,
-		outputRefRepository:      outputRefRepository,
-		SynchronizerOutputCreate: synchronizerOutputCreate,
-		SynchronizerCreateInput:  synchronizerCreateInput,
+		inputRepository:            inputRepository,
+		inputRefRepository:         inputRefRepository,
+		DbRawUrl:                   dbRawUrl,
+		RawRepository:              rawRepository,
+		SynchronizerUpdate:         synchronizerUpdate,
+		Decoder:                    decoder,
+		SynchronizerReport:         synchronizerReport,
+		SynchronizerOutputUpdate:   synchronizerOutputUpdate,
+		outputRefRepository:        outputRefRepository,
+		SynchronizerOutputCreate:   synchronizerOutputCreate,
+		SynchronizerCreateInput:    synchronizerCreateInput,
+		SynchronizerOutputExecuted: synchronizerOutputExecuted,
 	}
 }

@@ -137,13 +137,14 @@ type ComplexityRoot struct {
 	}
 
 	Voucher struct {
-		Destination func(childComplexity int) int
-		Executed    func(childComplexity int) int
-		Index       func(childComplexity int) int
-		Input       func(childComplexity int) int
-		Payload     func(childComplexity int) int
-		Proof       func(childComplexity int) int
-		Value       func(childComplexity int) int
+		Destination     func(childComplexity int) int
+		Executed        func(childComplexity int) int
+		Index           func(childComplexity int) int
+		Input           func(childComplexity int) int
+		Payload         func(childComplexity int) int
+		Proof           func(childComplexity int) int
+		TransactionHash func(childComplexity int) int
+		Value           func(childComplexity int) int
 	}
 
 	VoucherConnection struct {
@@ -656,6 +657,13 @@ func (e *executableSchema) Complexity(typeName, field string, childComplexity in
 
 		return e.complexity.Voucher.Proof(childComplexity), true
 
+	case "Voucher.transactionHash":
+		if e.complexity.Voucher.TransactionHash == nil {
+			break
+		}
+
+		return e.complexity.Voucher.TransactionHash(childComplexity), true
+
 	case "Voucher.value":
 		if e.complexity.Voucher.Value == nil {
 			break
@@ -866,6 +874,9 @@ type Voucher {
 
   "Indicates whether the voucher has been executed on the base layer blockchain"
   executed: Boolean
+
+  "The hash of executed transaction"
+  transactionHash: String
 }
 
 "Top level queries"
@@ -3322,6 +3333,8 @@ func (ec *executionContext) fieldContext_Query_voucher(ctx context.Context, fiel
 				return ec.fieldContext_Voucher_value(ctx, field)
 			case "executed":
 				return ec.fieldContext_Voucher_executed(ctx, field)
+			case "transactionHash":
+				return ec.fieldContext_Voucher_transactionHash(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Voucher", field.Name)
 		},
@@ -4594,6 +4607,47 @@ func (ec *executionContext) fieldContext_Voucher_executed(ctx context.Context, f
 	return fc, nil
 }
 
+func (ec *executionContext) _Voucher_transactionHash(ctx context.Context, field graphql.CollectedField, obj *model.Voucher) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Voucher_transactionHash(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (interface{}, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.TransactionHash, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalOString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Voucher_transactionHash(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Voucher",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _VoucherConnection_totalCount(ctx context.Context, field graphql.CollectedField, obj *model.Connection[*model.Voucher]) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_VoucherConnection_totalCount(ctx, field)
 	if err != nil {
@@ -4795,6 +4849,8 @@ func (ec *executionContext) fieldContext_VoucherEdge_node(ctx context.Context, f
 				return ec.fieldContext_Voucher_value(ctx, field)
 			case "executed":
 				return ec.fieldContext_Voucher_executed(ctx, field)
+			case "transactionHash":
+				return ec.fieldContext_Voucher_transactionHash(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Voucher", field.Name)
 		},
@@ -7847,6 +7903,8 @@ func (ec *executionContext) _Voucher(ctx context.Context, sel ast.SelectionSet, 
 			out.Values[i] = ec._Voucher_value(ctx, field, obj)
 		case "executed":
 			out.Values[i] = ec._Voucher_executed(ctx, field, obj)
+		case "transactionHash":
+			out.Values[i] = ec._Voucher_transactionHash(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}

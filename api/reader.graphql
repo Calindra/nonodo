@@ -72,6 +72,9 @@ type Voucher {
 
   "Indicates whether the voucher has been executed on the base layer blockchain"
   executed: Boolean
+
+  "The hash of executed transaction"
+  transactionHash: String
 }
 
 "Top level queries"

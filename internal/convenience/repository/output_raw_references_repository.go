@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -18,12 +19,14 @@ type RawOutputRefRepository struct {
 }
 
 type RawOutputRef struct {
-	RawID       uint64 `db:"raw_id"`
-	OutputIndex uint64 `db:"output_index"`
-	InputIndex  uint64 `db:"input_index"`
-	AppContract string `db:"app_contract"`
-	Type        string `db:"type"`
-	HasProof    bool   `db:"has_proof"`
+	RawID       uint64    `db:"raw_id"`
+	OutputIndex uint64    `db:"output_index"`
+	InputIndex  uint64    `db:"input_index"`
+	AppContract string    `db:"app_contract"`
+	Type        string    `db:"type"`
+	HasProof    bool      `db:"has_proof"`
+	Executed    bool      `db:"executed"`
+	UpdatedAt   time.Time `db:"updated_at"`
 }
 
 func (r *RawOutputRefRepository) CreateTable() error {
@@ -34,6 +37,8 @@ func (r *RawOutputRefRepository) CreateTable() error {
 		output_index	integer NOT NULL,
 		has_proof		BOOLEAN,
 		type            text NOT NULL CHECK (type IN ('voucher', 'notice')),
+		executed        BOOLEAN,
+		updated_at      TIMESTAMP NOT NULL,
 		PRIMARY KEY (input_index, output_index, app_contract));
 		
 		CREATE INDEX IF NOT EXISTS idx_input_index ON convenience_output_raw_references(input_index, app_contract);
@@ -57,13 +62,17 @@ func (r *RawOutputRefRepository) Create(ctx context.Context, rawOutput RawOutput
 		output_index,
 		type,
 		raw_id,
-		has_proof) VALUES ($1, $2, $3, $4, $5, $6)`,
+		has_proof,
+		executed,
+		updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
 		rawOutput.InputIndex,
 		rawOutput.AppContract,
 		rawOutput.OutputIndex,
 		rawOutput.Type,
 		rawOutput.RawID,
 		rawOutput.HasProof,
+		rawOutput.Executed,
+		rawOutput.UpdatedAt,
 	)
 
 	if err != nil {
@@ -114,6 +123,36 @@ func (r *RawOutputRefRepository) SetHasProofToTrue(ctx context.Context, rawOutpu
 	return nil
 }
 
+func (r *RawOutputRefRepository) SetExecutedToTrue(ctx context.Context, rawOutputRef *RawOutputRef) error {
+	exec := DBExecutor{r.Db}
+
+	result, err := exec.ExecContext(ctx, `
+		UPDATE convenience_output_raw_references
+		SET executed = true,
+		updated_at = $1
+		WHERE raw_id = $2`, rawOutputRef.UpdatedAt, rawOutputRef.RawID)
+
+	if err != nil {
+		slog.Error("Error updating executed field", "error", err)
+		return err
+	}
+
+	affected, err := result.RowsAffected()
+	if err != nil {
+		slog.Error("Error fetching rows affected", "error", err)
+		return err
+	}
+
+	if affected != 1 {
+		return fmt.Errorf("unexpected number of rows updated: %d", affected)
+	}
+	slog.Debug("SetExecutedToTrue",
+		"updated_at", rawOutputRef.UpdatedAt,
+		"raw_id", rawOutputRef.RawID,
+	)
+	return nil
+}
+
 func (r *RawOutputRefRepository) FindByID(ctx context.Context, id uint64) (*RawOutputRef, error) {
 	var outputRef RawOutputRef
 	err := r.Db.GetContext(ctx, &outputRef, `
@@ -151,4 +190,29 @@ func (r *RawOutputRefRepository) GetFirstOutputIdWithoutProof(ctx context.Contex
 		return 0, err
 	}
 	return outputId, err
+}
+
+func (r *RawOutputRefRepository) GetLastUpdatedAtExecuted(ctx context.Context) (*time.Time, *uint64, error) {
+	var result struct {
+		LastUpdatedAt time.Time `db:"updated_at"`
+		RawID         uint64    `db:"raw_id"`
+	}
+	err := r.Db.GetContext(ctx, &result, `
+		SELECT 
+			updated_at, raw_id
+		FROM
+			convenience_output_raw_references 
+		WHERE
+			executed = true and type = 'voucher'
+		ORDER BY updated_at DESC, raw_id DESC LIMIT 1`)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			slog.Debug("No output ID executed = true")
+			return nil, nil, nil
+		}
+		slog.Error("Failed to retrieve output ID not executed", "error", err)
+		return nil, nil, err
+	}
+	return &result.LastUpdatedAt, &result.RawID, err
 }

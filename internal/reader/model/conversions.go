@@ -86,12 +86,13 @@ func ConvertConvenientVoucherV1(cVoucher cModel.ConvenienceVoucher) *Voucher {
 		outputHashesSiblings = []string{}
 	}
 	return &Voucher{
-		Index:       int(cVoucher.OutputIndex),
-		InputIndex:  int(cVoucher.InputIndex),
-		Destination: cVoucher.Destination.String(),
-		Payload:     cVoucher.Payload,
-		Value:       cVoucher.Value,
-		// Executed:    &cVoucher.Executed,
+		Index:           int(cVoucher.OutputIndex),
+		InputIndex:      int(cVoucher.InputIndex),
+		Destination:     cVoucher.Destination.String(),
+		Payload:         cVoucher.Payload,
+		Value:           cVoucher.Value,
+		Executed:        cVoucher.Executed,
+		TransactionHash: cVoucher.TransactionHash,
 		Proof: Proof{
 			OutputIndex:          strconv.FormatUint(cVoucher.OutputIndex, 10),
 			OutputHashesSiblings: outputHashesSiblings,

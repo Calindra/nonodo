@@ -3,6 +3,7 @@ package synchronizernode
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"math/big"
 	"strconv"
 
@@ -36,6 +37,23 @@ func NewSynchronizerOutputCreate(
 }
 
 func (s *SynchronizerOutputCreate) SyncOutputs(ctx context.Context) error {
+	txCtx, err := s.startTransaction(ctx)
+	if err != nil {
+		return err
+	}
+	err = s.syncOutputs(txCtx)
+	if err != nil {
+		s.rollbackTransaction(txCtx)
+		return err
+	}
+	err = s.commitTransaction(txCtx)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *SynchronizerOutputCreate) syncOutputs(ctx context.Context) error {
 	latestOutputRawID, err := s.RawOutputRefRepository.GetLatestOutputRawId(ctx)
 	if err != nil {
 		return err
@@ -161,6 +179,7 @@ func (s *SynchronizerOutputCreate) GetRawOutputRef(rawOutput Output) (*repositor
 		OutputIndex: outputIndex,
 		AppContract: common.BytesToAddress(rawOutput.AppContract).Hex(),
 		Type:        outputType,
+		UpdatedAt:   rawOutput.UpdatedAt,
 	}, nil
 }
 
@@ -172,5 +191,33 @@ func getOutputType(rawData []byte) (string, error) {
 		return repository.RAW_NOTICE_TYPE, nil
 	} else {
 		return "", fmt.Errorf("unsupported output selector type: %s", strPayload[2:10])
+	}
+}
+
+func (s *SynchronizerOutputCreate) startTransaction(ctx context.Context) (context.Context, error) {
+	db := s.RawOutputRefRepository.Db
+	ctxWithTx, err := repository.StartTransaction(ctx, db)
+	if err != nil {
+		return ctx, err
+	}
+	return ctxWithTx, nil
+}
+
+func (s *SynchronizerOutputCreate) commitTransaction(ctx context.Context) error {
+	tx, hasTx := repository.GetTransaction(ctx)
+	if hasTx && tx != nil {
+		return tx.Commit()
+	}
+	return nil
+}
+
+func (s *SynchronizerOutputCreate) rollbackTransaction(ctx context.Context) {
+	tx, hasTx := repository.GetTransaction(ctx)
+	if hasTx && tx != nil {
+		err := tx.Rollback()
+		if err != nil {
+			slog.Error("transaction rollback error", "err", err)
+			panic(err)
+		}
 	}
 }
