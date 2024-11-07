@@ -489,6 +489,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		paioSequencerBuilder := paio.NewPaioBuilder()
 		paioSequencerBuilder.WithInputRepository(container.GetInputRepository())
 		paioSequencerBuilder.WithRpcUrl(opts.RpcUrl)
+		paioSequencerBuilder.WithNamespace(opts.Namespace)
 
 		if opts.AvailEnabled {
 			availClient, err := avail.NewAvailClient(

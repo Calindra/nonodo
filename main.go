@@ -32,9 +32,8 @@ import (
 )
 
 var (
-	MAX_FILE_SIZE     uint64 = 1_440_000 // 1,44 MB
-	APP_ADDRESS              = common.HexToAddress(devnet.ApplicationAddress)
-	DEFAULT_NAMESPACE        = 10008
+	MAX_FILE_SIZE uint64 = 1_440_000 // 1,44 MB
+	APP_ADDRESS          = common.HexToAddress(devnet.ApplicationAddress)
 )
 
 var inspectMessageText = `
@@ -386,7 +385,7 @@ func addEspressoSubcommands(espressoCmd *cobra.Command) {
 		},
 	}
 	espressoSendCmd.Flags().StringVar(&espressoOpts.Payload, "payload", "", "Payload to send to Espresso")
-	espressoSendCmd.Flags().IntVar(&espressoOpts.Namespace, "namespace", DEFAULT_NAMESPACE, "Namespace of the payload")
+	espressoSendCmd.Flags().IntVar(&espressoOpts.Namespace, "namespace", int(opts.Namespace), "Namespace of the payload")
 	markFlagRequired(espressoSendCmd, "payload")
 	espressoCmd.AddCommand(espressoSendCmd)
 
