@@ -211,7 +211,7 @@ func ConvertConvenientNoticeV1(cNotice cModel.ConvenienceNotice) *Notice {
 		InputIndex: int(cNotice.InputIndex),
 		Payload:    cNotice.Payload,
 		Proof: Proof{
-			OutputIndex:          strconv.FormatUint(cNotice.OutputIndex, 10),
+			OutputIndex:          strconv.FormatUint(cNotice.ProofOutputIndex, 10),
 			OutputHashesSiblings: outputHashesSiblings,
 		},
 	}

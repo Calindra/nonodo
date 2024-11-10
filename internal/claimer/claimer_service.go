@@ -32,8 +32,18 @@ func NewClaimService(
 func (c *ClaimerService) CreateProofsAndSendClaim(
 	ctx context.Context,
 	consensusAddress common.Address,
-	startBlockGte uint64, endBlockLt uint64) error {
+	startBlockGte uint64,
+	endBlockLt uint64,
+) error {
 	vouchers, err := c.VoucherRepository.FindAllVouchersByBlockNumber(
+		ctx,
+		startBlockGte,
+		endBlockLt,
+	)
+	if err != nil {
+		return err
+	}
+	notices, err := c.NoticeRepository.FindAllNoticesByBlockNumber(
 		ctx,
 		startBlockGte,
 		endBlockLt,
@@ -46,9 +56,14 @@ func (c *ClaimerService) CreateProofsAndSendClaim(
 		"startBlockGte", startBlockGte,
 		"endBlockLt", endBlockLt,
 	)
-	outputs := make([]*UnifiedOutput, len(vouchers))
+	lenVouchers := len(vouchers)
+	lenNotices := len(notices)
+	outputs := make([]*UnifiedOutput, lenVouchers+lenNotices)
 	for i, voucher := range vouchers {
 		outputs[i] = NewUnifiedOutput(voucher.Payload)
+	}
+	for i, notice := range notices {
+		outputs[i+lenVouchers] = NewUnifiedOutput(notice.Payload)
 	}
 	claim, err := c.claimer.FillProofsAndReturnClaim(outputs)
 	if err != nil {
@@ -63,10 +78,23 @@ func (c *ClaimerService) CreateProofsAndSendClaim(
 			return err
 		}
 	}
-	if len(vouchers) == 0 {
+	for i := range notices {
+		notices[i].OutputHashesSiblings = ToJsonArray(outputs[i+lenVouchers].proof.OutputHashesSiblings)
+		notices[i].ProofOutputIndex = outputs[i+lenVouchers].proof.OutputIndex
+		err := c.NoticeRepository.SetProof(ctx, notices[i])
+		if err != nil {
+			return err
+		}
+	}
+	if lenVouchers == 0 && lenNotices == 0 {
 		return nil
 	}
-	appAddress := vouchers[0].AppContract
+	var appAddress common.Address
+	if lenVouchers > 0 {
+		appAddress = vouchers[0].AppContract
+	} else {
+		appAddress = common.HexToAddress(notices[0].AppContract)
+	}
 	doesNotMatter := new(big.Int).SetInt64(10) // nolint
 	err = c.claimer.MakeTheClaim(ctx, &consensusAddress, &appAddress, claim, doesNotMatter, nil)
 	if err != nil {

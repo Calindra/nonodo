@@ -155,6 +155,7 @@ func (s *SynchronizerOutputCreate) GetConvenienceNotice(rawOutput Output) (*mode
 		Payload:              strPayload,
 		InputIndex:           inputIndex,
 		OutputIndex:          outputIndex,
+		ProofOutputIndex:     outputIndex,
 		AppContract:          common.BytesToAddress(rawOutput.AppContract).Hex(),
 		OutputHashesSiblings: string(rawOutput.OutputHashesSiblings),
 	}

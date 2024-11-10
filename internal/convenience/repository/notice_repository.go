@@ -27,6 +27,7 @@ func (c *NoticeRepository) CreateTables() error {
 		output_index	integer,
 		app_contract    text,
 		output_hashes_siblings text,
+		proof_output_index integer DEFAULT 0,
 		PRIMARY KEY (input_index, output_index, app_contract)
 	);
 
@@ -54,7 +55,8 @@ func (c *NoticeRepository) Create(
 		input_index,
 		output_index,
 		app_contract,
-		output_hashes_siblings) VALUES ($1, $2, $3, $4, $5)`
+		output_hashes_siblings,
+		proof_output_index) VALUES ($1, $2, $3, $4, $5, $6)`
 
 	exec := DBExecutor{&c.Db}
 	_, err := exec.ExecContext(ctx,
@@ -64,6 +66,7 @@ func (c *NoticeRepository) Create(
 		data.OutputIndex,
 		common.HexToAddress(data.AppContract).Hex(),
 		data.OutputHashesSiblings,
+		data.ProofOutputIndex,
 	)
 	if err != nil {
 		slog.Error("Error creating notice", "Error", err)
@@ -97,13 +100,15 @@ func (c *NoticeRepository) SetProof(
 	ctx context.Context, notice *model.ConvenienceNotice,
 ) error {
 	updateVoucher := `UPDATE notices SET 
-		output_hashes_siblings = $1
-		WHERE app_contract = $2 and output_index = $3`
+		output_hashes_siblings = $1,
+		proof_output_index = $2
+		WHERE app_contract = $3 and output_index = $4`
 	exec := DBExecutor{&c.Db}
 	res, err := exec.ExecContext(
 		ctx,
 		updateVoucher,
 		notice.OutputHashesSiblings,
+		notice.ProofOutputIndex,
 		common.HexToAddress(notice.AppContract).Hex(),
 		notice.OutputIndex,
 	)
@@ -192,6 +197,33 @@ func (c *NoticeRepository) FindAllNotices(
 		Offset: uint64(offset),
 	}
 	return pageResult, nil
+}
+
+func (c *NoticeRepository) FindAllNoticesByBlockNumber(
+	ctx context.Context, startBlockGte uint64, endBlockLt uint64,
+) ([]*model.ConvenienceNotice, error) {
+	stmt, err := c.Db.Preparex(`
+		SELECT
+			n.payload,
+			n.input_index,
+			n.output_index,
+			n.app_contract,
+			n.output_hashes_siblings,
+			n.proof_output_index
+		FROM notices n
+			INNER JOIN convenience_inputs i
+				ON i.app_contract = n.app_contract AND i.input_index = n.input_index
+		WHERE i.block_number >= $1 and i.block_number < $2`)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+	var notices []*model.ConvenienceNotice
+	err = stmt.SelectContext(ctx, &notices, startBlockGte, endBlockLt)
+	if err != nil {
+		return nil, err
+	}
+	return notices, nil
 }
 
 func (c *NoticeRepository) FindNoticeByOutputIndexAndAppContract(
