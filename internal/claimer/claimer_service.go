@@ -29,7 +29,7 @@ func NewClaimService(
 	}
 }
 
-func (c *ClaimerService) CreateProofs(
+func (c *ClaimerService) CreateProofsAndSendClaim(
 	ctx context.Context,
 	consensusAddress common.Address,
 	startBlockGte uint64, endBlockLt uint64) error {

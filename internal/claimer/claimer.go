@@ -127,7 +127,7 @@ func (c *Claimer) CreateConsensusTypeAuthority(ctx context.Context) (*common.Add
 	return nil, nil
 }
 
-func (c *Claimer) Deploy(
+func (c *Claimer) CreateNewOnChainApp(
 	ctx context.Context,
 	consensusAddress common.Address,
 ) (*common.Address, error) {

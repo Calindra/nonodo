@@ -41,7 +41,6 @@ func (c *ClaimerWorker) String() string {
 }
 
 func (c *ClaimerWorker) Start(ctx context.Context, ready chan<- struct{}) error {
-	ready <- struct{}{}
 	client, err := ethclient.DialContext(ctx, c.RpcUrl)
 	if err != nil {
 		return err
@@ -62,12 +61,13 @@ func (c *ClaimerWorker) Start(ctx context.Context, ready chan<- struct{}) error 
 	}
 	c.consensusAddress = consensusAddress
 
-	appAddress, err := claimer.Deploy(ctx, *c.consensusAddress)
+	appAddress, err := claimer.CreateNewOnChainApp(ctx, *c.consensusAddress)
 	if err != nil {
 		return err
 	}
 	c.appAddress = appAddress
 	slog.Info("AppAddress", "appAddress", appAddress.Hex())
+	ready <- struct{}{}
 	return c.watchNewBlocks(ctx)
 }
 
@@ -88,14 +88,14 @@ func (c *ClaimerWorker) watchNewBlocks(ctx context.Context) error {
 			)
 			blockNumber := header.Number.Uint64()
 			if blockNumber > 0 && blockNumber%DEFAULT_EPOCH_BLOCKS == 0 {
-				err := c.ClaimerService.CreateProofs(
+				err := c.ClaimerService.CreateProofsAndSendClaim(
 					ctx,
 					*c.consensusAddress,
 					blockNumber-DEFAULT_EPOCH_BLOCKS,
 					blockNumber,
 				)
 				if err != nil {
-					panic(err)
+					slog.Error("Error creating proofs and claim")
 				}
 			}
 		}

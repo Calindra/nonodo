@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math/big"
+	"os"
 	"strings"
 	"time"
 
@@ -23,6 +24,9 @@ import (
 
 func DefaultTxOpts(ctx context.Context, client *ethclient.Client) (*bind.TransactOpts, error) {
 	onlyHex := strings.TrimPrefix(SenderPrivateKey, "0x")
+	if envPrivateKey, ok := os.LookupEnv("SENDER_PRIVATE_KEY"); ok {
+		onlyHex = strings.TrimPrefix(envPrivateKey, "0x")
+	}
 	privateKey, err := crypto.ToECDSA(common.Hex2Bytes(onlyHex))
 	if err != nil {
 		return nil, fmt.Errorf("create private key: %w", err)
@@ -37,7 +41,11 @@ func DefaultTxOpts(ctx context.Context, client *ethclient.Client) (*bind.Transac
 	if err != nil {
 		return nil, fmt.Errorf("create transactor: %w", err)
 	}
-	nonce, err := client.PendingNonceAt(ctx, common.HexToAddress(SenderAddress))
+	msgSender := common.HexToAddress(SenderAddress)
+	if envValue, ok := os.LookupEnv("SENDER_ADDRESS"); ok {
+		msgSender = common.HexToAddress(envValue)
+	}
+	nonce, err := client.PendingNonceAt(ctx, msgSender)
 	if err != nil {
 		return nil, fmt.Errorf("get nonce: %w", err)
 	}

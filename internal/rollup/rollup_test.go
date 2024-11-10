@@ -171,7 +171,8 @@ func (s *RollupSuite) TestEncodeVoucher() {
 	deb, err := abiParsed.Pack("Voucher", destination, value, payload)
 	s.NoError(err)
 	slog.Debug("encoded", "encoded", common.Bytes2Hex(deb))
-	s.Equal("0xab7528bb862fB57E8A2BCd567a2e929a0Be56a5e", values[0].(common.Address).Hex())
+	expectedAddress := devnet.ApplicationAddress
+	s.Equal(expectedAddress, values[0].(common.Address).Hex())
 	s.Equal(value, values[1].(*big.Int))
 	s.Equal(payload, values[2])
 

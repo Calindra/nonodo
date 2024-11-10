@@ -100,13 +100,13 @@ func (s *ClaimerServiceSuite) TearDownTest() {
 func (s *ClaimerServiceSuite) TestMakeTheClaimAndValidateOutputOnChain() {
 	consensusAddress, err := s.claimer.CreateConsensusTypeAuthority(s.ctx)
 	s.Require().NoError(err)
-	appContract, err := s.claimer.Deploy(s.ctx, *consensusAddress)
+	appContract, err := s.claimer.CreateNewOnChainApp(s.ctx, *consensusAddress)
 	s.Require().NoError(err)
 	s.fillData(s.ctx, appContract)
 	startBlock := 1
 	endBlockLt := 10
 
-	err = s.claimerService.CreateProofs(
+	err = s.claimerService.CreateProofsAndSendClaim(
 		s.ctx,
 		*consensusAddress,
 		uint64(startBlock),
