@@ -2,8 +2,6 @@ package claimer
 
 import (
 	"context"
-	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"math/big"
@@ -29,7 +27,7 @@ type ClaimerSuite struct {
 	rpcUrl        string
 }
 
-func TestCreateProofsSuite(t *testing.T) {
+func TestClaimerSuite(t *testing.T) {
 	suite.Run(t, new(ClaimerSuite))
 }
 
@@ -94,21 +92,22 @@ func (s *ClaimerSuite) TestMakeTheClaim() {
 	s.Require().NoError(err)
 	slog.Debug("Deploy", "appContract", appContract.Hex())
 
-	lastProcessedBlockNumber := new(big.Int).SetUint64(10)
 	txOpts, err := devnet.DefaultTxOpts(ctx, ethClient)
 	s.Require().NoError(err)
 
 	// nolint
 	voucherPayloadStr := "237a816f000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb9226600000000000000000000000000000000000000000000000000000000deadbeef00000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000005deadbeef14000000000000000000000000000000000000000000000000000000"
-	voucherOutput0 := NewUnifiedOutput(voucherPayloadStr, 0)
-	voucherOutput1 := NewUnifiedOutput(voucherPayloadStr, 1)
+	voucherOutput0 := NewUnifiedOutput(voucherPayloadStr)
+	voucherOutput1 := NewUnifiedOutput(voucherPayloadStr)
+	voucherOutput1.proof.OutputIndex = 300 // due to simplification, it doesn't matter
 
 	outputs := []*UnifiedOutput{
 		voucherOutput0, voucherOutput1,
 	}
-	claimHash, _, err := claimer.CreateClaimRootHash(outputs)
+	claimHash, err := claimer.FillProofsAndReturnClaim(outputs)
 	s.Require().NoError(err)
 
+	lastProcessedBlockNumber := new(big.Int).SetUint64(10) // It makes no difference when using authority
 	err = claimer.MakeTheClaim(
 		ctx, consensusAddress, appContract, claimHash, lastProcessedBlockNumber,
 		txOpts,
@@ -118,6 +117,7 @@ func (s *ClaimerSuite) TestMakeTheClaim() {
 	applicationOnChain, err := contracts.NewApplication(*appContract, ethClient)
 	s.Require().NoError(err)
 
+	// smoke test
 	callOpts := bind.CallOpts{}
 	owner, err := applicationOnChain.Owner(&callOpts)
 	s.Require().NoError(err)
@@ -133,37 +133,4 @@ func (s *ClaimerSuite) TestMakeTheClaim() {
 
 	_, err = applicationOnChain.ExecuteOutput(txOpts, voucherOutput0.payload, voucherOutput0.proof)
 	s.Require().NoError(err)
-}
-
-func ConvertSiblings(jsonData string) [][32]byte {
-
-	var siblings []string
-
-	// Parse JSON data into the slice
-	if err := json.Unmarshal([]byte(jsonData), &siblings); err != nil {
-		panic(err)
-	}
-
-	// Print each sibling hash
-	asBytes := [][32]byte{}
-	for _, hexStr := range siblings {
-		// Remove the "0x" prefix if present
-		if hexStr[:2] == "0x" {
-			hexStr = hexStr[2:]
-		}
-
-		// Decode the hex string to bytes
-		bytes, err := hex.DecodeString(hexStr)
-		if err != nil {
-			panic(err)
-		}
-
-		// Convert the bytes to a [32]byte array
-		var arr [32]byte
-		copy(arr[:], bytes)
-
-		// Append to the slice
-		asBytes = append(asBytes, arr)
-	}
-	return asBytes
 }

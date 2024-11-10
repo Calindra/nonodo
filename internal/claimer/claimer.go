@@ -35,6 +35,13 @@ func (c *Claimer) MakeTheClaim(ctx context.Context,
 	lastProcessedBlockNumber *big.Int,
 	opts *bind.TransactOpts,
 ) error {
+	if opts == nil {
+		aux, err := devnet.DefaultTxOpts(ctx, c.ethClient)
+		if err != nil {
+			return err
+		}
+		opts = aux
+	}
 	if consensusAddress == nil {
 		return fmt.Errorf("missing consensus address")
 	}
@@ -174,33 +181,35 @@ type UnifiedOutput struct {
 	proof   contracts.OutputValidityProof
 }
 
-func NewUnifiedOutput(payload string, outputIndex uint64) *UnifiedOutput {
+func NewUnifiedOutput(payload string) *UnifiedOutput {
 	auxPayload := strings.TrimPrefix(payload, "0x")
 	return &UnifiedOutput{
 		payload: common.Hex2Bytes(auxPayload),
 		proof: contracts.OutputValidityProof{
-			OutputIndex: outputIndex,
+			OutputIndex: 0,
 		},
 	}
 }
 
-func (c *Claimer) CreateClaimRootHash(
+func (c *Claimer) FillProofsAndReturnClaim(
 	outputs []*UnifiedOutput,
-) (common.Hash, []common.Hash, error) {
+) (common.Hash, error) {
 	leaves := make([]common.Hash, len(outputs))
 	for i, output := range outputs {
 		leaves[i] = crypto.Keccak256Hash(output.payload)
 	}
 	claim, proofs, err := merkle.CreateProofs(leaves, uint(MAX_OUTPUT_TREE_HEIGHT))
 	if err != nil {
-		return common.Hash{}, nil, err
+		return common.Hash{}, err
 	}
 	for idx := range outputs {
+		// WARN: simplification to avoid redoing all the proofs in the world
+		outputs[idx].proof.OutputIndex = uint64(idx)
 		start := outputs[idx].proof.OutputIndex * MAX_OUTPUT_TREE_HEIGHT
 		end := (outputs[idx].proof.OutputIndex * MAX_OUTPUT_TREE_HEIGHT) + MAX_OUTPUT_TREE_HEIGHT
 		outputs[idx].proof.OutputHashesSiblings = ConvertHashesToOutputHashesSiblings(proofs[start:end])
 	}
-	return claim, proofs, err
+	return claim, err
 }
 
 func ConvertHashesToOutputHashesSiblings(hashes []common.Hash) [][32]byte {

@@ -129,13 +129,14 @@ func (s *SynchronizerOutputCreate) GetConvenienceVoucher(rawOutput Output) (*mod
 	}
 	strPayload := "0x" + common.Bytes2Hex(rawOutput.RawData)
 	cVoucher := model.ConvenienceVoucher{
-		Destination: destination,
-		Payload:     strPayload,
-		Executed:    false,
-		InputIndex:  inputIndex,
-		OutputIndex: outputIndex,
-		AppContract: common.BytesToAddress(rawOutput.AppContract),
-		Value:       voucherValue.String(),
+		Destination:      destination,
+		Payload:          strPayload,
+		Executed:         false,
+		InputIndex:       inputIndex,
+		OutputIndex:      outputIndex,
+		ProofOutputIndex: outputIndex,
+		AppContract:      common.BytesToAddress(rawOutput.AppContract),
+		Value:            voucherValue.String(),
 	}
 	return &cVoucher, nil
 }

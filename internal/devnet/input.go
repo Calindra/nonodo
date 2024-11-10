@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log/slog"
 	"math/big"
+	"strings"
 	"time"
 
 	"github.com/calindra/nonodo/internal/contracts"
@@ -21,7 +22,8 @@ import (
 )
 
 func DefaultTxOpts(ctx context.Context, client *ethclient.Client) (*bind.TransactOpts, error) {
-	privateKey, err := crypto.ToECDSA(common.Hex2Bytes(SenderPrivateKey[2:]))
+	onlyHex := strings.TrimPrefix(SenderPrivateKey, "0x")
+	privateKey, err := crypto.ToECDSA(common.Hex2Bytes(onlyHex))
 	if err != nil {
 		return nil, fmt.Errorf("create private key: %w", err)
 	}

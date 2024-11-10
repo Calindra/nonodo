@@ -106,6 +106,7 @@ func (s *SynchronizerOutputUpdate) UpdateProof(
 				AppContract:          common.HexToAddress(ref.AppContract),
 				OutputIndex:          ref.OutputIndex,
 				OutputHashesSiblings: string(jsonSiblings),
+				ProofOutputIndex:     ref.OutputIndex,
 			})
 		if err != nil {
 			return err

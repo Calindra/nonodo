@@ -94,7 +94,7 @@ func ConvertConvenientVoucherV1(cVoucher cModel.ConvenienceVoucher) *Voucher {
 		Executed:        cVoucher.Executed,
 		TransactionHash: cVoucher.TransactionHash,
 		Proof: Proof{
-			OutputIndex:          strconv.FormatUint(cVoucher.OutputIndex, 10),
+			OutputIndex:          strconv.FormatUint(cVoucher.ProofOutputIndex, 10),
 			OutputHashesSiblings: outputHashesSiblings,
 		},
 	}
