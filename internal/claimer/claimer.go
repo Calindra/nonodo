@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"log/slog"
 	"math/big"
+	"strings"
 
 	"github.com/calindra/nonodo/internal/contracts"
 	"github.com/calindra/nonodo/internal/devnet"
+	"github.com/calindra/nonodo/internal/merkle"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
@@ -127,7 +130,7 @@ func (c *Claimer) Deploy(
 	if err != nil {
 		return nil, err
 	}
-	txOpts1, err := devnet.DefaultTxOpts(ctx, c.ethClient)
+	txOpts, err := devnet.DefaultTxOpts(ctx, c.ethClient)
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +138,7 @@ func (c *Claimer) Deploy(
 	sender := common.HexToAddress(devnet.AnvilDefaultAddress)
 	templateHash := [32]byte{}
 	salt := [32]byte{}
-	tx, err := applicationFactory.NewApplication(txOpts1, consensusAddress, sender, templateHash, salt)
+	tx, err := applicationFactory.NewApplication(txOpts, consensusAddress, sender, templateHash, salt)
 	if err != nil {
 		return nil, err
 	}
@@ -164,4 +167,48 @@ func (c *Claimer) Deploy(
 		return &event.AppContract, nil
 	}
 	return nil, nil
+}
+
+type UnifiedOutput struct {
+	payload []byte
+	proof   contracts.OutputValidityProof
+}
+
+func NewUnifiedOutput(payload string, outputIndex uint64) *UnifiedOutput {
+	auxPayload := strings.TrimPrefix(payload, "0x")
+	return &UnifiedOutput{
+		payload: common.Hex2Bytes(auxPayload),
+		proof: contracts.OutputValidityProof{
+			OutputIndex: outputIndex,
+		},
+	}
+}
+
+func (c *Claimer) CreateClaimRootHash(
+	outputs []*UnifiedOutput,
+) (common.Hash, []common.Hash, error) {
+	leaves := make([]common.Hash, len(outputs))
+	for i, output := range outputs {
+		leaves[i] = crypto.Keccak256Hash(output.payload)
+	}
+	claim, proofs, err := merkle.CreateProofs(leaves, uint(MAX_OUTPUT_TREE_HEIGHT))
+	if err != nil {
+		return common.Hash{}, nil, err
+	}
+	for idx := range outputs {
+		start := outputs[idx].proof.OutputIndex * MAX_OUTPUT_TREE_HEIGHT
+		end := (outputs[idx].proof.OutputIndex * MAX_OUTPUT_TREE_HEIGHT) + MAX_OUTPUT_TREE_HEIGHT
+		outputs[idx].proof.OutputHashesSiblings = ConvertHashesToOutputHashesSiblings(proofs[start:end])
+	}
+	return claim, proofs, err
+}
+
+func ConvertHashesToOutputHashesSiblings(hashes []common.Hash) [][32]byte {
+	var output [][32]byte
+	for _, hash := range hashes {
+		var hashArray [32]byte
+		copy(hashArray[:], hash.Bytes())
+		output = append(output, hashArray)
+	}
+	return output
 }
