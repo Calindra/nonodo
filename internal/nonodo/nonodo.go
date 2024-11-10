@@ -16,6 +16,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/calindra/nonodo/internal/claimer"
 	"github.com/calindra/nonodo/internal/contracts"
 	"github.com/calindra/nonodo/internal/convenience"
 	"github.com/calindra/nonodo/internal/convenience/synchronizer"
@@ -576,8 +577,14 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		})
 	}
 
-	cleanSync := synchronizer.NewCleanSynchronizer(container.GetSyncRepository(), nil)
-	w.Workers = append(w.Workers, cleanSync)
+	// cleanSync := synchronizer.NewCleanSynchronizer(container.GetSyncRepository(), nil)
+	// w.Workers = append(w.Workers, cleanSync)
+
+	w.Workers = append(w.Workers, claimer.NewClaimerWorker(
+		opts.RpcUrl,
+		container.GetVoucherRepository(),
+		container.GetNoticeRepository(),
+	))
 
 	return w
 }

@@ -41,7 +41,11 @@ func (c *ClaimerService) CreateProofs(
 	if err != nil {
 		return err
 	}
-	slog.Debug("CreateProofs", "vouchers", len(vouchers))
+	slog.Debug("CreateProofs",
+		"vouchers", len(vouchers),
+		"startBlockGte", startBlockGte,
+		"endBlockLt", endBlockLt,
+	)
 	outputs := make([]*UnifiedOutput, len(vouchers))
 	for i, voucher := range vouchers {
 		outputs[i] = NewUnifiedOutput(voucher.Payload)
@@ -58,6 +62,9 @@ func (c *ClaimerService) CreateProofs(
 		if err != nil {
 			return err
 		}
+	}
+	if len(vouchers) == 0 {
+		return nil
 	}
 	appAddress := vouchers[0].AppContract
 	doesNotMatter := new(big.Int).SetInt64(10) // nolint
