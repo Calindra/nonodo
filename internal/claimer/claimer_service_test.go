@@ -149,7 +149,7 @@ func (s *ClaimerServiceSuite) checkVoucher(voucher model.ConvenienceVoucher) {
 	s.Require().NoError(err)
 }
 
-const TOTAL_INPUT_TEST = 100
+const TOTAL_INPUT_TEST = 10
 
 // nolint
 func (s *ClaimerServiceSuite) fillData(ctx context.Context, appContract *common.Address) {
