@@ -184,6 +184,17 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 					return fmt.Errorf("error converting nonce: %T", nonceField)
 				}
 
+				app, ok := typedData.Message["app"].(string)
+				if !ok {
+					return fmt.Errorf("message app address type assertion error")
+				}
+				appContract := common.HexToAddress(app)
+
+				if appContract.Hex() != e.InputterWorker.ApplicationAddress.Hex() {
+					slog.Debug("Espresso: ignoring transaction for other app", "txApp", appContract.Hex(), "expectedApp", e.InputterWorker.ApplicationAddress.Hex())
+					continue
+				}
+
 				payload, ok := typedData.Message["data"].(string)
 				if !ok {
 					return fmt.Errorf("message data type assertion error")
