@@ -96,6 +96,7 @@ type NonodoOpts struct {
 	PaioServerUrl       string
 	DbRawUrl            string
 	RawEnabled          bool
+	EpochBlocks         int
 }
 
 // Create the options struct with default values.
@@ -155,6 +156,7 @@ func NewNonodoOpts() NonodoOpts {
 		PaioServerUrl:       "https://cartesi-paio-avail-turing.fly.dev",
 		DbRawUrl:            "postgres://postgres:password@localhost:5432/rollupsdb?sslmode=disable",
 		RawEnabled:          false,
+		EpochBlocks:         claimer.DEFAULT_EPOCH_BLOCKS,
 	}
 }
 
@@ -577,11 +579,16 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		})
 	}
 
-	w.Workers = append(w.Workers, claimer.NewClaimerWorker(
-		opts.RpcUrl,
-		container.GetVoucherRepository(),
-		container.GetNoticeRepository(),
-	))
+	if opts.EpochBlocks == 0 {
+		slog.Info("Epoch, claim and proofs disabled")
+	} else {
+		w.Workers = append(w.Workers, claimer.NewClaimerWorker(
+			opts.RpcUrl,
+			container.GetVoucherRepository(),
+			container.GetNoticeRepository(),
+			opts.EpochBlocks,
+		))
+	}
 
 	return w
 }

@@ -22,17 +22,20 @@ type ClaimerWorker struct {
 	noticeRepository  *repository.NoticeRepository
 	consensusAddress  *common.Address
 	appAddress        *common.Address
+	epochBlocks       uint64
 }
 
 func NewClaimerWorker(
 	rpcURL string,
 	voucherRepository *repository.VoucherRepository,
 	noticeRepository *repository.NoticeRepository,
+	epochBlocks int,
 ) *ClaimerWorker {
 	return &ClaimerWorker{
 		RpcUrl:            rpcURL,
 		voucherRepository: voucherRepository,
 		noticeRepository:  noticeRepository,
+		epochBlocks:       uint64(epochBlocks),
 	}
 }
 
@@ -87,11 +90,11 @@ func (c *ClaimerWorker) watchNewBlocks(ctx context.Context) error {
 				"blockNumber", header.Number,
 			)
 			blockNumber := header.Number.Uint64()
-			if blockNumber > 0 && blockNumber%DEFAULT_EPOCH_BLOCKS == 0 {
+			if blockNumber > 0 && blockNumber%c.epochBlocks == 0 {
 				err := c.ClaimerService.CreateProofsAndSendClaim(
 					ctx,
 					*c.consensusAddress,
-					blockNumber-DEFAULT_EPOCH_BLOCKS,
+					blockNumber-c.epochBlocks,
 					blockNumber,
 				)
 				if err != nil {
