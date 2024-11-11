@@ -35,7 +35,7 @@ func (w *commandLogger) Write(data []byte) (int, error) {
 		re := regexp.MustCompile(`\x1b\[[0-9;]*m`)
 		line = re.ReplaceAllString(line, "") // remove color
 		if len(line) > 0 {
-			slog.Info("command: log", "command", w.name, "buffer", w.buffName,
+			slog.Debug("command: log", "command", w.name, "buffer", w.buffName,
 				"line", line)
 		}
 	}
