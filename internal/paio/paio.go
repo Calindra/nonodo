@@ -62,6 +62,19 @@ func (p *PaioAPI) getChainID(ctx context.Context) (*big.Int, error) {
 	return chainId, nil
 }
 
+func (p *PaioAPI) getBlockNumber(ctx context.Context) (uint64, error) {
+	client, err := ethclient.DialContext(ctx, p.EvmRpcUrl)
+	if err != nil {
+		return 0, fmt.Errorf("ethclient dial error: %w", err)
+	}
+	defer client.Close()
+	blockNumber, err := client.BlockNumber(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("ethclient block_number error: %w", err)
+	}
+	return blockNumber, nil
+}
+
 // SendTransaction implements ServerInterface.
 func (p *PaioAPI) SendTransaction(ctx echo.Context) error {
 	var request SendTransactionJSONRequestBody
@@ -353,6 +366,11 @@ func (p *PaioAPI) SendCartesiTransaction(ctx echo.Context) error {
 		}
 		return ctx.JSON(http.StatusCreated, response)
 	}
+	blockNumber, err := p.getBlockNumber(stdCtx)
+	if err != nil {
+		slog.Error("Error reading current block number:", "err", err)
+		return err
+	}
 	inputCount, err := p.inputRepository.Count(stdCtx, nil)
 	if err != nil {
 		slog.Error("Error counting inputs:", "err", err)
@@ -365,7 +383,7 @@ func (p *PaioAPI) SendCartesiTransaction(ctx echo.Context) error {
 		MsgSender:      msgSender,
 		Payload:        payload,
 		AppContract:    appContract,
-		BlockNumber:    1,
+		BlockNumber:    blockNumber,
 		BlockTimestamp: time.Now(),
 		InputBoxIndex:  -2,
 		Type:           "L2",

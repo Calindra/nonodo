@@ -14,7 +14,10 @@ const ApplicationContractName = "Application"
 // const ApplicationAddress = "0x70ac08179605AF2D9e75782b8DEcDD3c22aA4D0C"
 
 // sunodo v0.11.2
-const ApplicationAddress = "0xab7528bb862fb57e8a2bcd567a2e929a0be56a5e"
+// const ApplicationAddress = "0xab7528bb862fb57e8a2bcd567a2e929a0be56a5e"
+
+// nonodo
+const ApplicationAddress = "0x75135d8ADb7180640d29d822D9AD59E83E8695b2"
 
 // Foundry test mnemonic.
 const TestMnemonic = "test test test test test test test test test test test junk"

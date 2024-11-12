@@ -795,7 +795,7 @@ func (c *InputRepository) BatchFindInputByInputIndexAndAppContract(
 		results = append(results, advanceInput)
 	}
 
-	slog.Debug("BatchResult", "results", len(results))
+	slog.Debug("BatchResult", "results", len(results), "args", args, "query", "query")
 	return results, nil
 }
 

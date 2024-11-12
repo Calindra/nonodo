@@ -91,12 +91,17 @@ func CheckAnvilAndInstall(ctx context.Context) (string, error) {
 	return location, nil
 }
 
-func ShowAddresses() {
+func GetContractInfo() *ContractInfo {
 	var contracts ContractInfo
 	if err := json.Unmarshal(localhost, &contracts); err != nil {
 		slog.Warn("anvil: failed to unmarshal localhost.json", "error", err)
-		return
+		return nil
 	}
+	return &contracts
+}
+
+func ShowAddresses() {
+	contracts := GetContractInfo()
 	var names []string
 	for name := range contracts.Contracts {
 		names = append(names, name)
@@ -138,6 +143,7 @@ func (w AnvilWorker) Start(ctx context.Context, ready chan<- struct{}) error {
 	server.Args = append(server.Args, "--host", fmt.Sprint(w.Address))
 	server.Args = append(server.Args, "--port", fmt.Sprint(w.Port))
 	server.Args = append(server.Args, "--load-state", path.Join(dir, stateFileName))
+	// server.Args = append(server.Args, "--tracing")
 	if !w.Verbose {
 		server.Args = append(server.Args, "--silent")
 	}

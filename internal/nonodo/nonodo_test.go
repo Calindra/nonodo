@@ -63,7 +63,7 @@ func (s *NonodoSuite) TestItProcessesAdvanceInputs() {
 	for i := 0; i < n; i++ {
 		payloads[i] = s.makePayload()
 		err := devnet.AddInput(s.ctx, s.rpcUrl, payloads[i][:])
-		s.NoError(err)
+		s.Require().NoError(err)
 	}
 
 	s.T().Log("waiting until last input is ready")

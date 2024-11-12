@@ -39,6 +39,7 @@ type ConvenienceNotice struct {
 	InputIndex           uint64 `db:"input_index"`
 	OutputIndex          uint64 `db:"output_index"`
 	OutputHashesSiblings string `db:"output_hashes_siblings"`
+	ProofOutputIndex     uint64 `db:"proof_output_index"`
 }
 
 // Voucher metadata type
@@ -52,7 +53,7 @@ type ConvenienceVoucher struct {
 	AppContract          common.Address `db:"app_contract"`
 	OutputHashesSiblings string         `db:"output_hashes_siblings"`
 	TransactionHash      string         `db:"transaction_hash"`
-
+	ProofOutputIndex     uint64         `db:"proof_output_index"`
 	// future improvements
 	// Contract        common.Address
 	// Beneficiary     common.Address

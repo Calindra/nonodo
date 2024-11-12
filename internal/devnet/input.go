@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"log/slog"
 	"math/big"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/calindra/nonodo/internal/contracts"
@@ -19,6 +21,43 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
+
+func DefaultTxOpts(ctx context.Context, client *ethclient.Client) (*bind.TransactOpts, error) {
+	onlyHex := strings.TrimPrefix(SenderPrivateKey, "0x")
+	if envPrivateKey, ok := os.LookupEnv("SENDER_PRIVATE_KEY"); ok {
+		onlyHex = strings.TrimPrefix(envPrivateKey, "0x")
+	}
+	privateKey, err := crypto.ToECDSA(common.Hex2Bytes(onlyHex))
+	if err != nil {
+		return nil, fmt.Errorf("create private key: %w", err)
+	}
+
+	chainId, err := client.ChainID(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("get chain id: %w", err)
+	}
+
+	txOpts, err := bind.NewKeyedTransactorWithChainID(privateKey, chainId)
+	if err != nil {
+		return nil, fmt.Errorf("create transactor: %w", err)
+	}
+	msgSender := common.HexToAddress(SenderAddress)
+	if envValue, ok := os.LookupEnv("SENDER_ADDRESS"); ok {
+		msgSender = common.HexToAddress(envValue)
+	}
+	nonce, err := client.PendingNonceAt(ctx, msgSender)
+	if err != nil {
+		return nil, fmt.Errorf("get nonce: %w", err)
+	}
+	txOpts.Nonce = big.NewInt(int64(nonce))
+	txOpts.Value = big.NewInt(0)
+	txOpts.GasLimit = GasLimit
+	txOpts.GasPrice, err = client.SuggestGasPrice(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("get gas price: %w", err)
+	}
+	return txOpts, nil
+}
 
 // AddInput sends an input to Ethereum using the devnet sender.
 // This function should be used in the devnet environment.
@@ -32,30 +71,9 @@ func AddInput(ctx context.Context, rpcUrl string, payload []byte) error {
 		return fmt.Errorf("dial to %v: %w", rpcUrl, err)
 	}
 
-	privateKey, err := crypto.ToECDSA(common.Hex2Bytes(SenderPrivateKey[2:]))
-	if err != nil {
-		return fmt.Errorf("create private key: %w", err)
-	}
-
-	chainId, err := client.ChainID(ctx)
-	if err != nil {
-		return fmt.Errorf("get chain id: %w", err)
-	}
-
-	txOpts, err := bind.NewKeyedTransactorWithChainID(privateKey, chainId)
+	txOpts, err := DefaultTxOpts(ctx, client)
 	if err != nil {
 		return fmt.Errorf("create transactor: %w", err)
-	}
-	nonce, err := client.PendingNonceAt(ctx, common.HexToAddress(SenderAddress))
-	if err != nil {
-		return fmt.Errorf("get nonce: %w", err)
-	}
-	txOpts.Nonce = big.NewInt(int64(nonce))
-	txOpts.Value = big.NewInt(0)
-	txOpts.GasLimit = GasLimit
-	txOpts.GasPrice, err = client.SuggestGasPrice(ctx)
-	if err != nil {
-		return fmt.Errorf("get gas price: %w", err)
 	}
 
 	inputBox, err := contracts.NewInputBox(common.HexToAddress(InputBoxAddress), client)

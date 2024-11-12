@@ -125,7 +125,9 @@ func (s *AvailListenerSuite) TestTableTennis() {
 	timestampExtrinsic.Method.Args = encodeCompactU64(timestamp + uint64(delta))
 	block.Block.Extrinsics = append([]types.Extrinsic{}, timestampExtrinsic)
 	// nolint
-	fromPaio := "0x1463f9725f107358c9115bc9d86c72dd5823e9b1e60114ab7528bb862fb57e8a2bcd567a2e929a0be56a5e000a0d48656c6c6f2c20576f726c643f2076a270f52ade97cd95ef7be45e08ea956bfdaf14b7fc4f8816207fa9eb3a5c17207ccdd94ac1bd86a749b66526fff6579e2b6bf1698e831955332ad9d5ed44da7208000000000000001c"
+	fromPaio := "0x1463f9725f107358c9115bc9d86c72dd5823e9b1e60114"
+	fromPaio = fromPaio + strings.ToLower(devnet.ApplicationAddress)
+	fromPaio = fromPaio + "000a0d48656c6c6f2c20576f726c643f2076a270f52ade97cd95ef7be45e08ea956bfdaf14b7fc4f8816207fa9eb3a5c17207ccdd94ac1bd86a749b66526fff6579e2b6bf1698e831955332ad9d5ed44da7208000000000000001c"
 	extrinsicPaioBlock := CreatePaioExtrinsic(common.Hex2Bytes(fromPaio))
 	block.Block.Extrinsics = append(block.Block.Extrinsics, extrinsicPaioBlock)
 
@@ -179,7 +181,8 @@ type FakeDecoder struct {
 
 func (fd *FakeDecoder) DecodePaioBatch(ctx context.Context, bytes []byte) (string, error) {
 	// nolint
-	return `{"sequencer_payment_address":"0x63F9725f107358c9115BC9d86c72dD5823E9B1E6","txs":[{"app":"0xab7528bb862fB57E8A2BCd567a2e929a0Be56a5e","nonce":0,"max_gas_price":10,"data":[72,101,108,108,111,44,32,87,111,114,108,100,63],"signature":{"r":"0x76a270f52ade97cd95ef7be45e08ea956bfdaf14b7fc4f8816207fa9eb3a5c17","s":"0x7ccdd94ac1bd86a749b66526fff6579e2b6bf1698e831955332ad9d5ed44da72","v":"0x1c"}}]}`, nil
+	jsonStr := fmt.Sprintf(`{"sequencer_payment_address":"0x63F9725f107358c9115BC9d86c72dD5823E9B1E6","txs":[{"app":"%s","nonce":0,"max_gas_price":10,"data":[72,101,108,108,111,44,32,87,111,114,108,100,63],"signature":{"r":"0x76a270f52ade97cd95ef7be45e08ea956bfdaf14b7fc4f8816207fa9eb3a5c17","s":"0x7ccdd94ac1bd86a749b66526fff6579e2b6bf1698e831955332ad9d5ed44da72","v":"0x1c"}}]}`, devnet.ApplicationAddress)
+	return jsonStr, nil
 }
 
 func CreatePaioExtrinsic(args []byte) types.Extrinsic {

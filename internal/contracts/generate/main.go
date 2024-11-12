@@ -73,6 +73,21 @@ var bindings = []contractBinding{
 		typeName: "Outputs",
 		outFile:  "outputs.go",
 	},
+	{
+		jsonPath: baseContractsPath + "dapp/IApplicationFactory.sol/IApplicationFactory.json",
+		typeName: "IApplicationFactory",
+		outFile:  "application_factory.go",
+	},
+	{
+		jsonPath: baseContractsPath + "consensus/authority/IAuthorityFactory.sol/IAuthorityFactory.json",
+		typeName: "IAuthorityFactory",
+		outFile:  "authority_factory.go",
+	},
+	{
+		jsonPath: baseContractsPath + "consensus/IConsensus.sol/IConsensus.json",
+		typeName: "IConsensus",
+		outFile:  "consensus.go",
+	},
 }
 
 func main() {

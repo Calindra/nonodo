@@ -388,7 +388,6 @@ func addEspressoSubcommands(espressoCmd *cobra.Command) {
 	espressoSendCmd.Flags().IntVar(&espressoOpts.Namespace, "namespace", int(opts.Namespace), "Namespace of the payload")
 	markFlagRequired(espressoSendCmd, "payload")
 	espressoCmd.AddCommand(espressoSendCmd)
-
 }
 
 func addAvailSubcommands(availCmd *cobra.Command) {
@@ -551,6 +550,10 @@ func init() {
 
 	cmd.Flags().StringVar(&opts.DbRawUrl, "db-raw-url", opts.DbRawUrl, "The raw database url")
 	cmd.Flags().BoolVar(&opts.RawEnabled, "raw-enabled", opts.RawEnabled, "If set, enables raw database")
+
+	cmd.Flags().IntVar(&opts.EpochBlocks, "epoch-blocks", opts.EpochBlocks,
+		"Number of blocks in each epoch")
+
 }
 
 func run(cmd *cobra.Command, args []string) {
