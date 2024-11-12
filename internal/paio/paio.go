@@ -89,11 +89,11 @@ func (p *PaioAPI) SendTransaction(ctx echo.Context) error {
 	return nil
 }
 
-func (p *PaioAPI) getNonceFromPaio(user string, app string) (*NonceResponse, error) {
+func (p *PaioAPI) getNonceFromPaio(user common.Address, app common.Address) (*NonceResponse, error) {
 	url := p.paioNonceUrl
 	payload := map[string]string{
-		"application": app,
-		"user":        user,
+		"application": app.Hex(),
+		"user":        user.Hex(),
 	}
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
@@ -131,29 +131,8 @@ func (p *PaioAPI) GetNonce(ctx echo.Context) error {
 	if request.MsgSender == "" {
 		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "msg_sender is required"})
 	}
-
-	filters := []*model.ConvenienceFilter{}
-	msgSenderField := "MsgSender"
-	msgSender := common.HexToAddress(request.MsgSender).Hex()
-	filters = append(filters, &model.ConvenienceFilter{
-		Field: &msgSenderField,
-		Eq:    &msgSender,
-	})
-
-	typeField := "Type"
-	inputBoxType := "inputbox"
-	filters = append(filters, &model.ConvenienceFilter{
-		Field: &typeField,
-		Ne:    &inputBoxType,
-	})
-
-	appContractField := "AppContract"
-	appContract := common.HexToAddress(request.AppContract).Hex()
-	filters = append(filters, &model.ConvenienceFilter{
-		Field: &appContractField,
-		Eq:    &appContract,
-	})
-
+	msgSender := common.HexToAddress(request.MsgSender)
+	appContract := common.HexToAddress(request.AppContract)
 	if p.paioNonceUrl != "" {
 		slog.Debug("Requesting Paio's nonce for",
 			"msgSender", msgSender,
@@ -168,7 +147,7 @@ func (p *PaioAPI) GetNonce(ctx echo.Context) error {
 
 	slog.Debug("GetNonce", "AppContract", request.AppContract, "MsgSender", request.MsgSender)
 
-	total, err := p.inputRepository.Count(stdCtx, filters)
+	total, err := p.inputRepository.GetNonce(stdCtx, appContract, msgSender)
 	if err != nil {
 		slog.Error("Error querying for inputs:", "err", err)
 		return err

@@ -443,6 +443,28 @@ func (r *InputRepository) queryByIndexAndAppContract(
 	}
 }
 
+func (c *InputRepository) GetNonce(
+	ctx context.Context,
+	appContract common.Address,
+	msgSender common.Address,
+) (uint64, error) {
+	query := `SELECT count(*) FROM convenience_inputs 
+	WHERE app_contract = $1 and msg_sender = $2`
+	stmt, err := c.Db.Preparex(query)
+	if err != nil {
+		slog.Error("Count execution error")
+		return 0, err
+	}
+	defer stmt.Close()
+	var count uint64
+	err = stmt.GetContext(ctx, &count, appContract.Hex(), msgSender.Hex())
+	if err != nil {
+		slog.Error("Count execution error")
+		return 0, err
+	}
+	return count, nil
+}
+
 func (c *InputRepository) Count(
 	ctx context.Context,
 	filter []*model.ConvenienceFilter,

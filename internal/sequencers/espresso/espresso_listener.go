@@ -89,8 +89,6 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 	}
 	slog.Info("Espresso: starting l1 block from", "blockNumber", l1FinalizedPrevHeight)
 
-	// keep track of msgSender -> nonce
-	nonceMap := make(map[common.Address]int64)
 	var delay time.Duration = 800
 
 	// main polling loop
@@ -204,11 +202,22 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 				// update nonce maps
 				// no need to consider node exits abruptly and restarts from where it left
 				// app has to start `nonce` from 1 and increment by 1 for each payload
-				if nonceMap[msgSender] == nonce {
-					nonceMap[msgSender] = nonce + 1
-				} else {
-					// nonce repeated
-					slog.Debug("duplicated or incorrect nonce", "nonce", nonce, "expected", nonceMap[msgSender])
+				dbNonce, err := e.InputRepository.GetNonce(ctx, appContract, msgSender)
+				if err != nil {
+					slog.Error("calculate internal nonce error",
+						"appContract", appContract,
+						"msgSender", msgSender,
+						"error", err,
+					)
+					return err
+				}
+				if int64(dbNonce) != nonce {
+					slog.Warn("duplicated or incorrect nonce",
+						"nonce", nonce,
+						"expected", dbNonce,
+						"appContract", appContract,
+						"msgSender", msgSender,
+					)
 					continue
 				}
 
