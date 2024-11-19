@@ -167,7 +167,6 @@ func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 	container := convenience.NewContainer(*db, opts.AutoCount)
 	decoder := container.GetOutputDecoder()
 	convenienceService := container.GetConvenienceService()
-	adapter := reader.NewAdapterV1(db, convenienceService)
 	if opts.RpcUrl == "" && !opts.DisableDevnet {
 		anvilLocation, err := handleAnvilInstallation()
 		if err != nil {
@@ -230,7 +229,6 @@ func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 	}))
 	inspect.Register(e, model)
 	health.Register(e)
-	reader.Register(e, model, convenienceService, adapter)
 	w.Workers = append(w.Workers, supervisor.HttpWorker{
 		Address: fmt.Sprintf("%v:%v", opts.HttpAddress, opts.HttpPort),
 		Handler: e,
