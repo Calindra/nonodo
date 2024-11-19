@@ -15,8 +15,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/calindra/cartesi-rollups-hl-graphql/pkg/convenience"
 	"github.com/calindra/nonodo/internal/claimer"
-	"github.com/calindra/nonodo/internal/convenience"
 	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/calindra/nonodo/internal/echoapp"
 	"github.com/calindra/nonodo/internal/health"
@@ -315,7 +315,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 				w.Workers = append(w.Workers, espresso.NewEspressoListener(
 					opts.EspressoUrl,
 					opts.Namespace,
-					modelInstance.GetInputRepository(),
+					container.GetInputRepository(),
 					opts.FromBlock,
 					inputterWorker,
 					opts.FromBlockL1,

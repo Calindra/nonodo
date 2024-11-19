@@ -15,9 +15,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/calindra/cartesi-rollups-hl-graphql/pkg/convenience"
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/contracts"
-	"github.com/calindra/nonodo/internal/convenience"
 	cModel "github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/calindra/nonodo/internal/model"
