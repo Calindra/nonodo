@@ -18,11 +18,11 @@ import (
 	"time"
 
 	"github.com/Khan/genqlient/graphql"
+	"github.com/calindra/cartesi-rollups-hl-graphql/pkg/readerclient"
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/calindra/nonodo/internal/inspect"
-	"github.com/calindra/nonodo/internal/readerclient"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/stretchr/testify/suite"
