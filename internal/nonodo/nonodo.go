@@ -16,18 +16,17 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/calindra/cartesi-rollups-hl-graphql/pkg/convenience"
+	synchronizernode "github.com/calindra/cartesi-rollups-hl-graphql/pkg/convenience/synchronizer_node"
+	"github.com/calindra/cartesi-rollups-hl-graphql/pkg/reader"
 	"github.com/calindra/nonodo/internal/claimer"
 	"github.com/calindra/nonodo/internal/contracts"
-	"github.com/calindra/nonodo/internal/convenience"
-	"github.com/calindra/nonodo/internal/convenience/synchronizer"
-	synchronizernode "github.com/calindra/nonodo/internal/convenience/synchronizer_node"
 	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/calindra/nonodo/internal/echoapp"
 	"github.com/calindra/nonodo/internal/health"
 	"github.com/calindra/nonodo/internal/inspect"
 	"github.com/calindra/nonodo/internal/model"
 	"github.com/calindra/nonodo/internal/paio"
-	"github.com/calindra/nonodo/internal/reader"
 	"github.com/calindra/nonodo/internal/rollup"
 	"github.com/calindra/nonodo/internal/salsa"
 	"github.com/calindra/nonodo/internal/sequencers/avail"
@@ -230,7 +229,7 @@ func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 	}))
 	inspect.Register(e, model)
 	health.Register(e)
-	reader.Register(e, model, convenienceService, adapter)
+	reader.Register(e, convenienceService, adapter)
 	w.Workers = append(w.Workers, supervisor.HttpWorker{
 		Address: fmt.Sprintf("%v:%v", opts.HttpAddress, opts.HttpPort),
 		Handler: e,
@@ -312,9 +311,6 @@ func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
 		)
 		w.Workers = append(w.Workers, rawSequencer)
 	}
-
-	cleanSync := synchronizer.NewCleanSynchronizer(container.GetSyncRepository(), nil)
-	w.Workers = append(w.Workers, cleanSync)
 
 	slog.Info("Listening", "port", opts.HttpPort)
 	return w
@@ -429,7 +425,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	if !opts.DisableInspect {
 		inspect.Register(e, modelInstance)
 	}
-	reader.Register(e, modelInstance, convenienceService, adapter)
+	reader.Register(e, convenienceService, adapter)
 	health.Register(e)
 
 	// Start the "internal" http rollup server
@@ -485,7 +481,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 				w.Workers = append(w.Workers, espresso.NewEspressoListener(
 					opts.EspressoUrl,
 					opts.Namespace,
-					modelInstance.GetInputRepository(),
+					container.GetInputRepository(),
 					opts.FromBlock,
 					inputterWorker,
 					opts.FromBlockL1,

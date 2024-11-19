@@ -13,13 +13,13 @@ import (
 	"testing"
 	"time"
 
-	cModel "github.com/calindra/nonodo/internal/convenience/model"
-	cRepos "github.com/calindra/nonodo/internal/convenience/repository"
+	cModel "github.com/calindra/cartesi-rollups-hl-graphql/pkg/convenience/model"
+	cRepos "github.com/calindra/cartesi-rollups-hl-graphql/pkg/convenience/repository"
 	"github.com/calindra/nonodo/internal/devnet"
 
+	"github.com/calindra/cartesi-rollups-hl-graphql/pkg/convenience"
+	"github.com/calindra/cartesi-rollups-hl-graphql/pkg/convenience/services"
 	"github.com/calindra/nonodo/internal/commons"
-	"github.com/calindra/nonodo/internal/convenience"
-	"github.com/calindra/nonodo/internal/convenience/services"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/ncruces/go-sqlite3/driver"

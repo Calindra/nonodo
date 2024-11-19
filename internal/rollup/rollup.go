@@ -16,8 +16,8 @@ import (
 	"strings"
 	"time"
 
+	cModel "github.com/calindra/cartesi-rollups-hl-graphql/pkg/convenience/model"
 	"github.com/calindra/nonodo/internal/contracts"
-	cModel "github.com/calindra/nonodo/internal/convenience/model"
 	mdl "github.com/calindra/nonodo/internal/model"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
