@@ -41,14 +41,12 @@ Inspect running at http://localhost:HTTP_PORT/inspect/`
 
 var startupMessage = `
 Http Rollups for development started at http://localhost:ROLLUPS_PORT
-GraphQL running at http://localhost:HTTP_PORT/graphql
 INSPECT_MESSAGE
 Press Ctrl+C to stop the node
 `
 
 var startupMessageWithLambada = `
 Http Rollups for development started at http://localhost:ROLLUPS_PORT
-GraphQL running at http://localhost:HTTP_PORT/graphql
 INSPECT_MESSAGE
 Lambada running at http://SALSA_URL
 Press Ctrl+C to stop the node
@@ -391,7 +389,6 @@ func addEspressoSubcommands(espressoCmd *cobra.Command) {
 }
 
 func addAvailSubcommands(availCmd *cobra.Command) {
-
 	availOpts := &AvailOpts{}
 
 	availSendCmd := &cobra.Command{
@@ -413,7 +410,6 @@ func addAvailSubcommands(availCmd *cobra.Command) {
 				panic(err)
 			}
 			return nil
-
 		},
 	}
 	availSendCmd.Flags().StringVar(&availOpts.Payload, "payload", "", "Payload to send to Avail")
@@ -513,10 +509,6 @@ func init() {
 	cmd.Flags().StringVar(&opts.RpcUrl, "rpc-url", opts.RpcUrl,
 		"If set, nonodo connects to this url instead of setting up Anvil")
 
-	// convenience experimental implementation
-	cmd.Flags().BoolVar(&opts.HLGraphQL, "high-level-graphql", opts.HLGraphQL,
-		"If set, enables the convenience layer experiment")
-
 	// database file
 	cmd.Flags().StringVar(&opts.SqliteFile, "sqlite-file", opts.SqliteFile,
 		"The sqlite file to load the state")
@@ -553,7 +545,6 @@ func init() {
 
 	cmd.Flags().IntVar(&opts.EpochBlocks, "epoch-blocks", opts.EpochBlocks,
 		"Number of blocks in each epoch")
-
 }
 
 func run(cmd *cobra.Command, args []string) {
@@ -633,14 +624,10 @@ func run(cmd *cobra.Command, args []string) {
 		}
 	}()
 	LoadEnv()
-	if opts.HLGraphQL {
-		err := nonodo.NewSupervisorHLGraphQL(opts).Start(ctx, ready)
-		cobra.CheckErr(err)
-	} else {
-		opts.AutoCount = true // not check the Idempotency
-		err := nonodo.NewSupervisor(opts).Start(ctx, ready)
-		cobra.CheckErr(err)
-	}
+
+	opts.AutoCount = true // not check the Idempotency
+	err := nonodo.NewSupervisor(opts).Start(ctx, ready)
+	cobra.CheckErr(err)
 }
 
 //go:embed .env

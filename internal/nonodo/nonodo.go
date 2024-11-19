@@ -9,7 +9,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"math/big"
 	"net/url"
 	"os"
 	"path"
@@ -17,17 +16,13 @@ import (
 	"time"
 
 	"github.com/calindra/nonodo/internal/claimer"
-	"github.com/calindra/nonodo/internal/contracts"
 	"github.com/calindra/nonodo/internal/convenience"
-	"github.com/calindra/nonodo/internal/convenience/synchronizer"
-	synchronizernode "github.com/calindra/nonodo/internal/convenience/synchronizer_node"
 	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/calindra/nonodo/internal/echoapp"
 	"github.com/calindra/nonodo/internal/health"
 	"github.com/calindra/nonodo/internal/inspect"
 	"github.com/calindra/nonodo/internal/model"
 	"github.com/calindra/nonodo/internal/paio"
-	"github.com/calindra/nonodo/internal/reader"
 	"github.com/calindra/nonodo/internal/rollup"
 	"github.com/calindra/nonodo/internal/salsa"
 	"github.com/calindra/nonodo/internal/sequencers/avail"
@@ -75,7 +70,6 @@ type NonodoOpts struct {
 	DisableInspect bool
 	// If set, start application.
 	ApplicationArgs     []string
-	HLGraphQL           bool
 	SqliteFile          string
 	FromBlock           uint64
 	FromBlockL1         *uint64
@@ -134,7 +128,6 @@ func NewNonodoOpts() NonodoOpts {
 		DisableAdvance:      false,
 		DisableInspect:      false,
 		ApplicationArgs:     nil,
-		HLGraphQL:           false,
 		SqliteFile:          "",
 		FromBlock:           0,
 		FromBlockL1:         nil,
@@ -158,164 +151,6 @@ func NewNonodoOpts() NonodoOpts {
 		RawEnabled:          false,
 		EpochBlocks:         claimer.DEFAULT_EPOCH_BLOCKS,
 	}
-}
-
-func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
-	var w supervisor.SupervisorWorker
-	w.Timeout = opts.TimeoutWorker
-	db := CreateDBInstance(opts)
-	container := convenience.NewContainer(*db, opts.AutoCount)
-	decoder := container.GetOutputDecoder()
-	convenienceService := container.GetConvenienceService()
-	if opts.RpcUrl == "" && !opts.DisableDevnet {
-		anvilLocation, err := handleAnvilInstallation()
-		if err != nil {
-			panic(err)
-		}
-
-		w.Workers = append(w.Workers, devnet.AnvilWorker{
-			Address:  opts.AnvilAddress,
-			Port:     opts.AnvilPort,
-			Verbose:  opts.AnvilVerbose,
-			AnvilCmd: anvilLocation,
-		})
-		opts.RpcUrl = fmt.Sprintf("ws://%s:%v", opts.AnvilAddress, opts.AnvilPort)
-	}
-
-	if !opts.LoadTestMode && !opts.GraphileDisableSync {
-		slog.Debug("Sync initialization")
-		var synchronizer supervisor.Worker
-
-		if opts.NodeVersion == "v2" {
-			graphileUrl, err := url.Parse(opts.GraphileUrl)
-			if err != nil {
-				slog.Error("Error parsing Graphile URL", "error", err)
-				panic(err)
-			}
-
-			synchronizer = container.GetGraphileSynchronizer(*graphileUrl, opts.LoadTestMode)
-		} else {
-			synchronizer = container.GetGraphQLSynchronizer()
-		}
-
-		w.Workers = append(w.Workers, synchronizer)
-
-		opts.RpcUrl = fmt.Sprintf("ws://%s:%v", opts.AnvilAddress, opts.AnvilPort)
-		fromBlock := new(big.Int).SetUint64(opts.FromBlock)
-
-		execVoucherListener := convenience.NewExecListener(
-			opts.RpcUrl,
-			common.HexToAddress(opts.ApplicationAddress),
-			convenienceService,
-			fromBlock,
-		)
-		w.Workers = append(w.Workers, execVoucherListener)
-	}
-
-	model := model.NewNonodoModel(
-		decoder,
-		container.GetReportRepository(),
-		container.GetInputRepository(),
-		container.GetVoucherRepository(),
-		container.GetNoticeRepository(),
-	)
-
-	e := echo.New()
-	e.Use(middleware.CORS())
-	e.Use(middleware.Recover())
-	e.Use(middleware.TimeoutWithConfig(middleware.TimeoutConfig{
-		ErrorMessage: "Request timed out",
-		Timeout:      opts.TimeoutInspect,
-	}))
-	inspect.Register(e, model)
-	health.Register(e)
-	w.Workers = append(w.Workers, supervisor.HttpWorker{
-		Address: fmt.Sprintf("%v:%v", opts.HttpAddress, opts.HttpPort),
-		Handler: e,
-	})
-
-	if opts.Salsa {
-		w.Workers = append(w.Workers, salsa.SalsaWorker{
-			Address: opts.SalsaUrl,
-		})
-	}
-
-	if opts.RawEnabled {
-		dbNodeV2 := sqlx.MustConnect("postgres", opts.DbRawUrl)
-		rawRepository := synchronizernode.NewRawRepository(opts.DbRawUrl, dbNodeV2)
-		synchronizerUpdate := synchronizernode.NewSynchronizerUpdate(
-			container.GetRawInputRepository(),
-			rawRepository,
-			container.GetInputRepository(),
-		)
-		synchronizerReport := synchronizernode.NewSynchronizerReport(
-			container.GetReportRepository(),
-			rawRepository,
-		)
-		synchronizerOutputUpdate := synchronizernode.NewSynchronizerOutputUpdate(
-			container.GetVoucherRepository(),
-			container.GetNoticeRepository(),
-			rawRepository,
-			container.GetRawOutputRefRepository(),
-		)
-
-		abi, err := contracts.OutputsMetaData.GetAbi()
-		if err != nil {
-			panic(err)
-		}
-		abiDecoder := synchronizernode.NewAbiDecoder(abi)
-
-		inputAbi, err := contracts.InputsMetaData.GetAbi()
-		if err != nil {
-			panic(err)
-		}
-
-		inputAbiDecoder := synchronizernode.NewAbiDecoder(inputAbi)
-
-		synchronizerOutputCreate := synchronizernode.NewSynchronizerOutputCreate(
-			container.GetVoucherRepository(),
-			container.GetNoticeRepository(),
-			rawRepository,
-			container.GetRawOutputRefRepository(),
-			abiDecoder,
-		)
-
-		synchronizerOutputExecuted := synchronizernode.NewSynchronizerOutputExecuted(
-			container.GetVoucherRepository(),
-			container.GetNoticeRepository(),
-			rawRepository,
-			container.GetRawOutputRefRepository(),
-		)
-
-		synchronizerInputCreate := synchronizernode.NewSynchronizerInputCreator(
-			container.GetInputRepository(),
-			container.GetRawInputRepository(),
-			rawRepository,
-			inputAbiDecoder,
-		)
-
-		rawSequencer := synchronizernode.NewSynchronizerCreateWorker(
-			container.GetInputRepository(),
-			container.GetRawInputRepository(),
-			opts.DbRawUrl,
-			rawRepository,
-			&synchronizerUpdate,
-			container.GetOutputDecoder(),
-			synchronizerReport,
-			synchronizerOutputUpdate,
-			container.GetRawOutputRefRepository(),
-			synchronizerOutputCreate,
-			synchronizerInputCreate,
-			synchronizerOutputExecuted,
-		)
-		w.Workers = append(w.Workers, rawSequencer)
-	}
-
-	cleanSync := synchronizer.NewCleanSynchronizer(container.GetSyncRepository(), nil)
-	w.Workers = append(w.Workers, cleanSync)
-
-	slog.Info("Listening", "port", opts.HttpPort)
-	return w
 }
 
 func NewAbiDecoder(abi *abi.ABI) {
@@ -409,8 +244,6 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	db := CreateDBInstance(opts)
 	container := convenience.NewContainer(*db, opts.AutoCount)
 	decoder := container.GetOutputDecoder()
-	convenienceService := container.GetConvenienceService()
-	adapter := reader.NewAdapterV1(db, convenienceService)
 	modelInstance := model.NewNonodoModel(decoder,
 		container.GetReportRepository(),
 		container.GetInputRepository(),
@@ -427,7 +260,6 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	if !opts.DisableInspect {
 		inspect.Register(e, modelInstance)
 	}
-	reader.Register(e, modelInstance, convenienceService, adapter)
 	health.Register(e)
 
 	// Start the "internal" http rollup server
