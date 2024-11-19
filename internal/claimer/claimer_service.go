@@ -7,7 +7,7 @@ import (
 	"log/slog"
 	"math/big"
 
-	"github.com/calindra/nonodo/internal/convenience/repository"
+	"github.com/calindra/cartesi-rollups-hl-graphql/pkg/convenience/repository"
 	"github.com/ethereum/go-ethereum/common"
 )
 
