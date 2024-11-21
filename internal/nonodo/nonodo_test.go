@@ -48,21 +48,21 @@ type NonodoSuite struct {
 }
 
 // Mini implementation of GraphQL using hl like library
-// type InlineHLGraphQL struct{}
+type InlineHLGraphQL struct {
+	w supervisor.HttpWorker
+}
 
-// // Start implements supervisor.Worker.
-// func (i InlineHLGraphQL) Start(ctx context.Context, ready chan<- struct{}) error {
+// Start implements supervisor.Worker.
+func (i InlineHLGraphQL) Start(ctx context.Context, ready chan<- struct{}) error {
+	return i.w.Start(ctx, ready)
+}
 
-// 	ready <- struct{}{}
-// 	return nil
-// }
+// String implements supervisor.Worker.
+func (i InlineHLGraphQL) String() string {
+	return "InlineHLGraphQL"
+}
 
-// // String implements supervisor.Worker.
-// func (i InlineHLGraphQL) String() string {
-// 	return "InlineHLGraphQL"
-// }
-
-func NewInlineHLGraphQLWorker(opts NonodoOpts) supervisor.HttpWorker {
+func NewInlineHLGraphQLWorker(opts NonodoOpts) supervisor.Worker {
 	db := CreateDBInstance(opts)
 	container := convenience.NewContainer(*db, opts.AutoCount)
 	convenienceService := container.GetConvenienceService()
@@ -77,9 +77,11 @@ func NewInlineHLGraphQLWorker(opts NonodoOpts) supervisor.HttpWorker {
 	}))
 	reader.Register(e, convenienceService, adapter)
 
-	return supervisor.HttpWorker{
-		Address: fmt.Sprintf("%s:%d", opts.HttpAddress, opts.HttpPort),
-		Handler: e,
+	return InlineHLGraphQL{
+		w: supervisor.HttpWorker{
+			Address: fmt.Sprintf("%s:%d", opts.HttpAddress, opts.HttpPort),
+			Handler: e,
+		},
 	}
 }
 
@@ -222,7 +224,8 @@ func (s *NonodoSuite) setupTest(opts *NonodoOpts) {
 	workerCtx, s.workerCancel = context.WithCancel(s.ctx)
 
 	w := NewSupervisor(*opts)
-	w.Workers = append(w.Workers, NewInlineHLGraphQLWorker(*opts))
+	gqlw := NewInlineHLGraphQLWorker(*opts)
+	w.Workers = append(w.Workers, gqlw)
 
 	ready := make(chan struct{})
 	go func() {
