@@ -99,6 +99,8 @@ func NewNonodoOpts() NonodoOpts {
 		defaultTimeout time.Duration = 10 * time.Second
 		graphileUrl                  = os.Getenv("GRAPHILE_URL")
 	)
+
+	// FLAG: remove graphile if dont need
 	const defaultGraphileUrl = "http://localhost:5001/graphql"
 
 	if graphileUrl == "" {
