@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/calindra/cartesi-rollups-hl-graphql/pkg/convenience"
+	"github.com/calindra/cartesi-rollups-hl-graphql/pkg/reader"
 	"github.com/calindra/nonodo/internal/claimer"
 	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/calindra/nonodo/internal/echoapp"
@@ -246,6 +247,8 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	db := CreateDBInstance(opts)
 	container := convenience.NewContainer(*db, opts.AutoCount)
 	decoder := container.GetOutputDecoder()
+	convenienceService := container.GetConvenienceService()
+	adapter := reader.NewAdapterV1(db, convenienceService)
 	modelInstance := model.NewNonodoModel(decoder,
 		container.GetReportRepository(),
 		container.GetInputRepository(),
@@ -262,6 +265,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	if !opts.DisableInspect {
 		inspect.Register(e, modelInstance)
 	}
+	reader.Register(e, convenienceService, adapter)
 	health.Register(e)
 
 	// Start the "internal" http rollup server
