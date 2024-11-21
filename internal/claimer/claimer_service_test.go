@@ -35,6 +35,7 @@ type ClaimerServiceSuite struct {
 	container      *convenience.Container
 	claimer        *Claimer
 	ethClient      *ethclient.Client
+	dbFactory      *commons.DbFactory
 }
 
 func TestClaimerServiceSuite(t *testing.T) {
@@ -71,8 +72,8 @@ func (s *ClaimerServiceSuite) SetupTest() {
 		s.T().Log("nonodo ready")
 	}
 
-	dbFactory := commons.NewDbFactory()
-	db := dbFactory.CreateDb("claim-service.sqlite3")
+	s.dbFactory = commons.NewDbFactory()
+	db := s.dbFactory.CreateDb("claim-service.sqlite3")
 	s.container = convenience.NewContainer(*db, false)
 	ethClient, err := ethclient.DialContext(s.ctx, s.rpcUrl)
 	s.Require().NoError(err)
@@ -87,6 +88,7 @@ func (s *ClaimerServiceSuite) SetupTest() {
 
 func (s *ClaimerServiceSuite) TearDownTest() {
 	s.workerCancel()
+	defer s.dbFactory.Cleanup()
 	select {
 	case <-s.ctx.Done():
 		s.Fail("context error", s.ctx.Err())
