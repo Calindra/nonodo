@@ -1,0 +1,67 @@
+name: K6 Load Test
+
+on:
+  push:
+    branches:
+      - "**"
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  k6-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: up db
+        run : make up-db-raw
+
+      - name: Compile Nonodo
+        run : go build .
+
+      - name: Install PostgreSQL Client
+        run: sudo apt-get install -y postgresql-client
+
+      - name: Wait for Postgres to be ready
+        run: |
+          echo "Waiting for postgres to be ready..."
+          for i in {1..30}; do
+            if pg_isready -h localhost -p 5432 -U myuser; then
+              echo "Postgres is ready"
+              break
+            else
+              echo "Postgres is unavailable - sleeping"
+              sleep 1
+            fi
+          done
+
+      - name: Creating database hlgraphql
+        run: psql "postgres://postgres:password@localhost:5432/rollupsdb?sslmode=disable" -c "CREATE DATABASE hlgraphql WITH TEMPLATE = template0 ENCODING = 'UTF8' LC_COLLATE = 'en_US.UTF-8' LC_CTYPE = 'en_US.UTF-8';"
+      
+      - name: Using Postgres DB
+        run : |
+          export POSTGRES_HOST=localhost 
+          export POSTGRES_PORT=5432 
+          export POSTGRES_DB=hlgraphql
+          export POSTGRES_USER=postgres 
+          export POSTGRES_PASSWORD=password  
+          nohup ./nonodo -d --raw-enabled --high-level-graphql --graphile-disable-sync --db-implementation=postgres --db-raw-url=postgres://postgres:password@localhost:5432/rollupsdb?sslmode=disable --disable-devnet &
+          
+      - name: Install k6
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gnupg software-properties-common
+          sudo mkdir -p /etc/apt/keyrings
+          curl -fsSL https://dl.k6.io/key.gpg | sudo gpg --dearmor -o /etc/apt/keyrings/k6-archive-keyring.gpg
+          echo "deb [signed-by=/etc/apt/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update
+          sudo apt-get install -y k6
+
+      - name: Run k6 tests
+        id: k6
+        run: |
+          k6 run loadtesting/test.js
