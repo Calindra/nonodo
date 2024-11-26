@@ -41,16 +41,16 @@ jobs:
 
       - name: Creating database hlgraphql
         run: psql "postgres://postgres:password@localhost:5432/rollupsdb?sslmode=disable" -c "CREATE DATABASE hlgraphql WITH TEMPLATE = template0 ENCODING = 'UTF8' LC_COLLATE = 'en_US.UTF-8' LC_CTYPE = 'en_US.UTF-8';"
-      
+
       - name: Using Postgres DB
         run : |
-          export POSTGRES_HOST=localhost 
-          export POSTGRES_PORT=5432 
+          export POSTGRES_HOST=localhost
+          export POSTGRES_PORT=5432
           export POSTGRES_DB=hlgraphql
-          export POSTGRES_USER=postgres 
-          export POSTGRES_PASSWORD=password  
-          nohup ./nonodo -d --raw-enabled --high-level-graphql --graphile-disable-sync --db-implementation=postgres --db-raw-url=postgres://postgres:password@localhost:5432/rollupsdb?sslmode=disable --disable-devnet &
-          
+          export POSTGRES_USER=postgres
+          export POSTGRES_PASSWORD=password
+          nohup ./nonodo -d --graphile-disable-sync --db-implementation=postgres --db-raw-url=postgres://postgres:password@localhost:5432/rollupsdb?sslmode=disable --disable-devnet &
+
       - name: Install k6
         run: |
           sudo apt-get update
