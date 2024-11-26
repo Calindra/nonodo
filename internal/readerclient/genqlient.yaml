@@ -1,9 +1,0 @@
-schema: ../../api/reader.graphql
-generated: generated.go
-package: readerclient
-bindings:
-  BigInt:
-    type: string
-operations:
-  - state.graphql
-  - input_status.graphql

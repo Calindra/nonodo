@@ -7,7 +7,7 @@ build:
 
 .PHONY: test
 test:
-	go test -p 1 ./...
+	go test --timeout 1m -p 1 ./...
 clean-db-raw:
 	docker compose -f postgres/raw/compose.yml down --volumes --remove-orphans --rmi local
 up-db-raw:
