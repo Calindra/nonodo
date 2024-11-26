@@ -41,12 +41,14 @@ Inspect running at http://localhost:HTTP_PORT/inspect/`
 
 var startupMessage = `
 Http Rollups for development started at http://localhost:ROLLUPS_PORT
+GraphQL running at http://localhost:HTTP_PORT/graphql
 INSPECT_MESSAGE
 Press Ctrl+C to stop the node
 `
 
 var startupMessageWithLambada = `
 Http Rollups for development started at http://localhost:ROLLUPS_PORT
+GraphQL running at http://localhost:HTTP_PORT/graphql
 INSPECT_MESSAGE
 Lambada running at http://SALSA_URL
 Press Ctrl+C to stop the node
