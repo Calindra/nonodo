@@ -11,7 +11,7 @@ info:
     API that allows the DApp frontend to make inspect-state requests to the DApp backend.
 
 paths:
-  inspect/{payload}:
+  inspect/{app_address}/{payload}:
     get:
       operationId: inspect
       summary: Inspect DApp state via GET
@@ -35,6 +35,13 @@ paths:
           required: true
           schema:
             type: string
+        - in: path
+          name: app_address
+          required: true
+          schema:
+            type: string
+            pattern: "^0x([0-9a-fA-F]{2})*$"
+            format: hex
 
       responses:
         "200":
@@ -51,7 +58,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
-  inspect:
+  inspect/{app_address}:
     post:
       operationId: inspect_post
       summary: Inspect DApp state via POST
@@ -59,7 +66,14 @@ paths:
         Differently from the GET method, the POST method sends an inspect-state request to the DApp backend by passing its payload in the request body.
         The payload should be a binary.
         Other than that, it behaves the same way as described in the GET method.
-
+      parameters:
+        - in: path
+          name: app_address
+          required: true
+          schema:
+            type: string
+            pattern: "^0x([0-9a-fA-F]{2})*$"
+            format: hex
       requestBody:
         content:
           application/octet-stream:

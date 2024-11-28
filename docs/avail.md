@@ -62,6 +62,10 @@ graph TD
 - **`AVAIL_MNEMONIC`**
   Description: Mnemonic phrase used to send data to Avail.
 
+- **`L1_READ_DELAY_IN_SECONDS`
+  Default value: 300 (5 minutes)
+  Description: Defines the delay period, in seconds, that the system should wait before attempting to read from the L1 based on Avail's block timestamp.
+
 ## Nonodo
 
 Build:

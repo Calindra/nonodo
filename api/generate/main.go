@@ -48,12 +48,12 @@ func checkErr(context string, err error) {
 func main() {
 	commons.ConfigureLog(slog.LevelDebug)
 	v2URL := "https://raw.githubusercontent.com/cartesi/openapi-interfaces/v0.9.0/rollup.yaml"
-	inspectURL := "https://raw.githubusercontent.com/cartesi/rollups-node/v1.4.0/api/openapi/inspect.yaml"
+	// inspectURL := "https://raw.githubusercontent.com/cartesi/rollups-node/v1.4.0/api/openapi/inspect.yaml"
 
 	v2, wrong := getYAML(v2URL)
 	checkErr("download v2", wrong)
-	inspect, wrong := getYAML(inspectURL)
-	checkErr("download inspect", wrong)
+	// inspect, wrong := getYAML(inspectURL)
+	// checkErr("download inspect", wrong)
 
 	var filemode os.FileMode = 0644
 
@@ -62,10 +62,10 @@ func main() {
 		panic("Failed to write OpenAPI v2 to file: " + err.Error())
 	}
 
-	err = os.WriteFile("inspect.yaml", inspect, filemode)
-	if err != nil {
-		panic("Failed to write OpenAPI inspect to file: " + err.Error())
-	}
+	// err = os.WriteFile("inspect.yaml", inspect, filemode)
+	// if err != nil {
+	// 	panic("Failed to write OpenAPI inspect to file: " + err.Error())
+	// }
 
 	slog.Info("OpenAPI written to file")
 }

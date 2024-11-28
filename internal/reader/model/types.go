@@ -50,6 +50,8 @@ type Voucher struct {
 	Executed bool `json:"executed"`
 
 	Proof Proof `json:"proof"`
+
+	TransactionHash string `json:"transactionHash"`
 }
 
 type Proof struct {

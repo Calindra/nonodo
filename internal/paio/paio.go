@@ -5,7 +5,6 @@ import (
 	"context"
 	_ "embed"
 	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -14,9 +13,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/calindra/cartesi-rollups-hl-graphql/pkg/convenience/model"
+	"github.com/calindra/cartesi-rollups-hl-graphql/pkg/convenience/repository"
 	"github.com/calindra/nonodo/internal/commons"
-	"github.com/calindra/nonodo/internal/convenience/model"
-	"github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/calindra/nonodo/internal/sequencers/avail"
 	"github.com/calindra/nonodo/internal/sequencers/paiodecoder"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -63,6 +62,19 @@ func (p *PaioAPI) getChainID(ctx context.Context) (*big.Int, error) {
 	return chainId, nil
 }
 
+func (p *PaioAPI) getBlockNumber(ctx context.Context) (uint64, error) {
+	client, err := ethclient.DialContext(ctx, p.EvmRpcUrl)
+	if err != nil {
+		return 0, fmt.Errorf("ethclient dial error: %w", err)
+	}
+	defer client.Close()
+	blockNumber, err := client.BlockNumber(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("ethclient block_number error: %w", err)
+	}
+	return blockNumber, nil
+}
+
 // SendTransaction implements ServerInterface.
 func (p *PaioAPI) SendTransaction(ctx echo.Context) error {
 	var request SendTransactionJSONRequestBody
@@ -90,11 +102,11 @@ func (p *PaioAPI) SendTransaction(ctx echo.Context) error {
 	return nil
 }
 
-func (p *PaioAPI) getNonceFromPaio(user string, app string) (*NonceResponse, error) {
+func (p *PaioAPI) getNonceFromPaio(user common.Address, app common.Address) (*NonceResponse, error) {
 	url := p.paioNonceUrl
 	payload := map[string]string{
-		"application": app,
-		"user":        user,
+		"application": app.Hex(),
+		"user":        user.Hex(),
 	}
 	jsonData, err := json.Marshal(payload)
 	if err != nil {
@@ -132,29 +144,8 @@ func (p *PaioAPI) GetNonce(ctx echo.Context) error {
 	if request.MsgSender == "" {
 		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "msg_sender is required"})
 	}
-
-	filters := []*model.ConvenienceFilter{}
-	msgSenderField := "MsgSender"
-	msgSender := common.HexToAddress(request.MsgSender).Hex()
-	filters = append(filters, &model.ConvenienceFilter{
-		Field: &msgSenderField,
-		Eq:    &msgSender,
-	})
-
-	typeField := "Type"
-	inputBoxType := "inputbox"
-	filters = append(filters, &model.ConvenienceFilter{
-		Field: &typeField,
-		Ne:    &inputBoxType,
-	})
-
-	appContractField := "AppContract"
-	appContract := common.HexToAddress(request.AppContract).Hex()
-	filters = append(filters, &model.ConvenienceFilter{
-		Field: &appContractField,
-		Eq:    &appContract,
-	})
-
+	msgSender := common.HexToAddress(request.MsgSender)
+	appContract := common.HexToAddress(request.AppContract)
 	if p.paioNonceUrl != "" {
 		slog.Debug("Requesting Paio's nonce for",
 			"msgSender", msgSender,
@@ -169,7 +160,7 @@ func (p *PaioAPI) GetNonce(ctx echo.Context) error {
 
 	slog.Debug("GetNonce", "AppContract", request.AppContract, "MsgSender", request.MsgSender)
 
-	total, err := p.inputRepository.Count(stdCtx, filters)
+	total, err := p.inputRepository.GetNonce(stdCtx, appContract, msgSender)
 	if err != nil {
 		slog.Error("Error querying for inputs:", "err", err)
 		return err
@@ -292,14 +283,7 @@ func (p *PaioAPI) SaveTransaction(ctx echo.Context) error {
 		"payload", payload,
 	)
 
-	payloadBytes := []byte(payload)
-	if strings.HasPrefix(payload, "0x") {
-		payload = payload[2:] // remove 0x
-		payloadBytes, err = hex.DecodeString(payload)
-		if err != nil {
-			return err
-		}
-	}
+	payload = strings.TrimPrefix(payload, "0x")
 
 	inputCount, err := p.inputRepository.Count(stdCtx, nil)
 
@@ -313,7 +297,7 @@ func (p *PaioAPI) SaveTransaction(ctx echo.Context) error {
 		ID:            txId,
 		Index:         int(inputCount),
 		MsgSender:     msgSender,
-		Payload:       payloadBytes,
+		Payload:       payload,
 		AppContract:   common.HexToAddress(dappAddress),
 		InputBoxIndex: -2,
 		Type:          "Avail",
@@ -382,19 +366,24 @@ func (p *PaioAPI) SendCartesiTransaction(ctx echo.Context) error {
 		}
 		return ctx.JSON(http.StatusCreated, response)
 	}
+	blockNumber, err := p.getBlockNumber(stdCtx)
+	if err != nil {
+		slog.Error("Error reading current block number:", "err", err)
+		return err
+	}
 	inputCount, err := p.inputRepository.Count(stdCtx, nil)
 	if err != nil {
 		slog.Error("Error counting inputs:", "err", err)
 		return err
 	}
-	payload := common.Hex2Bytes(request.TypedData.Message.Data[2:])
+	payload := request.TypedData.Message.Data[2:]
 	_, err = p.inputRepository.Create(stdCtx, model.AdvanceInput{
 		ID:             txId,
 		Index:          int(inputCount),
 		MsgSender:      msgSender,
 		Payload:        payload,
 		AppContract:    appContract,
-		BlockNumber:    1,
+		BlockNumber:    blockNumber,
 		BlockTimestamp: time.Now(),
 		InputBoxIndex:  -2,
 		Type:           "L2",
@@ -410,7 +399,7 @@ func (p *PaioAPI) SendCartesiTransaction(ctx echo.Context) error {
 		"txId", txId,
 		"msgSender", msgSender,
 		"appContract", appContract.Hex(),
-		"data", common.Bytes2Hex(payload),
+		"data", payload,
 		"message", string(msg),
 	)
 	response := TransactionResponse{

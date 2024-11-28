@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/calindra/nonodo/internal/convenience/repository"
+	"github.com/calindra/cartesi-rollups-hl-graphql/pkg/convenience/repository"
 	"github.com/calindra/nonodo/internal/sequencers/avail"
 )
 
@@ -14,6 +14,7 @@ type PaioBuilder struct {
 	RpcUrl          string
 	EspressoUrl     string
 	PaioServerUrl   string
+	Namespace       uint64
 }
 
 func NewPaioBuilder() *PaioBuilder {
@@ -23,6 +24,7 @@ func NewPaioBuilder() *PaioBuilder {
 		RpcUrl:          "",
 		EspressoUrl:     "",
 		PaioServerUrl:   "",
+		Namespace:       0,
 	}
 }
 
@@ -41,6 +43,11 @@ func (pb *PaioBuilder) WithRpcUrl(rpcUrl string) *PaioBuilder {
 	return pb
 }
 
+func (pb *PaioBuilder) WithNamespace(namespace uint64) *PaioBuilder {
+	pb.Namespace = namespace
+	return pb
+}
+
 func (pb *PaioBuilder) WithEspressoUrl(espressoUrl string) *PaioBuilder {
 	pb.EspressoUrl = espressoUrl
 	return pb
@@ -55,7 +62,7 @@ func (pb *PaioBuilder) Build() *PaioAPI {
 	var clientSender Sender
 
 	if pb.EspressoUrl != "" {
-		clientSender = NewEspressoSender(pb.EspressoUrl)
+		clientSender = NewEspressoSender(pb.EspressoUrl, pb.Namespace)
 	}
 
 	paioNonceUrl := ""

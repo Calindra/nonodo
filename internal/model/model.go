@@ -12,9 +12,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/calindra/nonodo/internal/convenience/model"
-	cModel "github.com/calindra/nonodo/internal/convenience/model"
-	cRepos "github.com/calindra/nonodo/internal/convenience/repository"
+	cModel "github.com/calindra/cartesi-rollups-hl-graphql/pkg/convenience/model"
+	cRepos "github.com/calindra/cartesi-rollups-hl-graphql/pkg/convenience/repository"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
@@ -61,7 +60,7 @@ func NewNonodoModel(
 // Add an advance input to the model.
 func (m *NonodoModel) AddAdvanceInput(
 	sender common.Address,
-	payload []byte,
+	payload string,
 	blockNumber uint64,
 	timestamp time.Time,
 	inputBoxIndex int,
@@ -97,7 +96,7 @@ func (m *NonodoModel) AddAdvanceInput(
 		return err
 	}
 	slog.Info("nonodo: added advance input", "index", input.Index, "sender", input.MsgSender,
-		"payload", hexutil.Encode(input.Payload))
+		"payload", input.Payload)
 	return nil
 }
 
@@ -244,10 +243,10 @@ func (m *NonodoModel) RegisterException(payload []byte) error {
 
 func (m *NonodoModel) getProcessedInputCount() (int, error) {
 	ctx := context.Background()
-	filter := []*model.ConvenienceFilter{}
+	filter := []*cModel.ConvenienceFilter{}
 	field := "Status"
 	value := fmt.Sprintf("%d", cModel.CompletionStatusUnprocessed)
-	filter = append(filter, &model.ConvenienceFilter{
+	filter = append(filter, &cModel.ConvenienceFilter{
 		Field: &field,
 		Ne:    &value,
 	})

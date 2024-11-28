@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"log/slog"
 
-	cModel "github.com/calindra/nonodo/internal/convenience/model"
-	cRepos "github.com/calindra/nonodo/internal/convenience/repository"
+	cModel "github.com/calindra/cartesi-rollups-hl-graphql/pkg/convenience/model"
+	cRepos "github.com/calindra/cartesi-rollups-hl-graphql/pkg/convenience/repository"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
@@ -238,7 +238,7 @@ func (s *rollupsStateAdvance) addReport(appAddress common.Address, payload []byt
 		AppContract: appAddress,
 		Index:       index,
 		InputIndex:  s.input.Index,
-		Payload:     payload,
+		Payload:     common.Bytes2Hex(payload),
 	}
 	s.reports = append(s.reports, report)
 	slog.Info("nonodo: added report", "index", index, "payload", hexutil.Encode(payload))

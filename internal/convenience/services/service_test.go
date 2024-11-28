@@ -50,9 +50,9 @@ func (s *ConvenienceServiceSuite) SetupTest() {
 	s.NoError(err)
 
 	s.service = &ConvenienceService{
-		voucherRepository: s.voucherRepository,
-		noticeRepository:  s.noticeRepository,
-		reportRepository:  s.reportRepository,
+		VoucherRepository: s.voucherRepository,
+		NoticeRepository:  s.noticeRepository,
+		ReportRepository:  s.reportRepository,
 	}
 }
 
@@ -256,7 +256,7 @@ func (s *ConvenienceServiceSuite) XTestCreateReportIdempotency() {
 	_, err = s.service.CreateReport(ctx, &model.Report{
 		InputIndex: 1,
 		Index:      2,
-		Payload:    common.Hex2Bytes("1122"),
+		Payload:    "1122",
 	})
 	s.NoError(err)
 	count, err = s.reportRepository.Count(ctx, nil)

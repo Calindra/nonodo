@@ -1,6 +1,7 @@
 package commons
 
 import (
+	"context"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -27,6 +28,12 @@ func NewDbFactory() *DbFactory {
 		TempDir: tempDir,
 		Timeout: TimeoutInSeconds * time.Second,
 	}
+}
+
+func (d *DbFactory) CreateDbCtx(ctx context.Context, sqliteFileName string) (*sqlx.DB, error) {
+	sqlitePath := filepath.Join(d.TempDir, sqliteFileName)
+	slog.Info("Creating db (with ctx) attempting", "sqlitePath", sqlitePath)
+	return sqlx.ConnectContext(ctx, "sqlite3", sqlitePath)
 }
 
 func (d *DbFactory) CreateDb(sqliteFileName string) *sqlx.DB {

@@ -9,21 +9,19 @@ type Sender interface {
 	SubmitSigAndData(sigAndData commons.SigAndData) (string, error)
 }
 
-const DEFAULT_NAMESPACE = 10008
-
 type EspressoSender struct {
-	Namespace int
+	Namespace uint64
 	Client    espresso.EspressoClient
 }
 
 // SubmitSigAndData implements Sender.
 func (es EspressoSender) SubmitSigAndData(sigAndData commons.SigAndData) (string, error) {
-	return es.Client.SubmitSigAndData(es.Namespace, sigAndData)
+	return es.Client.SubmitSigAndData(int(es.Namespace), sigAndData)
 }
 
-func NewEspressoSender(url string) Sender {
+func NewEspressoSender(url string, namespace uint64) Sender {
 	return EspressoSender{
-		Namespace: DEFAULT_NAMESPACE,
+		Namespace: namespace,
 		Client: espresso.EspressoClient{
 			EspressoUrl: url,
 		},

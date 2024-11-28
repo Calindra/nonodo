@@ -61,12 +61,17 @@ func (s *AdapterSuite) SetupTest() {
 	err = s.noticeRepository.CreateTables()
 	s.Require().NoError(err)
 	s.adapter = &AdapterV1{
-		reportRepository: s.reportRepository,
-		inputRepository:  s.inputRepository,
+		reportRepository:  s.reportRepository,
+		inputRepository:   s.inputRepository,
+		voucherRepository: s.voucherRepository,
 		convenienceService: services.NewConvenienceService(
 			s.voucherRepository, s.noticeRepository, nil, nil,
 		),
 	}
+}
+
+func (s *AdapterSuite) TearDownTest() {
+	s.dbFactory.Cleanup()
 }
 
 func TestAdapterSuite(t *testing.T) {
@@ -83,7 +88,7 @@ func (s *AdapterSuite) TestGetReport() {
 	reportSaved, err := s.reportRepository.CreateReport(ctx, cModel.Report{
 		InputIndex: 1,
 		Index:      999,
-		Payload:    common.Hex2Bytes("1122"),
+		Payload:    "1122",
 	})
 	s.NoError(err)
 	report, err := s.adapter.GetReport(ctx, reportSaved.Index)
@@ -345,7 +350,7 @@ func (s *AdapterSuite) createTestData(ctx context.Context) {
 			Index:          i,
 			Status:         cModel.CompletionStatusUnprocessed,
 			MsgSender:      common.HexToAddress(fmt.Sprintf("000000000000000000000000000000000000000%d", i)),
-			Payload:        common.Hex2Bytes("0x1122"),
+			Payload:        "0x1122",
 			BlockNumber:    1,
 			BlockTimestamp: time.Now(),
 			AppContract:    appContract,
@@ -367,7 +372,7 @@ func (s *AdapterSuite) createTestData(ctx context.Context) {
 			AppContract: appContract,
 			InputIndex:  i,
 			Index:       i, // now it's a global number for the dapp
-			Payload:     common.Hex2Bytes("1122"),
+			Payload:     "1122",
 		})
 		s.NoError(err)
 	}

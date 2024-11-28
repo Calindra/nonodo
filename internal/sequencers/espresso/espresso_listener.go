@@ -2,7 +2,7 @@ package espresso
 
 import (
 	"context"
-	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -13,10 +13,10 @@ import (
 	"strings"
 	"time"
 
+	cModel "github.com/calindra/cartesi-rollups-hl-graphql/pkg/convenience/model"
+	cRepos "github.com/calindra/cartesi-rollups-hl-graphql/pkg/convenience/repository"
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/contracts"
-	cModel "github.com/calindra/nonodo/internal/convenience/model"
-	cRepos "github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/calindra/nonodo/internal/dataavailability"
 	"github.com/calindra/nonodo/internal/sequencers/inputter"
 	"github.com/ethereum/go-ethereum/common"
@@ -32,14 +32,29 @@ type EspressoListener struct {
 	InputRepository *cRepos.InputRepository
 	fromBlock       uint64
 	InputterWorker  *inputter.InputterWorker
+	fromBlockL1     *uint64
 }
 
 func (e EspressoListener) String() string {
 	return "espresso_listener"
 }
 
-func NewEspressoListener(espressoUrl string, namespace uint64, repository *cRepos.InputRepository, fromBlock uint64, w *inputter.InputterWorker) *EspressoListener {
-	return &EspressoListener{espressoUrl: espressoUrl, namespace: namespace, InputRepository: repository, fromBlock: fromBlock, InputterWorker: w}
+func NewEspressoListener(
+	espressoUrl string,
+	namespace uint64,
+	repository *cRepos.InputRepository,
+	fromBlock uint64,
+	w *inputter.InputterWorker,
+	fromBlockL1 *uint64,
+) *EspressoListener {
+	return &EspressoListener{
+		espressoUrl:     espressoUrl,
+		namespace:       namespace,
+		InputRepository: repository,
+		fromBlock:       fromBlock,
+		InputterWorker:  w,
+		fromBlockL1:     fromBlockL1,
+	}
 }
 
 func (e EspressoListener) getBaseUrl() string {
@@ -66,21 +81,32 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 		slog.Info("Espresso: starting from latest block height", "lastEspressoBlockHeight", lastEspressoBlockHeight)
 	}
 	previousBlockHeight := currentBlockHeight
-	l1FinalizedPrevHeight := e.getL1FinalizedHeight(previousBlockHeight)
+	var l1FinalizedPrevHeight uint64
+	if e.fromBlockL1 != nil {
+		l1FinalizedPrevHeight = *e.fromBlockL1
+	} else {
+		l1FinalizedPrevHeight = e.getL1FinalizedHeight(previousBlockHeight)
+	}
+	slog.Info("Espresso: starting l1 block from", "blockNumber", l1FinalizedPrevHeight)
 
-	// keep track of msgSender -> nonce
-	nonceMap := make(map[common.Address]int64)
+	var delay time.Duration = 800
 
 	// main polling loop
 	for {
 		slog.Debug("Espresso: fetchLatestBlockHeight...")
 		lastEspressoBlockHeight, err := e.espressoAPI.FetchLatestBlockHeight(ctx)
 		if err != nil {
-			return err
+			if errors.Is(err, context.Canceled) {
+				slog.Warn("Espresso: the context was canceled. stopping operation.")
+				return err
+			}
+			slog.Warn("Espresso: error fetching the latest block height. Retrying...", "error", err)
+			time.Sleep(delay * time.Millisecond)
+			continue
 		}
 		slog.Debug("Espresso:", "lastEspressoBlockHeight", lastEspressoBlockHeight)
+
 		if lastEspressoBlockHeight == currentBlockHeight {
-			var delay time.Duration = 800
 			time.Sleep(delay * time.Millisecond)
 			continue
 		}
@@ -88,7 +114,13 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 			slog.Debug("Espresso:", "currentBlockHeight", currentBlockHeight, "namespace", e.namespace)
 			transactions, err := e.espressoAPI.FetchTransactionsInBlock(ctx, currentBlockHeight, e.namespace)
 			if err != nil {
-				return err
+				if errors.Is(err, context.Canceled) {
+					slog.Warn("Espresso: the context was canceled. stopping operation.")
+					return err
+				}
+				slog.Warn("Espresso: error fetching transactions. Retrying...", "blockHeight", currentBlockHeight, "namespace", e.namespace, "error", err)
+				time.Sleep(delay * time.Millisecond)
+				continue
 			}
 			tot := len(transactions.Transactions)
 
@@ -124,7 +156,8 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 				//		 })
 				msgSender, typedData, signature, err := commons.ExtractSigAndData(string(transaction))
 				if err != nil {
-					return err
+					slog.Warn("Ignoring transaction", "blockHeight", currentBlockHeight, "transactionIndex", i, "error", err)
+					continue
 				}
 				// type EspressoMessage struct {
 				// 	nonce   uint32 `json:"nonce"`
@@ -149,6 +182,17 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 					return fmt.Errorf("error converting nonce: %T", nonceField)
 				}
 
+				app, ok := typedData.Message["app"].(string)
+				if !ok {
+					return fmt.Errorf("message app address type assertion error")
+				}
+				appContract := common.HexToAddress(app)
+
+				if appContract.Hex() != e.InputterWorker.ApplicationAddress.Hex() {
+					slog.Debug("Espresso: ignoring transaction for other app", "txApp", appContract.Hex(), "expectedApp", e.InputterWorker.ApplicationAddress.Hex())
+					continue
+				}
+
 				payload, ok := typedData.Message["data"].(string)
 				if !ok {
 					return fmt.Errorf("message data type assertion error")
@@ -158,22 +202,26 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 				// update nonce maps
 				// no need to consider node exits abruptly and restarts from where it left
 				// app has to start `nonce` from 1 and increment by 1 for each payload
-				if nonceMap[msgSender] == nonce-1 {
-					nonceMap[msgSender] = nonce
-				} else {
-					// nonce repeated
-					slog.Debug("duplicated or incorrect nonce", "nonce", nonce)
+				dbNonce, err := e.InputRepository.GetNonce(ctx, appContract, msgSender)
+				if err != nil {
+					slog.Error("calculate internal nonce error",
+						"appContract", appContract,
+						"msgSender", msgSender,
+						"error", err,
+					)
+					return err
+				}
+				if int64(dbNonce) != nonce {
+					slog.Warn("duplicated or incorrect nonce",
+						"nonce", nonce,
+						"expected", dbNonce,
+						"appContract", appContract,
+						"msgSender", msgSender,
+					)
 					continue
 				}
 
-				payloadBytes := []byte(payload)
-				if strings.HasPrefix(payload, "0x") {
-					payload = payload[2:] // remove 0x
-					payloadBytes, err = hex.DecodeString(payload)
-					if err != nil {
-						return err
-					}
-				}
+				payload = strings.TrimPrefix(payload, "0x")
 
 				chainId := (*big.Int)(typedData.Domain.ChainId).String()
 				slog.Debug("TypedData", "typedData.Domain", typedData.Domain,
@@ -188,7 +236,7 @@ func (e EspressoListener) watchNewTransactions(ctx context.Context) error {
 					ID:                     common.Bytes2Hex(crypto.Keccak256(signature)),
 					Index:                  int(index),
 					MsgSender:              msgSender,
-					Payload:                payloadBytes,
+					Payload:                payload,
 					BlockNumber:            blockNumber,
 					BlockTimestamp:         e.getL1FinalizedTimestamp(currentBlockHeight),
 					AppContract:            e.InputterWorker.ApplicationAddress,

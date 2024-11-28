@@ -40,6 +40,9 @@ jobs:
       - name: Build
         run: make build
 
+      - name: Run node v2 database
+        run: make up-db-raw
+
       - name: Test
         run: make test
 

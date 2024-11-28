@@ -9,6 +9,7 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
+const STATUS_PROPERTY = "Status"
 const EXECUTED = "Executed"
 const FALSE = "false"
 const DESTINATION = "Destination"
@@ -26,6 +27,10 @@ const (
 	CompletionStatusAccepted
 	CompletionStatusRejected
 	CompletionStatusException
+	CompletionStatusMachineHalted
+	CompletionStatusCycleLimitExceeded
+	CompletionStatusTimeLimitExceeded
+	CompletionStatusPayloadLengthLimitExceeded
 )
 
 type ConvenienceNotice struct {
@@ -34,6 +39,7 @@ type ConvenienceNotice struct {
 	InputIndex           uint64 `db:"input_index"`
 	OutputIndex          uint64 `db:"output_index"`
 	OutputHashesSiblings string `db:"output_hashes_siblings"`
+	ProofOutputIndex     uint64 `db:"proof_output_index"`
 }
 
 // Voucher metadata type
@@ -46,7 +52,8 @@ type ConvenienceVoucher struct {
 	Value                string         `db:"value"`
 	AppContract          common.Address `db:"app_contract"`
 	OutputHashesSiblings string         `db:"output_hashes_siblings"`
-
+	TransactionHash      string         `db:"transaction_hash"`
+	ProofOutputIndex     uint64         `db:"proof_output_index"`
 	// future improvements
 	// Contract        common.Address
 	// Beneficiary     common.Address
@@ -93,8 +100,9 @@ type Input interface{}
 type Report struct {
 	Index       int
 	InputIndex  int
-	Payload     []byte
+	Payload     string
 	AppContract common.Address `json:"app_contract"`
+	RawID       uint64
 }
 
 // Rollups advance input type.
@@ -103,7 +111,7 @@ type AdvanceInput struct {
 	Index                  int              `db:"input_index"`
 	Status                 CompletionStatus `db:"status"`
 	MsgSender              common.Address   `db:"msg_sender"`
-	Payload                []byte           `db:"payload"`
+	Payload                string           `db:"payload"`
 	BlockNumber            uint64           `db:"block_number"`
 	BlockTimestamp         time.Time        `db:"block_timestamp"`
 	PrevRandao             string           `db:"prev_randao"`
@@ -123,6 +131,7 @@ type AdvanceInput struct {
 }
 
 type ConvertedInput struct {
+	ChainId        *big.Int       `json:"chainId"`
 	MsgSender      common.Address `json:"msgSender"`
 	AppContract    common.Address `json:"app_contract"`
 	BlockNumber    *big.Int       `json:"blockNumber"`

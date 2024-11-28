@@ -32,25 +32,29 @@ import (
 )
 
 var (
-	MAX_FILE_SIZE     uint64 = 1_440_000 // 1,44 MB
-	APP_ADDRESS              = common.HexToAddress(devnet.ApplicationAddress)
-	DEFAULT_NAMESPACE        = 10008
+	MAX_FILE_SIZE uint64 = 1_440_000 // 1,44 MB
+	APP_ADDRESS          = common.HexToAddress(devnet.ApplicationAddress)
 )
+
+var inspectMessageText = `
+Inspect running at http://localhost:HTTP_PORT/inspect/`
 
 var startupMessage = `
 Http Rollups for development started at http://localhost:ROLLUPS_PORT
 GraphQL running at http://localhost:HTTP_PORT/graphql
-Inspect running at http://localhost:HTTP_PORT/inspect/
+INSPECT_MESSAGE
 Press Ctrl+C to stop the node
 `
 
 var startupMessageWithLambada = `
 Http Rollups for development started at http://localhost:ROLLUPS_PORT
 GraphQL running at http://localhost:HTTP_PORT/graphql
-Inspect running at http://localhost:HTTP_PORT/inspect/
+INSPECT_MESSAGE
 Lambada running at http://SALSA_URL
 Press Ctrl+C to stop the node
 `
+
+var tempFromBlockL1 uint64
 
 var cmd = &cobra.Command{
 	Use:     "nonodo [flags] [-- application [args]...]",
@@ -381,14 +385,12 @@ func addEspressoSubcommands(espressoCmd *cobra.Command) {
 		},
 	}
 	espressoSendCmd.Flags().StringVar(&espressoOpts.Payload, "payload", "", "Payload to send to Espresso")
-	espressoSendCmd.Flags().IntVar(&espressoOpts.Namespace, "namespace", DEFAULT_NAMESPACE, "Namespace of the payload")
+	espressoSendCmd.Flags().IntVar(&espressoOpts.Namespace, "namespace", int(opts.Namespace), "Namespace of the payload")
 	markFlagRequired(espressoSendCmd, "payload")
 	espressoCmd.AddCommand(espressoSendCmd)
-
 }
 
 func addAvailSubcommands(availCmd *cobra.Command) {
-
 	availOpts := &AvailOpts{}
 
 	availSendCmd := &cobra.Command{
@@ -410,7 +412,6 @@ func addAvailSubcommands(availCmd *cobra.Command) {
 				panic(err)
 			}
 			return nil
-
 		},
 	}
 	availSendCmd.Flags().StringVar(&availOpts.Payload, "payload", "", "Payload to send to Avail")
@@ -481,6 +482,9 @@ func init() {
 
 	cmd.Flags().StringVar(&opts.Sequencer, "sequencer", opts.Sequencer,
 		"Set the sequencer (inputbox[default] or espresso)")
+	cmd.Flags().StringVar(&opts.EspressoUrl, "espresso-url", opts.EspressoUrl,
+		"Set the Espresso base url")
+
 	cmd.Flags().Uint64Var(&opts.Namespace, "namespace", opts.Namespace,
 		"Set the namespace for espresso")
 	cmd.Flags().DurationVar(&opts.TimeoutWorker, "timeout-worker", opts.TimeoutWorker, "Timeout for workers. Example: nonodo --timeout-worker 30s")
@@ -492,6 +496,8 @@ func init() {
 		"If set, nonodo won't start a local devnet")
 	cmd.Flags().BoolVar(&opts.DisableAdvance, "disable-advance", opts.DisableAdvance,
 		"If set, nonodo won't start the inputter to get inputs from the local chain")
+	cmd.Flags().BoolVar(&opts.DisableInspect, "disable-inspect", opts.DisableInspect,
+		"If set, nonodo won't accept inspect inputs")
 
 	// http-*
 	cmd.Flags().StringVar(&opts.HttpAddress, "http-address", opts.HttpAddress,
@@ -505,16 +511,14 @@ func init() {
 	cmd.Flags().StringVar(&opts.RpcUrl, "rpc-url", opts.RpcUrl,
 		"If set, nonodo connects to this url instead of setting up Anvil")
 
-	// convenience experimental implementation
-	cmd.Flags().BoolVar(&opts.HLGraphQL, "high-level-graphql", opts.HLGraphQL,
-		"If set, enables the convenience layer experiment")
-
 	// database file
 	cmd.Flags().StringVar(&opts.SqliteFile, "sqlite-file", opts.SqliteFile,
 		"The sqlite file to load the state")
 
 	cmd.Flags().Uint64Var(&opts.FromBlock, "from-block", opts.FromBlock,
 		"The beginning of the queried range for events")
+
+	cmd.Flags().Uint64VarP(&tempFromBlockL1, "from-l1-block", "", 0, "The beginning of the queried range for events")
 
 	cmd.Flags().StringVar(&opts.DbImplementation, "db-implementation", opts.DbImplementation,
 		"DB to use. PostgreSQL or SQLite")
@@ -540,6 +544,9 @@ func init() {
 
 	cmd.Flags().StringVar(&opts.DbRawUrl, "db-raw-url", opts.DbRawUrl, "The raw database url")
 	cmd.Flags().BoolVar(&opts.RawEnabled, "raw-enabled", opts.RawEnabled, "If set, enables raw database")
+
+	cmd.Flags().IntVar(&opts.EpochBlocks, "epoch-blocks", opts.EpochBlocks,
+		"Number of blocks in each epoch")
 }
 
 func run(cmd *cobra.Command, args []string) {
@@ -570,6 +577,9 @@ func run(cmd *cobra.Command, args []string) {
 	if opts.EnableEcho && len(args) > 0 {
 		exitf("can't use built-in echo with custom application")
 	}
+	if cmd.Flags().Changed("from-l1-block") {
+		opts.FromBlockL1 = &tempFromBlockL1
+	}
 	opts.ApplicationArgs = args
 
 	// handle signals with notify context
@@ -584,6 +594,11 @@ func run(cmd *cobra.Command, args []string) {
 		startMessage = startupMessage
 	}
 
+	var inspectMessage string
+	if !opts.DisableInspect {
+		inspectMessage = inspectMessageText
+	}
+
 	// start nonodo
 	ready := make(chan struct{}, 1)
 	go func() {
@@ -591,6 +606,10 @@ func run(cmd *cobra.Command, args []string) {
 		case <-ready:
 			msg := strings.Replace(
 				startMessage,
+				"\nINSPECT_MESSAGE",
+				inspectMessage, -1)
+			msg = strings.Replace(
+				msg,
 				"HTTP_PORT",
 				fmt.Sprint(opts.HttpPort), -1)
 			msg = strings.Replace(
@@ -607,14 +626,10 @@ func run(cmd *cobra.Command, args []string) {
 		}
 	}()
 	LoadEnv()
-	if opts.HLGraphQL {
-		err := nonodo.NewSupervisorHLGraphQL(opts).Start(ctx, ready)
-		cobra.CheckErr(err)
-	} else {
-		opts.AutoCount = true // not check the Idempotency
-		err := nonodo.NewSupervisor(opts).Start(ctx, ready)
-		cobra.CheckErr(err)
-	}
+
+	opts.AutoCount = true // not check the Idempotency
+	err := nonodo.NewSupervisor(opts).Start(ctx, ready)
+	cobra.CheckErr(err)
 }
 
 //go:embed .env

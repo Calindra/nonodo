@@ -2,6 +2,8 @@ package repository
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -19,11 +21,17 @@ type ReportRepository struct {
 
 func (r *ReportRepository) CreateTables() error {
 	schema := `CREATE TABLE IF NOT EXISTS convenience_reports (
-		output_index  integer,
-		payload       text,
-		input_index   integer,
-		app_contract  text,
-		PRIMARY KEY (input_index, output_index));`
+    output_index  integer,
+    payload       text,
+    input_index   integer,
+    app_contract  text,
+    raw_id        integer,
+    PRIMARY KEY (input_index, output_index, app_contract)
+	);
+
+	CREATE INDEX IF NOT EXISTS idx_input_index_output_index ON convenience_reports(input_index, output_index);
+	CREATE INDEX IF NOT EXISTS idx_input_index_app_contract ON convenience_reports(input_index, app_contract);
+	CREATE INDEX IF NOT EXISTS idx_output_index_app_contract ON convenience_reports(output_index, app_contract);`
 	_, err := r.Db.Exec(schema)
 	if err == nil {
 		slog.Debug("Reports table created")
@@ -34,7 +42,7 @@ func (r *ReportRepository) CreateTables() error {
 }
 
 func (r *ReportRepository) CreateReport(ctx context.Context, report cModel.Report) (cModel.Report, error) {
-	slog.Debug("CreateReport", "payload", report.Payload)
+	// slog.Debug("CreateReport", "payload", report.Payload)
 	if r.AutoCount {
 		count, err := r.Count(ctx, nil)
 		if err != nil {
@@ -47,26 +55,35 @@ func (r *ReportRepository) CreateReport(ctx context.Context, report cModel.Repor
 		output_index,
 		payload,
 		input_index,
-		app_contract) VALUES ($1, $2, $3, $4)`
+		app_contract,
+		raw_id) VALUES ($1, $2, $3, $4, $5)`
+
+	var hexPayload string
+	if !strings.HasPrefix(report.Payload, "0x") {
+		hexPayload = "0x" + report.Payload
+	} else {
+		hexPayload = report.Payload
+	}
 
 	exec := DBExecutor{r.Db}
 	_, err := exec.ExecContext(
 		ctx,
 		insertSql,
 		report.Index,
-		common.Bytes2Hex(report.Payload),
+		hexPayload,
 		report.InputIndex,
 		report.AppContract.Hex(),
+		report.RawID,
 	)
 
 	if err != nil {
 		slog.Error("database error", "err", err)
 		return cModel.Report{}, err
 	}
-	slog.Debug("Report created",
-		"outputIndex", report.Index,
-		"inputIndex", report.InputIndex,
-	)
+	// slog.Debug("Report created",
+	// 	"outputIndex", report.Index,
+	// 	"inputIndex", report.InputIndex,
+	// )
 	return report, nil
 }
 
@@ -79,7 +96,7 @@ func (r *ReportRepository) Update(ctx context.Context, report cModel.Report) (*c
 	_, err := exec.ExecContext(
 		ctx,
 		sql,
-		common.Bytes2Hex(report.Payload),
+		report.Payload,
 		report.InputIndex,
 		report.Index,
 	)
@@ -112,6 +129,19 @@ func (r *ReportRepository) queryByOutputIndexAndAppContract(
 	}
 }
 
+func (r *ReportRepository) FindLastRawId(ctx context.Context) (uint64, error) {
+	var outputId uint64
+	err := r.Db.GetContext(ctx, &outputId, `SELECT raw_id FROM convenience_reports ORDER BY raw_id DESC LIMIT 1`)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, nil
+		}
+		slog.Error("Failed to retrieve the last raw_id from the database", "error", err)
+		return 0, err
+	}
+	return outputId, err
+}
+
 func (r *ReportRepository) FindByOutputIndexAndAppContract(
 	ctx context.Context,
 	outputIndex uint64,
@@ -133,7 +163,7 @@ func (r *ReportRepository) FindByOutputIndexAndAppContract(
 		report := &cModel.Report{
 			InputIndex: inputIndex,
 			Index:      int(outputIndex),
-			Payload:    common.Hex2Bytes(payload),
+			Payload:    payload,
 		}
 		return report, nil
 	}
@@ -170,7 +200,7 @@ func (r *ReportRepository) FindByInputAndOutputIndex(
 		report := &cModel.Report{
 			InputIndex: int(inputIndex),
 			Index:      int(outputIndex),
-			Payload:    common.Hex2Bytes(payload),
+			Payload:    payload,
 		}
 		return report, nil
 	}
@@ -293,7 +323,7 @@ func (c *ReportRepository) FindAll(
 		report := &cModel.Report{
 			InputIndex: inputIndex,
 			Index:      outputIndex,
-			Payload:    common.Hex2Bytes(payload),
+			Payload:    payload,
 		}
 		reports = append(reports, *report)
 	}
@@ -351,4 +381,90 @@ func transformToReportQuery(
 	}
 	query += strings.Join(where, " and ")
 	return query, args, count, nil
+}
+
+type BatchFilterItem struct {
+	AppContract *common.Address
+	InputIndex  int
+}
+
+func (c *ReportRepository) BatchFindAllByInputIndexAndAppContract(
+	ctx context.Context,
+	filters []*BatchFilterItem,
+) ([]*commons.PageResult[cModel.Report], []error) {
+	slog.Debug("BatchFindAllByInputIndexAndAppContract", "len", len(filters))
+	query := `SELECT 
+				input_index, output_index, payload, app_contract FROM convenience_reports
+		WHERE
+	`
+	args := []interface{}{}
+	where := []string{}
+	for i, filter := range filters {
+		// nolint
+		where = append(where, fmt.Sprintf(" (app_contract = $%d and input_index = $%d) ", i*2+1, i*2+2))
+		args = append(args, filter.AppContract.Hex())
+		args = append(args, filter.InputIndex)
+	}
+	query += strings.Join(where, " or ")
+
+	errors := []error{}
+	results := []*commons.PageResult[cModel.Report]{}
+	stmt, err := c.Db.PreparexContext(ctx, query)
+	if err != nil {
+		slog.Error("BatchFind prepare context", "error", err)
+		return nil, errors
+	}
+	defer stmt.Close()
+
+	var reports []cModel.Report
+	rows, err := stmt.QueryxContext(ctx, args...)
+	if err != nil {
+		slog.Error("BatchFind query context", "error", err)
+		return nil, errors
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var payload string
+		var inputIndex int
+		var outputIndex int
+		var appContract string
+		if err := rows.Scan(&inputIndex, &outputIndex, &payload, &appContract); err != nil {
+			return nil, errors
+		}
+		report := &cModel.Report{
+			InputIndex:  inputIndex,
+			Index:       outputIndex,
+			Payload:     payload,
+			AppContract: common.HexToAddress(appContract),
+		}
+		reports = append(reports, *report)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, errors
+	}
+	reportMap := make(map[string]*commons.PageResult[cModel.Report])
+	for _, report := range reports {
+		key := GenerateBatchReportKey(&report.AppContract, report.InputIndex)
+		if reportMap[key] == nil {
+			reportMap[key] = &commons.PageResult[cModel.Report]{}
+		}
+		reportMap[key].Total += 1
+		reportMap[key].Rows = append(reportMap[key].Rows, report)
+	}
+	for _, filter := range filters {
+		key := GenerateBatchReportKey(filter.AppContract, filter.InputIndex)
+		reportsItem := reportMap[key]
+		if reportsItem == nil {
+			reportsItem = &commons.PageResult[cModel.Report]{}
+		}
+		results = append(results, reportsItem)
+	}
+	slog.Debug("BatchResult", "len", len(results))
+	return results, nil
+}
+
+func GenerateBatchReportKey(appContract *common.Address, inputIndex int) string {
+	return fmt.Sprintf("%s|%d", appContract.Hex(), inputIndex)
 }

@@ -32,8 +32,8 @@ import (
 
 const (
 	celestiaUrl         = "https://raw.githubusercontent.com/miltonjonat/rollups-celestia/main/onchain/deployments/sepolia/CelestiaRelay.json"
-	openzeppelin        = "https://registry.npmjs.org/@openzeppelin/contracts/-/contracts-5.0.2.tgz"
-	rollupsContractsUrl = "https://registry.npmjs.org/@cartesi/rollups/-/rollups-2.0.0-rc.10.tgz"
+	openzeppelin        = "https://registry.npmjs.org/@openzeppelin/contracts/-/contracts-5.1.0.tgz"
+	rollupsContractsUrl = "https://registry.npmjs.org/@cartesi/rollups/-/rollups-2.0.0-rc.12.tgz"
 	baseContractsPath   = "package/export/artifacts/contracts/"
 	bindingPkg          = "contracts"
 )
@@ -72,6 +72,21 @@ var bindings = []contractBinding{
 		jsonPath: baseContractsPath + "common/Outputs.sol/Outputs.json",
 		typeName: "Outputs",
 		outFile:  "outputs.go",
+	},
+	{
+		jsonPath: baseContractsPath + "dapp/IApplicationFactory.sol/IApplicationFactory.json",
+		typeName: "IApplicationFactory",
+		outFile:  "application_factory.go",
+	},
+	{
+		jsonPath: baseContractsPath + "consensus/authority/IAuthorityFactory.sol/IAuthorityFactory.json",
+		typeName: "IAuthorityFactory",
+		outFile:  "authority_factory.go",
+	},
+	{
+		jsonPath: baseContractsPath + "consensus/IConsensus.sol/IConsensus.json",
+		typeName: "IConsensus",
+		outFile:  "consensus.go",
 	},
 }
 

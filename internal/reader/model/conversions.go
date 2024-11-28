@@ -11,7 +11,6 @@ import (
 	"strconv"
 
 	cModel "github.com/calindra/nonodo/internal/convenience/model"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
 //
@@ -28,6 +27,14 @@ func convertCompletionStatus(status cModel.CompletionStatus) (CompletionStatus, 
 		return CompletionStatusRejected, nil
 	case cModel.CompletionStatusException:
 		return CompletionStatusException, nil
+	case cModel.CompletionStatusMachineHalted:
+		return CompletionStatusMachineHalted, nil
+	case cModel.CompletionStatusCycleLimitExceeded:
+		return CompletionStatusCycleLimitExceeded, nil
+	case cModel.CompletionStatusTimeLimitExceeded:
+		return CompletionStatusTimeLimitExceeded, nil
+	case cModel.CompletionStatusPayloadLengthLimitExceeded:
+		return CompletionStatusPayloadLengthLimitExceeded, nil
 	default:
 		return "", errors.New("invalid completion status")
 	}
@@ -63,7 +70,7 @@ func ConvertInput(input cModel.AdvanceInput) (*Input, error) {
 		MsgSender:           input.MsgSender.String(),
 		Timestamp:           timestamp,
 		BlockNumber:         fmt.Sprint(input.BlockNumber),
-		Payload:             hexutil.Encode(input.Payload),
+		Payload:             input.Payload,
 		EspressoTimestamp:   espressoBlockTimestampStr,
 		EspressoBlockNumber: espressoBlockNumberStr,
 		InputBoxIndex:       inputBoxIndexStr,
@@ -79,14 +86,15 @@ func ConvertConvenientVoucherV1(cVoucher cModel.ConvenienceVoucher) *Voucher {
 		outputHashesSiblings = []string{}
 	}
 	return &Voucher{
-		Index:       int(cVoucher.OutputIndex),
-		InputIndex:  int(cVoucher.InputIndex),
-		Destination: cVoucher.Destination.String(),
-		Payload:     cVoucher.Payload,
-		Value:       cVoucher.Value,
-		// Executed:    &cVoucher.Executed,
+		Index:           int(cVoucher.OutputIndex),
+		InputIndex:      int(cVoucher.InputIndex),
+		Destination:     cVoucher.Destination.String(),
+		Payload:         cVoucher.Payload,
+		Value:           cVoucher.Value,
+		Executed:        cVoucher.Executed,
+		TransactionHash: cVoucher.TransactionHash,
 		Proof: Proof{
-			OutputIndex:          strconv.FormatUint(cVoucher.OutputIndex, 10),
+			OutputIndex:          strconv.FormatUint(cVoucher.ProofOutputIndex, 10),
 			OutputHashesSiblings: outputHashesSiblings,
 		},
 	}
@@ -192,7 +200,7 @@ func ConvertToVoucherConnectionV1(
 	return NewConnection(offset, total, convNodes), nil
 }
 
-func convertConvenientNoticeV1(cNotice cModel.ConvenienceNotice) *Notice {
+func ConvertConvenientNoticeV1(cNotice cModel.ConvenienceNotice) *Notice {
 	var outputHashesSiblings []string
 	err := json.Unmarshal([]byte(cNotice.OutputHashesSiblings), &outputHashesSiblings)
 	if err != nil {
@@ -203,7 +211,7 @@ func convertConvenientNoticeV1(cNotice cModel.ConvenienceNotice) *Notice {
 		InputIndex: int(cNotice.InputIndex),
 		Payload:    cNotice.Payload,
 		Proof: Proof{
-			OutputIndex:          strconv.FormatUint(cNotice.OutputIndex, 10),
+			OutputIndex:          strconv.FormatUint(cNotice.ProofOutputIndex, 10),
 			OutputHashesSiblings: outputHashesSiblings,
 		},
 	}
@@ -215,7 +223,7 @@ func ConvertToNoticeConnectionV1(
 ) (*NoticeConnection, error) {
 	convNodes := make([]*Notice, len(notices))
 	for i := range notices {
-		convNodes[i] = convertConvenientNoticeV1(notices[i])
+		convNodes[i] = ConvertConvenientNoticeV1(notices[i])
 	}
 	return NewConnection(offset, total, convNodes), nil
 }

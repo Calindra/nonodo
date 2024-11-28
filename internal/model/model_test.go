@@ -13,13 +13,13 @@ import (
 	"testing"
 	"time"
 
-	cModel "github.com/calindra/nonodo/internal/convenience/model"
-	cRepos "github.com/calindra/nonodo/internal/convenience/repository"
+	cModel "github.com/calindra/cartesi-rollups-hl-graphql/pkg/convenience/model"
+	cRepos "github.com/calindra/cartesi-rollups-hl-graphql/pkg/convenience/repository"
 	"github.com/calindra/nonodo/internal/devnet"
 
+	"github.com/calindra/cartesi-rollups-hl-graphql/pkg/convenience"
+	"github.com/calindra/cartesi-rollups-hl-graphql/pkg/convenience/services"
 	"github.com/calindra/nonodo/internal/commons"
-	"github.com/calindra/nonodo/internal/convenience"
-	"github.com/calindra/nonodo/internal/convenience/services"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/ncruces/go-sqlite3/driver"
@@ -36,7 +36,7 @@ type ModelSuite struct {
 	suite.Suite
 	m                  *NonodoModel
 	n                  int
-	payloads           [][]byte
+	payloads           []string
 	senders            []common.Address
 	blockNumbers       []uint64
 	timestamps         []time.Time
@@ -71,7 +71,7 @@ func (s *ModelSuite) SetupTest() {
 	)
 	s.convenienceService = container.GetConvenienceService()
 	s.n = 3
-	s.payloads = make([][]byte, s.n)
+	s.payloads = make([]string, s.n)
 	s.senders = make([]common.Address, s.n)
 	s.blockNumbers = make([]uint64, s.n)
 	s.timestamps = make([]time.Time, s.n)
@@ -80,7 +80,7 @@ func (s *ModelSuite) SetupTest() {
 		for addrI := 0; addrI < common.AddressLength; addrI++ {
 			s.senders[i][addrI] = 0xf0 + byte(i)
 		}
-		s.payloads[i] = []byte{0xf0 + byte(i)}
+		s.payloads[i] = common.Bytes2Hex([]byte{0xf0 + byte(i)})
 		s.blockNumbers[i] = uint64(i)
 		s.timestamps[i] = now.Add(time.Second * time.Duration(i))
 	}
@@ -109,7 +109,7 @@ func (s *ModelSuite) TestItAddsAndGetsAdvanceInputs() {
 		s.Equal(i, input.Index)
 		s.Equal(cModel.CompletionStatusUnprocessed, input.Status)
 		s.Equal(s.senders[i], input.MsgSender)
-		s.Equal(s.payloads[i], input.Payload)
+		s.Equal("0x"+s.payloads[i], input.Payload)
 		s.Equal(s.blockNumbers[i], input.BlockNumber)
 		s.Equal(s.timestamps[i].UnixMilli(), input.BlockTimestamp.UnixMilli())
 		s.Empty(input.Vouchers)
@@ -126,7 +126,7 @@ func (s *ModelSuite) TestItAddsAndGetsAdvanceInputs() {
 func (s *ModelSuite) TestItAddsAndGetsInspectInput() {
 	// add inputs
 	for i := 0; i < s.n; i++ {
-		index := s.m.AddInspectInput(s.payloads[i])
+		index := s.m.AddInspectInput(common.Hex2Bytes(s.payloads[i]))
 		s.Equal(i, index)
 	}
 
@@ -136,7 +136,7 @@ func (s *ModelSuite) TestItAddsAndGetsInspectInput() {
 
 		s.Equal(i, input.Index)
 		s.Equal(cModel.CompletionStatusUnprocessed, input.Status)
-		s.Equal(s.payloads[i], input.Payload)
+		s.Equal(s.payloads[i], common.Bytes2Hex(input.Payload))
 		s.Equal(0, input.ProcessedInputCount)
 		s.Empty(input.Reports)
 		s.Empty(input.Exception)
@@ -166,13 +166,13 @@ func (s *ModelSuite) TestItGetsFirstAdvanceInput() {
 	s.NotNil(convertedInput)
 	s.True(ok)
 	s.Equal(0, convertedInput.Index)
-	s.Equal(s.payloads[0], convertedInput.Payload)
+	s.Equal("0x"+s.payloads[0], convertedInput.Payload)
 }
 
 func (s *ModelSuite) TestItGetsFirstInspectInput() {
 	// add inputs
 	for i := 0; i < s.n; i++ {
-		s.m.AddInspectInput(s.payloads[i])
+		s.m.AddInspectInput(common.Hex2Bytes(s.payloads[i]))
 	}
 
 	// get first input
@@ -181,13 +181,13 @@ func (s *ModelSuite) TestItGetsFirstInspectInput() {
 	s.NotNil(convertedInput)
 	s.True(ok)
 	s.Equal(0, convertedInput.Index)
-	s.Equal(s.payloads[0], convertedInput.Payload)
+	s.Equal(s.payloads[0], common.Bytes2Hex(convertedInput.Payload))
 }
 
 func (s *ModelSuite) TestItGetsInspectBeforeAdvance() {
 	// add inputs
 	for i := 0; i < s.n; i++ {
-		s.m.AddInspectInput(s.payloads[i])
+		s.m.AddInspectInput(common.Hex2Bytes(s.payloads[i]))
 		err := s.m.AddAdvanceInput(s.senders[i], s.payloads[i], s.blockNumbers[i], s.timestamps[i], i, "", common.Address{}, "")
 
 		s.NoError(err)
@@ -222,11 +222,11 @@ func (s *ModelSuite) TestItFinishesAdvanceWithAccept() {
 	s.NoError(err)
 	_, err = s.m.FinishAndGetNext(true) // get
 	s.NoError(err)
-	_, err = s.m.AddVoucher(common.HexToAddress(devnet.ApplicationAddress), s.senders[0], "0", s.payloads[0])
+	_, err = s.m.AddVoucher(common.HexToAddress(devnet.ApplicationAddress), s.senders[0], "0", common.Hex2Bytes(s.payloads[0]))
 	s.NoError(err)
-	_, err = s.m.AddNotice(s.payloads[0], common.HexToAddress(devnet.ApplicationAddress))
+	_, err = s.m.AddNotice(common.Hex2Bytes(s.payloads[0]), common.HexToAddress(devnet.ApplicationAddress))
 	s.NoError(err)
-	err = s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), s.payloads[0])
+	err = s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), common.Hex2Bytes(s.payloads[0]))
 	s.NoError(err)
 	_, err = s.m.FinishAndGetNext(true) // finish
 	s.NoError(err)
@@ -260,11 +260,11 @@ func (s *ModelSuite) TestItFinishesAdvanceWithReject() {
 	s.NoError(err)
 	_, err = s.m.FinishAndGetNext(true) // get
 	s.Nil(err)
-	_, err = s.m.AddVoucher(common.HexToAddress(devnet.ApplicationAddress), s.senders[0], "0", s.payloads[0])
+	_, err = s.m.AddVoucher(common.HexToAddress(devnet.ApplicationAddress), s.senders[0], "0", common.Hex2Bytes(s.payloads[0]))
 	s.Nil(err)
-	_, err = s.m.AddNotice(s.payloads[0], common.HexToAddress(devnet.ApplicationAddress))
+	_, err = s.m.AddNotice(common.Hex2Bytes(s.payloads[0]), common.HexToAddress(devnet.ApplicationAddress))
 	s.Nil(err)
-	err = s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), s.payloads[0])
+	err = s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), common.Hex2Bytes(s.payloads[0]))
 	s.Nil(err)
 	_, err = s.m.FinishAndGetNext(false) // finish
 	s.Nil(err)
@@ -298,10 +298,10 @@ func (s *ModelSuite) TestItFinishesAdvanceWithReject() {
 
 func (s *ModelSuite) TestItFinishesInspectWithAccept() {
 	// add input and finish it
-	s.m.AddInspectInput(s.payloads[0])
+	s.m.AddInspectInput(common.Hex2Bytes(s.payloads[0]))
 	_, err := s.m.FinishAndGetNext(true) // get
 	s.NoError(err)
-	err = s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), s.payloads[0])
+	err = s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), common.Hex2Bytes(s.payloads[0]))
 	s.NoError(err)
 	_, err = s.m.FinishAndGetNext(true) // finish
 	s.NoError(err)
@@ -310,7 +310,7 @@ func (s *ModelSuite) TestItFinishesInspectWithAccept() {
 	input, _ := s.m.GetInspectInput(0)
 	s.Equal(0, input.Index)
 	s.Equal(cModel.CompletionStatusAccepted, input.Status)
-	s.Equal(s.payloads[0], input.Payload)
+	s.Equal(s.payloads[0], common.Bytes2Hex(input.Payload))
 	s.Equal(0, input.ProcessedInputCount)
 	s.Len(input.Reports, 1)
 	s.Empty(input.Exception)
@@ -318,10 +318,10 @@ func (s *ModelSuite) TestItFinishesInspectWithAccept() {
 
 func (s *ModelSuite) TestItFinishesInspectWithReject() {
 	// add input and finish it
-	s.m.AddInspectInput(s.payloads[0])
+	s.m.AddInspectInput(common.Hex2Bytes(s.payloads[0]))
 	_, err := s.m.FinishAndGetNext(true) // get
 	s.Nil(err)
-	err = s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), s.payloads[0])
+	err = s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), common.Hex2Bytes(s.payloads[0]))
 	s.Nil(err)
 	_, err = s.m.FinishAndGetNext(false) // finish
 	s.Nil(err)
@@ -330,7 +330,7 @@ func (s *ModelSuite) TestItFinishesInspectWithReject() {
 	input, _ := s.m.GetInspectInput(0)
 	s.Equal(0, input.Index)
 	s.Equal(cModel.CompletionStatusRejected, input.Status)
-	s.Equal(s.payloads[0], input.Payload)
+	s.Equal(common.Hex2Bytes(s.payloads[0]), input.Payload)
 	s.Equal(0, input.ProcessedInputCount)
 	s.Len(input.Reports, 1)
 	s.Empty(input.Exception)
@@ -348,7 +348,7 @@ func (s *ModelSuite) TestItComputesProcessedInputCount() {
 	}
 
 	// add inspect and finish it
-	s.m.AddInspectInput(s.payloads[0])
+	s.m.AddInspectInput(common.Hex2Bytes(s.payloads[0]))
 	_, err := s.m.FinishAndGetNext(true) // get
 	s.NoError(err)
 	_, err = s.m.FinishAndGetNext(true) // finish
@@ -373,7 +373,7 @@ func (s *ModelSuite) TestItAddsVoucher() {
 
 	// add vouchers
 	for i := 0; i < s.n; i++ {
-		index, err := s.m.AddVoucher(common.HexToAddress(devnet.ApplicationAddress), s.senders[i], "0", s.payloads[i])
+		index, err := s.m.AddVoucher(common.HexToAddress(devnet.ApplicationAddress), s.senders[i], "0", common.Hex2Bytes(s.payloads[i]))
 		s.Nil(err)
 		s.Equal(i, index)
 	}
@@ -396,20 +396,20 @@ func (s *ModelSuite) TestItAddsVoucher() {
 		s.Equal(0, int(vouchers.Rows[i].InputIndex))
 		s.Equal(i, int(vouchers.Rows[i].OutputIndex))
 		s.Equal(s.senders[i], vouchers.Rows[i].Destination)
-		s.Equal(s.payloads[i], common.Hex2Bytes(vouchers.Rows[i].Payload[2:]))
+		s.Equal(s.payloads[i], vouchers.Rows[i].Payload[2:])
 	}
 }
 
 func (s *ModelSuite) TestItFailsToAddVoucherWhenInspect() {
-	s.m.AddInspectInput(s.payloads[0])
+	s.m.AddInspectInput(common.Hex2Bytes(s.payloads[0]))
 	_, err := s.m.FinishAndGetNext(true)
 	s.NoError(err)
-	_, err = s.m.AddVoucher(common.HexToAddress(devnet.ApplicationAddress), s.senders[0], "0", s.payloads[0])
+	_, err = s.m.AddVoucher(common.HexToAddress(devnet.ApplicationAddress), s.senders[0], "0", common.Hex2Bytes(s.payloads[0]))
 	s.Error(err)
 }
 
 func (s *ModelSuite) TestItFailsToAddVoucherWhenIdle() {
-	_, err := s.m.AddVoucher(common.HexToAddress(devnet.ApplicationAddress), s.senders[0], "0", s.payloads[0])
+	_, err := s.m.AddVoucher(common.HexToAddress(devnet.ApplicationAddress), s.senders[0], "0", common.Hex2Bytes(s.payloads[0]))
 	s.Error(err)
 	s.Equal(errors.New("cannot add voucher in idle state"), err)
 }
@@ -427,7 +427,7 @@ func (s *ModelSuite) TestItAddsNotice() {
 
 	// add notices
 	for i := 0; i < s.n; i++ {
-		index, err := s.m.AddNotice(s.payloads[i], common.HexToAddress(devnet.ApplicationAddress))
+		index, err := s.m.AddNotice(common.Hex2Bytes(s.payloads[i]), common.HexToAddress(devnet.ApplicationAddress))
 		s.Nil(err)
 		s.Equal(i, index)
 	}
@@ -449,20 +449,20 @@ func (s *ModelSuite) TestItAddsNotice() {
 	for i := 0; i < s.n; i++ {
 		s.Equal(0, int(notices.Rows[i].InputIndex))
 		s.Equal(i, int(notices.Rows[i].OutputIndex))
-		s.Equal(s.payloads[i], common.Hex2Bytes(notices.Rows[i].Payload[2:]))
+		s.Equal(s.payloads[i], notices.Rows[i].Payload[2:])
 	}
 }
 
 func (s *ModelSuite) TestItFailsToAddNoticeWhenInspect() {
-	s.m.AddInspectInput(s.payloads[0])
+	s.m.AddInspectInput(common.Hex2Bytes(s.payloads[0]))
 	_, err := s.m.FinishAndGetNext(true)
 	s.NoError(err)
-	_, err = s.m.AddNotice(s.payloads[0], common.HexToAddress(devnet.ApplicationAddress))
+	_, err = s.m.AddNotice(common.Hex2Bytes(s.payloads[0]), common.HexToAddress(devnet.ApplicationAddress))
 	s.Error(err)
 }
 
 func (s *ModelSuite) TestItFailsToAddNoticeWhenIdle() {
-	_, err := s.m.AddNotice(s.payloads[0], common.HexToAddress(devnet.ApplicationAddress))
+	_, err := s.m.AddNotice(common.Hex2Bytes(s.payloads[0]), common.HexToAddress(devnet.ApplicationAddress))
 	s.Error(err)
 	s.Equal(errors.New("cannot add notice in current state"), err)
 }
@@ -482,7 +482,7 @@ func (s *ModelSuite) TestItAddsReportWhenAdvancing() {
 
 	// add reports
 	for i := 0; i < s.n; i++ {
-		err := s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), s.payloads[i])
+		err := s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), common.Hex2Bytes(s.payloads[i]))
 		s.Nil(err)
 	}
 
@@ -505,19 +505,19 @@ func (s *ModelSuite) TestItAddsReportWhenAdvancing() {
 	for i := 0; i < s.n; i++ {
 		s.Equal(0, page.Rows[i].InputIndex)
 		s.Equal(i, page.Rows[i].Index)
-		s.Equal(s.payloads[i], page.Rows[i].Payload)
+		s.Equal("0x"+s.payloads[i], page.Rows[i].Payload)
 	}
 }
 
 func (s *ModelSuite) TestItAddsReportWhenInspecting() {
 	// add input and get it
-	s.m.AddInspectInput(s.payloads[0])
+	s.m.AddInspectInput(common.Hex2Bytes(s.payloads[0]))
 	_, err := s.m.FinishAndGetNext(true)
 	s.NoError(err)
 
 	// add reports
 	for i := 0; i < s.n; i++ {
-		err := s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), s.payloads[i])
+		err := s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), common.Hex2Bytes(s.payloads[i]))
 		s.Nil(err)
 	}
 
@@ -535,12 +535,12 @@ func (s *ModelSuite) TestItAddsReportWhenInspecting() {
 	for i := 0; i < s.n; i++ {
 		s.Equal(0, reports.Reports[i].InputIndex)
 		s.Equal(i, reports.Reports[i].Index)
-		s.Equal(s.payloads[i], reports.Reports[i].Payload)
+		s.Equal(s.payloads[i], common.Bytes2Hex(reports.Reports[i].Payload))
 	}
 }
 
 func (s *ModelSuite) TestItFailsToAddReportWhenIdle() {
-	err := s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), s.payloads[0])
+	err := s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), common.Hex2Bytes(s.payloads[0]))
 	s.Error(err)
 	s.Equal(errors.New("cannot add report in current state"), err)
 }
@@ -556,13 +556,13 @@ func (s *ModelSuite) TestItRegistersExceptionWhenAdvancing() {
 	s.NoError(err)
 	_, err = s.m.FinishAndGetNext(true) // get
 	s.Nil(err)
-	_, err = s.m.AddVoucher(common.HexToAddress(devnet.ApplicationAddress), s.senders[0], "0", s.payloads[0])
+	_, err = s.m.AddVoucher(common.HexToAddress(devnet.ApplicationAddress), s.senders[0], "0", common.Hex2Bytes(s.payloads[0]))
 	s.Nil(err)
-	_, err = s.m.AddNotice(s.payloads[0], common.HexToAddress(devnet.ApplicationAddress))
+	_, err = s.m.AddNotice(common.Hex2Bytes(s.payloads[0]), common.HexToAddress(devnet.ApplicationAddress))
 	s.Nil(err)
-	err = s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), s.payloads[0])
+	err = s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), common.Hex2Bytes(s.payloads[0]))
 	s.Nil(err)
-	err = s.m.RegisterException(s.payloads[0])
+	err = s.m.RegisterException(common.Hex2Bytes(s.payloads[0]))
 	s.Nil(err)
 
 	// check input
@@ -573,7 +573,7 @@ func (s *ModelSuite) TestItRegistersExceptionWhenAdvancing() {
 	s.Empty(input.Vouchers)
 	s.Empty(input.Notices)
 	s.Empty(input.Reports)
-	s.Equal(s.payloads[0], input.Exception)
+	s.Equal(s.payloads[0], common.Bytes2Hex(input.Exception))
 
 	total, err := s.reportRepository.Count(ctx, nil)
 	s.NoError(err)
@@ -582,26 +582,26 @@ func (s *ModelSuite) TestItRegistersExceptionWhenAdvancing() {
 
 func (s *ModelSuite) TestItRegistersExceptionWhenInspecting() {
 	// add input and finish it
-	s.m.AddInspectInput(s.payloads[0])
+	s.m.AddInspectInput(common.Hex2Bytes(s.payloads[0]))
 	_, err := s.m.FinishAndGetNext(true) // get
 	s.Nil(err)
-	err = s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), s.payloads[0])
+	err = s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), common.Hex2Bytes(s.payloads[0]))
 	s.Nil(err)
-	err = s.m.RegisterException(s.payloads[0])
+	err = s.m.RegisterException(common.Hex2Bytes(s.payloads[0]))
 	s.Nil(err)
 
 	// check input
 	input, _ := s.m.GetInspectInput(0)
 	s.Equal(0, input.Index)
 	s.Equal(cModel.CompletionStatusException, input.Status)
-	s.Equal(s.payloads[0], input.Payload)
+	s.Equal(s.payloads[0], common.Bytes2Hex(input.Payload))
 	s.Equal(0, input.ProcessedInputCount)
 	s.Len(input.Reports, 1)
-	s.Equal(s.payloads[0], input.Exception)
+	s.Equal(s.payloads[0], common.Bytes2Hex(input.Exception))
 }
 
 func (s *ModelSuite) TestItFailsToRegisterExceptionWhenIdle() {
-	err := s.m.RegisterException(s.payloads[0])
+	err := s.m.RegisterException(common.Hex2Bytes(s.payloads[0]))
 	s.Error(err)
 	s.Equal(errors.New("cannot register exception in current state"), err)
 }
@@ -620,7 +620,7 @@ func (s *ModelSuite) TestItGetsAdvanceInputs() {
 		s.Equal(strconv.Itoa(i), input.ID)
 		s.Equal(cModel.CompletionStatusUnprocessed, input.Status)
 		s.Equal(s.senders[i], input.MsgSender)
-		s.Equal(s.payloads[i], input.Payload)
+		s.Equal("0x"+s.payloads[i], input.Payload)
 		s.Equal(s.blockNumbers[i], input.BlockNumber)
 		s.Equal(s.timestamps[i].UnixMilli(), input.BlockTimestamp.UnixMilli())
 	}
@@ -645,7 +645,7 @@ func (s *ModelSuite) TestItGetsVoucher() {
 		_, err = s.m.FinishAndGetNext(true) // get
 		s.NoError(err)
 		for j := 0; j < s.n; j++ {
-			_, err := s.m.AddVoucher(common.HexToAddress(devnet.ApplicationAddress), s.senders[j], "0", s.payloads[j])
+			_, err := s.m.AddVoucher(common.HexToAddress(devnet.ApplicationAddress), s.senders[j], "0", common.Hex2Bytes(s.payloads[j]))
 			s.Nil(err)
 		}
 		_, err = s.m.FinishAndGetNext(true) // finish
@@ -659,7 +659,7 @@ func (s *ModelSuite) TestItGetsVoucher() {
 			s.Equal(j, int(voucher.OutputIndex))
 			s.Equal(i, int(voucher.InputIndex))
 			s.Equal(s.senders[j].Hex(), voucher.Destination.Hex())
-			s.Equal(s.payloads[j], common.Hex2Bytes(voucher.Payload[2:]))
+			s.Equal(s.payloads[j], voucher.Payload[2:])
 		}
 	}
 }
@@ -697,7 +697,7 @@ func (s *ModelSuite) TestItGetsNotice() {
 		_, err = s.m.FinishAndGetNext(true) // get
 		s.NoError(err)
 		for j := 0; j < s.n; j++ {
-			_, err := s.m.AddNotice(s.payloads[j], common.HexToAddress(devnet.ApplicationAddress))
+			_, err := s.m.AddNotice(common.Hex2Bytes(s.payloads[j]), common.HexToAddress(devnet.ApplicationAddress))
 			s.Nil(err)
 		}
 		_, err = s.m.FinishAndGetNext(true) // finish
@@ -708,7 +708,7 @@ func (s *ModelSuite) TestItGetsNotice() {
 			notice := s.getNotice(i, j)
 			s.Equal(j, int(notice.OutputIndex))
 			s.Equal(i, int(notice.InputIndex))
-			s.Equal(s.payloads[j], common.Hex2Bytes(notice.Payload[2:]))
+			s.Equal(s.payloads[j], notice.Payload[2:])
 		}
 	}
 }
@@ -741,7 +741,7 @@ func (s *ModelSuite) TestItGetsReport() {
 		_, err = s.m.FinishAndGetNext(true) // get
 		s.NoError(err)
 		for j := 0; j < s.n; j++ {
-			err := s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), s.payloads[j])
+			err := s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), common.Hex2Bytes(s.payloads[j]))
 			s.Nil(err)
 		}
 		_, err = s.m.FinishAndGetNext(true) // finish
@@ -757,7 +757,7 @@ func (s *ModelSuite) TestItGetsReport() {
 			s.NoError(err)
 			s.Equal(j, report.Index)
 			s.Equal(i, report.InputIndex)
-			s.Equal(s.payloads[j], report.Payload)
+			s.Equal("0x"+s.payloads[j], report.Payload)
 		}
 	}
 }
@@ -831,7 +831,7 @@ func (s *ModelSuite) TestItGetsNumVouchers() {
 		s.NoError(err)
 		_, err = s.m.FinishAndGetNext(true) // get
 		s.NoError(err)
-		_, err = s.m.AddVoucher(common.HexToAddress(devnet.ApplicationAddress), s.senders[i], "0", s.payloads[i])
+		_, err = s.m.AddVoucher(common.HexToAddress(devnet.ApplicationAddress), s.senders[i], "0", common.Hex2Bytes(s.payloads[i]))
 		s.Nil(err)
 		_, err = s.m.FinishAndGetNext(true) // finish
 		s.Nil(err)
@@ -858,7 +858,7 @@ func (s *ModelSuite) TestItGetsNumNotices() {
 		s.NoError(err)
 		_, err = s.m.FinishAndGetNext(true) // get
 		s.NoError(err)
-		_, err = s.m.AddNotice(s.payloads[i], common.HexToAddress(devnet.ApplicationAddress))
+		_, err = s.m.AddNotice(common.Hex2Bytes(s.payloads[i]), common.HexToAddress(devnet.ApplicationAddress))
 		s.Nil(err)
 		_, err = s.m.FinishAndGetNext(true) // finish
 		s.Nil(err)
@@ -888,7 +888,7 @@ func (s *ModelSuite) TestItGetsNumReports() {
 		s.NoError(err)
 		_, err = s.m.FinishAndGetNext(true) // get
 		s.NoError(err)
-		err = s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), s.payloads[i])
+		err = s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), common.Hex2Bytes(s.payloads[i]))
 		s.Nil(err)
 		_, err = s.m.FinishAndGetNext(true) // finish
 		s.Nil(err)
@@ -1005,7 +1005,7 @@ func (s *ModelSuite) TestItGetsVouchers() {
 		_, err = s.m.FinishAndGetNext(true) // get
 		s.NoError(err)
 		for j := 0; j < s.n; j++ {
-			_, err := s.m.AddVoucher(common.HexToAddress(devnet.ApplicationAddress), s.senders[j], "0", s.payloads[j])
+			_, err := s.m.AddVoucher(common.HexToAddress(devnet.ApplicationAddress), s.senders[j], "0", common.Hex2Bytes(s.payloads[j]))
 			s.Nil(err)
 		}
 		_, err = s.m.FinishAndGetNext(true) // finish
@@ -1019,7 +1019,7 @@ func (s *ModelSuite) TestItGetsVouchers() {
 			s.Equal(j, int(vouchers[idx].OutputIndex))
 			s.Equal(i, int(vouchers[idx].InputIndex))
 			s.Equal(s.senders[j], vouchers[idx].Destination)
-			s.Equal(s.payloads[j], common.Hex2Bytes(vouchers[idx].Payload[2:]))
+			s.Equal(s.payloads[i], vouchers[i].Payload[2:])
 		}
 	}
 }
@@ -1031,7 +1031,7 @@ func (s *ModelSuite) TestItGetsVouchersWithFilter() {
 		_, err = s.m.FinishAndGetNext(true) // get
 		s.NoError(err)
 		for j := 0; j < s.n; j++ {
-			_, err := s.m.AddVoucher(common.HexToAddress(devnet.ApplicationAddress), s.senders[j], "0", s.payloads[j])
+			_, err := s.m.AddVoucher(common.HexToAddress(devnet.ApplicationAddress), s.senders[j], "0", common.Hex2Bytes(s.payloads[j]))
 			s.Nil(err)
 		}
 		_, err = s.m.FinishAndGetNext(true) // finish
@@ -1054,7 +1054,7 @@ func (s *ModelSuite) TestItGetsVouchersWithFilter() {
 		s.Equal(i, int(vouchers[i].OutputIndex))
 		s.Equal(inputIndex, int(vouchers[i].InputIndex))
 		s.Equal(s.senders[i], vouchers[i].Destination)
-		s.Equal(s.payloads[i], common.Hex2Bytes(vouchers[i].Payload[2:]))
+		s.Equal(s.payloads[i], vouchers[i].Payload[2:])
 	}
 }
 
@@ -1064,7 +1064,7 @@ func (s *ModelSuite) TestItGetsVouchersWithOffset() {
 	_, err = s.m.FinishAndGetNext(true) // get
 	s.NoError(err)
 	for i := 0; i < s.n; i++ {
-		_, err := s.m.AddVoucher(common.HexToAddress(devnet.ApplicationAddress), s.senders[i], "0", s.payloads[i])
+		_, err := s.m.AddVoucher(common.HexToAddress(devnet.ApplicationAddress), s.senders[i], "0", common.Hex2Bytes(s.payloads[i]))
 		s.Nil(err)
 	}
 	_, err = s.m.FinishAndGetNext(true) // finish
@@ -1082,7 +1082,7 @@ func (s *ModelSuite) TestItGetsVouchersWithLimit() {
 	_, err = s.m.FinishAndGetNext(true) // get
 	s.NoError(err)
 	for i := 0; i < s.n; i++ {
-		_, err := s.m.AddVoucher(common.HexToAddress(devnet.ApplicationAddress), s.senders[i], "0", s.payloads[i])
+		_, err := s.m.AddVoucher(common.HexToAddress(devnet.ApplicationAddress), s.senders[i], "0", common.Hex2Bytes(s.payloads[i]))
 		s.Nil(err)
 	}
 	_, err = s.m.FinishAndGetNext(true) // finish
@@ -1100,7 +1100,7 @@ func (s *ModelSuite) TestItGetsNoVouchersWithZeroLimit() {
 	_, err = s.m.FinishAndGetNext(true) // get
 	s.NoError(err)
 	for i := 0; i < s.n; i++ {
-		_, err := s.m.AddVoucher(common.HexToAddress(devnet.ApplicationAddress), s.senders[i], "0", s.payloads[i])
+		_, err := s.m.AddVoucher(common.HexToAddress(devnet.ApplicationAddress), s.senders[i], "0", common.Hex2Bytes(s.payloads[i]))
 		s.Nil(err)
 	}
 	_, err = s.m.FinishAndGetNext(true) // finish
@@ -1116,7 +1116,7 @@ func (s *ModelSuite) TestItGetsNoVouchersWhenOffsetIsGreaterThanInputs() {
 	_, err = s.m.FinishAndGetNext(true) // get
 	s.NoError(err)
 	for i := 0; i < s.n; i++ {
-		_, err := s.m.AddVoucher(common.HexToAddress(devnet.ApplicationAddress), s.senders[i], "0", s.payloads[i])
+		_, err := s.m.AddVoucher(common.HexToAddress(devnet.ApplicationAddress), s.senders[i], "0", common.Hex2Bytes(s.payloads[i]))
 		s.Nil(err)
 	}
 	_, err = s.m.FinishAndGetNext(true) // finish
@@ -1144,7 +1144,7 @@ func (s *ModelSuite) TestItGetsNotices() {
 		_, err = s.m.FinishAndGetNext(true) // get
 		s.NoError(err)
 		for j := 0; j < s.n; j++ {
-			_, err := s.m.AddNotice(s.payloads[j], common.HexToAddress(devnet.ApplicationAddress))
+			_, err := s.m.AddNotice(common.Hex2Bytes(s.payloads[j]), common.HexToAddress(devnet.ApplicationAddress))
 			s.Nil(err)
 		}
 		_, err = s.m.FinishAndGetNext(true) // finish
@@ -1160,7 +1160,7 @@ func (s *ModelSuite) TestItGetsNotices() {
 			idx := s.n*i + j
 			s.Equal(j, int(notices[idx].OutputIndex))
 			s.Equal(i, int(notices[idx].InputIndex))
-			s.Equal(s.payloads[j], common.Hex2Bytes(notices[idx].Payload[2:]))
+			s.Equal(s.payloads[j], notices[idx].Payload[2:])
 		}
 	}
 }
@@ -1172,7 +1172,7 @@ func (s *ModelSuite) TestItGetsNoticesWithFilter() {
 		_, err = s.m.FinishAndGetNext(true) // get
 		s.NoError(err)
 		for j := 0; j < s.n; j++ {
-			_, err := s.m.AddNotice(s.payloads[j], common.HexToAddress(devnet.ApplicationAddress))
+			_, err := s.m.AddNotice(common.Hex2Bytes(s.payloads[j]), common.HexToAddress(devnet.ApplicationAddress))
 			s.Nil(err)
 		}
 		_, err = s.m.FinishAndGetNext(true) // finish
@@ -1194,7 +1194,7 @@ func (s *ModelSuite) TestItGetsNoticesWithFilter() {
 	for i := 0; i < s.n; i++ {
 		s.Equal(i, int(notices[i].OutputIndex))
 		s.Equal(inputIndex, int(notices[i].InputIndex))
-		s.Equal(s.payloads[i], common.Hex2Bytes(notices[i].Payload[2:]))
+		s.Equal(s.payloads[i], notices[i].Payload[2:])
 	}
 }
 
@@ -1204,7 +1204,7 @@ func (s *ModelSuite) TestItGetsNoticesWithOffset() {
 	_, err = s.m.FinishAndGetNext(true) // get
 	s.NoError(err)
 	for i := 0; i < s.n; i++ {
-		_, err := s.m.AddNotice(s.payloads[i], common.HexToAddress(devnet.ApplicationAddress))
+		_, err := s.m.AddNotice(common.Hex2Bytes(s.payloads[i]), common.HexToAddress(devnet.ApplicationAddress))
 		s.Nil(err)
 	}
 	_, err = s.m.FinishAndGetNext(true) // finish
@@ -1226,7 +1226,7 @@ func (s *ModelSuite) TestItGetsNoticesWithLimit() {
 	_, err = s.m.FinishAndGetNext(true) // get
 	s.NoError(err)
 	for i := 0; i < s.n; i++ {
-		_, err := s.m.AddNotice(s.payloads[i], common.HexToAddress(devnet.ApplicationAddress))
+		_, err := s.m.AddNotice(common.Hex2Bytes(s.payloads[i]), common.HexToAddress(devnet.ApplicationAddress))
 		s.Nil(err)
 	}
 	_, err = s.m.FinishAndGetNext(true) // finish
@@ -1248,7 +1248,7 @@ func (s *ModelSuite) TestItGetsNoNoticesWithZeroLimit() {
 	_, err = s.m.FinishAndGetNext(true) // get
 	s.NoError(err)
 	for i := 0; i < s.n; i++ {
-		_, err := s.m.AddNotice(s.payloads[i], common.HexToAddress(devnet.ApplicationAddress))
+		_, err := s.m.AddNotice(common.Hex2Bytes(s.payloads[i]), common.HexToAddress(devnet.ApplicationAddress))
 		s.Nil(err)
 	}
 	_, err = s.m.FinishAndGetNext(true) // finish
@@ -1268,7 +1268,7 @@ func (s *ModelSuite) TestItGetsNoNoticesWhenOffsetIsGreaterThanInputs() {
 	_, err = s.m.FinishAndGetNext(true) // get
 	s.NoError(err)
 	for i := 0; i < s.n; i++ {
-		_, err := s.m.AddNotice(s.payloads[i], common.HexToAddress(devnet.ApplicationAddress))
+		_, err := s.m.AddNotice(common.Hex2Bytes(s.payloads[i]), common.HexToAddress(devnet.ApplicationAddress))
 		s.Nil(err)
 	}
 	_, err = s.m.FinishAndGetNext(true) // finish
@@ -1307,7 +1307,7 @@ func (s *ModelSuite) TestItGetsReports() {
 		_, err = s.m.FinishAndGetNext(true) // get
 		s.NoError(err)
 		for j := 0; j < s.n; j++ {
-			err := s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), s.payloads[j])
+			err := s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), common.Hex2Bytes(s.payloads[j]))
 			s.Nil(err)
 		}
 		_, err = s.m.FinishAndGetNext(true) // finish
@@ -1321,7 +1321,7 @@ func (s *ModelSuite) TestItGetsReports() {
 			idx := s.n*i + j
 			s.Equal(j, page.Rows[idx].Index)
 			s.Equal(i, page.Rows[idx].InputIndex)
-			s.Equal(s.payloads[j], page.Rows[idx].Payload)
+			s.Equal("0x"+s.payloads[j], page.Rows[idx].Payload)
 		}
 	}
 }
@@ -1334,7 +1334,7 @@ func (s *ModelSuite) TestItGetsReportsWithFilter() {
 		_, err = s.m.FinishAndGetNext(true) // get
 		s.NoError(err)
 		for j := 0; j < s.n; j++ {
-			err := s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), s.payloads[j])
+			err := s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), common.Hex2Bytes(s.payloads[j]))
 			s.Nil(err)
 		}
 		_, err = s.m.FinishAndGetNext(true) // finish
@@ -1347,7 +1347,7 @@ func (s *ModelSuite) TestItGetsReportsWithFilter() {
 	for i := 0; i < s.n; i++ {
 		s.Equal(i, page.Rows[i].Index)
 		s.Equal(inputIndex, page.Rows[i].InputIndex)
-		s.Equal(s.payloads[i], page.Rows[i].Payload)
+		s.Equal("0x"+s.payloads[i], page.Rows[i].Payload)
 	}
 }
 
@@ -1358,7 +1358,7 @@ func (s *ModelSuite) TestItGetsReportsWithOffset() {
 	_, err = s.m.FinishAndGetNext(true) // get
 	s.NoError(err)
 	for i := 0; i < s.n*2; i++ {
-		err := s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), s.payloads[i%s.n])
+		err := s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), common.Hex2Bytes(s.payloads[i%s.n]))
 		s.Nil(err)
 	}
 	_, err = s.m.FinishAndGetNext(true) // finish
@@ -1378,7 +1378,7 @@ func (s *ModelSuite) TestItGetsReportsWithLimit() {
 	_, err = s.m.FinishAndGetNext(true) // get
 	s.NoError(err)
 	for i := 0; i < s.n; i++ {
-		err := s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), s.payloads[i])
+		err := s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), common.Hex2Bytes(s.payloads[i]))
 		s.Nil(err)
 	}
 	_, err = s.m.FinishAndGetNext(true) // finish
@@ -1398,7 +1398,7 @@ func (s *ModelSuite) TestItGetsNoReportsWithZeroLimit() {
 	_, err = s.m.FinishAndGetNext(true) // get
 	s.NoError(err)
 	for i := 0; i < s.n; i++ {
-		err := s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), s.payloads[i])
+		err := s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), common.Hex2Bytes(s.payloads[i]))
 		s.NoError(err)
 	}
 	_, err = s.m.FinishAndGetNext(true) // finish
@@ -1416,7 +1416,7 @@ func (s *ModelSuite) TestItGetsNoReportsWhenOffsetIsGreaterThanInputs() {
 	_, err = s.m.FinishAndGetNext(true) // get
 	s.NoError(err)
 	for i := 0; i < s.n; i++ {
-		err := s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), s.payloads[i])
+		err := s.m.AddReport(common.HexToAddress(devnet.ApplicationAddress), common.Hex2Bytes(s.payloads[i]))
 		s.Nil(err)
 	}
 	_, err = s.m.FinishAndGetNext(true) // finish

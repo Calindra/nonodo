@@ -2,6 +2,7 @@
 
 ![CI](https://github.com/Calindra/nonodo/actions/workflows/ci.yaml/badge.svg)
 [![Go Report Card](https://goreportcard.com/badge/github.com/Calindra/nonodo)](https://goreportcard.com/report/github.com/Calindra/nonodo)
+![GitHub Release](https://img.shields.io/github/v/release/calindra/nonodo?include_prereleases&sort=semver&filter=v2*)
 
 NoNodo is a development node for [Cartesi Rollups](https://docs.cartesi.io/cartesi-rollups/) that was designed to work with applications running in the host machine instead of the Cartesi machine.
 So, the application developer doesn't need to be concerned with compiling their application to RISC-V.
@@ -177,7 +178,7 @@ nonodo \
     --rpc-url wss://eth-sepolia.g.alchemy.com/v2/$ALCHEMY_API_KEY
 ```
 
-### Connecting to PostGresDB and Graphile locally
+### Connecting to PostGresDB
 
 Start a PostGres instance locally, "cd" to db folder and use docker-compose.yml example.
 Set PostGres connection details using environment variables
@@ -192,20 +193,22 @@ export POSTGRES_PASSWORD=mypassword
 
 When running nonodo, set flag db-implementation with the value postgres
 
-Graphile can be called using `http://localhost:5001/graphql` and you can test queries using `http://localhost:5001/graphiql`
+#### Connection Pool
 
-You can change Graphile address and port using the flags graphile-url.
+| **Variable**            | **Default Value** | **Description** |
+|-------------------------|-------------------|-----------------|
+| `DB_MAX_OPEN_CONNS`      | 25                | Maximum number of open connections in the pool. Prevents exhausting the database resources by limiting connections. |
+| `DB_MAX_IDLE_CONNS`      | 10                | Number of idle connections kept in the pool to avoid frequent reconnections. |
+| `DB_CONN_MAX_LIFETIME`   | 1800 (30 minutes) | Maximum lifetime (in seconds) for each connection before it is closed and replaced. Prevents stale connections. |
+| `DB_CONN_MAX_IDLE_TIME`  | 300 (5 minutes)   | Maximum time (in seconds) that a connection can remain idle before being closed. Helps free up unused connections. |
 
-```sh
-nonodo --graphile-url http://mygraphileaddress:5034
-```
 
-Salsa/Lambada Support
+### Salsa/Lambada Support
 
 You can start a Lambda server using Salsa
 
 ```sh
-nonodo --salsa 
+nonodo --salsa
 ```
 
 Optionally, you can ser server's host and port

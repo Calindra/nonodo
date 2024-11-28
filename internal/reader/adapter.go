@@ -3,7 +3,6 @@ package reader
 import (
 	"context"
 
-	"github.com/calindra/nonodo/internal/reader/model"
 	graphql "github.com/calindra/nonodo/internal/reader/model"
 )
 
@@ -16,6 +15,11 @@ type Adapter interface {
 	GetReports(
 		ctx context.Context,
 		first *int, last *int, after *string, before *string, inputIndex *int,
+	) (*graphql.ReportConnection, error)
+
+	GetAllReportsByInputIndex(
+		ctx context.Context,
+		inputIndex *int,
 	) (*graphql.ReportConnection, error)
 
 	GetInputs(
@@ -49,6 +53,16 @@ type Adapter interface {
 	GetVouchers(
 		ctx context.Context,
 		first *int, last *int, after *string, before *string, inputIndex *int,
-		filter []*model.ConvenientFilter,
+		filter []*graphql.ConvenientFilter,
 	) (*graphql.VoucherConnection, error)
+
+	GetAllVouchersByInputIndex(
+		ctx context.Context,
+		inputIndex *int,
+	) (*graphql.VoucherConnection, error)
+
+	GetAllNoticesByInputIndex(
+		ctx context.Context,
+		inputIndex *int,
+	) (*graphql.Connection[*graphql.Notice], error)
 }

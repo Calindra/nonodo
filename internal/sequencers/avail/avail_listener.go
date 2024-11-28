@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strconv"
 	"time"
 
+	cModel "github.com/calindra/cartesi-rollups-hl-graphql/pkg/convenience/model"
+	cRepos "github.com/calindra/cartesi-rollups-hl-graphql/pkg/convenience/repository"
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/contracts"
-	cModel "github.com/calindra/nonodo/internal/convenience/model"
-	cRepos "github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/calindra/nonodo/internal/sequencers/inputter"
 	"github.com/calindra/nonodo/internal/sequencers/paiodecoder"
 	"github.com/calindra/nonodo/internal/supervisor"
@@ -36,6 +37,7 @@ type AvailListener struct {
 	AvailFromBlock     uint64
 	L1CurrentBlock     uint64
 	ApplicationAddress common.Address
+	L1ReadDelay        int
 }
 
 type PaioDecoder interface {
@@ -50,6 +52,16 @@ func NewAvailListener(availFromBlock uint64, repository *cRepos.InputRepository,
 	if binaryDecoderPathLocation != "" {
 		paioDecoder = paiodecoder.NewPaioDecoder(binaryDecoderPathLocation)
 	}
+	l1ReadDelay := FIVE_MINUTES
+	l1ReadDelayStr, ok := os.LookupEnv("L1_READ_DELAY_IN_SECONDS")
+	if ok {
+		aux, err := strconv.Atoi(l1ReadDelayStr)
+		if err != nil {
+			slog.Error("Configuration error: The L1_READ_DELAY_IN_SECONDS environment variable should be a numeric value.")
+			panic(err)
+		}
+		l1ReadDelay = aux
+	}
 	return AvailListener{
 		AvailFromBlock:     availFromBlock,
 		InputRepository:    repository,
@@ -57,6 +69,7 @@ func NewAvailListener(availFromBlock uint64, repository *cRepos.InputRepository,
 		PaioDecoder:        paioDecoder,
 		L1CurrentBlock:     fromBlock,
 		ApplicationAddress: common.HexToAddress(applicationAddress),
+		L1ReadDelay:        l1ReadDelay,
 	}
 }
 
@@ -238,7 +251,7 @@ func (a AvailListener) TableTennis(ctx context.Context,
 	}
 	inputsL1, err := a.InputterWorker.FindAllInputsByBlockAndTimestampLT(ctx,
 		ethClient, inputBox, startBlockNumber,
-		(availBlockTimestamp/ONE_SECOND_IN_MS)-FIVE_MINUTES,
+		(availBlockTimestamp/ONE_SECOND_IN_MS)-uint64(a.L1ReadDelay),
 	)
 	if err != nil {
 		return nil, err
@@ -259,7 +272,7 @@ func (a AvailListener) TableTennis(ctx context.Context,
 					"appContract", inputs[i].AppContract.Hex(),
 					"expected", a.ApplicationAddress.Hex(),
 					"msgSender", inputs[i].MsgSender.Hex(),
-					"payload", common.Bytes2Hex(inputs[i].Payload),
+					"payload", inputs[i].Payload,
 				)
 				continue
 			}
@@ -273,7 +286,7 @@ func (a AvailListener) TableTennis(ctx context.Context,
 				"index", inputs[i].Index,
 				"appContract", inputs[i].AppContract.Hex(),
 				"msgSender", inputs[i].MsgSender.Hex(),
-				"payload", common.Bytes2Hex(inputs[i].Payload),
+				"payload", inputs[i].Payload,
 			)
 		}
 	}
@@ -342,7 +355,7 @@ func ReadInputsFromAvailBlockZzzHui(block *types.SignedBlock) ([]cModel.AdvanceI
 			Index:                int(0),
 			CartesiTransactionId: common.Bytes2Hex(crypto.Keccak256(signature)),
 			MsgSender:            msgSender,
-			Payload:              paioMessage.Payload,
+			Payload:              common.Bytes2Hex(paioMessage.Payload),
 			AppContract:          common.HexToAddress(paioMessage.App),
 			AvailBlockNumber:     int(block.Block.Header.Number),
 			AvailBlockTimestamp:  time.Unix(int64(timestamp)/ONE_SECOND_IN_MS, 0),

@@ -6,13 +6,14 @@ package inspect
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
 	"time"
 
-	cModel "github.com/calindra/nonodo/internal/convenience/model"
+	cModel "github.com/calindra/cartesi-rollups-hl-graphql/pkg/convenience/model"
 	"github.com/calindra/nonodo/internal/model"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/labstack/echo/v4"
@@ -41,7 +42,7 @@ type inspectAPI struct {
 }
 
 // Handle POST requests to /.
-func (a *inspectAPI) InspectPost(c echo.Context) error {
+func (a *inspectAPI) InspectPost(c echo.Context, _ string) error {
 	body := c.Request().Body
 	defer body.Close()
 	payload, err := io.ReadAll(body)
@@ -55,9 +56,11 @@ func (a *inspectAPI) InspectPost(c echo.Context) error {
 }
 
 // Handle GET requests to /{payload}.
-func (a *inspectAPI) Inspect(c echo.Context, _ string) error {
-	uri := c.Request().RequestURI[9:] // remove '/inspect/'
+func (a *inspectAPI) Inspect(c echo.Context, appAddress string, _ string) error {
+	toRemove := len(fmt.Sprintf("/inspect/%s/", appAddress))
+	uri := c.Request().RequestURI[toRemove:] // remove '/inspect/<app-address>'
 	payload, err := url.QueryUnescape(uri)
+	slog.Debug("/inspect", "payload", payload)
 	if err != nil {
 		return c.String(http.StatusBadRequest, err.Error())
 	}
@@ -109,6 +112,14 @@ func convertInput(input model.InspectInput) (InspectResult, error) {
 		status = Rejected
 	case cModel.CompletionStatusException:
 		status = Exception
+	case cModel.CompletionStatusMachineHalted:
+		status = MachineHalted
+	case cModel.CompletionStatusCycleLimitExceeded:
+		status = CycleLimitExceeded
+	case cModel.CompletionStatusTimeLimitExceeded:
+		status = TimeLimitExceeded
+	case cModel.CompletionStatusPayloadLengthLimitExceeded:
+		status = "PAYLOAD_LENGTH_LIMIT_EXCEEDED"
 	default:
 		return InspectResult{}, errors.New("invalid completion status")
 	}

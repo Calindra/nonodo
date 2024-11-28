@@ -9,22 +9,21 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"math/big"
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"time"
 
-	"github.com/calindra/nonodo/internal/convenience"
-	"github.com/calindra/nonodo/internal/convenience/synchronizer"
-	synchronizernode "github.com/calindra/nonodo/internal/convenience/synchronizer_node"
+	"github.com/calindra/cartesi-rollups-hl-graphql/pkg/convenience"
+	"github.com/calindra/cartesi-rollups-hl-graphql/pkg/reader"
+	"github.com/calindra/nonodo/internal/claimer"
 	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/calindra/nonodo/internal/echoapp"
 	"github.com/calindra/nonodo/internal/health"
 	"github.com/calindra/nonodo/internal/inspect"
 	"github.com/calindra/nonodo/internal/model"
 	"github.com/calindra/nonodo/internal/paio"
-	"github.com/calindra/nonodo/internal/reader"
 	"github.com/calindra/nonodo/internal/rollup"
 	"github.com/calindra/nonodo/internal/salsa"
 	"github.com/calindra/nonodo/internal/sequencers/avail"
@@ -32,6 +31,7 @@ import (
 	"github.com/calindra/nonodo/internal/sequencers/inputter"
 	"github.com/calindra/nonodo/internal/sequencers/paiodecoder"
 	"github.com/calindra/nonodo/internal/supervisor"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"
@@ -67,11 +67,13 @@ type NonodoOpts struct {
 	DisableDevnet bool
 	// If set, disables advances.
 	DisableAdvance bool
+	// If set, disables inspects.
+	DisableInspect bool
 	// If set, start application.
 	ApplicationArgs     []string
-	HLGraphQL           bool
 	SqliteFile          string
 	FromBlock           uint64
+	FromBlockL1         *uint64
 	DbImplementation    string
 	NodeVersion         string
 	LoadTestMode        bool
@@ -89,6 +91,7 @@ type NonodoOpts struct {
 	PaioServerUrl       string
 	DbRawUrl            string
 	RawEnabled          bool
+	EpochBlocks         int
 }
 
 // Create the options struct with default values.
@@ -97,6 +100,8 @@ func NewNonodoOpts() NonodoOpts {
 		defaultTimeout time.Duration = 10 * time.Second
 		graphileUrl                  = os.Getenv("GRAPHILE_URL")
 	)
+
+	// FLAG: remove graphile if dont need
 	const defaultGraphileUrl = "http://localhost:5001/graphql"
 
 	if graphileUrl == "" {
@@ -124,10 +129,11 @@ func NewNonodoOpts() NonodoOpts {
 		EnableEcho:          false,
 		DisableDevnet:       false,
 		DisableAdvance:      false,
+		DisableInspect:      false,
 		ApplicationArgs:     nil,
-		HLGraphQL:           false,
 		SqliteFile:          "",
 		FromBlock:           0,
+		FromBlockL1:         nil,
 		DbImplementation:    "sqlite",
 		NodeVersion:         "v1",
 		Sequencer:           "inputbox",
@@ -144,103 +150,14 @@ func NewNonodoOpts() NonodoOpts {
 		AvailEnabled:        false,
 		AutoCount:           false,
 		PaioServerUrl:       "https://cartesi-paio-avail-turing.fly.dev",
-		DbRawUrl:            "postgres://postgres:password@localhost:5432/test_rollupsdb?sslmode=disable",
+		DbRawUrl:            "postgres://postgres:password@localhost:5432/rollupsdb?sslmode=disable",
 		RawEnabled:          false,
+		EpochBlocks:         claimer.DEFAULT_EPOCH_BLOCKS,
 	}
 }
 
-func NewSupervisorHLGraphQL(opts NonodoOpts) supervisor.SupervisorWorker {
-	var w supervisor.SupervisorWorker
-	w.Timeout = opts.TimeoutWorker
-	db := CreateDBInstance(opts)
-	container := convenience.NewContainer(*db, opts.AutoCount)
-	decoder := container.GetOutputDecoder()
-	convenienceService := container.GetConvenienceService()
-	adapter := reader.NewAdapterV1(db, convenienceService)
-	if opts.RpcUrl == "" && !opts.DisableDevnet {
-		anvilLocation, err := handleAnvilInstallation()
-		if err != nil {
-			panic(err)
-		}
-
-		w.Workers = append(w.Workers, devnet.AnvilWorker{
-			Address:  opts.AnvilAddress,
-			Port:     opts.AnvilPort,
-			Verbose:  opts.AnvilVerbose,
-			AnvilCmd: anvilLocation,
-		})
-		opts.RpcUrl = fmt.Sprintf("ws://%s:%v", opts.AnvilAddress, opts.AnvilPort)
-	}
-
-	if !opts.LoadTestMode && !opts.GraphileDisableSync {
-		slog.Debug("Sync initialization")
-		var synchronizer supervisor.Worker
-
-		if opts.NodeVersion == "v2" {
-			graphileUrl, err := url.Parse(opts.GraphileUrl)
-			if err != nil {
-				slog.Error("Error parsing Graphile URL", "error", err)
-				panic(err)
-			}
-
-			synchronizer = container.GetGraphileSynchronizer(*graphileUrl, opts.LoadTestMode)
-		} else {
-			synchronizer = container.GetGraphQLSynchronizer()
-		}
-
-		w.Workers = append(w.Workers, synchronizer)
-
-		opts.RpcUrl = fmt.Sprintf("ws://%s:%v", opts.AnvilAddress, opts.AnvilPort)
-		fromBlock := new(big.Int).SetUint64(opts.FromBlock)
-
-		execVoucherListener := convenience.NewExecListener(
-			opts.RpcUrl,
-			common.HexToAddress(opts.ApplicationAddress),
-			convenienceService,
-			fromBlock,
-		)
-		w.Workers = append(w.Workers, execVoucherListener)
-	}
-
-	model := model.NewNonodoModel(
-		decoder,
-		container.GetReportRepository(),
-		container.GetInputRepository(),
-		container.GetVoucherRepository(),
-		container.GetNoticeRepository(),
-	)
-
-	e := echo.New()
-	e.Use(middleware.CORS())
-	e.Use(middleware.Recover())
-	e.Use(middleware.TimeoutWithConfig(middleware.TimeoutConfig{
-		ErrorMessage: "Request timed out",
-		Timeout:      opts.TimeoutInspect,
-	}))
-	inspect.Register(e, model)
-	health.Register(e)
-	reader.Register(e, model, convenienceService, adapter)
-	w.Workers = append(w.Workers, supervisor.HttpWorker{
-		Address: fmt.Sprintf("%v:%v", opts.HttpAddress, opts.HttpPort),
-		Handler: e,
-	})
-
-	if opts.Salsa {
-		w.Workers = append(w.Workers, salsa.SalsaWorker{
-			Address: opts.SalsaUrl,
-		})
-	}
-
-	if opts.RawEnabled {
-		rawSequencer := synchronizernode.NewSynchronizerCreateWorker(container, opts.DbRawUrl)
-		w.Workers = append(w.Workers, rawSequencer)
-	}
-
-	cleanSync := synchronizer.NewCleanSynchronizer(container.GetSyncRepository(), nil)
-	w.Workers = append(w.Workers, cleanSync)
-
-	slog.Info("Listening", "port", opts.HttpPort)
-	return w
+func NewAbiDecoder(abi *abi.ABI) {
+	panic("unimplemented")
 }
 
 func CreateDBInstance(opts NonodoOpts) *sqlx.DB {
@@ -259,10 +176,36 @@ func CreateDBInstance(opts NonodoOpts) *sqlx.DB {
 			postgresDataBase, postgresPassword)
 
 		db = sqlx.MustConnect("postgres", connectionString)
+		configureConnectionPool(db)
 	} else {
 		db = handleSQLite(opts)
 	}
 	return db
+}
+
+// nolint
+func configureConnectionPool(db *sqlx.DB) {
+	maxOpenConns := getEnvInt("DB_MAX_OPEN_CONNS", 25)
+	maxIdleConns := getEnvInt("DB_MAX_IDLE_CONNS", 10)
+	connMaxLifetime := getEnvInt("DB_CONN_MAX_LIFETIME", 1800) // 30 min
+	connMaxIdleTime := getEnvInt("DB_CONN_MAX_IDLE_TIME", 300) // 5 min
+	db.SetMaxOpenConns(maxOpenConns)
+	db.SetMaxIdleConns(maxIdleConns)
+	db.SetConnMaxLifetime(time.Duration(connMaxLifetime) * time.Second)
+	db.SetConnMaxIdleTime(time.Duration(connMaxIdleTime) * time.Second)
+}
+
+func getEnvInt(envName string, defaultValue int) int {
+	value, exists := os.LookupEnv(envName)
+	if !exists {
+		return defaultValue
+	}
+	intValue, err := strconv.Atoi(value)
+	if err != nil {
+		slog.Error("configuration error", "envName", envName, "value", value)
+		panic(err)
+	}
+	return intValue
 }
 
 func handleSQLite(opts NonodoOpts) *sqlx.DB {
@@ -319,8 +262,10 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		ErrorMessage: "Request timed out",
 		Timeout:      opts.TimeoutInspect,
 	}))
-	inspect.Register(e, modelInstance)
-	reader.Register(e, modelInstance, convenienceService, adapter)
+	if !opts.DisableInspect {
+		inspect.Register(e, modelInstance)
+	}
+	reader.Register(e, convenienceService, adapter)
 	health.Register(e)
 
 	// Start the "internal" http rollup server
@@ -352,7 +297,7 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 	}
 
 	var sequencer model.Sequencer = nil
-	var inputterWorker = &inputter.InputterWorker{
+	inputterWorker := &inputter.InputterWorker{
 		Model:              modelInstance,
 		Provider:           opts.RpcUrl,
 		InputBoxAddress:    common.HexToAddress(opts.InputBoxAddress),
@@ -360,81 +305,86 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		ApplicationAddress: common.HexToAddress(opts.ApplicationAddress),
 	}
 
-	if !opts.DisableAdvance && !opts.AvailEnabled {
-		if opts.Sequencer == "inputbox" {
-			sequencer = model.NewInputBoxSequencer(modelInstance)
-			w.Workers = append(w.Workers, inputter.InputterWorker{
-				Model:              modelInstance,
-				Provider:           opts.RpcUrl,
-				InputBoxAddress:    common.HexToAddress(opts.InputBoxAddress),
-				InputBoxBlock:      opts.InputBoxBlock,
-				ApplicationAddress: common.HexToAddress(opts.ApplicationAddress),
-			})
-		} else if opts.Sequencer == "espresso" {
-			sequencer = model.NewEspressoSequencer(modelInstance)
-			w.Workers = append(w.Workers, espresso.NewEspressoListener(
-				opts.EspressoUrl,
-				opts.Namespace,
+	if !opts.DisableAdvance {
+		if !opts.AvailEnabled {
+			if opts.Sequencer == "inputbox" {
+				sequencer = model.NewInputBoxSequencer(modelInstance)
+				w.Workers = append(w.Workers, inputter.InputterWorker{
+					Model:              modelInstance,
+					Provider:           opts.RpcUrl,
+					InputBoxAddress:    common.HexToAddress(opts.InputBoxAddress),
+					InputBoxBlock:      opts.InputBoxBlock,
+					ApplicationAddress: common.HexToAddress(opts.ApplicationAddress),
+				})
+			} else if opts.Sequencer == "espresso" {
+				sequencer = model.NewEspressoSequencer(modelInstance)
+				w.Workers = append(w.Workers, espresso.NewEspressoListener(
+					opts.EspressoUrl,
+					opts.Namespace,
+					container.GetInputRepository(),
+					opts.FromBlock,
+					inputterWorker,
+					opts.FromBlockL1,
+				))
+			} else if opts.Sequencer == "paio" {
+				panic("sequencer not supported yet")
+			} else {
+				panic("sequencer not supported")
+			}
+		}
+
+		paioSequencerBuilder := paio.NewPaioBuilder()
+		paioSequencerBuilder.WithInputRepository(container.GetInputRepository())
+		paioSequencerBuilder.WithRpcUrl(opts.RpcUrl)
+		paioSequencerBuilder.WithNamespace(opts.Namespace)
+
+		if opts.AvailEnabled {
+			availClient, err := avail.NewAvailClient(
+				fmt.Sprintf("http://%s:%d", opts.HttpAddress, opts.HttpPort),
+				avail.DEFAULT_CHAINID_HARDHAT,
+				avail.DEFAULT_APP_ID,
+			)
+			if err != nil {
+				panic(err)
+			}
+			paioSequencerBuilder.WithPaioServerUrl(
+				opts.PaioServerUrl,
+			)
+			paioSequencerBuilder.WithAvalClient(availClient)
+		}
+		if opts.Sequencer == "espresso" {
+			paioSequencerBuilder = paioSequencerBuilder.WithEspressoUrl(opts.EspressoUrl)
+		}
+		paioSequencer := paioSequencerBuilder.Build()
+		paio.Register(e, paioSequencer)
+
+		if opts.AvailEnabled {
+			// Check if paio decoder is installed
+			paioLocation, err := paiodecoder.DownloadPaioDecoderExecutableAsNeeded()
+			if err != nil {
+				panic(err)
+			}
+			slog.Debug("AvailEnabled", "paioLocation", paioLocation)
+			w.Workers = append(w.Workers, avail.NewAvailListener(
+				opts.AvailFromBlock,
 				modelInstance.GetInputRepository(),
-				opts.FromBlock,
 				inputterWorker,
+				opts.FromBlock,
+				paioLocation,
+				opts.ApplicationAddress,
 			))
-		} else if opts.Sequencer == "paio" {
-			panic("sequencer not supported yet")
-		} else {
-			panic("sequencer not supported")
+			sequencer = model.NewInputBoxSequencer(modelInstance)
 		}
-	}
-
-	paioSequencerBuilder := paio.NewPaioBuilder()
-	paioSequencerBuilder.WithInputRepository(container.GetInputRepository())
-	paioSequencerBuilder.WithRpcUrl(opts.RpcUrl)
-
-	if opts.AvailEnabled {
-		availClient, err := avail.NewAvailClient(
-			fmt.Sprintf("http://%s:%d", opts.HttpAddress, opts.HttpPort),
-			avail.DEFAULT_CHAINID_HARDHAT,
-			avail.DEFAULT_APP_ID,
-		)
-
-		if err != nil {
-			panic(err)
-		}
-		paioSequencerBuilder.WithPaioServerUrl(
-			opts.PaioServerUrl,
-		)
-		paioSequencerBuilder.WithAvalClient(availClient)
-	}
-	if opts.Sequencer == "espresso" {
-		paioSequencerBuilder = paioSequencerBuilder.WithEspressoUrl(opts.EspressoUrl)
-	}
-	paioSequencer := paioSequencerBuilder.Build()
-	paio.Register(e, paioSequencer)
-
-	if opts.AvailEnabled {
-		// Check if paio decoder is installed
-		paioLocation, err := paiodecoder.DownloadPaioDecoderExecutableAsNeeded()
-		if err != nil {
-			panic(err)
-		}
-		slog.Debug("AvailEnabled", "paioLocation", paioLocation)
-		w.Workers = append(w.Workers, avail.NewAvailListener(
-			opts.AvailFromBlock,
-			modelInstance.GetInputRepository(),
-			inputterWorker,
-			opts.FromBlock,
-			paioLocation,
-			opts.ApplicationAddress,
-		))
+	} else {
 		sequencer = model.NewInputBoxSequencer(modelInstance)
 	}
 
 	if opts.RawEnabled {
-		rawSequencer := synchronizernode.NewSynchronizerCreateWorker(container, opts.DbRawUrl)
-		w.Workers = append(w.Workers, rawSequencer)
+		panic("use the --high-level-graphql flag")
 	}
 
 	rollup.Register(re, modelInstance, sequencer, common.HexToAddress(opts.ApplicationAddress))
+
 	w.Workers = append(w.Workers, supervisor.HttpWorker{
 		Address: fmt.Sprintf("%v:%v", opts.HttpAddress, opts.HttpRollupsPort),
 		Handler: re,
@@ -465,8 +415,16 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		})
 	}
 
-	cleanSync := synchronizer.NewCleanSynchronizer(container.GetSyncRepository(), nil)
-	w.Workers = append(w.Workers, cleanSync)
+	if opts.EpochBlocks == 0 {
+		slog.Info("Epoch, claim and proofs disabled")
+	} else {
+		w.Workers = append(w.Workers, claimer.NewClaimerWorker(
+			opts.RpcUrl,
+			container.GetVoucherRepository(),
+			container.GetNoticeRepository(),
+			opts.EpochBlocks,
+		))
+	}
 
 	return w
 }

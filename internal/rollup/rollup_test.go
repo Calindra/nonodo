@@ -15,9 +15,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/calindra/cartesi-rollups-hl-graphql/pkg/convenience"
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/contracts"
-	"github.com/calindra/nonodo/internal/convenience"
 	cModel "github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/calindra/nonodo/internal/model"
@@ -171,7 +171,8 @@ func (s *RollupSuite) TestEncodeVoucher() {
 	deb, err := abiParsed.Pack("Voucher", destination, value, payload)
 	s.NoError(err)
 	slog.Debug("encoded", "encoded", common.Bytes2Hex(deb))
-	s.Equal("0xab7528bb862fB57E8A2BCd567a2e929a0Be56a5e", values[0].(common.Address).Hex())
+	expectedAddress := devnet.ApplicationAddress
+	s.Equal(expectedAddress, values[0].(common.Address).Hex())
 	s.Equal(value, values[1].(*big.Int))
 	s.Equal(payload, values[2])
 
@@ -224,7 +225,7 @@ func (s *RollupSuite) TestEncodeNotice() {
 func (s *RollupSuite) addNewAdvanceInput(inputBoxIndex int) {
 	destination := common.HexToAddress("0xab7528bb862fb57e8a2bcd567a2e929a0be56a5e")
 	payloadHex := "0xdeadbeef"
-	payload := common.Hex2Bytes(payloadHex[2:])
+	payload := payloadHex[2:]
 	err := s.model.AddAdvanceInput(
 		common.HexToAddress("0xab7528bb862fb57e8a2bcd567a2e929a0be56a5e"),
 		payload, uint64(1), time.Now(), inputBoxIndex, "0x", destination, "31337",

@@ -16,7 +16,8 @@ import (
 	"testing"
 	"time"
 
-	cModel "github.com/calindra/nonodo/internal/convenience/model"
+	cModel "github.com/calindra/cartesi-rollups-hl-graphql/pkg/convenience/model"
+	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/calindra/nonodo/internal/model"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -184,14 +185,14 @@ func (s *InspectSuite) doHttpRequest(req *http.Request) (int, string) {
 }
 
 func (s *InspectSuite) doGetInspect(payload string) (int, string) {
-	url := fmt.Sprintf("http://%v/inspect/%v", s.server.Addr, payload)
+	url := fmt.Sprintf("http://%v/inspect/%s/%v", s.server.Addr, devnet.ApplicationAddress, payload)
 	req, err := http.NewRequestWithContext(s.ctx, http.MethodGet, url, nil)
 	s.Require().Nil(err)
 	return s.doHttpRequest(req)
 }
 
 func (s *InspectSuite) doPostInspect(payload []byte) (int, string) {
-	url := fmt.Sprintf("http://%v/inspect", s.server.Addr)
+	url := fmt.Sprintf("http://%v/inspect/%s", s.server.Addr, devnet.ApplicationAddress)
 	req, err := http.NewRequestWithContext(
 		s.ctx, http.MethodPost, url, bytes.NewReader(payload))
 	s.Require().Nil(err)

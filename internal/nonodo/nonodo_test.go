@@ -18,13 +18,18 @@ import (
 	"time"
 
 	"github.com/Khan/genqlient/graphql"
+	"github.com/calindra/cartesi-rollups-hl-graphql/pkg/convenience"
+	"github.com/calindra/cartesi-rollups-hl-graphql/pkg/reader"
+	"github.com/calindra/cartesi-rollups-hl-graphql/pkg/readerclient"
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/calindra/nonodo/internal/inspect"
-	"github.com/calindra/nonodo/internal/readerclient"
+	"github.com/calindra/nonodo/internal/supervisor"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -40,6 +45,44 @@ type NonodoSuite struct {
 	graphqlClient graphql.Client
 	inspectClient *inspect.ClientWithResponses
 	nonce         int
+}
+
+// Mini implementation of GraphQL using hl like library
+type InlineHLGraphQL struct {
+	w supervisor.HttpWorker
+}
+
+// Start implements supervisor.Worker.
+func (i InlineHLGraphQL) Start(ctx context.Context, ready chan<- struct{}) error {
+	return i.w.Start(ctx, ready)
+}
+
+// String implements supervisor.Worker.
+func (i InlineHLGraphQL) String() string {
+	return "InlineHLGraphQL"
+}
+
+func NewInlineHLGraphQLWorker(opts NonodoOpts) supervisor.Worker {
+	db := CreateDBInstance(opts)
+	container := convenience.NewContainer(*db, opts.AutoCount)
+	convenienceService := container.GetConvenienceService()
+	adapter := reader.NewAdapterV1(db, convenienceService)
+
+	e := echo.New()
+	e.Use(middleware.CORS())
+	e.Use(middleware.Recover())
+	e.Use(middleware.TimeoutWithConfig(middleware.TimeoutConfig{
+		ErrorMessage: "Request timed out",
+		Timeout:      opts.TimeoutInspect,
+	}))
+	reader.Register(e, convenienceService, adapter)
+
+	return InlineHLGraphQL{
+		w: supervisor.HttpWorker{
+			Address: fmt.Sprintf("%s:%d", opts.HttpAddress, opts.AnvilPort),
+			Handler: e,
+		},
+	}
 }
 
 //
@@ -63,7 +106,7 @@ func (s *NonodoSuite) TestItProcessesAdvanceInputs() {
 	for i := 0; i < n; i++ {
 		payloads[i] = s.makePayload()
 		err := devnet.AddInput(s.ctx, s.rpcUrl, payloads[i][:])
-		s.NoError(err)
+		s.Require().NoError(err)
 	}
 
 	s.T().Log("waiting until last input is ready")
@@ -79,7 +122,7 @@ func (s *NonodoSuite) TestItProcessesAdvanceInputs() {
 
 	s.T().Log("verifying node state")
 	response, err := readerclient.State(s.ctx, s.graphqlClient)
-	s.NoError(err)
+	s.Require().NoError(err)
 	for i := 0; i < n; i++ {
 		input := response.Inputs.Edges[i].Node
 		s.Equal(i, input.Index)
@@ -181,6 +224,8 @@ func (s *NonodoSuite) setupTest(opts *NonodoOpts) {
 	workerCtx, s.workerCancel = context.WithCancel(s.ctx)
 
 	w := NewSupervisor(*opts)
+	// gqlw := NewInlineHLGraphQLWorker(*opts)
+	// w.Workers = append([]supervisor.Worker{gqlw}, w.Workers...)
 
 	ready := make(chan struct{})
 	go func() {
@@ -264,6 +309,7 @@ func (s *NonodoSuite) decodeHex(value string) []byte {
 func (s *NonodoSuite) sendInspect(payload []byte) (*inspect.InspectPostResponse, error) {
 	return s.inspectClient.InspectPostWithBodyWithResponse(
 		s.ctx,
+		devnet.ApplicationAddress,
 		"application/octet-stream",
 		bytes.NewReader(payload),
 	)

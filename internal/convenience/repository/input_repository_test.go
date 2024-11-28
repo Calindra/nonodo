@@ -9,6 +9,7 @@ import (
 	"time"
 
 	convenience "github.com/calindra/nonodo/internal/convenience/model"
+	"github.com/calindra/nonodo/internal/devnet"
 
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/ethereum/go-ethereum/common"
@@ -48,7 +49,7 @@ func (s *InputRepositorySuite) TestCreateInput() {
 		Index:          0,
 		Status:         convenience.CompletionStatusUnprocessed,
 		MsgSender:      common.Address{},
-		Payload:        common.Hex2Bytes("0x1122"),
+		Payload:        "0x1122",
 		BlockNumber:    1,
 		BlockTimestamp: time.Now(),
 	})
@@ -62,7 +63,7 @@ func (s *InputRepositorySuite) TestFixCreateInputDuplicated() {
 		Index:          0,
 		Status:         convenience.CompletionStatusUnprocessed,
 		MsgSender:      common.Address{},
-		Payload:        common.Hex2Bytes("0x1122"),
+		Payload:        "0x1122",
 		BlockNumber:    1,
 		BlockTimestamp: time.Now(),
 	})
@@ -72,7 +73,7 @@ func (s *InputRepositorySuite) TestFixCreateInputDuplicated() {
 		Index:          0,
 		Status:         convenience.CompletionStatusUnprocessed,
 		MsgSender:      common.Address{},
-		Payload:        common.Hex2Bytes("0x1122"),
+		Payload:        "0x1122",
 		BlockNumber:    1,
 		BlockTimestamp: time.Now(),
 	})
@@ -90,7 +91,7 @@ func (s *InputRepositorySuite) TestCreateAndFindInputByID() {
 		Index:          123,
 		Status:         convenience.CompletionStatusUnprocessed,
 		MsgSender:      common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
-		Payload:        common.Hex2Bytes("1122"),
+		Payload:        "1122",
 		BlockNumber:    1,
 		BlockTimestamp: time.Now(),
 	})
@@ -99,10 +100,10 @@ func (s *InputRepositorySuite) TestCreateAndFindInputByID() {
 
 	input2, err := s.inputRepository.FindByIDAndAppContract(ctx, "123", nil)
 	s.NoError(err)
-	s.Equal("123", input.ID)
+	s.Equal("123", input2.ID)
 	s.Equal(input.Status, input2.Status)
-	s.Equal("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", input.MsgSender.Hex())
-	s.Equal("1122", common.Bytes2Hex(input.Payload))
+	s.Equal("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", input2.MsgSender.Hex())
+	s.Equal("0x1122", input2.Payload)
 	s.Equal(1, int(input2.BlockNumber))
 	s.Equal(input.BlockTimestamp.UnixMilli(), input2.BlockTimestamp.UnixMilli())
 }
@@ -114,7 +115,7 @@ func (s *InputRepositorySuite) TestCreateInputAndUpdateStatus() {
 		Index:          2222,
 		Status:         convenience.CompletionStatusUnprocessed,
 		MsgSender:      common.Address{},
-		Payload:        common.Hex2Bytes("0x1122"),
+		Payload:        "0x1122",
 		BlockNumber:    1,
 		BlockTimestamp: time.Now(),
 		AppContract:    common.HexToAddress("0x70997970C51812dc3A010C7d01b50e0d17dc79C8"),
@@ -138,7 +139,7 @@ func (s *InputRepositorySuite) TestCreateInputFindByStatus() {
 		Index:          2222,
 		Status:         convenience.CompletionStatusUnprocessed,
 		MsgSender:      common.Address{},
-		Payload:        common.Hex2Bytes("0x1122"),
+		Payload:        "0x1122",
 		BlockNumber:    1,
 		PrevRandao:     "0xdeadbeef",
 		BlockTimestamp: time.Now(),
@@ -172,7 +173,7 @@ func (s *InputRepositorySuite) TestFindByIndexGt() {
 			Index:          i,
 			Status:         convenience.CompletionStatusUnprocessed,
 			MsgSender:      common.Address{},
-			Payload:        common.Hex2Bytes("0x1122"),
+			Payload:        "0x1122",
 			BlockNumber:    1,
 			BlockTimestamp: time.Now(),
 			AppContract:    common.Address{},
@@ -200,7 +201,7 @@ func (s *InputRepositorySuite) TestFindByIndexLt() {
 			Index:          i,
 			Status:         convenience.CompletionStatusUnprocessed,
 			MsgSender:      common.Address{},
-			Payload:        common.Hex2Bytes("0x1122"),
+			Payload:        "0x1122",
 			BlockNumber:    1,
 			BlockTimestamp: time.Now(),
 			AppContract:    common.Address{},
@@ -228,7 +229,7 @@ func (s *InputRepositorySuite) TestFindByMsgSender() {
 			Index:          i,
 			Status:         convenience.CompletionStatusUnprocessed,
 			MsgSender:      common.HexToAddress(fmt.Sprintf("000000000000000000000000000000000000000%d", i)),
-			Payload:        common.Hex2Bytes("0x1122"),
+			Payload:        "0x1122",
 			BlockNumber:    1,
 			BlockTimestamp: time.Now(),
 			AppContract:    common.Address{},
@@ -284,7 +285,7 @@ func (s *InputRepositorySuite) TestCreateInputAndCheckAppContract() {
 		Index:          2222,
 		Status:         convenience.CompletionStatusUnprocessed,
 		MsgSender:      common.Address{},
-		Payload:        common.Hex2Bytes("0x1122"),
+		Payload:        "0x1122",
 		BlockNumber:    1,
 		BlockTimestamp: time.Now(),
 		AppContract:    common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"),
@@ -295,6 +296,43 @@ func (s *InputRepositorySuite) TestCreateInputAndCheckAppContract() {
 	input2, err := s.inputRepository.FindByIDAndAppContract(ctx, "2222", nil)
 	s.NoError(err)
 	s.Equal("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266", input2.AppContract.Hex())
+}
+
+func (s *InputRepositorySuite) TestBatchFindInput() {
+	ctx := context.Background()
+	appContract := common.HexToAddress(devnet.ApplicationAddress)
+	for i := 0; i < 5; i++ {
+		input, err := s.inputRepository.Create(ctx, convenience.AdvanceInput{
+			ID:             strconv.Itoa(i),
+			Index:          i,
+			Status:         convenience.CompletionStatusUnprocessed,
+			MsgSender:      common.Address{},
+			Payload:        "0x1122",
+			BlockNumber:    1,
+			BlockTimestamp: time.Now(),
+			AppContract:    appContract,
+		})
+		s.NoError(err)
+		s.Equal(i, input.Index)
+	}
+	res, err := s.inputRepository.FindAll(ctx, nil, nil, nil, nil, nil)
+	s.Require().NoError(err)
+	for _, input := range res.Rows {
+		slog.Debug("res",
+			"AppContract", input.AppContract.Hex(),
+			"Index", input.Index,
+		)
+	}
+	filters := []*BatchFilterItem{
+		{
+			AppContract: &appContract,
+			InputIndex:  2,
+		},
+	}
+	results, errors := s.inputRepository.BatchFindInputByInputIndexAndAppContract(ctx, filters)
+	s.Require().Equal(0, len(errors))
+	s.Equal(1, len(results))
+	s.Equal(2, results[0].Index)
 }
 
 func (s *InputRepositorySuite) TearDownTest() {

@@ -32,6 +32,8 @@ type voucherRow struct {
 	Value                string `db:"value"`
 	OutputHashesSiblings string `db:"output_hashes_siblings"`
 	AppContract          string `db:"app_contract"`
+	TransactionHash      string `db:"transaction_hash"`
+	ProofOutputIndex     uint64 `db:"proof_output_index"`
 }
 
 func (c *VoucherRepository) CreateTables() error {
@@ -44,7 +46,15 @@ func (c *VoucherRepository) CreateTables() error {
 		value		           text,
 		output_hashes_siblings text,
 		app_contract           text,
-		PRIMARY KEY (input_index, output_index, app_contract));`
+		transaction_hash       text DEFAULT '' NOT NULL,
+		proof_output_index     integer DEFAULT 0,
+		PRIMARY KEY (input_index, output_index, app_contract)
+	);
+
+	CREATE INDEX IF NOT EXISTS idx_input_index_output_index ON vouchers(input_index, output_index);
+	CREATE INDEX IF NOT EXISTS idx_app_contract_output_index ON vouchers(app_contract, output_index);
+	CREATE INDEX IF NOT EXISTS idx_app_contract_input_index ON vouchers(app_contract, input_index);
+	`
 
 	// execute a query on the server
 	_, err := c.Db.Exec(schema)
@@ -70,7 +80,9 @@ func (c *VoucherRepository) CreateVoucher(
 		output_index,
 		value,
 		output_hashes_siblings,
-		app_contract) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
+		app_contract,
+		proof_output_index
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
 
 	exec := DBExecutor{&c.Db}
 
@@ -85,12 +97,70 @@ func (c *VoucherRepository) CreateVoucher(
 		voucher.Value,
 		voucher.OutputHashesSiblings,
 		voucher.AppContract.Hex(),
+		voucher.ProofOutputIndex,
 	)
 	if err != nil {
 		slog.Error("Error creating vouchers", "Error", err)
 		return nil, err
 	}
 	return voucher, nil
+}
+
+func (c *VoucherRepository) SetProof(
+	ctx context.Context, voucher *model.ConvenienceVoucher,
+) error {
+	updateVoucher := `UPDATE vouchers SET 
+		output_hashes_siblings = $1,
+		proof_output_index = $2
+		WHERE app_contract = $3 and output_index = $4`
+	exec := DBExecutor{&c.Db}
+	res, err := exec.ExecContext(
+		ctx,
+		updateVoucher,
+		voucher.OutputHashesSiblings,
+		voucher.ProofOutputIndex,
+		voucher.AppContract.Hex(),
+		voucher.OutputIndex,
+	)
+	if err != nil {
+		return err
+	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected != 1 {
+		return fmt.Errorf("wrong number of vouchers affected: %d; app_contract %v; output_index %d", affected, voucher.AppContract, voucher.OutputIndex)
+	}
+	return nil
+}
+
+func (c *VoucherRepository) SetExecuted(
+	ctx context.Context, voucher *model.ConvenienceVoucher,
+) error {
+	updateVoucher := `UPDATE vouchers SET 
+		transaction_hash = $1,
+		executed = true
+		WHERE app_contract = $2 and output_index = $3`
+	exec := DBExecutor{&c.Db}
+	res, err := exec.ExecContext(
+		ctx,
+		updateVoucher,
+		voucher.TransactionHash,
+		voucher.AppContract.Hex(),
+		voucher.OutputIndex,
+	)
+	if err != nil {
+		return err
+	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected != 1 {
+		return fmt.Errorf("wrong number of vouchers affected: %d; app_contract %v; output_index %d", affected, voucher.AppContract, voucher.OutputIndex)
+	}
+	return nil
 }
 
 func (c *VoucherRepository) UpdateVoucher(
@@ -181,6 +251,40 @@ func (c *VoucherRepository) FindVoucherByOutputIndexAndAppContract(
 	}
 
 	return nil, nil
+}
+
+func (c *VoucherRepository) FindAllVouchersByBlockNumber(
+	ctx context.Context, startBlockGte uint64, endBlockLt uint64,
+) ([]*model.ConvenienceVoucher, error) {
+	stmt, err := c.Db.Preparex(`
+		SELECT
+			v.destination,
+			v.payload,
+			v.executed,
+			v.input_index,
+			v.output_index,
+			v.value,
+			v.output_hashes_siblings,
+			v.app_contract
+		FROM vouchers v
+			INNER JOIN convenience_inputs i
+				ON i.app_contract = v.app_contract AND i.input_index = v.input_index
+		WHERE i.block_number >= $1 and i.block_number < $2`)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+	var rows []voucherRow
+	err = stmt.SelectContext(ctx, &rows, startBlockGte, endBlockLt)
+	if err != nil {
+		return nil, err
+	}
+	vouchers := make([]*model.ConvenienceVoucher, len(rows))
+	for i, row := range rows {
+		cVoucher := convertToConvenienceVoucher(row)
+		vouchers[i] = &cVoucher
+	}
+	return vouchers, nil
 }
 
 func (c *VoucherRepository) FindVoucherByInputAndOutputIndex(
@@ -314,6 +418,8 @@ func convertToConvenienceVoucher(row voucherRow) model.ConvenienceVoucher {
 		Value:                row.Value,
 		AppContract:          appContract,
 		OutputHashesSiblings: row.OutputHashesSiblings,
+		TransactionHash:      row.TransactionHash,
+		ProofOutputIndex:     row.ProofOutputIndex,
 	}
 	return voucher
 }
@@ -376,4 +482,80 @@ func transformToQuery(
 	}
 	query += strings.Join(where, " and ")
 	return query, args, count, nil
+}
+
+func (c *VoucherRepository) BatchFindAllByInputIndexAndAppContract(
+	ctx context.Context,
+	filters []*BatchFilterItem,
+) ([]*commons.PageResult[model.ConvenienceVoucher], []error) {
+	slog.Debug("BatchFindAllByInputIndexAndAppContract", "len", len(filters))
+	query := `SELECT * FROM vouchers WHERE `
+
+	args := []interface{}{}
+	where := []string{}
+	for i, filter := range filters {
+		// nolint
+		where = append(where, fmt.Sprintf(" (app_contract = $%d and input_index = $%d) ", i*2+1, i*2+2))
+		args = append(args, filter.AppContract.Hex())
+		args = append(args, filter.InputIndex)
+	}
+	query += strings.Join(where, " or ")
+
+	errors := []error{}
+	results := []*commons.PageResult[model.ConvenienceVoucher]{}
+	stmt, err := c.Db.PreparexContext(ctx, query)
+	if err != nil {
+		slog.Error("BatchFind prepare context", "error", err)
+		return nil, errors
+	}
+	defer stmt.Close()
+
+	rows, err := stmt.QueryxContext(ctx, args...)
+	if err != nil {
+		slog.Error("BatchFind query context", "error", err)
+		return nil, errors
+	}
+	defer rows.Close()
+
+	var voucherRows []voucherRow
+	err = stmt.SelectContext(ctx, &voucherRows, args...)
+	if err != nil {
+		return nil, errors
+	}
+
+	vouchers := make([]model.ConvenienceVoucher, len(voucherRows))
+
+	for i, row := range voucherRows {
+		vouchers[i] = convertToConvenienceVoucher(row)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, errors
+	}
+
+	voucherMap := make(map[string]*commons.PageResult[model.ConvenienceVoucher])
+
+	for _, voucher := range vouchers {
+		key := GenerateBatchVoucherKey(&voucher.AppContract, int(voucher.InputIndex))
+		if voucherMap[key] == nil {
+			voucherMap[key] = &commons.PageResult[model.ConvenienceVoucher]{}
+		}
+		voucherMap[key].Total += 1
+		voucherMap[key].Rows = append(voucherMap[key].Rows, voucher)
+	}
+
+	for _, filter := range filters {
+		key := GenerateBatchVoucherKey(filter.AppContract, filter.InputIndex)
+		reportsItem := voucherMap[key]
+		if reportsItem == nil {
+			reportsItem = &commons.PageResult[model.ConvenienceVoucher]{}
+		}
+		results = append(results, reportsItem)
+	}
+	slog.Debug("BatchVouchersResult", "len", len(results))
+	return results, nil
+}
+
+func GenerateBatchVoucherKey(appContract *common.Address, inputIndex int) string {
+	return fmt.Sprintf("%s|%d", appContract.Hex(), inputIndex)
 }

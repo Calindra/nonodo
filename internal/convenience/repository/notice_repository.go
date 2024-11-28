@@ -27,8 +27,13 @@ func (c *NoticeRepository) CreateTables() error {
 		output_index	integer,
 		app_contract    text,
 		output_hashes_siblings text,
-		PRIMARY KEY (input_index, output_index, app_contract));`
+		proof_output_index integer DEFAULT 0,
+		PRIMARY KEY (input_index, output_index, app_contract)
+	);
 
+	CREATE INDEX IF NOT EXISTS idx_app_contract_input_index ON notices(app_contract, input_index);
+	CREATE INDEX IF NOT EXISTS idx_app_contract_output_index ON notices(app_contract, output_index);
+	CREATE INDEX IF NOT EXISTS idx_input_index_output_index ON notices(input_index, output_index);`
 	// execute a query on the server
 	_, err := c.Db.Exec(schema)
 	return err
@@ -50,7 +55,8 @@ func (c *NoticeRepository) Create(
 		input_index,
 		output_index,
 		app_contract,
-		output_hashes_siblings) VALUES ($1, $2, $3, $4, $5)`
+		output_hashes_siblings,
+		proof_output_index) VALUES ($1, $2, $3, $4, $5, $6)`
 
 	exec := DBExecutor{&c.Db}
 	_, err := exec.ExecContext(ctx,
@@ -58,8 +64,9 @@ func (c *NoticeRepository) Create(
 		data.Payload,
 		data.InputIndex,
 		data.OutputIndex,
-		data.AppContract,
+		common.HexToAddress(data.AppContract).Hex(),
 		data.OutputHashesSiblings,
+		data.ProofOutputIndex,
 	)
 	if err != nil {
 		slog.Error("Error creating notice", "Error", err)
@@ -87,6 +94,37 @@ func (c *NoticeRepository) Update(
 		return nil, err
 	}
 	return data, nil
+}
+
+func (c *NoticeRepository) SetProof(
+	ctx context.Context, notice *model.ConvenienceNotice,
+) error {
+	updateVoucher := `UPDATE notices SET 
+		output_hashes_siblings = $1,
+		proof_output_index = $2
+		WHERE app_contract = $3 and output_index = $4`
+	exec := DBExecutor{&c.Db}
+	res, err := exec.ExecContext(
+		ctx,
+		updateVoucher,
+		notice.OutputHashesSiblings,
+		notice.ProofOutputIndex,
+		common.HexToAddress(notice.AppContract).Hex(),
+		notice.OutputIndex,
+	)
+	if err != nil {
+		return err
+	}
+	affected, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if affected != 1 {
+		return fmt.Errorf("wrong number of notices affected: %d; app_contract %v; output_index %d",
+			affected, notice.AppContract, notice.OutputIndex,
+		)
+	}
+	return nil
 }
 
 func (c *NoticeRepository) Count(
@@ -159,6 +197,33 @@ func (c *NoticeRepository) FindAllNotices(
 		Offset: uint64(offset),
 	}
 	return pageResult, nil
+}
+
+func (c *NoticeRepository) FindAllNoticesByBlockNumber(
+	ctx context.Context, startBlockGte uint64, endBlockLt uint64,
+) ([]*model.ConvenienceNotice, error) {
+	stmt, err := c.Db.Preparex(`
+		SELECT
+			n.payload,
+			n.input_index,
+			n.output_index,
+			n.app_contract,
+			n.output_hashes_siblings,
+			n.proof_output_index
+		FROM notices n
+			INNER JOIN convenience_inputs i
+				ON i.app_contract = n.app_contract AND i.input_index = n.input_index
+		WHERE i.block_number >= $1 and i.block_number < $2`)
+	if err != nil {
+		return nil, err
+	}
+	defer stmt.Close()
+	var notices []*model.ConvenienceNotice
+	err = stmt.SelectContext(ctx, &notices, startBlockGte, endBlockLt)
+	if err != nil {
+		return nil, err
+	}
+	return notices, nil
 }
 
 func (c *NoticeRepository) FindNoticeByOutputIndexAndAppContract(
@@ -271,4 +336,74 @@ func transformToNoticeQuery(
 	}
 	query += strings.Join(where, " and ")
 	return query, args, count, nil
+}
+
+type BatchFilterItemForNotice struct {
+	AppContract string
+	InputIndex  int
+}
+
+func (c *NoticeRepository) BatchFindAllNoticesByInputIndexAndAppContract(
+	ctx context.Context,
+	filters []*BatchFilterItemForNotice,
+) ([]*commons.PageResult[model.ConvenienceNotice], []error) {
+	slog.Debug("BatchFindAllNoticesByInputIndexAndAppContract", "len", len(filters))
+
+	query := `SELECT * FROM notices WHERE `
+
+	args := []interface{}{}
+	where := []string{}
+
+	for i, filter := range filters {
+		// nolint
+		where = append(where, fmt.Sprintf(" (app_contract = $%d and input_index = $%d) ", i*2+1, i*2+2))
+		args = append(args, filter.AppContract)
+		args = append(args, filter.InputIndex)
+	}
+
+	query += strings.Join(where, " or ")
+
+	errors := []error{}
+	results := []*commons.PageResult[model.ConvenienceNotice]{}
+	stmt, err := c.Db.PreparexContext(ctx, query)
+	if err != nil {
+		slog.Error("BatchFind prepare context", "error", err)
+		return nil, errors
+	}
+	defer stmt.Close()
+
+	var notices []model.ConvenienceNotice
+
+	err = stmt.SelectContext(ctx, &notices, args...)
+	if err != nil {
+		slog.Error("BatchFind", "error", err)
+		return nil, errors
+	}
+
+	noticeMap := make(map[string]*commons.PageResult[model.ConvenienceNotice])
+	for _, notice := range notices {
+		key := GenerateBatchNoticeKey(notice.AppContract, notice.InputIndex)
+
+		if noticeMap[key] == nil {
+			noticeMap[key] = &commons.PageResult[model.ConvenienceNotice]{}
+		}
+		noticeMap[key].Total += 1
+		noticeMap[key].Rows = append(noticeMap[key].Rows, notice)
+	}
+
+	for _, filter := range filters {
+		key := GenerateBatchNoticeKey(filter.AppContract, uint64(filter.InputIndex))
+		noticesItem := noticeMap[key]
+		if noticesItem == nil {
+			noticesItem = &commons.PageResult[model.ConvenienceNotice]{}
+		}
+		results = append(results, noticesItem)
+	}
+
+	slog.Debug("BatchResult", "results", len(results))
+	return results, nil
+}
+
+func GenerateBatchNoticeKey(appContract string, inputIndex uint64) string {
+	return fmt.Sprintf("%s|%d", appContract, inputIndex)
 }

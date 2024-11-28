@@ -8,6 +8,7 @@ import (
 	cModel "github.com/calindra/nonodo/internal/convenience/model"
 	cRepos "github.com/calindra/nonodo/internal/convenience/repository"
 	services "github.com/calindra/nonodo/internal/convenience/services"
+	"github.com/calindra/nonodo/internal/reader/loaders"
 	graphql "github.com/calindra/nonodo/internal/reader/model"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
@@ -16,6 +17,7 @@ import (
 type AdapterV1 struct {
 	reportRepository   *cRepos.ReportRepository
 	inputRepository    *cRepos.InputRepository
+	voucherRepository  *cRepos.VoucherRepository
 	convenienceService *services.ConvenienceService
 }
 
@@ -38,9 +40,18 @@ func NewAdapterV1(
 	if err != nil {
 		panic(err)
 	}
+	voucherRepository := &cRepos.VoucherRepository{
+		Db: *db,
+	}
+	err = voucherRepository.CreateTables()
+	if err != nil {
+		panic(err)
+	}
+
 	return AdapterV1{
 		reportRepository:   reportRepository,
 		inputRepository:    inputRepository,
+		voucherRepository:  voucherRepository,
 		convenienceService: convenienceService,
 	}
 }
@@ -97,13 +108,7 @@ func (a AdapterV1) GetVoucher(ctx context.Context, outputIndex int) (*graphql.Vo
 	if voucher == nil {
 		return nil, fmt.Errorf("voucher not found")
 	}
-	return &graphql.Voucher{
-		Index:       outputIndex,
-		InputIndex:  int(voucher.InputIndex),
-		Destination: voucher.Destination.Hex(),
-		Payload:     voucher.Payload,
-		Value:       voucher.Value,
-	}, nil
+	return graphql.ConvertConvenientVoucherV1(*voucher), nil
 }
 
 func getAppContractFromContext(ctx context.Context) (*common.Address, error) {
@@ -178,6 +183,50 @@ func (a AdapterV1) GetVouchers(
 	)
 }
 
+func (a AdapterV1) GetAllNoticesByInputIndex(ctx context.Context, inputIndex *int) (*graphql.Connection[*graphql.Notice], error) {
+	loaders := loaders.For(ctx)
+	if loaders == nil {
+		return a.GetNotices(ctx, nil, nil, nil, nil, inputIndex)
+	} else {
+		appContract, err := getAppContractFromContext(ctx)
+		if err != nil {
+			return nil, err
+		}
+		key := cRepos.GenerateBatchNoticeKey(appContract.Hex(), uint64(*inputIndex))
+		notices, err := loaders.NoticeLoader.Load(ctx, key)
+		if err != nil {
+			return nil, err
+		}
+		return graphql.ConvertToNoticeConnectionV1(
+			notices.Rows,
+			int(notices.Offset),
+			int(notices.Total),
+		)
+	}
+}
+
+func (a AdapterV1) GetAllVouchersByInputIndex(ctx context.Context, inputIndex *int) (*graphql.Connection[*graphql.Voucher], error) {
+	loaders := loaders.For(ctx)
+	if loaders == nil {
+		return a.GetVouchers(ctx, nil, nil, nil, nil, inputIndex, nil)
+	} else {
+		appContract, err := getAppContractFromContext(ctx)
+		if err != nil {
+			return nil, err
+		}
+		key := cRepos.GenerateBatchVoucherKey(appContract, *inputIndex)
+		vouchers, err := loaders.VoucherLoader.Load(ctx, key)
+		if err != nil {
+			return nil, err
+		}
+		return graphql.ConvertToVoucherConnectionV1(
+			vouchers.Rows,
+			int(vouchers.Offset),
+			int(vouchers.Total),
+		)
+	}
+}
+
 func (a AdapterV1) GetNotice(ctx context.Context, outputIndex int) (*graphql.Notice, error) {
 	appContract, err := getAppContractFromContext(ctx)
 	if err != nil {
@@ -194,11 +243,7 @@ func (a AdapterV1) GetNotice(ctx context.Context, outputIndex int) (*graphql.Not
 	if notice == nil {
 		return nil, fmt.Errorf("notice not found")
 	}
-	return &graphql.Notice{
-		Index:      outputIndex,
-		InputIndex: int(notice.InputIndex),
-		Payload:    notice.Payload,
-	}, nil
+	return graphql.ConvertConvenientNoticeV1(*notice), nil
 }
 
 func (a AdapterV1) GetReport(
@@ -258,6 +303,28 @@ func (a AdapterV1) GetReports(
 	)
 }
 
+func (a AdapterV1) GetAllReportsByInputIndex(ctx context.Context, inputIndex *int) (*graphql.Connection[*graphql.Report], error) {
+	loaders := loaders.For(ctx)
+	if loaders == nil {
+		return a.GetReports(ctx, nil, nil, nil, nil, inputIndex)
+	} else {
+		appContract, err := getAppContractFromContext(ctx)
+		if err != nil {
+			return nil, err
+		}
+		key := cRepos.GenerateBatchReportKey(appContract, *inputIndex)
+		reports, err := loaders.ReportLoader.Load(ctx, key)
+		if err != nil {
+			return nil, err
+		}
+		return a.convertToReportConnection(
+			reports.Rows,
+			int(reports.Offset),
+			int(reports.Total),
+		)
+	}
+}
+
 func (a AdapterV1) convertToReportConnection(
 	reports []cModel.Report,
 	offset int, total int,
@@ -275,7 +342,7 @@ func (a AdapterV1) convertToReport(
 	return &graphql.Report{
 		Index:      report.Index,
 		InputIndex: report.InputIndex,
-		Payload:    fmt.Sprintf("0x%s", common.Bytes2Hex(report.Payload)),
+		Payload:    report.Payload,
 	}
 }
 
@@ -288,14 +355,27 @@ func (a AdapterV1) GetInputByIndex(
 	if err != nil {
 		return nil, err
 	}
-	input, err := a.inputRepository.FindByIndexAndAppContract(ctx, inputIndex, appContract)
-	if err != nil {
-		return nil, err
+	loaders := loaders.For(ctx)
+	if loaders != nil {
+		key := cRepos.GenerateBatchInputKey(appContract.Hex(), uint64(inputIndex))
+		input, err := loaders.InputLoader.Load(ctx, key)
+		if err != nil {
+			return nil, err
+		}
+		return getConvertedInputFromGraphql(input)
+	} else {
+		input, err := a.inputRepository.FindByIndexAndAppContract(ctx, inputIndex, appContract)
+		if err != nil {
+			return nil, err
+		}
+		return getConvertedInputFromGraphql(input)
 	}
+}
+
+func getConvertedInputFromGraphql(input *cModel.AdvanceInput) (*graphql.Input, error) {
 	if input == nil {
 		return nil, fmt.Errorf("input not found")
 	}
-
 	convertedInput, err := graphql.ConvertInput(*input)
 
 	if err != nil {
@@ -316,17 +396,7 @@ func (a AdapterV1) GetInput(
 	if err != nil {
 		return nil, err
 	}
-	if input == nil {
-		return nil, fmt.Errorf("input not found")
-	}
-
-	convertedInput, err := graphql.ConvertInput(*input)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return convertedInput, nil
+	return getConvertedInputFromGraphql(input)
 }
 
 func (a AdapterV1) GetInputs(
