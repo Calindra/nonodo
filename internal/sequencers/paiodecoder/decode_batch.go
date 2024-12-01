@@ -9,7 +9,6 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
-	"path"
 	"path/filepath"
 	"runtime"
 	"time"
@@ -27,7 +26,7 @@ func IsDecodeBatchInstalled() (string, bool) {
 	if runtime.GOOS == commons.WINDOWS {
 		filename = filename + ".exe"
 	}
-	location := path.Join(os.TempDir(), filename)
+	location := filepath.Join(os.TempDir(), filename)
 	_, err := os.Stat(location)
 	return location, err == nil
 }

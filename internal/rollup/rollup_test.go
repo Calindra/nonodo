@@ -11,7 +11,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"path"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -69,7 +69,7 @@ func (s *RollupSuite) SetupTest() {
 
 	// Database
 	sqliteFileName := fmt.Sprintf("test_rollup%d.sqlite3", time.Now().UnixMilli())
-	sqliteFileName = path.Join(tempDir, sqliteFileName)
+	sqliteFileName = filepath.Join(tempDir, sqliteFileName)
 
 	// NoNodoModel
 	db := sqlx.MustConnect("sqlite3", sqliteFileName)

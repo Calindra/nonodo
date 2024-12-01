@@ -8,7 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 	"strconv"
 	"testing"
 	"time"
@@ -53,7 +53,7 @@ func (s *ModelSuite) SetupTest() {
 	s.tempDir = tempDir
 	s.NoError(err)
 	sqliteFileName := fmt.Sprintf("test%d.sqlite3", time.Now().UnixMilli())
-	sqliteFileName = path.Join(tempDir, sqliteFileName)
+	sqliteFileName = filepath.Join(tempDir, sqliteFileName)
 	db := sqlx.MustConnect("sqlite3", sqliteFileName)
 	container := convenience.NewContainer(*db, false)
 	decoder := container.GetOutputDecoder()
