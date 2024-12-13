@@ -10,7 +10,7 @@ require (
 	github.com/Khan/genqlient v0.6.0
 	github.com/btcsuite/btcd v0.24.2
 	github.com/btcsuite/btcd/btcutil v1.1.6
-	github.com/calindra/cartesi-rollups-hl-graphql v1.0.4-0.20241119142252-c50599ebdd36
+	github.com/calindra/cartesi-rollups-graphql v1.0.4-0.20241119142252-c50599ebdd36
 	github.com/carlmjohnson/versioninfo v0.22.5
 	github.com/celestiaorg/celestia-openrpc v0.5.0
 	github.com/deepmap/oapi-codegen/v2 v2.0.0

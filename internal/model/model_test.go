@@ -13,12 +13,12 @@ import (
 	"testing"
 	"time"
 
-	cModel "github.com/calindra/cartesi-rollups-hl-graphql/pkg/convenience/model"
-	cRepos "github.com/calindra/cartesi-rollups-hl-graphql/pkg/convenience/repository"
+	cModel "github.com/calindra/cartesi-rollups-graphql/pkg/convenience/model"
+	cRepos "github.com/calindra/cartesi-rollups-graphql/pkg/convenience/repository"
 	"github.com/calindra/nonodo/internal/devnet"
 
-	"github.com/calindra/cartesi-rollups-hl-graphql/pkg/convenience"
-	"github.com/calindra/cartesi-rollups-hl-graphql/pkg/convenience/services"
+	"github.com/calindra/cartesi-rollups-graphql/pkg/convenience"
+	"github.com/calindra/cartesi-rollups-graphql/pkg/convenience/services"
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"

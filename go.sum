@@ -87,8 +87,8 @@ github.com/btcsuite/snappy-go v0.0.0-20151229074030-0bdef8d06723/go.mod h1:8woku
 github.com/btcsuite/snappy-go v1.0.0/go.mod h1:8woku9dyThutzjeg+3xrA5iCpBRH8XEEg3lh6TiUghc=
 github.com/btcsuite/websocket v0.0.0-20150119174127-31079b680792/go.mod h1:ghJtEyQwv5/p4Mg4C0fgbePVuGr935/5ddU9Z3TmDRY=
 github.com/btcsuite/winsvc v1.0.0/go.mod h1:jsenWakMcC0zFBFurPLEAyrnc/teJEM1O46fmI40EZs=
-github.com/calindra/cartesi-rollups-hl-graphql v1.0.4-0.20241119142252-c50599ebdd36 h1:l8sLXiQdfXHEz0qwY643l7IVrszphtLciSQe6A7QZIU=
-github.com/calindra/cartesi-rollups-hl-graphql v1.0.4-0.20241119142252-c50599ebdd36/go.mod h1:4cjb88Y903vNcYIjwRLkbbMk3UMYyK0nieyL28DLquE=
+github.com/calindra/cartesi-rollups-graphql v1.0.4-0.20241119142252-c50599ebdd36 h1:l8sLXiQdfXHEz0qwY643l7IVrszphtLciSQe6A7QZIU=
+github.com/calindra/cartesi-rollups-graphql v1.0.4-0.20241119142252-c50599ebdd36/go.mod h1:4cjb88Y903vNcYIjwRLkbbMk3UMYyK0nieyL28DLquE=
 github.com/carlmjohnson/versioninfo v0.22.5 h1:O00sjOLUAFxYQjlN/bzYTuZiS0y6fWDQjMRvwtKgwwc=
 github.com/carlmjohnson/versioninfo v0.22.5/go.mod h1:QT9mph3wcVfISUKd0i9sZfVrPviHuSF+cUtLjm2WSf8=
 github.com/celestiaorg/celestia-core v1.43.0-tm-v0.34.35 h1:L4GTm+JUXhB0a/nGPMq6jEqqe6THuYSQ8m2kUCtZYqw=

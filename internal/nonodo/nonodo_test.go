@@ -18,9 +18,9 @@ import (
 	"time"
 
 	"github.com/Khan/genqlient/graphql"
-	"github.com/calindra/cartesi-rollups-hl-graphql/pkg/convenience"
-	"github.com/calindra/cartesi-rollups-hl-graphql/pkg/reader"
-	"github.com/calindra/cartesi-rollups-hl-graphql/pkg/readerclient"
+	"github.com/calindra/cartesi-rollups-graphql/pkg/convenience"
+	"github.com/calindra/cartesi-rollups-graphql/pkg/reader"
+	"github.com/calindra/cartesi-rollups-graphql/pkg/readerclient"
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/devnet"

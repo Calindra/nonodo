@@ -13,7 +13,7 @@ import (
 	"net/url"
 	"time"
 
-	cModel "github.com/calindra/cartesi-rollups-hl-graphql/pkg/convenience/model"
+	cModel "github.com/calindra/cartesi-rollups-graphql/pkg/convenience/model"
 	"github.com/calindra/nonodo/internal/model"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/labstack/echo/v4"

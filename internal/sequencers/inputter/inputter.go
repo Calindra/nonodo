@@ -11,8 +11,8 @@ import (
 	"strconv"
 	"time"
 
-	cModel "github.com/calindra/cartesi-rollups-hl-graphql/pkg/convenience/model"
-	cRepos "github.com/calindra/cartesi-rollups-hl-graphql/pkg/convenience/repository"
+	cModel "github.com/calindra/cartesi-rollups-graphql/pkg/convenience/model"
+	cRepos "github.com/calindra/cartesi-rollups-graphql/pkg/convenience/repository"
 	"github.com/calindra/nonodo/internal/contracts"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"

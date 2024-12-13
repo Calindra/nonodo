@@ -12,8 +12,8 @@ import (
 	"sync"
 	"time"
 
-	cModel "github.com/calindra/cartesi-rollups-hl-graphql/pkg/convenience/model"
-	cRepos "github.com/calindra/cartesi-rollups-hl-graphql/pkg/convenience/repository"
+	cModel "github.com/calindra/cartesi-rollups-graphql/pkg/convenience/model"
+	cRepos "github.com/calindra/cartesi-rollups-graphql/pkg/convenience/repository"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
