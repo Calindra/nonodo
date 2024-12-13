@@ -10,7 +10,6 @@ require (
 	github.com/Khan/genqlient v0.6.0
 	github.com/btcsuite/btcd v0.24.2
 	github.com/btcsuite/btcd/btcutil v1.1.6
-	github.com/calindra/cartesi-rollups-graphql v1.0.4-0.20241119142252-c50599ebdd36
 	github.com/carlmjohnson/versioninfo v0.22.5
 	github.com/celestiaorg/celestia-openrpc v0.5.0
 	github.com/deepmap/oapi-codegen/v2 v2.0.0
@@ -36,13 +35,25 @@ require (
 require (
 	github.com/aws/aws-sdk-go v1.40.45 // indirect
 	github.com/btcsuite/btcd/chaincfg/chainhash v1.1.0 // indirect
+	github.com/calindra/cartesi-rollups-graphql v0.0.0-20241213194838-e872075af89f // indirect
 	github.com/crate-crypto/go-ipa v0.0.0-20240223125850-b1e8a79f509c // indirect
 	github.com/ethereum/go-verkle v0.1.1-0.20240829091221-dffa7562dbe9 // indirect
+	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
+	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/oasisprotocol/curve25519-voi v0.0.0-20220708102147-0a8a51822cae // indirect
+	github.com/pelletier/go-toml/v2 v2.2.3 // indirect
+	github.com/sagikazarmark/locafero v0.4.0 // indirect
+	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
+	github.com/sourcegraph/conc v0.3.0 // indirect
+	github.com/spf13/afero v1.11.0 // indirect
+	github.com/spf13/cast v1.7.0 // indirect
+	github.com/spf13/viper v1.19.0 // indirect
+	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/vedhavyas/go-subkey/v2 v2.0.0 // indirect
+	gopkg.in/ini.v1 v1.67.0 // indirect
 )
 
 replace (
