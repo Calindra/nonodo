@@ -15,8 +15,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/calindra/cartesi-rollups-hl-graphql/pkg/convenience"
-	"github.com/calindra/cartesi-rollups-hl-graphql/pkg/reader"
+	"github.com/calindra/cartesi-rollups-graphql/pkg/convenience"
+	"github.com/calindra/cartesi-rollups-graphql/pkg/reader"
 	"github.com/calindra/nonodo/internal/claimer"
 	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/calindra/nonodo/internal/echoapp"

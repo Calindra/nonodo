@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/calindra/cartesi-rollups-hl-graphql/pkg/convenience/repository"
+	"github.com/calindra/cartesi-rollups-graphql/pkg/convenience/repository"
 	"github.com/calindra/nonodo/internal/sequencers/avail"
 )
 
