@@ -95,6 +95,8 @@ github.com/calindra/cartesi-rollups-graphql v0.0.0-20241222041540-9dc60ae31a6a h
 github.com/calindra/cartesi-rollups-graphql v0.0.0-20241222041540-9dc60ae31a6a/go.mod h1:65lxkpqx0pxuNu2bnZiZ/PYfoGfSZnAWUIRRHvuZlHQ=
 github.com/calindra/cartesi-rollups-graphql v0.0.0-20241226233132-74aa449eb280 h1:xXJrhvOaLRFxKDg4mCsUR1aY4mjM3ny3PZb9NvDsRlI=
 github.com/calindra/cartesi-rollups-graphql v0.0.0-20241226233132-74aa449eb280/go.mod h1:65lxkpqx0pxuNu2bnZiZ/PYfoGfSZnAWUIRRHvuZlHQ=
+github.com/calindra/cartesi-rollups-graphql v0.0.0-20250102174933-4db6afba729e h1:w2u6hLRF0l6cHnkJfzopJYKM4plwDAhvtnc2Tsh58qQ=
+github.com/calindra/cartesi-rollups-graphql v0.0.0-20250102174933-4db6afba729e/go.mod h1:65lxkpqx0pxuNu2bnZiZ/PYfoGfSZnAWUIRRHvuZlHQ=
 github.com/carlmjohnson/versioninfo v0.22.5 h1:O00sjOLUAFxYQjlN/bzYTuZiS0y6fWDQjMRvwtKgwwc=
 github.com/carlmjohnson/versioninfo v0.22.5/go.mod h1:QT9mph3wcVfISUKd0i9sZfVrPviHuSF+cUtLjm2WSf8=
 github.com/celestiaorg/celestia-core v1.43.0-tm-v0.34.35 h1:L4GTm+JUXhB0a/nGPMq6jEqqe6THuYSQ8m2kUCtZYqw=
