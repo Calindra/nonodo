@@ -39,6 +39,7 @@ func (c *ClaimerService) CreateProofsAndSendClaim(
 		ctx,
 		startBlockGte,
 		endBlockLt,
+		false,
 	)
 	if err != nil {
 		return err
