@@ -202,6 +202,16 @@ func (m *NonodoModel) AddVoucher(appAddress common.Address, destination common.A
 	return m.state.addVoucher(appAddress, destination, value, payload)
 }
 
+// Add a DC voucher to the model.
+// Return the DC voucher index within the input.
+// Return an error if the state isn't advance.
+func (m *NonodoModel) AddDCVoucher(appAddress common.Address, destination common.Address, payload []byte) (int, error) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	return m.state.addDCVoucher(appAddress, destination, payload)
+}
+
 // Add a notice to the model.
 // Return the notice index within the input.
 // Return an error if the state isn't advance.

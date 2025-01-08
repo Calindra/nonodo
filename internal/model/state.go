@@ -23,6 +23,9 @@ type rollupsState interface {
 	// Add voucher to current state.
 	addVoucher(appAddress common.Address, destination common.Address, value string, payload []byte) (int, error)
 
+	// Add voucher to current state.
+	addDCVoucher(appAddress common.Address, destination common.Address, payload []byte) (int, error)
+
 	// Add notice to current state.
 	addNotice(payload []byte, appAddress common.Address) (int, error)
 
@@ -51,12 +54,17 @@ type Decoder interface {
 // In the idle state, the model waits for an finish request from the rollups API.
 type rollupsStateIdle struct{}
 
-func newRollupsStateIdle() *rollupsStateIdle {
+func newRollupsStateIdle() rollupsState {
 	return &rollupsStateIdle{}
 }
 
 func (s *rollupsStateIdle) finish(status cModel.CompletionStatus) error {
 	return nil
+}
+
+// addDCVoucher implements rollupsState.
+func (s *rollupsStateIdle) addDCVoucher(appAddress common.Address, destination common.Address, payload []byte) (int, error) {
+	return 0, fmt.Errorf("cannot add delegate call voucher in idle state")
 }
 
 func (s *rollupsStateIdle) addVoucher(appAddress common.Address, destination common.Address, value string, payload []byte) (int, error) {
@@ -99,7 +107,7 @@ func newRollupsStateAdvance(
 	inputRepository *cRepos.InputRepository,
 	voucherRepository *cRepos.VoucherRepository,
 	noticeRepository *cRepos.NoticeRepository,
-) *rollupsStateAdvance {
+) rollupsState {
 	slog.Info("nonodo: processing advance", "index", input.Index)
 	return &rollupsStateAdvance{
 		input:             input,
@@ -219,6 +227,23 @@ func (s *rollupsStateAdvance) addVoucher(appAddress common.Address, destination 
 	return index, nil
 }
 
+// addDCVoucher implements rollupsState.
+func (s *rollupsStateAdvance) addDCVoucher(appAddress common.Address, destination common.Address, payload []byte) (int, error) {
+	index := len(s.vouchers)
+	dcvoucher := cModel.ConvenienceVoucher{
+		AppContract:     appAddress,
+		OutputIndex:     uint64(index),
+		InputIndex:      uint64(s.input.Index),
+		Destination:     destination,
+		Payload:         common.Bytes2Hex(payload),
+		IsDelegatedCall: true,
+	}
+	s.vouchers = append(s.vouchers, dcvoucher)
+	slog.Info("nonodo: added delegate call voucher", "index", index, "destination", destination,
+		"payload", hexutil.Encode(payload))
+	return index, nil
+}
+
 func (s *rollupsStateAdvance) addNotice(payload []byte, appAddress common.Address) (int, error) {
 	index := len(s.notices)
 	notice := cModel.ConvenienceNotice{
@@ -278,7 +303,7 @@ type rollupsStateInspect struct {
 func newRollupsStateInspect(
 	input *InspectInput,
 	getProcessedInputCount func() (int, error),
-) *rollupsStateInspect {
+) rollupsState {
 	slog.Info("nonodo: processing inspect", "index", input.Index)
 	return &rollupsStateInspect{
 		input:                  input,
@@ -303,6 +328,11 @@ func (s *rollupsStateInspect) finish(status cModel.CompletionStatus) error {
 
 func (s *rollupsStateInspect) addVoucher(appAddress common.Address, destination common.Address, value string, payload []byte) (int, error) {
 	return 0, fmt.Errorf("cannot add voucher in inspect state")
+}
+
+// addDCVoucher implements rollupsState.
+func (s *rollupsStateInspect) addDCVoucher(appAddress common.Address, destination common.Address, payload []byte) (int, error) {
+	return 0, fmt.Errorf("cannot add delegate call voucher in inspect state")
 }
 
 func (s *rollupsStateInspect) addNotice(payload []byte, appAddress common.Address) (int, error) {
