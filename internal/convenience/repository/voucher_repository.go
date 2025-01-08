@@ -109,7 +109,7 @@ func (c *VoucherRepository) CreateVoucher(
 func (c *VoucherRepository) SetProof(
 	ctx context.Context, voucher *model.ConvenienceVoucher,
 ) error {
-	updateVoucher := `UPDATE vouchers SET 
+	updateVoucher := `UPDATE vouchers SET
 		output_hashes_siblings = $1,
 		proof_output_index = $2
 		WHERE app_contract = $3 and output_index = $4`
@@ -138,7 +138,7 @@ func (c *VoucherRepository) SetProof(
 func (c *VoucherRepository) SetExecuted(
 	ctx context.Context, voucher *model.ConvenienceVoucher,
 ) error {
-	updateVoucher := `UPDATE vouchers SET 
+	updateVoucher := `UPDATE vouchers SET
 		transaction_hash = $1,
 		executed = true
 		WHERE app_contract = $2 and output_index = $3`
@@ -166,7 +166,7 @@ func (c *VoucherRepository) SetExecuted(
 func (c *VoucherRepository) UpdateVoucher(
 	ctx context.Context, voucher *model.ConvenienceVoucher,
 ) (*model.ConvenienceVoucher, error) {
-	updateVoucher := `UPDATE vouchers SET 
+	updateVoucher := `UPDATE vouchers SET
 		destination = $1,
 		payload = $2,
 		executed = $3
