@@ -4,7 +4,7 @@
 package model
 
 import (
-	cModel "github.com/calindra/cartesi-rollups-graphql/pkg/convenience/model"
+	cModel "github.com/cartesi/rollups-graphql/pkg/convenience/model"
 	"github.com/ethereum/go-ethereum/common"
 )
 

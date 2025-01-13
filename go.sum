@@ -113,8 +113,14 @@ github.com/calindra/cartesi-rollups-graphql v0.0.0-20250106194703-20fe1288923b h
 github.com/calindra/cartesi-rollups-graphql v0.0.0-20250106194703-20fe1288923b/go.mod h1:65lxkpqx0pxuNu2bnZiZ/PYfoGfSZnAWUIRRHvuZlHQ=
 github.com/calindra/cartesi-rollups-graphql v0.0.0-20250108214347-5f68bce286d3 h1:kkDU89vHtYlp9DkAdeb5a3+KUmEE1RdsG8JAT9Cdnyw=
 github.com/calindra/cartesi-rollups-graphql v0.0.0-20250108214347-5f68bce286d3/go.mod h1:1mMMTYVAU5GJQOqkh9LxClXJO+ooiFLNgfRrpcjD7p0=
+github.com/calindra/cartesi-rollups-graphql v0.0.0-20250110143739-cf788395e143 h1:aywzjF8IGDXyKWbuKMR9A5zxxXO89tExynSWaqzAGJE=
+github.com/calindra/cartesi-rollups-graphql v0.0.0-20250110143739-cf788395e143/go.mod h1:1mMMTYVAU5GJQOqkh9LxClXJO+ooiFLNgfRrpcjD7p0=
+github.com/calindra/cartesi-rollups-graphql v0.0.0-20250110183505-8473883882b7 h1:ImASNNKddPJgCiHv3jvb/wUNvQG469LGMjk+OVuuZFk=
+github.com/calindra/cartesi-rollups-graphql v0.0.0-20250110183505-8473883882b7/go.mod h1:1mMMTYVAU5GJQOqkh9LxClXJO+ooiFLNgfRrpcjD7p0=
 github.com/carlmjohnson/versioninfo v0.22.5 h1:O00sjOLUAFxYQjlN/bzYTuZiS0y6fWDQjMRvwtKgwwc=
 github.com/carlmjohnson/versioninfo v0.22.5/go.mod h1:QT9mph3wcVfISUKd0i9sZfVrPviHuSF+cUtLjm2WSf8=
+github.com/cartesi/rollups-graphql v0.0.0-20250113201852-cc35f8b69098 h1:dmMSUi90IZaUEuAkKeXPH8z8YeWcL/PCCgUgq5cwvi4=
+github.com/cartesi/rollups-graphql v0.0.0-20250113201852-cc35f8b69098/go.mod h1:UyHNESjR+yjVl/PQDZUaJRtfC2xJ5IkuoQL+QMplPPE=
 github.com/celestiaorg/celestia-core v1.43.0-tm-v0.34.35 h1:L4GTm+JUXhB0a/nGPMq6jEqqe6THuYSQ8m2kUCtZYqw=
 github.com/celestiaorg/celestia-core v1.43.0-tm-v0.34.35/go.mod h1:bFr0lAGwaJ0mOHSBmib5/ca5pbBf1yKWGPs93Td0HPw=
 github.com/celestiaorg/celestia-openrpc v0.5.0 h1:coCflj4fRoemrCv4XrUtlXXcZ8tsYBFmVabmlm1BP20=

@@ -15,12 +15,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/calindra/cartesi-rollups-graphql/pkg/convenience"
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/contracts"
 	cModel "github.com/calindra/nonodo/internal/convenience/model"
 	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/calindra/nonodo/internal/model"
+	"github.com/cartesi/rollups-graphql/pkg/convenience"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
 	"github.com/labstack/echo/v4"

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/calindra/cartesi-rollups-graphql/pkg/convenience/repository"
 	"github.com/calindra/nonodo/internal/sequencers/avail"
+	"github.com/cartesi/rollups-graphql/pkg/convenience/repository"
 )
 
 type PaioBuilder struct {

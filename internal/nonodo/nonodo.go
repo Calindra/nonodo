@@ -14,8 +14,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/calindra/cartesi-rollups-graphql/pkg/convenience"
-	"github.com/calindra/cartesi-rollups-graphql/pkg/reader"
 	"github.com/calindra/nonodo/internal/claimer"
 	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/calindra/nonodo/internal/echoapp"
@@ -30,6 +28,8 @@ import (
 	"github.com/calindra/nonodo/internal/sequencers/inputter"
 	"github.com/calindra/nonodo/internal/sequencers/paiodecoder"
 	"github.com/calindra/nonodo/internal/supervisor"
+	"github.com/cartesi/rollups-graphql/pkg/convenience"
+	"github.com/cartesi/rollups-graphql/pkg/reader"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"

@@ -13,11 +13,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/calindra/cartesi-rollups-graphql/pkg/convenience/model"
-	"github.com/calindra/cartesi-rollups-graphql/pkg/convenience/repository"
 	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/sequencers/avail"
 	"github.com/calindra/nonodo/internal/sequencers/paiodecoder"
+	"github.com/cartesi/rollups-graphql/pkg/convenience/model"
+	"github.com/cartesi/rollups-graphql/pkg/convenience/repository"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
