@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/pkg/errors"
 )
 
 const DEFAULT_EPOCH_BLOCKS = 10
@@ -46,7 +47,7 @@ func (c *ClaimerWorker) String() string {
 func (c *ClaimerWorker) Start(ctx context.Context, ready chan<- struct{}) error {
 	client, err := ethclient.DialContext(ctx, c.RpcUrl)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "fail to dial eth client")
 	}
 	c.ethClient = client
 	claimer := NewClaimer(c.ethClient)
@@ -57,7 +58,7 @@ func (c *ClaimerWorker) Start(ctx context.Context, ready chan<- struct{}) error 
 	)
 	consensusAddress, err := claimer.CreateConsensusTypeAuthority(ctx)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "fail to create consensus")
 	}
 	if consensusAddress == nil {
 		return fmt.Errorf("fail to create consensus")
@@ -66,7 +67,7 @@ func (c *ClaimerWorker) Start(ctx context.Context, ready chan<- struct{}) error 
 
 	appAddress, err := claimer.CreateNewOnChainApp(ctx, *c.consensusAddress)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "fail to create app")
 	}
 	c.appAddress = appAddress
 	slog.Info("AppAddress", "appAddress", appAddress.Hex())
