@@ -80,13 +80,28 @@ func handleAdvance(
 ) error {
 	slog.Info("echo: handling advance input")
 
+	// add DC voucher
+	dcVoucherReq := rollup.DelegateCallVoucher{
+		Destination: advance.Metadata.MsgSender,
+		Payload:     advance.Payload,
+	}
+
+	voucherResp, err := client.AddDelegateCallVoucher(ctx, dcVoucherReq)
+	if err != nil {
+		return fmt.Errorf("echo: %w", err)
+	}
+	if voucherResp.StatusCode != http.StatusOK {
+		return fmt.Errorf("echo: failed to add delegate voucher voucher")
+	}
+
 	// add voucher
 	voucherReq := rollup.Voucher{
 		Destination: advance.Metadata.MsgSender,
 		Payload:     advance.Payload,
-		Value:       "0x0000000000000000000000000000000000000000000000000000000000000001",
+		Value:       "0x0000000000000000000000000000000000000000000000000000000000000000",
 	}
-	voucherResp, err := client.AddVoucher(ctx, voucherReq)
+
+	voucherResp, err = client.AddVoucher(ctx, voucherReq)
 	if err != nil {
 		return fmt.Errorf("echo: %w", err)
 	}

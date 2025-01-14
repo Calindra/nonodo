@@ -9,14 +9,11 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
 	"time"
 
-	"github.com/calindra/cartesi-rollups-hl-graphql/pkg/convenience"
-	"github.com/calindra/cartesi-rollups-hl-graphql/pkg/reader"
 	"github.com/calindra/nonodo/internal/claimer"
 	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/calindra/nonodo/internal/echoapp"
@@ -31,6 +28,8 @@ import (
 	"github.com/calindra/nonodo/internal/sequencers/inputter"
 	"github.com/calindra/nonodo/internal/sequencers/paiodecoder"
 	"github.com/calindra/nonodo/internal/supervisor"
+	"github.com/cartesi/rollups-graphql/pkg/convenience"
+	"github.com/cartesi/rollups-graphql/pkg/reader"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
@@ -70,89 +69,72 @@ type NonodoOpts struct {
 	// If set, disables inspects.
 	DisableInspect bool
 	// If set, start application.
-	ApplicationArgs     []string
-	SqliteFile          string
-	FromBlock           uint64
-	FromBlockL1         *uint64
-	DbImplementation    string
-	NodeVersion         string
-	LoadTestMode        bool
-	Sequencer           string
-	Namespace           uint64
-	TimeoutInspect      time.Duration
-	TimeoutAdvance      time.Duration
-	TimeoutWorker       time.Duration
-	GraphileUrl         string
-	GraphileDisableSync bool
-	Salsa               bool
-	SalsaUrl            string
-	AvailFromBlock      uint64
-	AvailEnabled        bool
-	PaioServerUrl       string
-	DbRawUrl            string
-	RawEnabled          bool
-	EpochBlocks         int
+	ApplicationArgs  []string
+	SqliteFile       string
+	FromBlock        uint64
+	FromBlockL1      *uint64
+	DbImplementation string
+	NodeVersion      string
+	LoadTestMode     bool
+	Sequencer        string
+	Namespace        uint64
+	TimeoutInspect   time.Duration
+	TimeoutAdvance   time.Duration
+	TimeoutWorker    time.Duration
+	Salsa            bool
+	SalsaUrl         string
+	AvailFromBlock   uint64
+	AvailEnabled     bool
+	PaioServerUrl    string
+	DbRawUrl         string
+	RawEnabled       bool
+	EpochBlocks      int
 }
 
 // Create the options struct with default values.
 func NewNonodoOpts() NonodoOpts {
 	var (
 		defaultTimeout time.Duration = 10 * time.Second
-		graphileUrl                  = os.Getenv("GRAPHILE_URL")
 	)
 
-	// FLAG: remove graphile if dont need
-	const defaultGraphileUrl = "http://localhost:5001/graphql"
-
-	if graphileUrl == "" {
-		graphileUrl = defaultGraphileUrl
-	}
-
-	// Check if the URL is valid
-	if _, err := url.Parse(graphileUrl); err != nil {
-		graphileUrl = defaultGraphileUrl
-	}
-
 	return NonodoOpts{
-		AnvilAddress:        devnet.AnvilDefaultAddress,
-		AnvilPort:           devnet.AnvilDefaultPort,
-		AnvilCommand:        "",
-		AnvilVerbose:        false,
-		HttpAddress:         "127.0.0.1",
-		HttpPort:            DefaultHttpPort,
-		HttpRollupsPort:     DefaultRollupsPort,
-		InputBoxAddress:     devnet.InputBoxAddress,
-		InputBoxBlock:       0,
-		ApplicationAddress:  devnet.ApplicationAddress,
-		RpcUrl:              "",
-		EspressoUrl:         "https://query.decaf.testnet.espresso.network",
-		EnableEcho:          false,
-		DisableDevnet:       false,
-		DisableAdvance:      false,
-		DisableInspect:      false,
-		ApplicationArgs:     nil,
-		SqliteFile:          "",
-		FromBlock:           0,
-		FromBlockL1:         nil,
-		DbImplementation:    "sqlite",
-		NodeVersion:         "v1",
-		Sequencer:           "inputbox",
-		LoadTestMode:        false,
-		Namespace:           DefaultNamespace,
-		TimeoutInspect:      defaultTimeout,
-		TimeoutAdvance:      defaultTimeout,
-		TimeoutWorker:       supervisor.DefaultSupervisorTimeout,
-		GraphileUrl:         graphileUrl,
-		GraphileDisableSync: false,
-		Salsa:               false,
-		SalsaUrl:            "127.0.0.1:5005",
-		AvailFromBlock:      0,
-		AvailEnabled:        false,
-		AutoCount:           false,
-		PaioServerUrl:       "https://cartesi-paio-avail-turing.fly.dev",
-		DbRawUrl:            "postgres://postgres:password@localhost:5432/rollupsdb?sslmode=disable",
-		RawEnabled:          false,
-		EpochBlocks:         claimer.DEFAULT_EPOCH_BLOCKS,
+		AnvilAddress:       devnet.AnvilDefaultAddress,
+		AnvilPort:          devnet.AnvilDefaultPort,
+		AnvilCommand:       "",
+		AnvilVerbose:       false,
+		HttpAddress:        "127.0.0.1",
+		HttpPort:           DefaultHttpPort,
+		HttpRollupsPort:    DefaultRollupsPort,
+		InputBoxAddress:    devnet.InputBoxAddress,
+		InputBoxBlock:      0,
+		ApplicationAddress: devnet.ApplicationAddress,
+		RpcUrl:             "",
+		EspressoUrl:        "https://query.decaf.testnet.espresso.network",
+		EnableEcho:         false,
+		DisableDevnet:      false,
+		DisableAdvance:     false,
+		DisableInspect:     false,
+		ApplicationArgs:    nil,
+		SqliteFile:         "",
+		FromBlock:          0,
+		FromBlockL1:        nil,
+		DbImplementation:   "sqlite",
+		NodeVersion:        "v1",
+		Sequencer:          "inputbox",
+		LoadTestMode:       false,
+		Namespace:          DefaultNamespace,
+		TimeoutInspect:     defaultTimeout,
+		TimeoutAdvance:     defaultTimeout,
+		TimeoutWorker:      supervisor.DefaultSupervisorTimeout,
+		Salsa:              false,
+		SalsaUrl:           "127.0.0.1:5005",
+		AvailFromBlock:     0,
+		AvailEnabled:       false,
+		AutoCount:          false,
+		PaioServerUrl:      "https://cartesi-paio-avail-turing.fly.dev",
+		DbRawUrl:           "postgres://postgres:password@localhost:5432/rollupsdb?sslmode=disable",
+		RawEnabled:         false,
+		EpochBlocks:        claimer.DEFAULT_EPOCH_BLOCKS,
 	}
 }
 
@@ -169,12 +151,16 @@ func CreateDBInstance(opts NonodoOpts) *sqlx.DB {
 		postgresDataBase := os.Getenv("POSTGRES_DB")
 		postgresUser := os.Getenv("POSTGRES_USER")
 		postgresPassword := os.Getenv("POSTGRES_PASSWORD")
-
 		connectionString := fmt.Sprintf("host=%s port=%s user=%s "+
 			"dbname=%s password=%s sslmode=disable",
 			postgresHost, postgresPort, postgresUser,
 			postgresDataBase, postgresPassword)
-
+		dbUrl, ok := os.LookupEnv("POSTGRES_GRAPHQL_DB_URL")
+		if ok {
+			connectionString = dbUrl
+		} else {
+			slog.Warn("The environment variables POSTGRES_HOST, POSTGRES_PORT, POSTGRES_DB, POSTGRES_USER, and POSTGRES_PASSWORD are deprecated. Please use POSTGRES_GRAPHQL_DB_URL instead.")
+		}
 		db = sqlx.MustConnect("postgres", connectionString)
 		configureConnectionPool(db)
 	} else {

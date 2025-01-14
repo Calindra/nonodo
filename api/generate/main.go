@@ -47,7 +47,8 @@ func checkErr(context string, err error) {
 
 func main() {
 	commons.ConfigureLog(slog.LevelDebug)
-	v2URL := "https://raw.githubusercontent.com/cartesi/openapi-interfaces/v0.9.0/rollup.yaml"
+	v2URL := "https://raw.githubusercontent.com/cartesi/openapi-interfaces/902f68615366d29b512140fd1a37aaaabf4087a1/rollup.yaml"
+	// v2URL := "https://raw.githubusercontent.com/cartesi/openapi-interfaces/v0.9.0/rollup.yaml"
 	// inspectURL := "https://raw.githubusercontent.com/cartesi/rollups-node/v1.4.0/api/openapi/inspect.yaml"
 
 	v2, wrong := getYAML(v2URL)

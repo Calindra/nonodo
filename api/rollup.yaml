@@ -133,10 +133,8 @@ paths:
       description: |
         The DApp backend can call this method to add a new voucher when processing an advance-state request.
         Vouchers are collateral effects actionable in the blockchain.
-        Between calls to the finish method, the voucher method can be called up to 32k times.
 
-        The returned value is the index of the voucher for the current advance-state request.
-        In other words, the index counting restarts at every request.
+        The returned value is the output index.
 
       requestBody:
         content:
@@ -160,6 +158,38 @@ paths:
               schema:
                 $ref: "#/components/schemas/Error"
 
+  /delegate-call-voucher:
+    post:
+      operationId: addDelegateCallVoucher
+      summary: Add a new delegate call voucher
+      description: |
+        The DApp backend can call this method to add a new delegate call voucher when processing an advance-state request.
+        Delegate call vouchers are collateral effects actionable in the blockchain.
+
+        The returned value is the output index.
+
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DelegateCallVoucher"
+        required: true
+
+      responses:
+        "201":
+          description: Created the delegate call voucher.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IndexResponse"
+
+        default:
+          description: Error response.
+          content:
+            text/plain:
+              schema:
+                $ref: "#/components/schemas/Error"
+
   /notice:
     post:
       operationId: addNotice
@@ -167,10 +197,8 @@ paths:
       description: |
         The DApp backend can call this method to add a new notice when processing the advance-state request.
         A notice describes any changes to the internal state of the DApp that may be relevant to the blockchain.
-        Between calls to the finish method, the notice method can be called up to 32k times.
 
-        The returned value is the index of the notice for the current advance request.
-        In other words, the index counting restarts at every request.
+        The returned value is the output index.
 
       requestBody:
         content:
@@ -427,6 +455,30 @@ components:
       required:
         - destination
         - value
+        - payload
+
+    DelegateCallVoucher:
+      type: object
+      properties:
+        destination:
+          type: string
+          description: 20-byte address of the destination contract for which the payload will be sent.
+          example: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+          pattern: "^0x([0-9a-fA-F]{40})$"
+          format: address
+        payload:
+          type: string
+          description: |
+            String in Ethereum hex binary format describing a method call to be executed by the destination contract.
+            The first two characters are '0x' followed by pairs of hexadecimal numbers that correspond to one byte.
+            For instance, '0xcdcd77c0' corresponds to a payload with length 4 and bytes 205, 205, 119, 192.
+            To describe the method call, the payload should consist of a function selector (method identifier) followed
+            by its ABI-encoded arguments.
+            ref: https://docs.soliditylang.org/en/v0.8.19/abi-spec.html
+          example: "0xcdcd77c000000000000000000000000000000000000000000000000000000000000000450000000000000000000000000000000000000000000000000000000000000001"
+          format: hex
+      required:
+        - destination
         - payload
 
     Notice:

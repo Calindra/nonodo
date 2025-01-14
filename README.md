@@ -129,7 +129,7 @@ application.
 ```sh
 INPUT=0xdeadbeef; \
 INPUT_BOX_ADDRESS=0x593E5BCf894D6829Dd26D0810DA7F064406aebB6; \
-APPLICATION_ADDRESS=0xab7528bb862fb57e8a2bcd567a2e929a0be56a5e; \
+APPLICATION_ADDRESS=0x75135d8ADb7180640d29d822D9AD59E83E8695b2; \
 cast send \
     --mnemonic "test test test test test test test test test test test junk" \
     --rpc-url "http://localhost:8545" \

@@ -2,14 +2,11 @@ package convenience
 
 import (
 	"fmt"
-	"log/slog"
-	"net/url"
 
 	"github.com/calindra/nonodo/internal/convenience/decoder"
 	"github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/calindra/nonodo/internal/convenience/services"
 	"github.com/calindra/nonodo/internal/convenience/synchronizer"
-	"github.com/calindra/nonodo/internal/graphile"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -25,9 +22,6 @@ type Container struct {
 	graphQLSynchronizer    *synchronizer.Synchronizer
 	voucherFetcher         *synchronizer.VoucherFetcher
 	noticeRepository       *repository.NoticeRepository
-	graphileFetcher        *synchronizer.GraphileFetcher
-	graphileSynchronizer   *synchronizer.GraphileSynchronizer
-	graphileClient         graphile.GraphileClient
 	inputRepository        *repository.InputRepository
 	reportRepository       *repository.ReportRepository
 	AutoCount              bool
@@ -197,49 +191,4 @@ func (c *Container) GetVoucherFetcher() *synchronizer.VoucherFetcher {
 	}
 	c.voucherFetcher = synchronizer.NewVoucherFetcher()
 	return c.voucherFetcher
-}
-
-func (c *Container) GetGraphileSynchronizer(graphileUrl url.URL, loadTestMode bool) *synchronizer.GraphileSynchronizer {
-	if c.graphileSynchronizer != nil {
-		return c.graphileSynchronizer
-	}
-
-	graphileClient := c.GetGraphileClient(graphileUrl, loadTestMode)
-	c.graphileSynchronizer = synchronizer.NewGraphileSynchronizer(
-		c.GetOutputDecoder(),
-		c.GetSyncRepository(),
-		c.GetGraphileFetcher(graphileClient),
-	)
-	return c.graphileSynchronizer
-}
-
-func (c *Container) GetGraphileFetcher(graphileClient graphile.GraphileClient) *synchronizer.GraphileFetcher {
-	if c.graphileFetcher != nil {
-		return c.graphileFetcher
-	}
-	c.graphileFetcher = synchronizer.NewGraphileFetcher(graphileClient)
-	return c.graphileFetcher
-}
-
-func (c *Container) GetGraphileClient(graphileUrl url.URL, loadTestMode bool) graphile.GraphileClient {
-
-	if c.graphileClient != nil {
-		return c.graphileClient
-	}
-
-	if loadTestMode {
-		const serviceName = "http://postgraphile"
-		if graphileUrl.Port() != "" {
-			graphileUrl.Host = fmt.Sprintf("%s:%s", serviceName, graphileUrl.Port())
-		} else {
-			graphileUrl.Host = serviceName
-		}
-	}
-	slog.Debug("GraphileClient",
-		"graphileUrl", graphileUrl,
-	)
-	c.graphileClient = &graphile.GraphileClientImpl{
-		GraphileUrl: graphileUrl,
-	}
-	return c.graphileClient
 }
