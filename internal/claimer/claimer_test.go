@@ -89,6 +89,7 @@ func (s *ClaimerSuite) TestMakeTheClaim() {
 	slog.Debug("NewAuthority0", "authorityAddress", consensusAddress)
 
 	appContract, err := claimer.CreateNewOnChainApp(ctx, *consensusAddress)
+	s.Require().NotNil(appContract)
 	s.Require().NoError(err)
 	slog.Debug("Deploy", "appContract", appContract.Hex())
 
