@@ -144,8 +144,9 @@ func (c *Claimer) CreateNewOnChainApp(
 
 	sender := common.HexToAddress(devnet.AnvilDefaultAddress)
 	templateHash := [32]byte{}
+	dataAvailability := []byte{}
 	salt := [32]byte{}
-	tx, err := applicationFactory.NewApplication(txOpts, consensusAddress, sender, templateHash, salt)
+	tx, err := applicationFactory.NewApplication(txOpts, consensusAddress, sender, templateHash, dataAvailability, salt)
 	if err != nil {
 		return nil, err
 	}
