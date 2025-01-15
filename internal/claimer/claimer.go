@@ -114,6 +114,8 @@ func (c *Claimer) CreateConsensusTypeAuthority(ctx context.Context) (*common.Add
 	if err != nil {
 		return nil, err
 	}
+	slog.Debug("CreateConsensusAuthorityType", "receipt.status", receipt.Status)
+	slog.Debug("CreateConsensusAuthorityType", "receipt.logs", len(receipt.Logs))
 	for _, vLog := range receipt.Logs {
 		event := struct {
 			Authority common.Address
