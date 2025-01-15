@@ -40,6 +40,20 @@ type Advance struct {
 	Payload Payload `json:"payload"`
 }
 
+// DelegateCallVoucher defines model for DelegateCallVoucher.
+type DelegateCallVoucher struct {
+	// Destination 20-byte address of the destination contract for which the payload will be sent.
+	Destination string `json:"destination"`
+
+	// Payload String in Ethereum hex binary format describing a method call to be executed by the destination contract.
+	// The first two characters are '0x' followed by pairs of hexadecimal numbers that correspond to one byte.
+	// For instance, '0xcdcd77c0' corresponds to a payload with length 4 and bytes 205, 205, 119, 192.
+	// To describe the method call, the payload should consist of a function selector (method identifier) followed
+	// by its ABI-encoded arguments.
+	// ref: https://docs.soliditylang.org/en/v0.8.19/abi-spec.html
+	Payload string `json:"payload"`
+}
+
 // Error Detailed error message.
 type Error = string
 
@@ -171,6 +185,9 @@ type Voucher struct {
 	// Value A big-endian 32-byte unsigned integer in hex.
 	Value string `json:"value"`
 }
+
+// AddDelegateCallVoucherJSONRequestBody defines body for AddDelegateCallVoucher for application/json ContentType.
+type AddDelegateCallVoucherJSONRequestBody = DelegateCallVoucher
 
 // RegisterExceptionJSONRequestBody defines body for RegisterException for application/json ContentType.
 type RegisterExceptionJSONRequestBody = Exception
@@ -325,6 +342,11 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 
 // The interface specification for the client above.
 type ClientInterface interface {
+	// AddDelegateCallVoucherWithBody request with any body
+	AddDelegateCallVoucherWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	AddDelegateCallVoucher(ctx context.Context, body AddDelegateCallVoucherJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// RegisterExceptionWithBody request with any body
 	RegisterExceptionWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -354,6 +376,30 @@ type ClientInterface interface {
 	AddVoucherWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	AddVoucher(ctx context.Context, body AddVoucherJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+}
+
+func (c *Client) AddDelegateCallVoucherWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAddDelegateCallVoucherRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
+
+func (c *Client) AddDelegateCallVoucher(ctx context.Context, body AddDelegateCallVoucherJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewAddDelegateCallVoucherRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
 }
 
 func (c *Client) RegisterExceptionWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -498,6 +544,46 @@ func (c *Client) AddVoucher(ctx context.Context, body AddVoucherJSONRequestBody,
 		return nil, err
 	}
 	return c.Client.Do(req)
+}
+
+// NewAddDelegateCallVoucherRequest calls the generic AddDelegateCallVoucher builder with application/json body
+func NewAddDelegateCallVoucherRequest(server string, body AddDelegateCallVoucherJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader = bytes.NewReader(buf)
+	return NewAddDelegateCallVoucherRequestWithBody(server, "application/json", bodyReader)
+}
+
+// NewAddDelegateCallVoucherRequestWithBody generates requests for AddDelegateCallVoucher with any type of body
+func NewAddDelegateCallVoucherRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
+	if err != nil {
+		return nil, err
+	}
+
+	operationPath := fmt.Sprintf("/delegate-call-voucher")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
 }
 
 // NewRegisterExceptionRequest calls the generic RegisterException builder with application/json body
@@ -783,6 +869,11 @@ func WithBaseURL(baseURL string) ClientOption {
 
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
+	// AddDelegateCallVoucherWithBodyWithResponse request with any body
+	AddDelegateCallVoucherWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AddDelegateCallVoucherResponse, error)
+
+	AddDelegateCallVoucherWithResponse(ctx context.Context, body AddDelegateCallVoucherJSONRequestBody, reqEditors ...RequestEditorFn) (*AddDelegateCallVoucherResponse, error)
+
 	// RegisterExceptionWithBodyWithResponse request with any body
 	RegisterExceptionWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RegisterExceptionResponse, error)
 
@@ -812,6 +903,28 @@ type ClientWithResponsesInterface interface {
 	AddVoucherWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AddVoucherResponse, error)
 
 	AddVoucherWithResponse(ctx context.Context, body AddVoucherJSONRequestBody, reqEditors ...RequestEditorFn) (*AddVoucherResponse, error)
+}
+
+type AddDelegateCallVoucherResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON201      *IndexResponse
+}
+
+// Status returns HTTPResponse.Status
+func (r AddDelegateCallVoucherResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r AddDelegateCallVoucherResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
 }
 
 type RegisterExceptionResponse struct {
@@ -944,6 +1057,23 @@ func (r AddVoucherResponse) StatusCode() int {
 	return 0
 }
 
+// AddDelegateCallVoucherWithBodyWithResponse request with arbitrary body returning *AddDelegateCallVoucherResponse
+func (c *ClientWithResponses) AddDelegateCallVoucherWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*AddDelegateCallVoucherResponse, error) {
+	rsp, err := c.AddDelegateCallVoucherWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAddDelegateCallVoucherResponse(rsp)
+}
+
+func (c *ClientWithResponses) AddDelegateCallVoucherWithResponse(ctx context.Context, body AddDelegateCallVoucherJSONRequestBody, reqEditors ...RequestEditorFn) (*AddDelegateCallVoucherResponse, error) {
+	rsp, err := c.AddDelegateCallVoucher(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
+	}
+	return ParseAddDelegateCallVoucherResponse(rsp)
+}
+
 // RegisterExceptionWithBodyWithResponse request with arbitrary body returning *RegisterExceptionResponse
 func (c *ClientWithResponses) RegisterExceptionWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*RegisterExceptionResponse, error) {
 	rsp, err := c.RegisterExceptionWithBody(ctx, contentType, body, reqEditors...)
@@ -1044,6 +1174,32 @@ func (c *ClientWithResponses) AddVoucherWithResponse(ctx context.Context, body A
 		return nil, err
 	}
 	return ParseAddVoucherResponse(rsp)
+}
+
+// ParseAddDelegateCallVoucherResponse parses an HTTP response from a AddDelegateCallVoucherWithResponse call
+func ParseAddDelegateCallVoucherResponse(rsp *http.Response) (*AddDelegateCallVoucherResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
+	if err != nil {
+		return nil, err
+	}
+
+	response := &AddDelegateCallVoucherResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest IndexResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	}
+
+	return response, nil
 }
 
 // ParseRegisterExceptionResponse parses an HTTP response from a RegisterExceptionWithResponse call
@@ -1184,6 +1340,9 @@ func ParseAddVoucherResponse(rsp *http.Response) (*AddVoucherResponse, error) {
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// Add a new delegate call voucher
+	// (POST /delegate-call-voucher)
+	AddDelegateCallVoucher(ctx echo.Context) error
 	// Register an exception
 	// (POST /exception)
 	RegisterException(ctx echo.Context) error
@@ -1207,6 +1366,15 @@ type ServerInterface interface {
 // ServerInterfaceWrapper converts echo contexts to parameters.
 type ServerInterfaceWrapper struct {
 	Handler ServerInterface
+}
+
+// AddDelegateCallVoucher converts echo context to params.
+func (w *ServerInterfaceWrapper) AddDelegateCallVoucher(ctx echo.Context) error {
+	var err error
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.AddDelegateCallVoucher(ctx)
+	return err
 }
 
 // RegisterException converts echo context to params.
@@ -1291,6 +1459,7 @@ func RegisterHandlersWithBaseURL(router EchoRouter, si ServerInterface, baseURL 
 		Handler: si,
 	}
 
+	router.POST(baseURL+"/delegate-call-voucher", wrapper.AddDelegateCallVoucher)
 	router.POST(baseURL+"/exception", wrapper.RegisterException)
 	router.POST(baseURL+"/finish", wrapper.Finish)
 	router.POST(baseURL+"/gio", wrapper.Gio)

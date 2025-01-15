@@ -16,9 +16,9 @@ import (
 	"strings"
 	"time"
 
-	cModel "github.com/calindra/cartesi-rollups-hl-graphql/pkg/convenience/model"
 	"github.com/calindra/nonodo/internal/contracts"
 	mdl "github.com/calindra/nonodo/internal/model"
+	cModel "github.com/cartesi/rollups-graphql/pkg/convenience/model"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/labstack/echo/v4"
@@ -42,6 +42,58 @@ type RollupAPI struct {
 
 type Sequencer interface {
 	FinishAndGetNext(accept bool) (cModel.Input, error)
+}
+
+// AddDelegateCallVoucher implements ServerInterface.
+func (r *RollupAPI) AddDelegateCallVoucher(ctx echo.Context) error {
+	if !checkContentType(ctx) {
+		return ctx.String(http.StatusUnsupportedMediaType, "invalid content type")
+	}
+
+	// parse body
+	var request AddDelegateCallVoucherJSONRequestBody
+	if err := ctx.Bind(&request); err != nil {
+		slog.Error("AddDelegateCallVoucher bind request error", "error", err)
+		return err
+	}
+
+	// validate fields
+	destination, err := hexutil.Decode(request.Destination)
+	if err != nil {
+		slog.Error("invalid hex payload", "error", err)
+		return ctx.String(http.StatusBadRequest, "invalid hex payload")
+	}
+	if len(destination) != common.AddressLength {
+		return ctx.String(http.StatusBadRequest, "invalid address length")
+	}
+	payload, err := hexutil.Decode(request.Payload)
+	if err != nil {
+		slog.Error("invalid hex payload", "error", err)
+		return ctx.String(http.StatusBadRequest, "invalid hex payload")
+	}
+
+	abiParsed, err := contracts.OutputsMetaData.GetAbi()
+
+	if err != nil {
+		slog.Error("Error parsing abi", "err", err)
+		return err
+	}
+	destinationContract := common.HexToAddress(request.Destination)
+	encodedPayload, err := abiParsed.Pack("DelegateCallVoucher", destinationContract, payload)
+	if err != nil {
+		slog.Error("encoded payload error", "err", err)
+		return err
+	}
+
+	index, err := r.model.AddDCVoucher(r.ApplicationAddress, common.Address(destination), encodedPayload)
+	if err != nil {
+		slog.Error("AddDelegateCallVoucher", "err", err)
+		return ctx.String(http.StatusInternalServerError, err.Error())
+	}
+	resp := IndexResponse{
+		Index: uint64(index),
+	}
+	return ctx.JSON(http.StatusOK, &resp)
 }
 
 // Gio implements ServerInterface.

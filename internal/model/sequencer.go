@@ -3,7 +3,7 @@ package model
 import (
 	"context"
 
-	cModel "github.com/calindra/cartesi-rollups-hl-graphql/pkg/convenience/model"
+	cModel "github.com/cartesi/rollups-graphql/pkg/convenience/model"
 )
 
 type Sequencer interface {

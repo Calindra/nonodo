@@ -7,7 +7,7 @@ import (
 	"log/slog"
 	"math/big"
 
-	"github.com/calindra/cartesi-rollups-hl-graphql/pkg/convenience/repository"
+	"github.com/cartesi/rollups-graphql/pkg/convenience/repository"
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -39,6 +39,7 @@ func (c *ClaimerService) CreateProofsAndSendClaim(
 		ctx,
 		startBlockGte,
 		endBlockLt,
+		false,
 	)
 	if err != nil {
 		return err
