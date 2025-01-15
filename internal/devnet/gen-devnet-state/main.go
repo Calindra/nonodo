@@ -49,7 +49,6 @@ func main() {
 
 	slog.Info("Copying the state file")
 	defer func() {
-		// run("docker", "rm", "temp-devnet")
 		run("docker", "rm", "temp-devnet")
 		run("docker", "rmi", "temp-devnet:devrel")
 		slog.Info("Finished copying the state file")
