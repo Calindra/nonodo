@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"log/slog"
 	"os/exec"
+	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/calindra/nonodo/internal/commons"
@@ -32,25 +34,26 @@ func main() {
 	slog.Info("Creating temporary container")
 
 	// like __filename
-	// _, xdir, _, ok := runtime.Caller(0)
-	// if !ok {
-	// 	panic("no found dirname")
-	// }
+	_, xdir, _, ok := runtime.Caller(0)
+	if !ok {
+		panic("no found dirname")
+	}
 
 	// Custom Docker anvil state
-	// dockerfile := filepath.Join(filepath.Dir(xdir), "Dockerfile.sdk")
-	// run("docker", "build", "-t", "temp-devnet:devrel", ".", "-f", dockerfile)
-	// run("docker", "create", "--name", "temp-devnet", "temp-devnet:devrel")
+	dockerfile := filepath.Join(filepath.Dir(xdir), "Dockerfile.sdk")
+	run("docker", "build", "-t", "temp-devnet:devrel", ".", "-f", dockerfile)
+	run("docker", "create", "--name", "temp-devnet", "temp-devnet:devrel")
 
 	// Production ready anvil state
-	run("docker", "create", "--name", "temp-devnet", "ghcr.io/cartesi/sdk:0.11.0")
+	// run("docker", "create", "--name", "temp-devnet", "ghcr.io/cartesi/sdk:0.11.1")
 
 	slog.Info("Copying the state file")
 	defer func() {
+		// run("docker", "rm", "temp-devnet")
 		run("docker", "rm", "temp-devnet")
-		// run("docker", "rmi", "temp-devnet:devrel")
+		run("docker", "rmi", "temp-devnet:devrel")
 		slog.Info("Finished copying the state file")
 	}()
-	// run("docker", "cp", "temp-devnet:/usr/share/cartesi/anvil_state.json", ".")
-	// run("docker", "cp", "temp-devnet:/usr/share/cartesi/localhost.json", ".")
+	run("docker", "cp", "temp-devnet:/usr/share/cartesi/anvil_state.json", ".")
+	run("docker", "cp", "temp-devnet:/usr/share/cartesi/localhost.json", ".")
 }
