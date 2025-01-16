@@ -31,7 +31,7 @@ var (
 
 // IApplicationFactoryMetaData contains all meta data concerning the IApplicationFactory contract.
 var IApplicationFactoryMetaData = &bind.MetaData{
-	ABI: "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"contractIConsensus\",\"name\":\"consensus\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"appOwner\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"templateHash\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"contractIApplication\",\"name\":\"appContract\",\"type\":\"address\"}],\"name\":\"ApplicationCreated\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"contractIConsensus\",\"name\":\"consensus\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"appOwner\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"templateHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"salt\",\"type\":\"bytes32\"}],\"name\":\"calculateApplicationAddress\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIConsensus\",\"name\":\"consensus\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"appOwner\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"templateHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"salt\",\"type\":\"bytes32\"}],\"name\":\"newApplication\",\"outputs\":[{\"internalType\":\"contractIApplication\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIConsensus\",\"name\":\"consensus\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"appOwner\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"templateHash\",\"type\":\"bytes32\"}],\"name\":\"newApplication\",\"outputs\":[{\"internalType\":\"contractIApplication\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+	ABI: "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"contractIConsensus\",\"name\":\"consensus\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"appOwner\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"templateHash\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"dataAvailability\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"contractIApplication\",\"name\":\"appContract\",\"type\":\"address\"}],\"name\":\"ApplicationCreated\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"contractIConsensus\",\"name\":\"consensus\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"appOwner\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"templateHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes\",\"name\":\"dataAvailability\",\"type\":\"bytes\"},{\"internalType\":\"bytes32\",\"name\":\"salt\",\"type\":\"bytes32\"}],\"name\":\"calculateApplicationAddress\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIConsensus\",\"name\":\"consensus\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"appOwner\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"templateHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes\",\"name\":\"dataAvailability\",\"type\":\"bytes\"},{\"internalType\":\"bytes32\",\"name\":\"salt\",\"type\":\"bytes32\"}],\"name\":\"newApplication\",\"outputs\":[{\"internalType\":\"contractIApplication\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"contractIConsensus\",\"name\":\"consensus\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"appOwner\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"templateHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes\",\"name\":\"dataAvailability\",\"type\":\"bytes\"}],\"name\":\"newApplication\",\"outputs\":[{\"internalType\":\"contractIApplication\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
 }
 
 // IApplicationFactoryABI is the input ABI used to generate the binding from.
@@ -180,12 +180,12 @@ func (_IApplicationFactory *IApplicationFactoryTransactorRaw) Transact(opts *bin
 	return _IApplicationFactory.Contract.contract.Transact(opts, method, params...)
 }
 
-// CalculateApplicationAddress is a free data retrieval call binding the contract method 0xbd4f1219.
+// CalculateApplicationAddress is a free data retrieval call binding the contract method 0x4269667b.
 //
-// Solidity: function calculateApplicationAddress(address consensus, address appOwner, bytes32 templateHash, bytes32 salt) view returns(address)
-func (_IApplicationFactory *IApplicationFactoryCaller) CalculateApplicationAddress(opts *bind.CallOpts, consensus common.Address, appOwner common.Address, templateHash [32]byte, salt [32]byte) (common.Address, error) {
+// Solidity: function calculateApplicationAddress(address consensus, address appOwner, bytes32 templateHash, bytes dataAvailability, bytes32 salt) view returns(address)
+func (_IApplicationFactory *IApplicationFactoryCaller) CalculateApplicationAddress(opts *bind.CallOpts, consensus common.Address, appOwner common.Address, templateHash [32]byte, dataAvailability []byte, salt [32]byte) (common.Address, error) {
 	var out []interface{}
-	err := _IApplicationFactory.contract.Call(opts, &out, "calculateApplicationAddress", consensus, appOwner, templateHash, salt)
+	err := _IApplicationFactory.contract.Call(opts, &out, "calculateApplicationAddress", consensus, appOwner, templateHash, dataAvailability, salt)
 
 	if err != nil {
 		return *new(common.Address), err
@@ -197,60 +197,60 @@ func (_IApplicationFactory *IApplicationFactoryCaller) CalculateApplicationAddre
 
 }
 
-// CalculateApplicationAddress is a free data retrieval call binding the contract method 0xbd4f1219.
+// CalculateApplicationAddress is a free data retrieval call binding the contract method 0x4269667b.
 //
-// Solidity: function calculateApplicationAddress(address consensus, address appOwner, bytes32 templateHash, bytes32 salt) view returns(address)
-func (_IApplicationFactory *IApplicationFactorySession) CalculateApplicationAddress(consensus common.Address, appOwner common.Address, templateHash [32]byte, salt [32]byte) (common.Address, error) {
-	return _IApplicationFactory.Contract.CalculateApplicationAddress(&_IApplicationFactory.CallOpts, consensus, appOwner, templateHash, salt)
+// Solidity: function calculateApplicationAddress(address consensus, address appOwner, bytes32 templateHash, bytes dataAvailability, bytes32 salt) view returns(address)
+func (_IApplicationFactory *IApplicationFactorySession) CalculateApplicationAddress(consensus common.Address, appOwner common.Address, templateHash [32]byte, dataAvailability []byte, salt [32]byte) (common.Address, error) {
+	return _IApplicationFactory.Contract.CalculateApplicationAddress(&_IApplicationFactory.CallOpts, consensus, appOwner, templateHash, dataAvailability, salt)
 }
 
-// CalculateApplicationAddress is a free data retrieval call binding the contract method 0xbd4f1219.
+// CalculateApplicationAddress is a free data retrieval call binding the contract method 0x4269667b.
 //
-// Solidity: function calculateApplicationAddress(address consensus, address appOwner, bytes32 templateHash, bytes32 salt) view returns(address)
-func (_IApplicationFactory *IApplicationFactoryCallerSession) CalculateApplicationAddress(consensus common.Address, appOwner common.Address, templateHash [32]byte, salt [32]byte) (common.Address, error) {
-	return _IApplicationFactory.Contract.CalculateApplicationAddress(&_IApplicationFactory.CallOpts, consensus, appOwner, templateHash, salt)
+// Solidity: function calculateApplicationAddress(address consensus, address appOwner, bytes32 templateHash, bytes dataAvailability, bytes32 salt) view returns(address)
+func (_IApplicationFactory *IApplicationFactoryCallerSession) CalculateApplicationAddress(consensus common.Address, appOwner common.Address, templateHash [32]byte, dataAvailability []byte, salt [32]byte) (common.Address, error) {
+	return _IApplicationFactory.Contract.CalculateApplicationAddress(&_IApplicationFactory.CallOpts, consensus, appOwner, templateHash, dataAvailability, salt)
 }
 
-// NewApplication is a paid mutator transaction binding the contract method 0x0e1a07f5.
+// NewApplication is a paid mutator transaction binding the contract method 0x2cc3ef7c.
 //
-// Solidity: function newApplication(address consensus, address appOwner, bytes32 templateHash, bytes32 salt) returns(address)
-func (_IApplicationFactory *IApplicationFactoryTransactor) NewApplication(opts *bind.TransactOpts, consensus common.Address, appOwner common.Address, templateHash [32]byte, salt [32]byte) (*types.Transaction, error) {
-	return _IApplicationFactory.contract.Transact(opts, "newApplication", consensus, appOwner, templateHash, salt)
+// Solidity: function newApplication(address consensus, address appOwner, bytes32 templateHash, bytes dataAvailability, bytes32 salt) returns(address)
+func (_IApplicationFactory *IApplicationFactoryTransactor) NewApplication(opts *bind.TransactOpts, consensus common.Address, appOwner common.Address, templateHash [32]byte, dataAvailability []byte, salt [32]byte) (*types.Transaction, error) {
+	return _IApplicationFactory.contract.Transact(opts, "newApplication", consensus, appOwner, templateHash, dataAvailability, salt)
 }
 
-// NewApplication is a paid mutator transaction binding the contract method 0x0e1a07f5.
+// NewApplication is a paid mutator transaction binding the contract method 0x2cc3ef7c.
 //
-// Solidity: function newApplication(address consensus, address appOwner, bytes32 templateHash, bytes32 salt) returns(address)
-func (_IApplicationFactory *IApplicationFactorySession) NewApplication(consensus common.Address, appOwner common.Address, templateHash [32]byte, salt [32]byte) (*types.Transaction, error) {
-	return _IApplicationFactory.Contract.NewApplication(&_IApplicationFactory.TransactOpts, consensus, appOwner, templateHash, salt)
+// Solidity: function newApplication(address consensus, address appOwner, bytes32 templateHash, bytes dataAvailability, bytes32 salt) returns(address)
+func (_IApplicationFactory *IApplicationFactorySession) NewApplication(consensus common.Address, appOwner common.Address, templateHash [32]byte, dataAvailability []byte, salt [32]byte) (*types.Transaction, error) {
+	return _IApplicationFactory.Contract.NewApplication(&_IApplicationFactory.TransactOpts, consensus, appOwner, templateHash, dataAvailability, salt)
 }
 
-// NewApplication is a paid mutator transaction binding the contract method 0x0e1a07f5.
+// NewApplication is a paid mutator transaction binding the contract method 0x2cc3ef7c.
 //
-// Solidity: function newApplication(address consensus, address appOwner, bytes32 templateHash, bytes32 salt) returns(address)
-func (_IApplicationFactory *IApplicationFactoryTransactorSession) NewApplication(consensus common.Address, appOwner common.Address, templateHash [32]byte, salt [32]byte) (*types.Transaction, error) {
-	return _IApplicationFactory.Contract.NewApplication(&_IApplicationFactory.TransactOpts, consensus, appOwner, templateHash, salt)
+// Solidity: function newApplication(address consensus, address appOwner, bytes32 templateHash, bytes dataAvailability, bytes32 salt) returns(address)
+func (_IApplicationFactory *IApplicationFactoryTransactorSession) NewApplication(consensus common.Address, appOwner common.Address, templateHash [32]byte, dataAvailability []byte, salt [32]byte) (*types.Transaction, error) {
+	return _IApplicationFactory.Contract.NewApplication(&_IApplicationFactory.TransactOpts, consensus, appOwner, templateHash, dataAvailability, salt)
 }
 
-// NewApplication0 is a paid mutator transaction binding the contract method 0x3648bfb5.
+// NewApplication0 is a paid mutator transaction binding the contract method 0x8d02370d.
 //
-// Solidity: function newApplication(address consensus, address appOwner, bytes32 templateHash) returns(address)
-func (_IApplicationFactory *IApplicationFactoryTransactor) NewApplication0(opts *bind.TransactOpts, consensus common.Address, appOwner common.Address, templateHash [32]byte) (*types.Transaction, error) {
-	return _IApplicationFactory.contract.Transact(opts, "newApplication0", consensus, appOwner, templateHash)
+// Solidity: function newApplication(address consensus, address appOwner, bytes32 templateHash, bytes dataAvailability) returns(address)
+func (_IApplicationFactory *IApplicationFactoryTransactor) NewApplication0(opts *bind.TransactOpts, consensus common.Address, appOwner common.Address, templateHash [32]byte, dataAvailability []byte) (*types.Transaction, error) {
+	return _IApplicationFactory.contract.Transact(opts, "newApplication0", consensus, appOwner, templateHash, dataAvailability)
 }
 
-// NewApplication0 is a paid mutator transaction binding the contract method 0x3648bfb5.
+// NewApplication0 is a paid mutator transaction binding the contract method 0x8d02370d.
 //
-// Solidity: function newApplication(address consensus, address appOwner, bytes32 templateHash) returns(address)
-func (_IApplicationFactory *IApplicationFactorySession) NewApplication0(consensus common.Address, appOwner common.Address, templateHash [32]byte) (*types.Transaction, error) {
-	return _IApplicationFactory.Contract.NewApplication0(&_IApplicationFactory.TransactOpts, consensus, appOwner, templateHash)
+// Solidity: function newApplication(address consensus, address appOwner, bytes32 templateHash, bytes dataAvailability) returns(address)
+func (_IApplicationFactory *IApplicationFactorySession) NewApplication0(consensus common.Address, appOwner common.Address, templateHash [32]byte, dataAvailability []byte) (*types.Transaction, error) {
+	return _IApplicationFactory.Contract.NewApplication0(&_IApplicationFactory.TransactOpts, consensus, appOwner, templateHash, dataAvailability)
 }
 
-// NewApplication0 is a paid mutator transaction binding the contract method 0x3648bfb5.
+// NewApplication0 is a paid mutator transaction binding the contract method 0x8d02370d.
 //
-// Solidity: function newApplication(address consensus, address appOwner, bytes32 templateHash) returns(address)
-func (_IApplicationFactory *IApplicationFactoryTransactorSession) NewApplication0(consensus common.Address, appOwner common.Address, templateHash [32]byte) (*types.Transaction, error) {
-	return _IApplicationFactory.Contract.NewApplication0(&_IApplicationFactory.TransactOpts, consensus, appOwner, templateHash)
+// Solidity: function newApplication(address consensus, address appOwner, bytes32 templateHash, bytes dataAvailability) returns(address)
+func (_IApplicationFactory *IApplicationFactoryTransactorSession) NewApplication0(consensus common.Address, appOwner common.Address, templateHash [32]byte, dataAvailability []byte) (*types.Transaction, error) {
+	return _IApplicationFactory.Contract.NewApplication0(&_IApplicationFactory.TransactOpts, consensus, appOwner, templateHash, dataAvailability)
 }
 
 // IApplicationFactoryApplicationCreatedIterator is returned from FilterApplicationCreated and is used to iterate over the raw logs and unpacked data for ApplicationCreated events raised by the IApplicationFactory contract.
@@ -322,16 +322,17 @@ func (it *IApplicationFactoryApplicationCreatedIterator) Close() error {
 
 // IApplicationFactoryApplicationCreated represents a ApplicationCreated event raised by the IApplicationFactory contract.
 type IApplicationFactoryApplicationCreated struct {
-	Consensus    common.Address
-	AppOwner     common.Address
-	TemplateHash [32]byte
-	AppContract  common.Address
-	Raw          types.Log // Blockchain specific contextual infos
+	Consensus        common.Address
+	AppOwner         common.Address
+	TemplateHash     [32]byte
+	DataAvailability []byte
+	AppContract      common.Address
+	Raw              types.Log // Blockchain specific contextual infos
 }
 
-// FilterApplicationCreated is a free log retrieval operation binding the contract event 0xe73165c2d277daf8713fd08b40845cb6bb7a20b2b543f3d35324a475660fcebd.
+// FilterApplicationCreated is a free log retrieval operation binding the contract event 0xd291ffe9436f2c57d5ce3e87ed33576f801053946651a2fb4fec5a406cf68cc5.
 //
-// Solidity: event ApplicationCreated(address indexed consensus, address appOwner, bytes32 templateHash, address appContract)
+// Solidity: event ApplicationCreated(address indexed consensus, address appOwner, bytes32 templateHash, bytes dataAvailability, address appContract)
 func (_IApplicationFactory *IApplicationFactoryFilterer) FilterApplicationCreated(opts *bind.FilterOpts, consensus []common.Address) (*IApplicationFactoryApplicationCreatedIterator, error) {
 
 	var consensusRule []interface{}
@@ -346,9 +347,9 @@ func (_IApplicationFactory *IApplicationFactoryFilterer) FilterApplicationCreate
 	return &IApplicationFactoryApplicationCreatedIterator{contract: _IApplicationFactory.contract, event: "ApplicationCreated", logs: logs, sub: sub}, nil
 }
 
-// WatchApplicationCreated is a free log subscription operation binding the contract event 0xe73165c2d277daf8713fd08b40845cb6bb7a20b2b543f3d35324a475660fcebd.
+// WatchApplicationCreated is a free log subscription operation binding the contract event 0xd291ffe9436f2c57d5ce3e87ed33576f801053946651a2fb4fec5a406cf68cc5.
 //
-// Solidity: event ApplicationCreated(address indexed consensus, address appOwner, bytes32 templateHash, address appContract)
+// Solidity: event ApplicationCreated(address indexed consensus, address appOwner, bytes32 templateHash, bytes dataAvailability, address appContract)
 func (_IApplicationFactory *IApplicationFactoryFilterer) WatchApplicationCreated(opts *bind.WatchOpts, sink chan<- *IApplicationFactoryApplicationCreated, consensus []common.Address) (event.Subscription, error) {
 
 	var consensusRule []interface{}
@@ -388,9 +389,9 @@ func (_IApplicationFactory *IApplicationFactoryFilterer) WatchApplicationCreated
 	}), nil
 }
 
-// ParseApplicationCreated is a log parse operation binding the contract event 0xe73165c2d277daf8713fd08b40845cb6bb7a20b2b543f3d35324a475660fcebd.
+// ParseApplicationCreated is a log parse operation binding the contract event 0xd291ffe9436f2c57d5ce3e87ed33576f801053946651a2fb4fec5a406cf68cc5.
 //
-// Solidity: event ApplicationCreated(address indexed consensus, address appOwner, bytes32 templateHash, address appContract)
+// Solidity: event ApplicationCreated(address indexed consensus, address appOwner, bytes32 templateHash, bytes dataAvailability, address appContract)
 func (_IApplicationFactory *IApplicationFactoryFilterer) ParseApplicationCreated(log types.Log) (*IApplicationFactoryApplicationCreated, error) {
 	event := new(IApplicationFactoryApplicationCreated)
 	if err := _IApplicationFactory.contract.UnpackLog(event, "ApplicationCreated", log); err != nil {

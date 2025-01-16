@@ -90,6 +90,7 @@ func (s *ClaimerSuite) TestMakeTheClaim() {
 
 	appContract, err := claimer.CreateNewOnChainApp(ctx, *consensusAddress)
 	s.Require().NoError(err)
+	s.Require().NotNil(appContract)
 	slog.Debug("Deploy", "appContract", appContract.Hex())
 
 	txOpts, err := devnet.DefaultTxOpts(ctx, ethClient)
