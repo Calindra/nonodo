@@ -16,7 +16,7 @@ ENV POSTGRES_DB=mydatabase
 ENV POSTGRES_USER=myuser
 ENV POSTGRES_PASSWORD=mypassword
 
-ARG ANVIL_TAG=nightly-e90348416c3a831ab75bb43f6fa5f0a0be4106c4
+ARG ANVIL_TAG=nightly-2cdbfaca634b284084d0f86357623aef7a0d2ce3
 
 # Verifique se o Foundry e anvil estão instalados corretamente
 RUN foundryup --version ${ANVIL_TAG} && which anvil
