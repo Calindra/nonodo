@@ -88,7 +88,7 @@ type NonodoOpts struct {
 	PaioServerUrl    string
 	DbRawUrl         string
 	RawEnabled       bool
-	EpochBlocks      int
+	EpochBlocks      uint64
 }
 
 // Create the options struct with default values.

@@ -12,7 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-const DEFAULT_EPOCH_BLOCKS = 10
+const DEFAULT_EPOCH_BLOCKS = 1
 
 type ClaimerWorker struct {
 	RpcUrl            string
@@ -29,13 +29,13 @@ func NewClaimerWorker(
 	rpcURL string,
 	voucherRepository *repository.VoucherRepository,
 	noticeRepository *repository.NoticeRepository,
-	epochBlocks int,
+	epochBlocks uint64,
 ) *ClaimerWorker {
 	return &ClaimerWorker{
 		RpcUrl:            rpcURL,
 		voucherRepository: voucherRepository,
 		noticeRepository:  noticeRepository,
-		epochBlocks:       uint64(epochBlocks),
+		epochBlocks:       epochBlocks,
 	}
 }
 
