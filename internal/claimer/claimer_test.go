@@ -97,8 +97,8 @@ func (s *ClaimerSuite) TestMakeTheClaim() {
 
 	// nolint
 	voucherPayloadStr := "237a816f000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb9226600000000000000000000000000000000000000000000000000000000deadbeef00000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000005deadbeef14000000000000000000000000000000000000000000000000000000"
-	voucherOutput0 := NewUnifiedOutput(voucherPayloadStr)
-	voucherOutput1 := NewUnifiedOutput(voucherPayloadStr)
+	voucherOutput0 := NewUnifiedOutput(voucherPayloadStr, uint64(1))
+	voucherOutput1 := NewUnifiedOutput(voucherPayloadStr, uint64(3))
 	voucherOutput1.proof.OutputIndex = 300 // due to simplification, it doesn't matter
 
 	outputs := []*UnifiedOutput{
@@ -133,4 +133,6 @@ func (s *ClaimerSuite) TestMakeTheClaim() {
 
 	_, err = applicationOnChain.ExecuteOutput(txOpts, voucherOutput0.payload, voucherOutput0.proof)
 	s.Require().NoError(err)
+
+	s.Equal(300, int(voucherOutput1.proof.OutputIndex))
 }

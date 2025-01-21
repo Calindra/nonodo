@@ -35,6 +35,14 @@ func (c *ClaimerService) CreateProofsAndSendClaim(
 	startBlockGte uint64,
 	endBlockLt uint64,
 ) error {
+	totalVouchers, err := c.VoucherRepository.Count(ctx, nil)
+	if err != nil {
+		return err
+	}
+	noticesCount, err := c.NoticeRepository.Count(ctx, nil)
+	if err != nil {
+		return err
+	}
 	vouchers, err := c.VoucherRepository.FindAllVouchersByBlockNumber(
 		ctx,
 		startBlockGte,
@@ -61,10 +69,10 @@ func (c *ClaimerService) CreateProofsAndSendClaim(
 	lenNotices := len(notices)
 	outputs := make([]*UnifiedOutput, lenVouchers+lenNotices)
 	for i, voucher := range vouchers {
-		outputs[i] = NewUnifiedOutput(voucher.Payload)
+		outputs[i] = NewUnifiedOutput(voucher.Payload, noticesCount+totalVouchers+uint64(i))
 	}
 	for i, notice := range notices {
-		outputs[i+lenVouchers] = NewUnifiedOutput(notice.Payload)
+		outputs[i+lenVouchers] = NewUnifiedOutput(notice.Payload, noticesCount+totalVouchers+uint64(lenVouchers)+uint64(i))
 	}
 	claim, err := c.claimer.FillProofsAndReturnClaim(outputs)
 	if err != nil {
