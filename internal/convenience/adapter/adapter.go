@@ -5,7 +5,7 @@ import (
 	"log/slog"
 
 	"github.com/calindra/nonodo/internal/contracts"
-	"github.com/calindra/nonodo/internal/convenience/model"
+	"github.com/cartesi/rollups-graphql/pkg/convenience/model"
 	"github.com/ethereum/go-ethereum/common"
 )
 

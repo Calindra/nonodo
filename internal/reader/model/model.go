@@ -6,7 +6,7 @@
 package model
 
 import (
-	"github.com/calindra/nonodo/internal/model"
+	"github.com/cartesi/rollups-graphql/pkg/model"
 )
 
 // Nonodo model wrapper that convert types to GraphQL types.

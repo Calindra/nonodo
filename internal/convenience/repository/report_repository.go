@@ -8,8 +8,8 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/calindra/nonodo/internal/commons"
-	cModel "github.com/calindra/nonodo/internal/convenience/model"
+	"github.com/cartesi/rollups-graphql/pkg/commons"
+	cModel "github.com/cartesi/rollups-graphql/pkg/convenience/model"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
 )
@@ -393,7 +393,7 @@ func (c *ReportRepository) BatchFindAllByInputIndexAndAppContract(
 	filters []*BatchFilterItem,
 ) ([]*commons.PageResult[cModel.Report], []error) {
 	slog.Debug("BatchFindAllByInputIndexAndAppContract", "len", len(filters))
-	query := `SELECT 
+	query := `SELECT
 				input_index, output_index, payload, app_contract FROM convenience_reports
 		WHERE
 	`

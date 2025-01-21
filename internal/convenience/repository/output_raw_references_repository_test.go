@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"testing"
 
-	"github.com/calindra/nonodo/internal/commons"
+	"github.com/cartesi/rollups-graphql/pkg/commons"
 	"github.com/stretchr/testify/suite"
 )
 

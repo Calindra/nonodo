@@ -35,7 +35,7 @@ require (
 require (
 	github.com/aws/aws-sdk-go v1.40.45 // indirect
 	github.com/btcsuite/btcd/chaincfg/chainhash v1.1.0 // indirect
-	github.com/cartesi/rollups-graphql v0.0.0-20250121203148-743bf6dc090f // indirect
+	github.com/cartesi/rollups-graphql v0.0.0-20250121233645-bc540761b21a // indirect
 	github.com/crate-crypto/go-ipa v0.0.0-20240223125850-b1e8a79f509c // indirect
 	github.com/ethereum/go-verkle v0.1.1-0.20240829091221-dffa7562dbe9 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect

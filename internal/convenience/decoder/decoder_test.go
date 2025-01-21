@@ -9,10 +9,10 @@ import (
 	"testing"
 
 	"github.com/calindra/nonodo/internal/contracts"
-	"github.com/calindra/nonodo/internal/convenience/model"
-	"github.com/calindra/nonodo/internal/convenience/repository"
-	"github.com/calindra/nonodo/internal/convenience/services"
 	"github.com/calindra/nonodo/internal/devnet"
+	"github.com/cartesi/rollups-graphql/pkg/convenience/model"
+	"github.com/cartesi/rollups-graphql/pkg/convenience/repository"
+	"github.com/cartesi/rollups-graphql/pkg/convenience/services"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/suite"

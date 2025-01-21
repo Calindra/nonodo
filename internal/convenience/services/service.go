@@ -4,9 +4,9 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/calindra/nonodo/internal/commons"
-	"github.com/calindra/nonodo/internal/convenience/model"
-	"github.com/calindra/nonodo/internal/convenience/repository"
+	"github.com/cartesi/rollups-graphql/pkg/commons"
+	"github.com/cartesi/rollups-graphql/pkg/convenience/model"
+	"github.com/cartesi/rollups-graphql/pkg/convenience/repository"
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -210,7 +210,7 @@ func (c *ConvenienceService) FindVoucherByOutputIndexAndAppContract(
 	appContract *common.Address,
 ) (*model.ConvenienceVoucher, error) {
 	return c.VoucherRepository.FindVoucherByOutputIndexAndAppContract(
-		ctx, outputIndex, appContract,
+		ctx, outputIndex, appContract, false,
 	)
 }
 

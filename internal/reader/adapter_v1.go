@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"log/slog"
 
-	cModel "github.com/calindra/nonodo/internal/convenience/model"
-	cRepos "github.com/calindra/nonodo/internal/convenience/repository"
-	services "github.com/calindra/nonodo/internal/convenience/services"
 	"github.com/calindra/nonodo/internal/reader/loaders"
 	graphql "github.com/calindra/nonodo/internal/reader/model"
+	cModel "github.com/cartesi/rollups-graphql/pkg/convenience/model"
+	cRepos "github.com/cartesi/rollups-graphql/pkg/convenience/repository"
+	services "github.com/cartesi/rollups-graphql/pkg/convenience/services"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/jmoiron/sqlx"
 )
@@ -101,7 +101,7 @@ func (a AdapterV1) GetVoucher(ctx context.Context, outputIndex int) (*graphql.Vo
 		return nil, err
 	}
 	voucher, err := a.convenienceService.FindVoucherByOutputIndexAndAppContract(
-		ctx, uint64(outputIndex), appContract)
+		ctx, uint64(outputIndex), appContract, false)
 	if err != nil {
 		return nil, err
 	}

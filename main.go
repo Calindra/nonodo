@@ -465,6 +465,7 @@ func init() {
 		"HTTP port used by Anvil")
 	cmd.Flags().BoolVar(&opts.AnvilVerbose, "anvil-verbose", opts.AnvilVerbose,
 		"If set, prints Anvil's output")
+	cmd.Flags().DurationVar(&opts.AnvilBlockTime, "anvil-block-time", opts.AnvilBlockTime, "Block time for Anvil")
 
 	// contracts-*
 	cmd.Flags().StringVar(&opts.ApplicationAddress, "contracts-application-address",

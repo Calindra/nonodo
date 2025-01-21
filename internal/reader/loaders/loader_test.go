@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/calindra/nonodo/internal/commons"
-	cModel "github.com/calindra/nonodo/internal/convenience/model"
-	cRepos "github.com/calindra/nonodo/internal/convenience/repository"
 	"github.com/calindra/nonodo/internal/devnet"
+	"github.com/cartesi/rollups-graphql/pkg/commons"
+	cModel "github.com/cartesi/rollups-graphql/pkg/convenience/model"
+	cRepos "github.com/cartesi/rollups-graphql/pkg/convenience/repository"
 	"github.com/ethereum/go-ethereum/common"
 	_ "github.com/ncruces/go-sqlite3/driver"
 	_ "github.com/ncruces/go-sqlite3/embed"

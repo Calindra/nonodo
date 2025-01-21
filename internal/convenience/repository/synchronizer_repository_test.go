@@ -5,8 +5,8 @@ import (
 	"log/slog"
 	"testing"
 
-	"github.com/calindra/nonodo/internal/commons"
-	"github.com/calindra/nonodo/internal/convenience/model"
+	"github.com/cartesi/rollups-graphql/pkg/commons"
+	"github.com/cartesi/rollups-graphql/pkg/convenience/model"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/ncruces/go-sqlite3/driver"
 	_ "github.com/ncruces/go-sqlite3/embed"

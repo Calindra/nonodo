@@ -51,6 +51,7 @@ type NonodoOpts struct {
 	AnvilPort          int
 	AnvilVerbose       bool
 	AnvilCommand       string
+	AnvilBlockTime     time.Duration
 	HttpAddress        string
 	HttpPort           int
 	HttpRollupsPort    int
@@ -101,6 +102,7 @@ func NewNonodoOpts() NonodoOpts {
 		AnvilAddress:       devnet.AnvilDefaultAddress,
 		AnvilPort:          devnet.AnvilDefaultPort,
 		AnvilCommand:       "",
+		AnvilBlockTime:     0,
 		AnvilVerbose:       false,
 		HttpAddress:        "127.0.0.1",
 		HttpPort:           DefaultHttpPort,
@@ -274,10 +276,11 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		}
 
 		w.Workers = append(w.Workers, devnet.AnvilWorker{
-			Address:  opts.AnvilAddress,
-			Port:     opts.AnvilPort,
-			Verbose:  opts.AnvilVerbose,
-			AnvilCmd: anvilLocation,
+			Address:        opts.AnvilAddress,
+			Port:           opts.AnvilPort,
+			Verbose:        opts.AnvilVerbose,
+			AnvilCmd:       anvilLocation,
+			AnvilBlockTime: opts.AnvilBlockTime,
 		})
 		opts.RpcUrl = fmt.Sprintf("ws://%s:%v", opts.AnvilAddress, opts.AnvilPort)
 	}
