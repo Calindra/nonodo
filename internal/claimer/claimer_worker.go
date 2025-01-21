@@ -98,7 +98,7 @@ func (c *ClaimerWorker) watchNewBlocks(ctx context.Context) error {
 					blockNumber,
 				)
 				if err != nil {
-					slog.Error("Error creating proofs and claim")
+					slog.Error("Error creating proofs and claim", "err", err)
 				}
 			}
 		}
