@@ -96,14 +96,13 @@ type NonodoOpts struct {
 func NewNonodoOpts() NonodoOpts {
 	var (
 		defaultTimeout        time.Duration = 10 * time.Second
-		defaultAnvilBlockTime time.Duration = 2 * time.Second
 	)
 
 	return NonodoOpts{
 		AnvilAddress:       devnet.AnvilDefaultAddress,
 		AnvilPort:          devnet.AnvilDefaultPort,
 		AnvilCommand:       "",
-		AnvilBlockTime:     defaultAnvilBlockTime,
+		AnvilBlockTime:     0,
 		AnvilVerbose:       false,
 		HttpAddress:        "127.0.0.1",
 		HttpPort:           DefaultHttpPort,
