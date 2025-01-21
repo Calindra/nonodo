@@ -136,7 +136,7 @@ func (s *ClaimerServiceSuite) checkVoucher(voucher model.ConvenienceVoucher) {
 	s.Require().NoError(err)
 	slog.Debug("Owner", "owner", owner, "appContract", appContract.Hex())
 
-	voucherOutput0 := NewUnifiedOutput(voucher.Payload)
+	voucherOutput0 := NewUnifiedOutput(voucher.Payload, uint64(0))
 	voucherOutput0.proof.OutputIndex = voucher.ProofOutputIndex
 	arr, err := To32ByteArray(voucher.OutputHashesSiblings)
 	s.Require().NoError(err)

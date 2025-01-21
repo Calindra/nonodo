@@ -61,10 +61,10 @@ func (c *ClaimerService) CreateProofsAndSendClaim(
 	lenNotices := len(notices)
 	outputs := make([]*UnifiedOutput, lenVouchers+lenNotices)
 	for i, voucher := range vouchers {
-		outputs[i] = NewUnifiedOutput(voucher.Payload)
+		outputs[i] = NewUnifiedOutput(voucher.Payload, voucher.ProofOutputIndex)
 	}
 	for i, notice := range notices {
-		outputs[i+lenVouchers] = NewUnifiedOutput(notice.Payload)
+		outputs[i+lenVouchers] = NewUnifiedOutput(notice.Payload, notice.ProofOutputIndex)
 	}
 	claim, err := c.claimer.FillProofsAndReturnClaim(outputs)
 	if err != nil {
