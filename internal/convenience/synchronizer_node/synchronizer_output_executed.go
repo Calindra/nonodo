@@ -6,13 +6,15 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/calindra/nonodo/internal/convenience/model"
-	"github.com/calindra/nonodo/internal/convenience/repository"
+	"github.com/cartesi/rollups-graphql/pkg/convenience/model"
+	repo "github.com/cartesi/rollups-graphql/pkg/convenience/repository"
+
+	"github.com/cartesi/rollups-graphql/pkg/convenience/repository"
 	"github.com/ethereum/go-ethereum/common"
 )
 
 type SynchronizerOutputExecuted struct {
-	VoucherRepository      *repository.VoucherRepository
+	VoucherRepository      *repo.VoucherRepository
 	NoticeRepository       *repository.NoticeRepository
 	RawNodeV2Repository    *RawRepository
 	RawOutputRefRepository *repository.RawOutputRefRepository

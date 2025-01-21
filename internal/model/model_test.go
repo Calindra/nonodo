@@ -17,7 +17,7 @@ import (
 	cModel "github.com/cartesi/rollups-graphql/pkg/convenience/model"
 	cRepos "github.com/cartesi/rollups-graphql/pkg/convenience/repository"
 
-	"github.com/calindra/nonodo/internal/commons"
+	"github.com/cartesi/rollups-graphql/pkg/commons"
 	"github.com/cartesi/rollups-graphql/pkg/convenience"
 	"github.com/cartesi/rollups-graphql/pkg/convenience/services"
 	"github.com/ethereum/go-ethereum/common"

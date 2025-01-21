@@ -3,10 +3,10 @@ package convenience
 import (
 	"fmt"
 
-	"github.com/calindra/nonodo/internal/convenience/decoder"
-	"github.com/calindra/nonodo/internal/convenience/repository"
-	"github.com/calindra/nonodo/internal/convenience/services"
 	"github.com/calindra/nonodo/internal/convenience/synchronizer"
+	"github.com/cartesi/rollups-graphql/pkg/convenience/decoder"
+	"github.com/cartesi/rollups-graphql/pkg/convenience/repository"
+	"github.com/cartesi/rollups-graphql/pkg/convenience/services"
 	"github.com/jmoiron/sqlx"
 )
 

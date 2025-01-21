@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/contracts"
 	"github.com/calindra/nonodo/internal/devnet"
 	"github.com/calindra/nonodo/internal/supervisor"
+	"github.com/cartesi/rollups-graphql/pkg/commons"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/stretchr/testify/suite"

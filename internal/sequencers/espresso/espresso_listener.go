@@ -13,10 +13,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/contracts"
 	"github.com/calindra/nonodo/internal/dataavailability"
 	"github.com/calindra/nonodo/internal/sequencers/inputter"
+	"github.com/cartesi/rollups-graphql/pkg/commons"
 	cModel "github.com/cartesi/rollups-graphql/pkg/convenience/model"
 	cRepos "github.com/cartesi/rollups-graphql/pkg/convenience/repository"
 	"github.com/ethereum/go-ethereum/common"

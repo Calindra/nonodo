@@ -12,7 +12,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/calindra/nonodo/internal/commons"
+	"github.com/cartesi/rollups-graphql/pkg/commons"
 )
 
 func run(name string, args ...string) {

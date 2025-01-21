@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/calindra/nonodo/internal/commons"
-	cModel "github.com/calindra/nonodo/internal/convenience/model"
-	"github.com/calindra/nonodo/internal/convenience/repository"
+	"github.com/cartesi/rollups-graphql/pkg/commons"
+	cModel "github.com/cartesi/rollups-graphql/pkg/convenience/model"
+	"github.com/cartesi/rollups-graphql/pkg/convenience/repository"
 	"github.com/vikstrous/dataloadgen"
 )
 

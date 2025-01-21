@@ -11,7 +11,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/calindra/nonodo/internal/commons"
+	"github.com/cartesi/rollups-graphql/pkg/commons"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/signer/core/apitypes"
