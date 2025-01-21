@@ -95,14 +95,15 @@ type NonodoOpts struct {
 // Create the options struct with default values.
 func NewNonodoOpts() NonodoOpts {
 	var (
-		defaultTimeout time.Duration = 10 * time.Second
+		defaultTimeout        time.Duration = 10 * time.Second
+		defaultAnvilBlockTime time.Duration = 2 * time.Second
 	)
 
 	return NonodoOpts{
 		AnvilAddress:       devnet.AnvilDefaultAddress,
 		AnvilPort:          devnet.AnvilDefaultPort,
 		AnvilCommand:       "",
-		AnvilBlockTime:     2 * time.Second,
+		AnvilBlockTime:     defaultAnvilBlockTime,
 		AnvilVerbose:       false,
 		HttpAddress:        "127.0.0.1",
 		HttpPort:           DefaultHttpPort,
@@ -276,10 +277,10 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 		}
 
 		w.Workers = append(w.Workers, devnet.AnvilWorker{
-			Address:  opts.AnvilAddress,
-			Port:     opts.AnvilPort,
-			Verbose:  opts.AnvilVerbose,
-			AnvilCmd: anvilLocation,
+			Address:        opts.AnvilAddress,
+			Port:           opts.AnvilPort,
+			Verbose:        opts.AnvilVerbose,
+			AnvilCmd:       anvilLocation,
 			AnvilBlockTime: opts.AnvilBlockTime,
 		})
 		opts.RpcUrl = fmt.Sprintf("ws://%s:%v", opts.AnvilAddress, opts.AnvilPort)

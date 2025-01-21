@@ -41,10 +41,10 @@ const anvilCommand = "anvil"
 
 // Start the anvil process in the host machine.
 type AnvilWorker struct {
-	Address  string
-	Port     int
-	Verbose  bool
-	AnvilCmd string
+	Address        string
+	Port           int
+	Verbose        bool
+	AnvilCmd       string
 	AnvilBlockTime time.Duration
 }
 
