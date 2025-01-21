@@ -71,6 +71,7 @@ func (c *VoucherRepository) CreateVoucher(
 			return nil, err
 		}
 		voucher.OutputIndex = count
+		voucher.ProofOutputIndex = count
 	}
 	insertVoucher := `INSERT INTO vouchers (
 		destination,
