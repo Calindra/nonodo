@@ -121,6 +121,8 @@ github.com/carlmjohnson/versioninfo v0.22.5 h1:O00sjOLUAFxYQjlN/bzYTuZiS0y6fWDQj
 github.com/carlmjohnson/versioninfo v0.22.5/go.mod h1:QT9mph3wcVfISUKd0i9sZfVrPviHuSF+cUtLjm2WSf8=
 github.com/cartesi/rollups-graphql v0.0.0-20250113201852-cc35f8b69098 h1:dmMSUi90IZaUEuAkKeXPH8z8YeWcL/PCCgUgq5cwvi4=
 github.com/cartesi/rollups-graphql v0.0.0-20250113201852-cc35f8b69098/go.mod h1:UyHNESjR+yjVl/PQDZUaJRtfC2xJ5IkuoQL+QMplPPE=
+github.com/cartesi/rollups-graphql v0.0.0-20250121203148-743bf6dc090f h1:CUMJ4EIDYRCpZ/H5QcbZQ5ZLo1MR4Sc332DEnVH/Yg4=
+github.com/cartesi/rollups-graphql v0.0.0-20250121203148-743bf6dc090f/go.mod h1:UyHNESjR+yjVl/PQDZUaJRtfC2xJ5IkuoQL+QMplPPE=
 github.com/celestiaorg/celestia-core v1.43.0-tm-v0.34.35 h1:L4GTm+JUXhB0a/nGPMq6jEqqe6THuYSQ8m2kUCtZYqw=
 github.com/celestiaorg/celestia-core v1.43.0-tm-v0.34.35/go.mod h1:bFr0lAGwaJ0mOHSBmib5/ca5pbBf1yKWGPs93Td0HPw=
 github.com/celestiaorg/celestia-openrpc v0.5.0 h1:coCflj4fRoemrCv4XrUtlXXcZ8tsYBFmVabmlm1BP20=
