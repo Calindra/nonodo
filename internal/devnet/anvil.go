@@ -143,6 +143,7 @@ func (w AnvilWorker) Start(ctx context.Context, ready chan<- struct{}) error {
 	server.Args = append(server.Args, "--host", fmt.Sprint(w.Address))
 	server.Args = append(server.Args, "--port", fmt.Sprint(w.Port))
 	server.Args = append(server.Args, "--load-state", filepath.Join(dir, stateFileName))
+	server.Args = append(server.Args, "--block-time", "2")
 	// server.Args = append(server.Args, "--tracing")
 	if !w.Verbose {
 		server.Args = append(server.Args, "--silent")
