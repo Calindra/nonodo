@@ -95,7 +95,7 @@ type NonodoOpts struct {
 // Create the options struct with default values.
 func NewNonodoOpts() NonodoOpts {
 	var (
-		defaultTimeout        time.Duration = 10 * time.Second
+		defaultTimeout time.Duration = 10 * time.Second
 	)
 
 	return NonodoOpts{
