@@ -5,7 +5,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/calindra/nonodo/internal/convenience/repository"
+	"github.com/cartesi/rollups-graphql/pkg/convenience/repository"
 )
 
 type CleanSynchronizer struct {

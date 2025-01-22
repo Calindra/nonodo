@@ -123,6 +123,12 @@ github.com/cartesi/rollups-graphql v0.0.0-20250113201852-cc35f8b69098 h1:dmMSUi9
 github.com/cartesi/rollups-graphql v0.0.0-20250113201852-cc35f8b69098/go.mod h1:UyHNESjR+yjVl/PQDZUaJRtfC2xJ5IkuoQL+QMplPPE=
 github.com/cartesi/rollups-graphql v0.0.0-20250121203148-743bf6dc090f h1:CUMJ4EIDYRCpZ/H5QcbZQ5ZLo1MR4Sc332DEnVH/Yg4=
 github.com/cartesi/rollups-graphql v0.0.0-20250121203148-743bf6dc090f/go.mod h1:UyHNESjR+yjVl/PQDZUaJRtfC2xJ5IkuoQL+QMplPPE=
+github.com/cartesi/rollups-graphql v0.0.0-20250121232110-2875c8106dcd h1:zrgQqRfl2CvlQF4IUBvH0rzqCp/GWH5hjUAWmCwBECE=
+github.com/cartesi/rollups-graphql v0.0.0-20250121232110-2875c8106dcd/go.mod h1:UyHNESjR+yjVl/PQDZUaJRtfC2xJ5IkuoQL+QMplPPE=
+github.com/cartesi/rollups-graphql v0.0.0-20250121232908-208a9d0697d9 h1:xRe8O6X8+IdCI4XHYaeU75p48A5gqfh0IzmheBvxRWc=
+github.com/cartesi/rollups-graphql v0.0.0-20250121232908-208a9d0697d9/go.mod h1:UyHNESjR+yjVl/PQDZUaJRtfC2xJ5IkuoQL+QMplPPE=
+github.com/cartesi/rollups-graphql v0.0.0-20250121233645-bc540761b21a h1:KV6MoBV0vQvYONP0Ak1kGAoS0J9jdHm1IAsoyfkhiks=
+github.com/cartesi/rollups-graphql v0.0.0-20250121233645-bc540761b21a/go.mod h1:UyHNESjR+yjVl/PQDZUaJRtfC2xJ5IkuoQL+QMplPPE=
 github.com/celestiaorg/celestia-core v1.43.0-tm-v0.34.35 h1:L4GTm+JUXhB0a/nGPMq6jEqqe6THuYSQ8m2kUCtZYqw=
 github.com/celestiaorg/celestia-core v1.43.0-tm-v0.34.35/go.mod h1:bFr0lAGwaJ0mOHSBmib5/ca5pbBf1yKWGPs93Td0HPw=
 github.com/celestiaorg/celestia-openrpc v0.5.0 h1:coCflj4fRoemrCv4XrUtlXXcZ8tsYBFmVabmlm1BP20=

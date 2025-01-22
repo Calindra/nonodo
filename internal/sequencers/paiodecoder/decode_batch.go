@@ -13,7 +13,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/calindra/nonodo/internal/commons"
+	"github.com/cartesi/rollups-graphql/pkg/commons"
 	"github.com/google/go-github/github"
 )
 

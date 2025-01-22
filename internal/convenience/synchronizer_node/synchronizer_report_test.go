@@ -7,9 +7,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/calindra/nonodo/internal/commons"
-	"github.com/calindra/nonodo/internal/convenience"
 	"github.com/calindra/nonodo/postgres/raw"
+	"github.com/cartesi/rollups-graphql/pkg/commons"
+	"github.com/cartesi/rollups-graphql/pkg/convenience"
 	"github.com/jmoiron/sqlx"
 	"github.com/stretchr/testify/suite"
 )

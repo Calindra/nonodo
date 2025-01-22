@@ -1,8 +1,8 @@
 package paio
 
 import (
-	"github.com/calindra/nonodo/internal/commons"
 	"github.com/calindra/nonodo/internal/sequencers/espresso"
+	"github.com/cartesi/rollups-graphql/pkg/commons"
 )
 
 type Sender interface {

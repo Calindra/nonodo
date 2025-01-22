@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/calindra/nonodo/internal/convenience/adapter"
-	"github.com/calindra/nonodo/internal/convenience/decoder"
-	"github.com/calindra/nonodo/internal/convenience/model"
-	"github.com/calindra/nonodo/internal/convenience/repository"
+	"github.com/cartesi/rollups-graphql/pkg/convenience/decoder"
+	"github.com/cartesi/rollups-graphql/pkg/convenience/model"
+	"github.com/cartesi/rollups-graphql/pkg/convenience/repository"
 	"github.com/ethereum/go-ethereum/common"
 )
 

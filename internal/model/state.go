@@ -128,6 +128,7 @@ func saveAllInputVouchers(voucherRepository *cRepos.VoucherRepository, inputInde
 	for _, v := range vouchers {
 		v.InputIndex = inputIndex
 		v.Payload = fmt.Sprintf("0x%s", v.Payload)
+		slog.Info("nonodo saving voucher", "autocount", voucherRepository.AutoCount)
 		_, err := voucherRepository.CreateVoucher(ctx, &v)
 		if err != nil {
 			return err
