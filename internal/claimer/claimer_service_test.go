@@ -46,16 +46,17 @@ func (s *ClaimerServiceSuite) SetupTest() {
 	commons.ConfigureLog(slog.LevelDebug)
 	var w supervisor.SupervisorWorker
 	w.Name = "WorkerClaimerServiceSuite"
-	const testTimeout = 5 * time.Second
+	const testTimeout = 15 * time.Second
 	s.ctx, s.timeoutCancel = context.WithTimeout(context.Background(), testTimeout)
 	s.workerResult = make(chan error)
 
 	s.workerCtx, s.workerCancel = context.WithCancel(s.ctx)
 	w.Workers = append(w.Workers, devnet.AnvilWorker{
-		Address:  devnet.AnvilDefaultAddress,
-		Port:     devnet.AnvilDefaultPort,
-		Verbose:  true,
-		AnvilCmd: "anvil",
+		Address:        devnet.AnvilDefaultAddress,
+		Port:           devnet.AnvilDefaultPort,
+		Verbose:        true,
+		AnvilCmd:       "anvil",
+		AnvilBlockTime: 1 * time.Second,
 	})
 
 	s.rpcUrl = fmt.Sprintf("ws://%s:%v", devnet.AnvilDefaultAddress, devnet.AnvilDefaultPort)
@@ -135,20 +136,50 @@ func (s *ClaimerServiceSuite) checkVoucher(voucher model.ConvenienceVoucher) {
 	owner, err := applicationOnChain.Owner(&callOpts)
 	s.Require().NoError(err)
 	slog.Debug("Owner", "owner", owner, "appContract", appContract.Hex())
+	{
+		voucherOutput0 := NewUnifiedOutput(voucher.Payload, uint64(0))
+		voucherOutput0.proof.OutputIndex = voucher.ProofOutputIndex
+		// voucherOutput0.proof.OutputIndex = 0
+		arr, err := To32ByteArray(voucher.OutputHashesSiblings)
+		s.Require().NoError(err)
+		// arr[0][0] = 0
+		voucherOutput0.proof.OutputHashesSiblings = arr
+		err = applicationOnChain.ValidateOutput(&callOpts, voucherOutput0.payload, voucherOutput0.proof)
+		s.Require().NoError(err)
 
-	voucherOutput0 := NewUnifiedOutput(voucher.Payload, uint64(0))
-	voucherOutput0.proof.OutputIndex = voucher.ProofOutputIndex
-	arr, err := To32ByteArray(voucher.OutputHashesSiblings)
-	s.Require().NoError(err)
-	voucherOutput0.proof.OutputHashesSiblings = arr
-	err = applicationOnChain.ValidateOutput(&callOpts, voucherOutput0.payload, voucherOutput0.proof)
-	s.Require().NoError(err)
+		txOpts, err := devnet.DefaultTxOpts(s.ctx, s.ethClient)
+		s.Require().NoError(err)
 
-	txOpts, err := devnet.DefaultTxOpts(s.ctx, s.ethClient)
-	s.Require().NoError(err)
+		tx, err := applicationOnChain.ExecuteOutput(txOpts, voucherOutput0.payload, voucherOutput0.proof)
+		s.Require().NoError(err)
+		receipt, err := bind.WaitMined(context.Background(), s.ethClient, tx)
+		if err != nil {
+			s.Require().NoError(err)
+		}
+		s.Equal(uint64(1), receipt.Status)
+	}
+	{
+		time.Sleep(time.Second * 3)
+		voucherOutput0 := NewUnifiedOutput(voucher.Payload, uint64(0))
+		voucherOutput0.proof.OutputIndex = voucher.ProofOutputIndex
+		// voucherOutput0.proof.OutputIndex = 0
+		arr, err := To32ByteArray(voucher.OutputHashesSiblings)
+		s.Require().NoError(err)
+		voucherOutput0.proof.OutputHashesSiblings = arr
+		err = applicationOnChain.ValidateOutput(&callOpts, voucherOutput0.payload, voucherOutput0.proof)
+		s.Require().NoError(err)
 
-	_, err = applicationOnChain.ExecuteOutput(txOpts, voucherOutput0.payload, voucherOutput0.proof)
-	s.Require().NoError(err)
+		txOpts, err := devnet.DefaultTxOpts(s.ctx, s.ethClient)
+		s.Require().NoError(err)
+
+		tx, err := applicationOnChain.ExecuteOutput(txOpts, voucherOutput0.payload, voucherOutput0.proof)
+		s.Require().NoError(err)
+		receipt, err := bind.WaitMined(context.Background(), s.ethClient, tx)
+		if err != nil {
+			s.Require().NoError(err)
+		}
+		s.Equal(uint64(0), receipt.Status)
+	}
 }
 
 const TOTAL_INPUT_TEST = 10

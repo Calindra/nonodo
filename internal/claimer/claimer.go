@@ -204,12 +204,12 @@ func (c *Claimer) FillProofsAndReturnClaim(
 	}
 	for idx := range outputs {
 		// WARN: simplification to avoid redoing all the proofs in the world
-		old := outputs[idx].proof.OutputIndex
+		// old := outputs[idx].proof.OutputIndex
 		outputs[idx].proof.OutputIndex = uint64(idx)
 		start := outputs[idx].proof.OutputIndex * MAX_OUTPUT_TREE_HEIGHT
 		end := (outputs[idx].proof.OutputIndex * MAX_OUTPUT_TREE_HEIGHT) + MAX_OUTPUT_TREE_HEIGHT
 		outputs[idx].proof.OutputHashesSiblings = ConvertHashesToOutputHashesSiblings(proofs[start:end])
-		outputs[idx].proof.OutputIndex = old
+		// outputs[idx].proof.OutputIndex = old
 	}
 	return claim, err
 }

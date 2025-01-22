@@ -37,7 +37,7 @@ func (c *ClaimerService) CreateProofsAndSendClaim(
 ) error {
 	vouchers, err := c.VoucherRepository.FindAllVouchersByBlockNumber(
 		ctx,
-		startBlockGte,
+		0,
 		endBlockLt,
 		false,
 	)
@@ -46,7 +46,7 @@ func (c *ClaimerService) CreateProofsAndSendClaim(
 	}
 	notices, err := c.NoticeRepository.FindAllNoticesByBlockNumber(
 		ctx,
-		startBlockGte,
+		0,
 		endBlockLt,
 	)
 	if err != nil {
