@@ -56,12 +56,11 @@ func (c *Claimer) MakeTheClaim(ctx context.Context,
 	if err != nil {
 		return err
 	}
-	slog.Debug("SubmitClaim", "tx", tx.Hash())
 	receipt, err := bind.WaitMined(context.Background(), c.ethClient, tx)
 	if err != nil {
 		return err
 	}
-	slog.Debug("SubmitClaim", "receipt.status", receipt.Status)
+	slog.Info("SubmitClaim", "receipt.status", receipt.Status, "tx", tx.Hash())
 	abi, err := contracts.IConsensusMetaData.GetAbi()
 	if err != nil {
 		return err
@@ -177,8 +176,11 @@ func (c *Claimer) CreateNewOnChainApp(
 }
 
 type UnifiedOutput struct {
-	payload []byte
-	proof   contracts.OutputValidityProof
+	payload     []byte
+	proof       contracts.OutputValidityProof
+	OutputType  string
+	AppContract common.Address
+	OutputIndex uint64
 }
 
 func NewUnifiedOutput(payload string, outputIndex uint64) *UnifiedOutput {
@@ -194,24 +196,32 @@ func NewUnifiedOutput(payload string, outputIndex uint64) *UnifiedOutput {
 func (c *Claimer) FillProofsAndReturnClaim(
 	outputs []*UnifiedOutput,
 ) (common.Hash, error) {
+	// Hash outputs to create Merkle tree leaves
 	leaves := make([]common.Hash, len(outputs))
 	for i, output := range outputs {
 		leaves[i] = crypto.Keccak256Hash(output.payload)
 	}
+
+	// Create Merkle proofs
 	claim, proofs, err := merkle.CreateProofs(leaves, uint(MAX_OUTPUT_TREE_HEIGHT))
 	if err != nil {
-		return common.Hash{}, err
+		return common.Hash{}, fmt.Errorf("failed to create Merkle proofs: %w", err)
 	}
+
+	// Populate outputs with proof data
 	for idx := range outputs {
-		// WARN: simplification to avoid redoing all the proofs in the world
-		old := outputs[idx].proof.OutputIndex
-		outputs[idx].proof.OutputIndex = uint64(idx)
-		start := outputs[idx].proof.OutputIndex * MAX_OUTPUT_TREE_HEIGHT
-		end := (outputs[idx].proof.OutputIndex * MAX_OUTPUT_TREE_HEIGHT) + MAX_OUTPUT_TREE_HEIGHT
+		start := int(outputs[idx].proof.OutputIndex) * MAX_OUTPUT_TREE_HEIGHT
+		end := start + MAX_OUTPUT_TREE_HEIGHT
+
+		// Ensure bounds are valid
+		if start < 0 || end > len(proofs) {
+			return common.Hash{}, fmt.Errorf("invalid proof indices: start=%d, end=%d, len(proofs)=%d", start, end, len(proofs))
+		}
+
 		outputs[idx].proof.OutputHashesSiblings = ConvertHashesToOutputHashesSiblings(proofs[start:end])
-		outputs[idx].proof.OutputIndex = old
 	}
-	return claim, err
+
+	return claim, nil
 }
 
 func ConvertHashesToOutputHashesSiblings(hashes []common.Hash) [][32]byte {

@@ -46,16 +46,17 @@ func (s *ClaimerServiceSuite) SetupTest() {
 	commons.ConfigureLog(slog.LevelDebug)
 	var w supervisor.SupervisorWorker
 	w.Name = "WorkerClaimerServiceSuite"
-	const testTimeout = 5 * time.Second
+	const testTimeout = 15 * time.Second
 	s.ctx, s.timeoutCancel = context.WithTimeout(context.Background(), testTimeout)
 	s.workerResult = make(chan error)
 
 	s.workerCtx, s.workerCancel = context.WithCancel(s.ctx)
 	w.Workers = append(w.Workers, devnet.AnvilWorker{
-		Address:  devnet.AnvilDefaultAddress,
-		Port:     devnet.AnvilDefaultPort,
-		Verbose:  true,
-		AnvilCmd: "anvil",
+		Address:        devnet.AnvilDefaultAddress,
+		Port:           devnet.AnvilDefaultPort,
+		Verbose:        true,
+		AnvilCmd:       "anvil",
+		AnvilBlockTime: 1 * time.Second,
 	})
 
 	s.rpcUrl = fmt.Sprintf("ws://%s:%v", devnet.AnvilDefaultAddress, devnet.AnvilDefaultPort)
@@ -74,7 +75,7 @@ func (s *ClaimerServiceSuite) SetupTest() {
 
 	s.dbFactory = commons.NewDbFactory()
 	db := s.dbFactory.CreateDb("claim-service.sqlite3")
-	s.container = convenience.NewContainer(*db, false)
+	s.container = convenience.NewContainer(*db, true)
 	ethClient, err := ethclient.DialContext(s.ctx, s.rpcUrl)
 	s.Require().NoError(err)
 	s.ethClient = ethClient
@@ -115,10 +116,10 @@ func (s *ClaimerServiceSuite) TestMakeTheClaimAndValidateOutputOnChain() {
 		uint64(endBlockLt),
 	)
 	s.Require().NoError(err)
-	pages, err := s.container.GetVoucherRepository().FindAllVouchers(s.ctx, nil, nil, nil, nil, nil)
+	vouchers, err := s.container.GetVoucherRepository().FindAll(s.ctx)
 	s.Require().NoError(err)
 	siblings := []string{}
-	voucher := pages.Rows[0]
+	voucher := vouchers[0]
 	err = json.Unmarshal([]byte(voucher.OutputHashesSiblings), &siblings)
 	s.Require().NoError(err)
 	s.Equal(63, len(siblings))
@@ -130,25 +131,50 @@ func (s *ClaimerServiceSuite) checkVoucher(voucher model.ConvenienceVoucher) {
 	applicationOnChain, err := contracts.NewApplication(appContract, s.ethClient)
 	s.Require().NoError(err)
 
-	// smoke test
 	callOpts := bind.CallOpts{}
 	owner, err := applicationOnChain.Owner(&callOpts)
 	s.Require().NoError(err)
 	slog.Debug("Owner", "owner", owner, "appContract", appContract.Hex())
-
-	voucherOutput0 := NewUnifiedOutput(voucher.Payload, uint64(0))
-	voucherOutput0.proof.OutputIndex = voucher.ProofOutputIndex
+	time.Sleep(time.Second * 3)
+	voucherOutput0 := NewUnifiedOutput(voucher.Payload, voucher.OutputIndex)
 	arr, err := To32ByteArray(voucher.OutputHashesSiblings)
 	s.Require().NoError(err)
+	// arr[0][0] = 0
 	voucherOutput0.proof.OutputHashesSiblings = arr
-	err = applicationOnChain.ValidateOutput(&callOpts, voucherOutput0.payload, voucherOutput0.proof)
-	s.Require().NoError(err)
+	{
+		// it should be valid
+		err = applicationOnChain.ValidateOutput(&callOpts, voucherOutput0.payload, voucherOutput0.proof)
+		s.Require().NoError(err)
+	}
+	{
+		// it should be executed
+		txOpts, err := devnet.DefaultTxOpts(s.ctx, s.ethClient)
+		s.Require().NoError(err)
+		s.Require().Equal(1, int(voucherOutput0.proof.OutputIndex))
+		tx, err := applicationOnChain.ExecuteOutput(txOpts, voucherOutput0.payload, voucherOutput0.proof)
+		s.Require().NoError(err)
+		receipt, err := bind.WaitMined(context.Background(), s.ethClient, tx)
+		s.Require().NoError(err)
+		s.Equal(uint64(1), receipt.Status)
+	}
+	{
+		// still valid
+		err = applicationOnChain.ValidateOutput(&callOpts, voucherOutput0.payload, voucherOutput0.proof)
+		s.Require().NoError(err)
+	}
+	{
+		// it should not be executed again
+		txOpts, err := devnet.DefaultTxOpts(s.ctx, s.ethClient)
+		s.Require().NoError(err)
+		tx, err := applicationOnChain.ExecuteOutput(txOpts, voucherOutput0.payload, voucherOutput0.proof)
+		s.Require().NoError(err)
+		receipt, err := bind.WaitMined(context.Background(), s.ethClient, tx)
+		if err != nil {
+			s.Require().NoError(err)
+		}
+		s.Equal(uint64(0), receipt.Status)
+	}
 
-	txOpts, err := devnet.DefaultTxOpts(s.ctx, s.ethClient)
-	s.Require().NoError(err)
-
-	_, err = applicationOnChain.ExecuteOutput(txOpts, voucherOutput0.payload, voucherOutput0.proof)
-	s.Require().NoError(err)
 }
 
 const TOTAL_INPUT_TEST = 10
@@ -156,14 +182,14 @@ const TOTAL_INPUT_TEST = 10
 // nolint
 func (s *ClaimerServiceSuite) fillData(ctx context.Context, appContract *common.Address) {
 	blockNumber := 9
-	voucherPayloadStr := "0x237a816f000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb9226600000000000000000000000000000000000000000000000000000000deadbeef00000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000005deadbeef14000000000000000000000000000000000000000000000000000000"
+	voucherPayloadStr := "0x237a816f000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb92266000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000004deadbeef00000000000000000000000000000000000000000000000000000000"
 	noticePayloadStr := "0xc258d6e500000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000005deadbeef00000000000000000000000000000000000000000000000000000000"
 	// msgSender := common.HexToAddress(devnet.SenderAddress)
 	for i := 0; i < TOTAL_INPUT_TEST*2; i++ {
 		id := strconv.FormatInt(int64(i), 10) // our ID
 		outputType := repository.RAW_VOUCHER_TYPE
 		if i%2 == 0 {
-			outputType = "notice"
+			outputType = repository.RAW_NOTICE_TYPE
 		}
 		_, err := s.container.GetInputRepository().Create(ctx, model.AdvanceInput{
 			ID:          id,
@@ -180,6 +206,7 @@ func (s *ClaimerServiceSuite) fillData(ctx context.Context, appContract *common.
 					OutputIndex: uint64(i),
 					InputIndex:  uint64(i),
 					Payload:     voucherPayloadStr,
+					Value:       "0x0000000000000000000000000000000000000000000000000000000000000000",
 				},
 			)
 			s.Require().NoError(err)

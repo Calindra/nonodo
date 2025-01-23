@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"log/slog"
 	"math/big"
+	"sort"
 
+	"github.com/cartesi/rollups-graphql/pkg/convenience/model"
 	"github.com/cartesi/rollups-graphql/pkg/convenience/repository"
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -35,18 +37,13 @@ func (c *ClaimerService) CreateProofsAndSendClaim(
 	startBlockGte uint64,
 	endBlockLt uint64,
 ) error {
-	vouchers, err := c.VoucherRepository.FindAllVouchersByBlockNumber(
-		ctx,
-		startBlockGte,
-		endBlockLt,
-		false,
-	)
+	vouchers, err := c.VoucherRepository.FindAll(ctx)
 	if err != nil {
 		return err
 	}
 	notices, err := c.NoticeRepository.FindAllNoticesByBlockNumber(
 		ctx,
-		startBlockGte,
+		0,
 		endBlockLt,
 	)
 	if err != nil {
@@ -59,36 +56,53 @@ func (c *ClaimerService) CreateProofsAndSendClaim(
 	)
 	lenVouchers := len(vouchers)
 	lenNotices := len(notices)
+	if lenVouchers == 0 && lenNotices == 0 {
+		return nil
+	}
 	outputs := make([]*UnifiedOutput, lenVouchers+lenNotices)
 	for i, voucher := range vouchers {
-		outputs[i] = NewUnifiedOutput(voucher.Payload, voucher.ProofOutputIndex)
+		outputs[i] = NewUnifiedOutput(voucher.Payload, voucher.OutputIndex)
+		outputs[i].AppContract = voucher.AppContract
+		outputs[i].OutputType = repository.RAW_VOUCHER_TYPE
+		outputs[i].OutputIndex = voucher.OutputIndex
 	}
 	for i, notice := range notices {
-		outputs[i+lenVouchers] = NewUnifiedOutput(notice.Payload, notice.ProofOutputIndex)
+		outputs[i+lenVouchers] = NewUnifiedOutput(notice.Payload, notice.OutputIndex)
+		outputs[i+lenVouchers].AppContract = common.HexToAddress(notice.AppContract)
+		outputs[i+lenVouchers].OutputType = repository.RAW_NOTICE_TYPE
+		outputs[i+lenVouchers].OutputIndex = notice.OutputIndex
 	}
+	sort.Slice(outputs, func(i, j int) bool {
+		return outputs[i].proof.OutputIndex < outputs[j].proof.OutputIndex
+	})
 	claim, err := c.claimer.FillProofsAndReturnClaim(outputs)
 	if err != nil {
 		return err
 	}
 	slog.Debug("CreateProofs", "claim", claim.Hex())
-	for i := range vouchers {
-		vouchers[i].OutputHashesSiblings = ToJsonArray(outputs[i].proof.OutputHashesSiblings)
-		vouchers[i].ProofOutputIndex = outputs[i].proof.OutputIndex
-		err := c.VoucherRepository.SetProof(ctx, vouchers[i])
-		if err != nil {
-			return err
+	for i := range outputs {
+		if outputs[i].OutputType == repository.RAW_VOUCHER_TYPE {
+			voucher := model.ConvenienceVoucher{
+				AppContract:          outputs[i].AppContract,
+				OutputHashesSiblings: ToJsonArray(outputs[i].proof.OutputHashesSiblings),
+				OutputIndex:          outputs[i].OutputIndex,
+			}
+			err := c.VoucherRepository.SetProof(ctx, &voucher)
+			if err != nil {
+				return err
+			}
+		} else if outputs[i].OutputType == repository.RAW_NOTICE_TYPE {
+			notice := model.ConvenienceNotice{
+				AppContract:          outputs[i].AppContract.Hex(),
+				OutputHashesSiblings: ToJsonArray(outputs[i].proof.OutputHashesSiblings),
+				OutputIndex:          outputs[i].OutputIndex,
+				ProofOutputIndex:     outputs[i].OutputIndex,
+			}
+			err := c.NoticeRepository.SetProof(ctx, &notice)
+			if err != nil {
+				return err
+			}
 		}
-	}
-	for i := range notices {
-		notices[i].OutputHashesSiblings = ToJsonArray(outputs[i+lenVouchers].proof.OutputHashesSiblings)
-		notices[i].ProofOutputIndex = outputs[i+lenVouchers].proof.OutputIndex
-		err := c.NoticeRepository.SetProof(ctx, notices[i])
-		if err != nil {
-			return err
-		}
-	}
-	if lenVouchers == 0 && lenNotices == 0 {
-		return nil
 	}
 	var appAddress common.Address
 	if lenVouchers > 0 {

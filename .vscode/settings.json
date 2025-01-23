@@ -47,6 +47,7 @@
         "Inputter",
         "isatty",
         "jmoiron",
+        "Keccak",
         "keyrings",
         "labstack",
         "Ligneul",

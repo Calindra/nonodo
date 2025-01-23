@@ -97,9 +97,8 @@ func (s *ClaimerSuite) TestMakeTheClaim() {
 
 	// nolint
 	voucherPayloadStr := "237a816f000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb9226600000000000000000000000000000000000000000000000000000000deadbeef00000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000005deadbeef14000000000000000000000000000000000000000000000000000000"
-	voucherOutput0 := NewUnifiedOutput(voucherPayloadStr, uint64(1))
-	voucherOutput1 := NewUnifiedOutput(voucherPayloadStr, uint64(3))
-	voucherOutput1.proof.OutputIndex = 300 // due to simplification, it doesn't matter
+	voucherOutput0 := NewUnifiedOutput(voucherPayloadStr, uint64(0))
+	voucherOutput1 := NewUnifiedOutput(voucherPayloadStr, uint64(1))
 
 	outputs := []*UnifiedOutput{
 		voucherOutput0, voucherOutput1,
@@ -131,8 +130,11 @@ func (s *ClaimerSuite) TestMakeTheClaim() {
 	txOpts, err = devnet.DefaultTxOpts(ctx, ethClient)
 	s.Require().NoError(err)
 
-	_, err = applicationOnChain.ExecuteOutput(txOpts, voucherOutput0.payload, voucherOutput0.proof)
+	tx, err := applicationOnChain.ExecuteOutput(txOpts, voucherOutput0.payload, voucherOutput0.proof)
 	s.Require().NoError(err)
-
-	s.Equal(300, int(voucherOutput1.proof.OutputIndex))
+	receipt, err := bind.WaitMined(context.Background(), ethClient, tx)
+	if err != nil {
+		s.Require().NoError(err)
+	}
+	s.Equal(uint64(0), receipt.Status)
 }

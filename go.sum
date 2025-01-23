@@ -129,6 +129,8 @@ github.com/cartesi/rollups-graphql v0.0.0-20250121232908-208a9d0697d9 h1:xRe8O6X
 github.com/cartesi/rollups-graphql v0.0.0-20250121232908-208a9d0697d9/go.mod h1:UyHNESjR+yjVl/PQDZUaJRtfC2xJ5IkuoQL+QMplPPE=
 github.com/cartesi/rollups-graphql v0.0.0-20250121233645-bc540761b21a h1:KV6MoBV0vQvYONP0Ak1kGAoS0J9jdHm1IAsoyfkhiks=
 github.com/cartesi/rollups-graphql v0.0.0-20250121233645-bc540761b21a/go.mod h1:UyHNESjR+yjVl/PQDZUaJRtfC2xJ5IkuoQL+QMplPPE=
+github.com/cartesi/rollups-graphql v0.0.0-20250123015513-a3f31466b23d h1:Ym32VD+vc2flzLnR2cLVhnQfHMImHBRjRawc+WZIJIY=
+github.com/cartesi/rollups-graphql v0.0.0-20250123015513-a3f31466b23d/go.mod h1:UyHNESjR+yjVl/PQDZUaJRtfC2xJ5IkuoQL+QMplPPE=
 github.com/celestiaorg/celestia-core v1.43.0-tm-v0.34.35 h1:L4GTm+JUXhB0a/nGPMq6jEqqe6THuYSQ8m2kUCtZYqw=
 github.com/celestiaorg/celestia-core v1.43.0-tm-v0.34.35/go.mod h1:bFr0lAGwaJ0mOHSBmib5/ca5pbBf1yKWGPs93Td0HPw=
 github.com/celestiaorg/celestia-openrpc v0.5.0 h1:coCflj4fRoemrCv4XrUtlXXcZ8tsYBFmVabmlm1BP20=
