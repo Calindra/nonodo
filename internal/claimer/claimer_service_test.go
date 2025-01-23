@@ -78,7 +78,7 @@ func (s *ClaimerServiceSuite) SetupTest() {
 
 	s.dbFactory = commons.NewDbFactory()
 	db := s.dbFactory.CreateDb("claim-service.sqlite3")
-	s.container = convenience.NewContainer(*db, false)
+	s.container = convenience.NewContainer(*db, true)
 	ethClient, err := ethclient.DialContext(s.ctx, s.rpcUrl)
 	s.Require().NoError(err)
 	s.ethClient = ethClient
@@ -119,10 +119,10 @@ func (s *ClaimerServiceSuite) TestMakeTheClaimAndValidateOutputOnChain() {
 		uint64(endBlockLt),
 	)
 	s.Require().NoError(err)
-	pages, err := s.container.GetVoucherRepository().FindAllVouchers(s.ctx, nil, nil, nil, nil, nil)
+	vouchers, err := s.container.GetVoucherRepository().FindAll(s.ctx)
 	s.Require().NoError(err)
 	siblings := []string{}
-	voucher := pages.Rows[0]
+	voucher := vouchers[0]
 	err = json.Unmarshal([]byte(voucher.OutputHashesSiblings), &siblings)
 	s.Require().NoError(err)
 	s.Equal(63, len(siblings))
@@ -134,50 +134,41 @@ func (s *ClaimerServiceSuite) checkVoucher(voucher model.ConvenienceVoucher) {
 	applicationOnChain, err := contracts.NewApplication(appContract, s.ethClient)
 	s.Require().NoError(err)
 
-	// smoke test
 	callOpts := bind.CallOpts{}
 	owner, err := applicationOnChain.Owner(&callOpts)
 	s.Require().NoError(err)
 	slog.Debug("Owner", "owner", owner, "appContract", appContract.Hex())
+	time.Sleep(time.Second * 3)
+	voucherOutput0 := NewUnifiedOutput(voucher.Payload, voucher.OutputIndex)
+	arr, err := To32ByteArray(voucher.OutputHashesSiblings)
+	s.Require().NoError(err)
+	// arr[0][0] = 0
+	voucherOutput0.proof.OutputHashesSiblings = arr
 	{
-		voucherOutput0 := NewUnifiedOutput(voucher.Payload, voucher.ProofOutputIndex)
-		// voucherOutput0.proof.OutputIndex = voucher.ProofOutputIndex
-		// voucherOutput0.proof.OutputIndex = 0
-		arr, err := To32ByteArray(voucher.OutputHashesSiblings)
-		s.Require().NoError(err)
-		// arr[0][0] = 0
-		voucherOutput0.proof.OutputHashesSiblings = arr
+		// it should be valid
 		err = applicationOnChain.ValidateOutput(&callOpts, voucherOutput0.payload, voucherOutput0.proof)
 		s.Require().NoError(err)
-
+	}
+	{
+		// it should be executed
 		txOpts, err := devnet.DefaultTxOpts(s.ctx, s.ethClient)
 		s.Require().NoError(err)
-		s.Require().Equal(0, int(voucherOutput0.proof.OutputIndex))
+		s.Require().Equal(1, int(voucherOutput0.proof.OutputIndex))
 		tx, err := applicationOnChain.ExecuteOutput(txOpts, voucherOutput0.payload, voucherOutput0.proof)
 		s.Require().NoError(err)
 		receipt, err := bind.WaitMined(context.Background(), s.ethClient, tx)
 		s.Require().NoError(err)
-		// _, err = s.getRevertMessage(s.ethClient, tx.Hash())
-		// s.Require().NoError(err)
-		// if receipt.Status != 1 {
-		// 	s.Fail("Revert reason: %s\n", msg)
-		// }
 		s.Equal(uint64(1), receipt.Status)
 	}
 	{
-		time.Sleep(time.Second * 3)
-		voucherOutput0 := NewUnifiedOutput(voucher.Payload, voucher.ProofOutputIndex)
-		// voucherOutput0.proof.OutputIndex = voucher.ProofOutputIndex
-		// voucherOutput0.proof.OutputIndex = 0
-		arr, err := To32ByteArray(voucher.OutputHashesSiblings)
-		s.Require().NoError(err)
-		voucherOutput0.proof.OutputHashesSiblings = arr
+		// still valid
 		err = applicationOnChain.ValidateOutput(&callOpts, voucherOutput0.payload, voucherOutput0.proof)
 		s.Require().NoError(err)
-
+	}
+	{
+		// it should not be executed again
 		txOpts, err := devnet.DefaultTxOpts(s.ctx, s.ethClient)
 		s.Require().NoError(err)
-
 		tx, err := applicationOnChain.ExecuteOutput(txOpts, voucherOutput0.payload, voucherOutput0.proof)
 		s.Require().NoError(err)
 		receipt, err := bind.WaitMined(context.Background(), s.ethClient, tx)
@@ -186,6 +177,7 @@ func (s *ClaimerServiceSuite) checkVoucher(voucher model.ConvenienceVoucher) {
 		}
 		s.Equal(uint64(0), receipt.Status)
 	}
+
 }
 
 const TOTAL_INPUT_TEST = 10
@@ -193,7 +185,7 @@ const TOTAL_INPUT_TEST = 10
 // nolint
 func (s *ClaimerServiceSuite) fillData(ctx context.Context, appContract *common.Address) {
 	blockNumber := 9
-	voucherPayloadStr := "0x237a816f000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb9226600000000000000000000000000000000000000000000000000000000deadbeef00000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000005deadbeef14000000000000000000000000000000000000000000000000000000"
+	voucherPayloadStr := "0x237a816f000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb92266000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000600000000000000000000000000000000000000000000000000000000000000004deadbeef00000000000000000000000000000000000000000000000000000000"
 	noticePayloadStr := "0xc258d6e500000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000005deadbeef00000000000000000000000000000000000000000000000000000000"
 	// msgSender := common.HexToAddress(devnet.SenderAddress)
 	for i := 0; i < TOTAL_INPUT_TEST*2; i++ {
@@ -308,7 +300,6 @@ func (s *ClaimerServiceSuite) decodeCustomError(data []byte) (string, error) {
 
 	// Decode the error
 	methodID := data[:4]
-	s.Fail("CustomError", "methodID", methodID)
 	for name, method := range parsedABI.Methods {
 		if hex.EncodeToString(method.ID) == hex.EncodeToString(methodID) {
 			unpacked, err := method.Inputs.Unpack(data[4:])
@@ -317,6 +308,30 @@ func (s *ClaimerServiceSuite) decodeCustomError(data []byte) (string, error) {
 			}
 			return fmt.Sprintf("%s: %v", name, unpacked), nil
 		}
+	}
+
+	return "Unknown error", nil
+}
+
+func (s *ClaimerServiceSuite) errorCodes() (string, error) {
+	errorABI := `
+		[
+			{ "name": "OutputNotExecutable", "type": "error", "inputs": [{"name": "output", "type": "bytes"}] },
+			{ "name": "OutputNotReexecutable", "type": "error", "inputs": [{"name": "output", "type": "bytes"}] },
+			{ "name": "InsufficientFunds", "type": "error", "inputs": [{"name": "value", "type": "uint256"}, {"name": "balance", "type": "uint256"}] },
+			{ "name": "InvalidOutputHashesSiblingsArrayLength", "type": "error", "inputs": [] },
+			{ "name": "ClaimNotAccepted", "type": "error", "inputs": [{"name": "claim", "type": "bytes32"}] }
+		]
+	`
+
+	parsedABI, err := abi.JSON(strings.NewReader(errorABI))
+	if err != nil {
+		return "", fmt.Errorf("failed to parse ABI: %w", err)
+	}
+
+	slog.Warn("Error Codes")
+	for name, err := range parsedABI.Errors {
+		slog.Warn("Code", "name", name, "Sig", err.Sig, "ID", hex.EncodeToString(err.ID[:]))
 	}
 
 	return "Unknown error", nil

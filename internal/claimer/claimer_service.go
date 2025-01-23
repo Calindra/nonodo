@@ -75,12 +75,6 @@ func (c *ClaimerService) CreateProofsAndSendClaim(
 	sort.Slice(outputs, func(i, j int) bool {
 		return outputs[i].proof.OutputIndex < outputs[j].proof.OutputIndex
 	})
-	// for i := range outputs {
-	// 	slog.Info("Index",
-	// 		"i", i,
-	// 		"OutputIndex", outputs[i].proof.OutputIndex,
-	// 	)
-	// }
 	claim, err := c.claimer.FillProofsAndReturnClaim(outputs)
 	if err != nil {
 		return err
