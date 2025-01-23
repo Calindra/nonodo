@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -17,6 +18,8 @@ import (
 	"github.com/cartesi/rollups-graphql/pkg/convenience"
 	"github.com/cartesi/rollups-graphql/pkg/convenience/model"
 	"github.com/cartesi/rollups-graphql/pkg/convenience/repository"
+	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -137,8 +140,8 @@ func (s *ClaimerServiceSuite) checkVoucher(voucher model.ConvenienceVoucher) {
 	s.Require().NoError(err)
 	slog.Debug("Owner", "owner", owner, "appContract", appContract.Hex())
 	{
-		voucherOutput0 := NewUnifiedOutput(voucher.Payload, uint64(0))
-		voucherOutput0.proof.OutputIndex = voucher.ProofOutputIndex
+		voucherOutput0 := NewUnifiedOutput(voucher.Payload, voucher.ProofOutputIndex)
+		// voucherOutput0.proof.OutputIndex = voucher.ProofOutputIndex
 		// voucherOutput0.proof.OutputIndex = 0
 		arr, err := To32ByteArray(voucher.OutputHashesSiblings)
 		s.Require().NoError(err)
@@ -149,19 +152,22 @@ func (s *ClaimerServiceSuite) checkVoucher(voucher model.ConvenienceVoucher) {
 
 		txOpts, err := devnet.DefaultTxOpts(s.ctx, s.ethClient)
 		s.Require().NoError(err)
-
+		s.Require().Equal(0, int(voucherOutput0.proof.OutputIndex))
 		tx, err := applicationOnChain.ExecuteOutput(txOpts, voucherOutput0.payload, voucherOutput0.proof)
 		s.Require().NoError(err)
 		receipt, err := bind.WaitMined(context.Background(), s.ethClient, tx)
-		if err != nil {
-			s.Require().NoError(err)
-		}
+		s.Require().NoError(err)
+		// _, err = s.getRevertMessage(s.ethClient, tx.Hash())
+		// s.Require().NoError(err)
+		// if receipt.Status != 1 {
+		// 	s.Fail("Revert reason: %s\n", msg)
+		// }
 		s.Equal(uint64(1), receipt.Status)
 	}
 	{
 		time.Sleep(time.Second * 3)
-		voucherOutput0 := NewUnifiedOutput(voucher.Payload, uint64(0))
-		voucherOutput0.proof.OutputIndex = voucher.ProofOutputIndex
+		voucherOutput0 := NewUnifiedOutput(voucher.Payload, voucher.ProofOutputIndex)
+		// voucherOutput0.proof.OutputIndex = voucher.ProofOutputIndex
 		// voucherOutput0.proof.OutputIndex = 0
 		arr, err := To32ByteArray(voucher.OutputHashesSiblings)
 		s.Require().NoError(err)
@@ -211,6 +217,7 @@ func (s *ClaimerServiceSuite) fillData(ctx context.Context, appContract *common.
 					OutputIndex: uint64(i),
 					InputIndex:  uint64(i),
 					Payload:     voucherPayloadStr,
+					Value:       "0x0000000000000000000000000000000000000000000000000000000000000000",
 				},
 			)
 			s.Require().NoError(err)
@@ -259,4 +266,58 @@ func To32ByteArray(jsonInput string) ([][32]byte, error) {
 	}
 
 	return result, nil
+}
+
+// getRevertMessage fetches and decodes the revert reason or custom error from a failed transaction.
+func (s *ClaimerServiceSuite) getRevertMessage(client *ethclient.Client, txHash common.Hash) (string, error) {
+	tx, _, err := client.TransactionByHash(context.Background(), txHash)
+	if err != nil {
+		return "", fmt.Errorf("failed to fetch transaction: %w", err)
+	}
+
+	callMsg := ethereum.CallMsg{
+		To:   tx.To(),
+		Data: tx.Data(),
+	}
+
+	// Simulate the call to get the revert data
+	revertData, err := client.CallContract(context.Background(), callMsg, nil)
+	if err == nil {
+		return s.decodeCustomError(revertData)
+	}
+
+	return "", fmt.Errorf("unexpected error: %w", err)
+}
+
+// decodeCustomError decodes the revert data into custom error messages.
+func (s *ClaimerServiceSuite) decodeCustomError(data []byte) (string, error) {
+	errorABI := `
+		[
+			{ "name": "OutputNotExecutable", "type": "error", "inputs": [{"name": "output", "type": "bytes"}] },
+			{ "name": "OutputNotReexecutable", "type": "error", "inputs": [{"name": "output", "type": "bytes"}] },
+			{ "name": "InsufficientFunds", "type": "error", "inputs": [{"name": "value", "type": "uint256"}, {"name": "balance", "type": "uint256"}] },
+			{ "name": "InvalidOutputHashesSiblingsArrayLength", "type": "error", "inputs": [] },
+			{ "name": "ClaimNotAccepted", "type": "error", "inputs": [{"name": "claim", "type": "bytes32"}] }
+		]
+	`
+
+	parsedABI, err := abi.JSON(strings.NewReader(errorABI))
+	if err != nil {
+		return "", fmt.Errorf("failed to parse ABI: %w", err)
+	}
+
+	// Decode the error
+	methodID := data[:4]
+	s.Fail("CustomError", "methodID", methodID)
+	for name, method := range parsedABI.Methods {
+		if hex.EncodeToString(method.ID) == hex.EncodeToString(methodID) {
+			unpacked, err := method.Inputs.Unpack(data[4:])
+			if err != nil {
+				return "", fmt.Errorf("failed to unpack error data: %w", err)
+			}
+			return fmt.Sprintf("%s: %v", name, unpacked), nil
+		}
+	}
+
+	return "Unknown error", nil
 }

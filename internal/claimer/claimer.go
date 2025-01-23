@@ -177,8 +177,11 @@ func (c *Claimer) CreateNewOnChainApp(
 }
 
 type UnifiedOutput struct {
-	payload []byte
-	proof   contracts.OutputValidityProof
+	payload     []byte
+	proof       contracts.OutputValidityProof
+	OutputType  string
+	AppContract common.Address
+	OutputIndex uint64
 }
 
 func NewUnifiedOutput(payload string, outputIndex uint64) *UnifiedOutput {
@@ -205,9 +208,13 @@ func (c *Claimer) FillProofsAndReturnClaim(
 	for idx := range outputs {
 		// WARN: simplification to avoid redoing all the proofs in the world
 		// old := outputs[idx].proof.OutputIndex
+		slog.Info("Index",
+			"idx", idx,
+			"OutputIndex", outputs[idx].proof.OutputIndex,
+		)
 		outputs[idx].proof.OutputIndex = uint64(idx)
-		start := outputs[idx].proof.OutputIndex * MAX_OUTPUT_TREE_HEIGHT
-		end := (outputs[idx].proof.OutputIndex * MAX_OUTPUT_TREE_HEIGHT) + MAX_OUTPUT_TREE_HEIGHT
+		start := int(outputs[idx].proof.OutputIndex) * MAX_OUTPUT_TREE_HEIGHT
+		end := (int(outputs[idx].proof.OutputIndex) * MAX_OUTPUT_TREE_HEIGHT) + MAX_OUTPUT_TREE_HEIGHT
 		outputs[idx].proof.OutputHashesSiblings = ConvertHashesToOutputHashesSiblings(proofs[start:end])
 		// outputs[idx].proof.OutputIndex = old
 	}
