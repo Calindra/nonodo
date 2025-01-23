@@ -130,8 +130,11 @@ func (s *ClaimerSuite) TestMakeTheClaim() {
 	txOpts, err = devnet.DefaultTxOpts(ctx, ethClient)
 	s.Require().NoError(err)
 
-	_, err = applicationOnChain.ExecuteOutput(txOpts, voucherOutput0.payload, voucherOutput0.proof)
+	tx, err := applicationOnChain.ExecuteOutput(txOpts, voucherOutput0.payload, voucherOutput0.proof)
 	s.Require().NoError(err)
-
-	// s.Equal(300, int(voucherOutput1.proof.OutputIndex))
+	receipt, err := bind.WaitMined(context.Background(), ethClient, tx)
+	if err != nil {
+		s.Require().NoError(err)
+	}
+	s.Equal(uint64(0), receipt.Status)
 }
