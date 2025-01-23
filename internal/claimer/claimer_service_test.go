@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 
@@ -18,8 +17,6 @@ import (
 	"github.com/cartesi/rollups-graphql/pkg/convenience"
 	"github.com/cartesi/rollups-graphql/pkg/convenience/model"
 	"github.com/cartesi/rollups-graphql/pkg/convenience/repository"
-	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -192,7 +189,7 @@ func (s *ClaimerServiceSuite) fillData(ctx context.Context, appContract *common.
 		id := strconv.FormatInt(int64(i), 10) // our ID
 		outputType := repository.RAW_VOUCHER_TYPE
 		if i%2 == 0 {
-			outputType = "notice"
+			outputType = repository.RAW_NOTICE_TYPE
 		}
 		_, err := s.container.GetInputRepository().Create(ctx, model.AdvanceInput{
 			ID:          id,
@@ -258,81 +255,4 @@ func To32ByteArray(jsonInput string) ([][32]byte, error) {
 	}
 
 	return result, nil
-}
-
-// getRevertMessage fetches and decodes the revert reason or custom error from a failed transaction.
-func (s *ClaimerServiceSuite) getRevertMessage(client *ethclient.Client, txHash common.Hash) (string, error) {
-	tx, _, err := client.TransactionByHash(context.Background(), txHash)
-	if err != nil {
-		return "", fmt.Errorf("failed to fetch transaction: %w", err)
-	}
-
-	callMsg := ethereum.CallMsg{
-		To:   tx.To(),
-		Data: tx.Data(),
-	}
-
-	// Simulate the call to get the revert data
-	revertData, err := client.CallContract(context.Background(), callMsg, nil)
-	if err == nil {
-		return s.decodeCustomError(revertData)
-	}
-
-	return "", fmt.Errorf("unexpected error: %w", err)
-}
-
-// decodeCustomError decodes the revert data into custom error messages.
-func (s *ClaimerServiceSuite) decodeCustomError(data []byte) (string, error) {
-	errorABI := `
-		[
-			{ "name": "OutputNotExecutable", "type": "error", "inputs": [{"name": "output", "type": "bytes"}] },
-			{ "name": "OutputNotReexecutable", "type": "error", "inputs": [{"name": "output", "type": "bytes"}] },
-			{ "name": "InsufficientFunds", "type": "error", "inputs": [{"name": "value", "type": "uint256"}, {"name": "balance", "type": "uint256"}] },
-			{ "name": "InvalidOutputHashesSiblingsArrayLength", "type": "error", "inputs": [] },
-			{ "name": "ClaimNotAccepted", "type": "error", "inputs": [{"name": "claim", "type": "bytes32"}] }
-		]
-	`
-
-	parsedABI, err := abi.JSON(strings.NewReader(errorABI))
-	if err != nil {
-		return "", fmt.Errorf("failed to parse ABI: %w", err)
-	}
-
-	// Decode the error
-	methodID := data[:4]
-	for name, method := range parsedABI.Methods {
-		if hex.EncodeToString(method.ID) == hex.EncodeToString(methodID) {
-			unpacked, err := method.Inputs.Unpack(data[4:])
-			if err != nil {
-				return "", fmt.Errorf("failed to unpack error data: %w", err)
-			}
-			return fmt.Sprintf("%s: %v", name, unpacked), nil
-		}
-	}
-
-	return "Unknown error", nil
-}
-
-func (s *ClaimerServiceSuite) errorCodes() (string, error) {
-	errorABI := `
-		[
-			{ "name": "OutputNotExecutable", "type": "error", "inputs": [{"name": "output", "type": "bytes"}] },
-			{ "name": "OutputNotReexecutable", "type": "error", "inputs": [{"name": "output", "type": "bytes"}] },
-			{ "name": "InsufficientFunds", "type": "error", "inputs": [{"name": "value", "type": "uint256"}, {"name": "balance", "type": "uint256"}] },
-			{ "name": "InvalidOutputHashesSiblingsArrayLength", "type": "error", "inputs": [] },
-			{ "name": "ClaimNotAccepted", "type": "error", "inputs": [{"name": "claim", "type": "bytes32"}] }
-		]
-	`
-
-	parsedABI, err := abi.JSON(strings.NewReader(errorABI))
-	if err != nil {
-		return "", fmt.Errorf("failed to parse ABI: %w", err)
-	}
-
-	slog.Warn("Error Codes")
-	for name, err := range parsedABI.Errors {
-		slog.Warn("Code", "name", name, "Sig", err.Sig, "ID", hex.EncodeToString(err.ID[:]))
-	}
-
-	return "Unknown error", nil
 }

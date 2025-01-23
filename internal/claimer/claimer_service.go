@@ -49,7 +49,7 @@ func (c *ClaimerService) CreateProofsAndSendClaim(
 	if err != nil {
 		return err
 	}
-	slog.Info("CreateProofs",
+	slog.Debug("CreateProofs",
 		"vouchers", len(vouchers),
 		"startBlockGte", startBlockGte,
 		"endBlockLt", endBlockLt,
@@ -63,13 +63,13 @@ func (c *ClaimerService) CreateProofsAndSendClaim(
 	for i, voucher := range vouchers {
 		outputs[i] = NewUnifiedOutput(voucher.Payload, voucher.OutputIndex)
 		outputs[i].AppContract = voucher.AppContract
-		outputs[i].OutputType = "voucher"
+		outputs[i].OutputType = repository.RAW_VOUCHER_TYPE
 		outputs[i].OutputIndex = voucher.OutputIndex
 	}
 	for i, notice := range notices {
 		outputs[i+lenVouchers] = NewUnifiedOutput(notice.Payload, notice.OutputIndex)
 		outputs[i+lenVouchers].AppContract = common.HexToAddress(notice.AppContract)
-		outputs[i+lenVouchers].OutputType = "notice"
+		outputs[i+lenVouchers].OutputType = repository.RAW_NOTICE_TYPE
 		outputs[i+lenVouchers].OutputIndex = notice.OutputIndex
 	}
 	sort.Slice(outputs, func(i, j int) bool {
@@ -81,7 +81,7 @@ func (c *ClaimerService) CreateProofsAndSendClaim(
 	}
 	slog.Debug("CreateProofs", "claim", claim.Hex())
 	for i := range outputs {
-		if outputs[i].OutputType == "voucher" {
+		if outputs[i].OutputType == repository.RAW_VOUCHER_TYPE {
 			voucher := model.ConvenienceVoucher{
 				AppContract:          outputs[i].AppContract,
 				OutputHashesSiblings: ToJsonArray(outputs[i].proof.OutputHashesSiblings),
@@ -91,7 +91,7 @@ func (c *ClaimerService) CreateProofsAndSendClaim(
 			if err != nil {
 				return err
 			}
-		} else if outputs[i].OutputType == "notice" {
+		} else if outputs[i].OutputType == repository.RAW_NOTICE_TYPE {
 			notice := model.ConvenienceNotice{
 				AppContract:          outputs[i].AppContract.Hex(),
 				OutputHashesSiblings: ToJsonArray(outputs[i].proof.OutputHashesSiblings),

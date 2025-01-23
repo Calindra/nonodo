@@ -56,12 +56,11 @@ func (c *Claimer) MakeTheClaim(ctx context.Context,
 	if err != nil {
 		return err
 	}
-	slog.Debug("SubmitClaim", "tx", tx.Hash())
 	receipt, err := bind.WaitMined(context.Background(), c.ethClient, tx)
 	if err != nil {
 		return err
 	}
-	slog.Debug("SubmitClaim", "receipt.status", receipt.Status)
+	slog.Info("SubmitClaim", "receipt.status", receipt.Status, "tx", tx.Hash())
 	abi, err := contracts.IConsensusMetaData.GetAbi()
 	if err != nil {
 		return err
