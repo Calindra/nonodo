@@ -1,4 +1,3 @@
-const { toHex } = require('viem');
 const { privateKeyToAccount } = require('viem/accounts');
 const config = require('./config.json');
 const serializeBigInt = (key, value) => {
@@ -85,7 +84,7 @@ const addTransactionL2 = async (chainId, appAddress, payload) => {
 };
 
 (async () => {
-    const chainId = "0xaa36a7"; // sepolia
+    const chainId = process.env.CHAIN_ID || "0xaa36a7"; // sepolia
     const appAddress = process.env.APP_ADDRESS || "0x5a205fcb6947e200615b75c409ac0aa486d77649";
     const inputData = process.env.INPUT || "0xdeadbeef";
 
