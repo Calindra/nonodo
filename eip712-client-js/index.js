@@ -92,5 +92,6 @@ const addTransactionL2 = async (chainId, appAddress, payload) => {
         await addTransactionL2(chainId, appAddress, inputData);
     } catch (error) {
         console.error("Error:", error);
+        process.exit(1);
     }
 })();
