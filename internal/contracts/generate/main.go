@@ -32,6 +32,7 @@ import (
 
 const (
 	celestiaUrl         = "https://raw.githubusercontent.com/miltonjonat/rollups-celestia/main/onchain/deployments/sepolia/CelestiaRelay.json"
+	adapterCt           = "https://raw.githubusercontent.com/Calindra/dapp-coprocessor-frontend/refs/heads/main/onchain/artifacts/contracts/FakeCoprocessorAdapter.sol/FakeCoprocessorAdapter.json"
 	openzeppelin        = "https://registry.npmjs.org/@openzeppelin/contracts/-/contracts-5.1.0.tgz"
 	rollupsContractsUrl = "https://registry.npmjs.org/@cartesi/rollups/-/rollups-2.0.0-rc.12.tgz"
 	baseContractsPath   = "package/export/artifacts/contracts/"
@@ -106,6 +107,9 @@ func main() {
 	checkErr("unzip contracts", err)
 	defer contractsTarOpenZeppelin.Close()
 
+	adptJson := downloadJsonContract(adapterCt)
+	defer adptJson.Close()
+
 	contractJson := downloadJsonContract(celestiaUrl)
 	defer contractJson.Close()
 
@@ -135,6 +139,14 @@ func main() {
 		outFile:  "celestia_relay.go",
 	})
 	bindings = append(bindings, bindingsOpenZeppelin...)
+
+	content = readJson(adptJson)
+	contents[baseContractsPath+"FakeCoprocessorAdapter.json"] = content
+	bindings = append(bindings, contractBinding{
+		jsonPath: baseContractsPath + "FakeCoprocessorAdapter.json",
+		typeName: "CoprocessorAdapter",
+		outFile:  "CoprocessorAdapter.go",
+	})
 
 	for _, b := range bindings {
 		content := contents[b.jsonPath]

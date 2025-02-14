@@ -251,9 +251,9 @@ func (r *RollupAPI) AddVoucher(c echo.Context) error {
 	return c.JSON(http.StatusOK, &resp)
 }
 
-func (r *RollupAPI) addCoProcessorNotice(notice []byte) {
-	contractABI := `[{"constant":false,"inputs":[{"name":"payloadHash","type":"bytes32"},{"name":"notice","type":"bytes"}],"name":"nonodoHandleNotice","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"}]`
-	client, err := ethclient.Dial("http://127.0.0.1:8545")
+func (r *RollupAPI) addCoProcessorNotice(ctx context.Context, notice []byte) {
+	contractABI := contracts.CoprocessorAdapterMetaData.ABI
+	client, err := ethclient.DialContext(ctx, "http://127.0.0.1:8545")
 	if err != nil {
 		log.Fatalf("Failed to connect to the Ethereum client: %v", err)
 	}
@@ -284,13 +284,13 @@ func (r *RollupAPI) addCoProcessorNotice(notice []byte) {
 	fromAddress := crypto.PubkeyToAddress(privateKey.PublicKey)
 
 	// Get the nonce for the transaction
-	nonce, err := client.PendingNonceAt(context.Background(), fromAddress)
+	nonce, err := client.PendingNonceAt(ctx, fromAddress)
 	if err != nil {
 		log.Fatalf("Failed to get nonce: %v", err)
 	}
 
 	// Set the gas price
-	gasPrice, err := client.SuggestGasPrice(context.Background())
+	gasPrice, err := client.SuggestGasPrice(ctx)
 	if err != nil {
 		log.Fatalf("Failed to get gas price: %v", err)
 	}
@@ -298,7 +298,7 @@ func (r *RollupAPI) addCoProcessorNotice(notice []byte) {
 	contractAddress := "0x68B1D87F95878fE05B998F19b66F4baba5De1aed"
 	address := common.HexToAddress(contractAddress)
 	// Estimate the gas needed for the transaction
-	gasLimit, err := client.EstimateGas(context.Background(), ethereum.CallMsg{
+	gasLimit, err := client.EstimateGas(ctx, ethereum.CallMsg{
 		To:   &address,
 		Data: data,
 	})
@@ -308,7 +308,7 @@ func (r *RollupAPI) addCoProcessorNotice(notice []byte) {
 
 	// Prepare the transaction
 	tx := types.NewTransaction(nonce, common.HexToAddress(contractAddress), big.NewInt(0), gasLimit, gasPrice, data)
-	chainID, err := client.NetworkID(context.Background())
+	chainID, err := client.NetworkID(ctx)
 	if err != nil {
 		log.Fatalf("Failed to get network ID: %v", err)
 	}
@@ -319,13 +319,13 @@ func (r *RollupAPI) addCoProcessorNotice(notice []byte) {
 	}
 
 	// Send the transaction
-	err = client.SendTransaction(context.Background(), signedTx)
+	err = client.SendTransaction(ctx, signedTx)
 	if err != nil {
 		log.Fatalf("Failed to send transaction: %v", err)
 	}
 
 	fmt.Println("Transaction sent! Transaction Hash:", signedTx.Hash().Hex())
-	receipt, err := bind.WaitMined(context.Background(), client, signedTx)
+	receipt, err := bind.WaitMined(ctx, client, signedTx)
 	if err != nil {
 		log.Fatalf("Failed to send transaction: %v", err)
 	}
@@ -337,6 +337,8 @@ func (r *RollupAPI) addCoProcessorNotice(notice []byte) {
 
 // Handle requests to /notice.
 func (r *RollupAPI) AddNotice(c echo.Context) error {
+	ctx := c.Request().Context()
+
 	if !checkContentType(c) {
 		slog.Error("invalid notice content type")
 		return c.String(http.StatusUnsupportedMediaType, "invalid content type")
@@ -356,7 +358,7 @@ func (r *RollupAPI) AddNotice(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "invalid hex payload")
 	}
 
-	r.addCoProcessorNotice(payload)
+	r.addCoProcessorNotice(ctx, payload)
 
 	abiParsed, err := contracts.OutputsMetaData.GetAbi()
 
