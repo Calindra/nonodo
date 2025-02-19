@@ -6,6 +6,7 @@ package inspect
 
 import (
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"time"
@@ -53,6 +54,7 @@ func (a *inspectAPI) InspectPost(c echo.Context) error {
 
 // Handle GET requests to /{payload}.
 func (a *inspectAPI) Inspect(c echo.Context, _ string) error {
+	slog.Warn("[Deprecated] The /inspect endpoint is deprecated and will be removed in a future version. Please migrate this method to POST.")
 	uri := c.Request().RequestURI[9:] // remove '/inspect/'
 	payload, err := url.QueryUnescape(uri)
 	if err != nil {
