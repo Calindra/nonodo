@@ -6,11 +6,9 @@ package inspect
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
-	"net/url"
 	"time"
 
 	"github.com/calindra/nonodo/internal/model"
@@ -57,14 +55,7 @@ func (a *inspectAPI) InspectPost(c echo.Context, _ string) error {
 
 // Handle GET requests to /{payload}.
 func (a *inspectAPI) Inspect(c echo.Context, appAddress string, _ string) error {
-	toRemove := len(fmt.Sprintf("/inspect/%s/", appAddress))
-	uri := c.Request().RequestURI[toRemove:] // remove '/inspect/<app-address>'
-	payload, err := url.QueryUnescape(uri)
-	slog.Debug("/inspect", "payload", payload)
-	if err != nil {
-		return c.String(http.StatusBadRequest, err.Error())
-	}
-	return a.inspect(c, []byte(payload))
+	return echo.NewHTTPError(http.StatusGone, "This endpoint is deprecated")
 }
 
 // Send the inspect input to the model and wait until it is completed.
