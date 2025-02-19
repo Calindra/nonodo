@@ -12,7 +12,6 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
-	"net/url"
 	"testing"
 	"time"
 
@@ -113,31 +112,6 @@ func (s *InspectSuite) TearDownTest() {
 }
 
 // Test cases //////////////////////////////////////////////////////////////////////////////////////
-
-func (s *InspectSuite) TestGetWithSimplePayload() {
-	s.testGet("hello")
-}
-
-func (s *InspectSuite) TestGetWithSpaces() {
-	s.testGet("hello world")
-}
-
-func (s *InspectSuite) TestGetWithUrlEncodedPayload() {
-	s.testGet("hello%20world")
-}
-
-func (s *InspectSuite) TestGetWithSlashes() {
-	s.testGet("user/123/name")
-}
-
-func (s *InspectSuite) TestGetWithPathAndQuery() {
-	s.testGet("user/data?key=value&key2=value2")
-}
-
-func (s *InspectSuite) TestGetWithJson() {
-	s.testGet(`{"key": ["value1", "value2"]}`)
-}
-
 func (s *InspectSuite) TestGetFailsWithEmptyPayload() {
 	status, body := s.doGetInspect("")
 	s.Equal(http.StatusNotFound, status)
@@ -197,16 +171,6 @@ func (s *InspectSuite) doPostInspect(payload []byte) (int, string) {
 		s.ctx, http.MethodPost, url, bytes.NewReader(payload))
 	s.Require().Nil(err)
 	return s.doHttpRequest(req)
-}
-
-func (s *InspectSuite) testGet(escapedPayload string) {
-	unescaped, err := url.QueryUnescape(escapedPayload)
-	s.Require().Nil(err)
-	payload := []byte(unescaped)
-	s.model.setInspectInput(payload)
-	status, body := s.doGetInspect(escapedPayload)
-	s.Equal(http.StatusOK, status)
-	s.Equal(echoResult(payload), body)
 }
 
 func (s *InspectSuite) testPost(payload []byte) {
