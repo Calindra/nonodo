@@ -65,7 +65,7 @@ func (s *AdapterSuite) SetupTest() {
 		inputRepository:   s.inputRepository,
 		voucherRepository: s.voucherRepository,
 		convenienceService: services.NewConvenienceService(
-			s.voucherRepository, s.noticeRepository, nil, nil,
+			s.voucherRepository, s.noticeRepository, nil, nil, nil,
 		),
 	}
 }
