@@ -21,11 +21,12 @@ func TestExecListenerSuite(t *testing.T) {
 
 type ExecListenerSuite struct {
 	suite.Suite
-	ConvenienceService *services.ConvenienceService
-	repository         *repository.VoucherRepository
-	noticeRepository   *repository.NoticeRepository
-	inputRepository    *repository.InputRepository
-	reportRepository   *repository.ReportRepository
+	ConvenienceService    *services.ConvenienceService
+	repository            *repository.VoucherRepository
+	noticeRepository      *repository.NoticeRepository
+	inputRepository       *repository.InputRepository
+	reportRepository      *repository.ReportRepository
+	applicationRepository *repository.ApplicationRepository
 }
 
 var Bob = common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
@@ -64,11 +65,16 @@ func (s *ExecListenerSuite) SetupTest() {
 		Db: db,
 	}
 
+	s.applicationRepository = &repository.ApplicationRepository{
+		Db: *db,
+	}
+
 	s.ConvenienceService = services.NewConvenienceService(
 		s.repository,
 		s.noticeRepository,
 		s.inputRepository,
 		s.reportRepository,
+		s.applicationRepository,
 	)
 }
 
