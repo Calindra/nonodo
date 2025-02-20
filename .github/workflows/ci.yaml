@@ -91,57 +91,6 @@ jobs:
           goarch: ${{ matrix.goarch }}
           extra_files: CHANGELOG.md LICENSE README.md
 
-  # release-darwin-arm64:
-  #   name: Build binaries for darwin arm64
-  #   runs-on: macos-14
-  #   needs: [release]
-
-  #   steps:
-  #     - uses: actions/checkout@v4
-
-  #     - name: Set up Go
-  #       uses: actions/setup-go@v5
-  #       with:
-  #         go-version: "1.21"
-
-  #     - name: Compile arm64
-  #       run: go build -tags "darwin arm64"
-
-  #     - name: Compress binary
-  #       run: |
-  #         tar -czvf nonodo-$GITHUB_REF_NAME-darwin-arm64.tar.gz nonodo
-
-  #     - name: Generate MD5 checksum
-  #       run: md5 -q nonodo-$GITHUB_REF_NAME-darwin-arm64.tar.gz > nonodo-$GITHUB_REF_NAME-darwin-arm64.tar.gz.md5
-
-  #     - name: Upload Artifact
-  #       env:
-  #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  #       run: |
-  #         gh release upload $GITHUB_REF_NAME nonodo-$GITHUB_REF_NAME-darwin-arm64.tar.gz --clobber
-  #         gh release upload $GITHUB_REF_NAME nonodo-$GITHUB_REF_NAME-darwin-arm64.tar.gz.md5 --clobber
-
-  # release-darwin-amd64:
-  #   name: Build binaries for Mac Intel
-  #   runs-on: macos-13-large
-  #   needs: [release]
-
-  #   steps:
-  #   - uses: actions/checkout@v4
-
-  #   - name: Set up Go
-  #     uses: actions/setup-go@v5
-  #     with:
-  #       go-version: '1.21'
-
-  #   - name: Install deps
-  #     run: |
-  #       brew install sqlite3
-  #       brew upgrade icu4c
-
-  #   - name: Compile amd64
-  #     run: go build -tags "darwin amd64"
-
   npm-publish-v1:
     runs-on: ubuntu-latest
     name: NPM Publish v1 nonodo
@@ -184,7 +133,7 @@ jobs:
 
   npm-publish-v2:
     runs-on: ubuntu-latest
-    name: NPM Publish v2 brunodo
+    name: NPM Publish Nonodo v2 beta
     defaults:
       run:
         working-directory: ./npm-package
@@ -204,8 +153,6 @@ jobs:
           TAG="${{ steps.extract_tag.outputs.tag }}"
           TAG_NO_V=$(echo "$TAG" | sed 's/^v//')
           sed -i "s/\"version\": \".*\"/\"version\": \"$TAG_NO_V\"/" package.json
-          sed -i "s/\"name\": \".*\"/\"name\": \"brunodo\"/" package.json
-          sed -i "s/\"nonodo\": \".*\"/\"brunodo\": \".\/src\/nonodo.js\"/" package.json
           echo "Updated version to $TAG_NO_V in package.json"
           cp package-lock.json ..
           cat package.json
@@ -220,6 +167,6 @@ jobs:
         run: |
           npm ci
           npm pack
-          npm publish --access public
+          npm publish --access public --tag beta
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
