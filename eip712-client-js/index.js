@@ -43,11 +43,13 @@ const fetchNonceL2 = async (user, application, chainConfig) => {
     return responseData.nonce;
 };
 
-const submitTransactionL2 = async (body, chainConfig) => {
+const submitTransactionL2 = async (data, chainConfig) => {
+    const body = JSON.stringify(data, serializeBigInt)
+    console.log(body)
     const response = await fetch(`${chainConfig.l2EIP712Url}/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body, serializeBigInt),
+        body,
     });
     if (!response.ok) {
         throw new Error(`submit to L2 failed: ${await response.text()}`);
@@ -57,7 +59,7 @@ const submitTransactionL2 = async (body, chainConfig) => {
 
 const addTransactionL2 = async (chainId, appAddress, payload) => {
     const account1 = privateKeyToAccount(process.env.SENDER_PRIVATE_KEY)
-    const account = account1.publicKey
+    const account = account1.address
     const chainConfig = config.chains[chainId];
     const nonce = await fetchNonceL2(account, appAddress, chainConfig);
 
@@ -79,11 +81,14 @@ const addTransactionL2 = async (chainId, appAddress, payload) => {
 
     const response = await submitTransactionL2(l2Data, chainConfig);
     console.log(`Transaction submitted to L2. Transaction ID: ${response.id}`);
-    console.log(typedData)
     return response.id;
 };
 
 (async () => {
+    if (!process.env.SENDER_PRIVATE_KEY) {
+        console.error("The SENDER_PRIVATE_KEY environment variable is missing.");
+        process.exit(1)
+    }
     const chainId = process.env.CHAIN_ID || "0xaa36a7"; // sepolia
     const appAddress = process.env.APP_ADDRESS || "0x5a205fcb6947e200615b75c409ac0aa486d77649";
     const inputData = process.env.INPUT || "0xdeadbeef";
