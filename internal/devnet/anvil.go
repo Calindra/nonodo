@@ -35,17 +35,18 @@ var devnetState []byte
 //go:embed localhost.json
 var localhost []byte
 
-const stateFileName = "anvil_state.json"
+const StateFileName = "anvil_state.json"
 
 const anvilCommand = "anvil"
 
 // Start the anvil process in the host machine.
 type AnvilWorker struct {
-	Address        string
-	Port           int
-	Verbose        bool
-	AnvilCmd       string
-	AnvilBlockTime time.Duration
+	Address            string
+	Port               int
+	Verbose            bool
+	AnvilCmd           string
+	AnvilBlockTime     time.Duration
+	AnvilStateFileName *string
 }
 
 // Define a struct to represent the structure of your JSON data
@@ -126,8 +127,25 @@ func ShowAddresses() {
 	}
 }
 
+func (w AnvilWorker) loadState() ([]byte, error) {
+	if w.AnvilStateFileName == nil || *w.AnvilStateFileName == StateFileName {
+		slog.Debug("anvil: using embedded state file")
+		return devnetState, nil
+	}
+	slog.Debug("anvil: using external state file", "file", *w.AnvilStateFileName)
+	content, err := os.ReadFile(*w.AnvilStateFileName)
+	if err != nil {
+		return nil, fmt.Errorf("anvil: failed to read state file: %w", err)
+	}
+	return content, nil
+}
+
 func (w AnvilWorker) Start(ctx context.Context, ready chan<- struct{}) error {
-	dir, err := makeStateTemp()
+	content, err := w.loadState()
+	if err != nil {
+		return err
+	}
+	dir, err := makeStateTemp(content)
 	if err != nil {
 		return err
 	}
@@ -146,7 +164,7 @@ func (w AnvilWorker) Start(ctx context.Context, ready chan<- struct{}) error {
 	server.Port = w.Port
 	server.Args = append(server.Args, "--host", fmt.Sprint(w.Address))
 	server.Args = append(server.Args, "--port", fmt.Sprint(w.Port))
-	server.Args = append(server.Args, "--load-state", filepath.Join(dir, stateFileName))
+	server.Args = append(server.Args, "--load-state", filepath.Join(dir, StateFileName))
 	if seconds > 0 {
 		server.Args = append(server.Args, "--block-time", fmt.Sprint(seconds))
 	}
@@ -159,14 +177,14 @@ func (w AnvilWorker) Start(ctx context.Context, ready chan<- struct{}) error {
 
 // Create a temporary directory with the state file in it.
 // The directory should be removed by the callee.
-func makeStateTemp() (string, error) {
+func makeStateTemp(content []byte) (string, error) {
 	tempDir, err := os.MkdirTemp("", "")
 	if err != nil {
 		return "", fmt.Errorf("anvil: failed to create temp dir: %w", err)
 	}
-	stateFile := filepath.Join(tempDir, stateFileName)
+	stateFile := filepath.Join(tempDir, StateFileName)
 	const permissions = 0644
-	err = os.WriteFile(stateFile, devnetState, permissions)
+	err = os.WriteFile(stateFile, content, permissions)
 	if err != nil {
 		return "", fmt.Errorf("anvil: failed to write state file: %w", err)
 	}
