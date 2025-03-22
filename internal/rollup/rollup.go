@@ -7,11 +7,9 @@ package rollup
 //go:generate go run github.com/deepmap/oapi-codegen/v2/cmd/oapi-codegen -config=oapi.yaml ../../api/rollup.yaml
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
-	"log"
 	"log/slog"
 	"math/big"
 	"net/http"
@@ -20,16 +18,11 @@ import (
 	"time"
 
 	"github.com/calindra/nonodo/internal/contracts"
+	"github.com/calindra/nonodo/internal/coprocessor"
 	mdl "github.com/calindra/nonodo/internal/model"
 	cModel "github.com/cartesi/rollups-graphql/pkg/convenience/model"
-	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/labstack/echo/v4"
 )
 
@@ -38,7 +31,12 @@ const FinishPollInterval = time.Millisecond * 100
 
 // Register the rollup API to echo
 func Register(e *echo.Echo, model *mdl.NonodoModel, sequencer Sequencer, applicationAddress common.Address) {
-	var rollupAPI ServerInterface = &RollupAPI{model, sequencer, applicationAddress}
+	ctx := context.Background()
+	coProcessor, err := coprocessor.NewCoProcessorFromEnvs(ctx)
+	if err != nil {
+		slog.Debug("starting without coprocessor")
+	}
+	var rollupAPI ServerInterface = &RollupAPI{model, sequencer, applicationAddress, coProcessor}
 	RegisterHandlers(e, rollupAPI)
 }
 
@@ -47,6 +45,7 @@ type RollupAPI struct {
 	model              *mdl.NonodoModel
 	sequencer          Sequencer
 	ApplicationAddress common.Address
+	coProcessor        *coprocessor.CoProcessor
 }
 
 type Sequencer interface {
@@ -251,90 +250,6 @@ func (r *RollupAPI) AddVoucher(c echo.Context) error {
 	return c.JSON(http.StatusOK, &resp)
 }
 
-func (r *RollupAPI) addCoProcessorNotice(ctx context.Context, notice []byte) {
-	contractABI := contracts.CoprocessorAdapterMetaData.ABI
-	client, err := ethclient.DialContext(ctx, "http://127.0.0.1:8545")
-	if err != nil {
-		log.Fatalf("Failed to connect to the Ethereum client: %v", err)
-	}
-
-	// Load the contract ABI
-	parsedABI, err := abi.JSON(bytes.NewReader([]byte(contractABI)))
-	if err != nil {
-		log.Fatalf("Failed to parse contract ABI: %v", err)
-	}
-
-	// Prepare data for the function
-	payloadHash := common.HexToHash("0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80")
-	// notice := []byte("Your notice data here")
-
-	// Pack the data to call the Solidity function
-	data, err := parsedABI.Pack("nonodoHandleNotice", payloadHash, notice)
-	if err != nil {
-		log.Fatalf("Failed to pack data: %v", err)
-	}
-
-	// Load the private key
-	privateKey, err := crypto.HexToECDSA("ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80")
-	if err != nil {
-		log.Fatalf("Failed to load private key: %v", err)
-	}
-
-	// Get the sender address
-	fromAddress := crypto.PubkeyToAddress(privateKey.PublicKey)
-
-	// Get the nonce for the transaction
-	nonce, err := client.PendingNonceAt(ctx, fromAddress)
-	if err != nil {
-		log.Fatalf("Failed to get nonce: %v", err)
-	}
-
-	// Set the gas price
-	gasPrice, err := client.SuggestGasPrice(ctx)
-	if err != nil {
-		log.Fatalf("Failed to get gas price: %v", err)
-	}
-
-	contractAddress := "0x68B1D87F95878fE05B998F19b66F4baba5De1aed"
-	address := common.HexToAddress(contractAddress)
-	// Estimate the gas needed for the transaction
-	gasLimit, err := client.EstimateGas(ctx, ethereum.CallMsg{
-		To:   &address,
-		Data: data,
-	})
-	if err != nil {
-		log.Fatalf("Failed to estimate gas: %v", err)
-	}
-
-	// Prepare the transaction
-	tx := types.NewTransaction(nonce, common.HexToAddress(contractAddress), big.NewInt(0), gasLimit, gasPrice, data)
-	chainID, err := client.NetworkID(ctx)
-	if err != nil {
-		log.Fatalf("Failed to get network ID: %v", err)
-	}
-	// Sign the transaction
-	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(chainID), privateKey)
-	if err != nil {
-		log.Fatalf("Failed to sign the transaction: %v", err)
-	}
-
-	// Send the transaction
-	err = client.SendTransaction(ctx, signedTx)
-	if err != nil {
-		log.Fatalf("Failed to send transaction: %v", err)
-	}
-
-	fmt.Println("Transaction sent! Transaction Hash:", signedTx.Hash().Hex())
-	receipt, err := bind.WaitMined(ctx, client, signedTx)
-	if err != nil {
-		log.Fatalf("Failed to send transaction: %v", err)
-	}
-
-	if receipt.Status == 0 {
-		log.Fatalf("Failed to send transaction")
-	}
-}
-
 // Handle requests to /notice.
 func (r *RollupAPI) AddNotice(c echo.Context) error {
 	ctx := c.Request().Context()
@@ -358,7 +273,9 @@ func (r *RollupAPI) AddNotice(c echo.Context) error {
 		return c.String(http.StatusBadRequest, "invalid hex payload")
 	}
 
-	r.addCoProcessorNotice(ctx, payload)
+	if r.coProcessor != nil {
+		r.coProcessor.SendNoticeCallback(ctx, payload)
+	}
 
 	abiParsed, err := contracts.OutputsMetaData.GetAbi()
 
