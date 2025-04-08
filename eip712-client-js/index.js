@@ -31,7 +31,9 @@ const typedDataTemplate = {
 };
 
 const fetchNonceL2 = async (user, application, chainConfig) => {
-    const response = await fetch(`${chainConfig.l2EIP712Url}/nonce`, {
+    const url = `${process.env.TRANSACTION_BASE_URL || chainConfig.l2EIP712Url}/nonce`
+    console.log(`fetching nonce from ${url}`)
+    const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ msg_sender: user, app_contract: application }),
@@ -46,7 +48,9 @@ const fetchNonceL2 = async (user, application, chainConfig) => {
 const submitTransactionL2 = async (data, chainConfig) => {
     const body = JSON.stringify(data, serializeBigInt)
     console.log(body)
-    const response = await fetch(`${chainConfig.l2EIP712Url}/submit`, {
+    const url = `${process.env.TRANSACTION_BASE_URL || chainConfig.l2EIP712Url}/submit`
+    console.log(`Submitting transaction to ${url}`);
+    const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body,
