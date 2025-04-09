@@ -13,6 +13,28 @@ info:
 paths:
   /submit:
     post:
+      operationId: sendCartesiTransactionDeprecated
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Cartesi712"
+        required: true
+      responses:
+        "201":
+          description: Transaction created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TransactionError"
+  /transaction/submit:
+    post:
       operationId: sendCartesiTransaction
       requestBody:
         content:
@@ -33,41 +55,22 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/TransactionError"
-  /transaction:
-    post:
-      operationId: saveTransaction
-      summary: Save transaction
-      description: |
-        A good description
-
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/SaveTransactionRequest"
-        required: true
-
-      responses:
-        "201":
-          description: Transaction created
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/TransactionResponse"
-        "400":
-          description: Bad request
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/TransactionError"
-
-        default:
-          description: Error response.
-          content:
-            text/plain:
-              schema:
-                $ref: "#/components/schemas/Error"
   /nonce:
+    post:
+      operationId: getNonceDeprecated
+      summary: Get Nonce
+      desctiption:
+        A good description
+      
+      responses:
+        "200":
+          description: Nonce
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NonceResponse"
+
+  /transaction/nonce:
     post:
       operationId: getNonce
       summary: Get Nonce
@@ -88,44 +91,6 @@ paths:
             schema:
               $ref: "#/components/schemas/GetNonce"
         required: true
-
-  /transactions:
-    post:
-      operationId: sendTransaction
-      summary: Send Paio's transaction
-      description: |
-        A good description
-
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/PaioTransaction"
-        required: true
-
-      responses:
-        "200":
-          description: PaioTransaction accepted
-          content:
-            application/json:
-              schema:
-                type: string
-                example: "no rollup request available"
-
-        "202":
-          description: Finish accepted but try again to obtain the next request.
-          content:
-            text/plain:
-              schema:
-                type: string
-                example: "no rollup request available"
-
-        default:
-          description: Error response.
-          content:
-            text/plain:
-              schema:
-                $ref: "#/components/schemas/Error"
 
 components:
   schemas:

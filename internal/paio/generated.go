@@ -71,9 +71,6 @@ type Cartesi712_TypedData_Message_Nonce struct {
 	union json.RawMessage
 }
 
-// Error Detailed error message.
-type Error = string
-
 // GetNonce defines model for GetNonce.
 type GetNonce struct {
 	// AppContract App contract address
@@ -89,24 +86,6 @@ type NonceResponse struct {
 	Nonce *int `json:"nonce,omitempty"`
 }
 
-// PaioTransaction defines model for PaioTransaction.
-type PaioTransaction struct {
-	Signature string `json:"signature"`
-
-	// TypedData Base 64
-	TypedData string `json:"typedData"`
-}
-
-// SaveTransactionRequest defines model for SaveTransactionRequest.
-type SaveTransactionRequest struct {
-	// Message ABI encoded
-	Message string `json:"message"`
-
-	// MsgSender (optional) sender address to check the signature
-	MsgSender *string `json:"msg_sender,omitempty"`
-	Signature string  `json:"signature"`
-}
-
 // TransactionError defines model for TransactionError.
 type TransactionError struct {
 	// Message Detailed error message
@@ -119,17 +98,14 @@ type TransactionResponse struct {
 	Id *string `json:"id,omitempty"`
 }
 
+// SendCartesiTransactionDeprecatedJSONRequestBody defines body for SendCartesiTransactionDeprecated for application/json ContentType.
+type SendCartesiTransactionDeprecatedJSONRequestBody = Cartesi712
+
 // GetNonceJSONRequestBody defines body for GetNonce for application/json ContentType.
 type GetNonceJSONRequestBody = GetNonce
 
 // SendCartesiTransactionJSONRequestBody defines body for SendCartesiTransaction for application/json ContentType.
 type SendCartesiTransactionJSONRequestBody = Cartesi712
-
-// SaveTransactionJSONRequestBody defines body for SaveTransaction for application/json ContentType.
-type SaveTransactionJSONRequestBody = SaveTransactionRequest
-
-// SendTransactionJSONRequestBody defines body for SendTransaction for application/json ContentType.
-type SendTransactionJSONRequestBody = PaioTransaction
 
 // AsCartesi712TypedDataMessageMaxGasPrice0 returns the union data inside the Cartesi712_TypedData_Message_MaxGasPrice as a Cartesi712TypedDataMessageMaxGasPrice0
 func (t Cartesi712_TypedData_Message_MaxGasPrice) AsCartesi712TypedDataMessageMaxGasPrice0() (Cartesi712TypedDataMessageMaxGasPrice0, error) {
@@ -328,6 +304,14 @@ func WithRequestEditorFn(fn RequestEditorFn) ClientOption {
 
 // The interface specification for the client above.
 type ClientInterface interface {
+	// GetNonceDeprecated request
+	GetNonceDeprecated(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	// SendCartesiTransactionDeprecatedWithBody request with any body
+	SendCartesiTransactionDeprecatedWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+
+	SendCartesiTransactionDeprecated(ctx context.Context, body SendCartesiTransactionDeprecatedJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+
 	// GetNonceWithBody request with any body
 	GetNonceWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
@@ -337,16 +321,42 @@ type ClientInterface interface {
 	SendCartesiTransactionWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
 
 	SendCartesiTransaction(ctx context.Context, body SendCartesiTransactionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+}
 
-	// SaveTransactionWithBody request with any body
-	SaveTransactionWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
+func (c *Client) GetNonceDeprecated(ctx context.Context, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewGetNonceDeprecatedRequest(c.Server)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
 
-	SaveTransaction(ctx context.Context, body SaveTransactionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+func (c *Client) SendCartesiTransactionDeprecatedWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSendCartesiTransactionDeprecatedRequestWithBody(c.Server, contentType, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
+}
 
-	// SendTransactionWithBody request with any body
-	SendTransactionWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error)
-
-	SendTransaction(ctx context.Context, body SendTransactionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error)
+func (c *Client) SendCartesiTransactionDeprecated(ctx context.Context, body SendCartesiTransactionDeprecatedJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
+	req, err := NewSendCartesiTransactionDeprecatedRequest(c.Server, body)
+	if err != nil {
+		return nil, err
+	}
+	req = req.WithContext(ctx)
+	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+		return nil, err
+	}
+	return c.Client.Do(req)
 }
 
 func (c *Client) GetNonceWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
@@ -397,52 +407,71 @@ func (c *Client) SendCartesiTransaction(ctx context.Context, body SendCartesiTra
 	return c.Client.Do(req)
 }
 
-func (c *Client) SaveTransactionWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewSaveTransactionRequestWithBody(c.Server, contentType, body)
+// NewGetNonceDeprecatedRequest generates requests for GetNonceDeprecated
+func NewGetNonceDeprecatedRequest(server string) (*http.Request, error) {
+	var err error
+
+	serverURL, err := url.Parse(server)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+
+	operationPath := fmt.Sprintf("/nonce")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
 		return nil, err
 	}
-	return c.Client.Do(req)
+
+	req, err := http.NewRequest("POST", queryURL.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return req, nil
 }
 
-func (c *Client) SaveTransaction(ctx context.Context, body SaveTransactionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewSaveTransactionRequest(c.Server, body)
+// NewSendCartesiTransactionDeprecatedRequest calls the generic SendCartesiTransactionDeprecated builder with application/json body
+func NewSendCartesiTransactionDeprecatedRequest(server string, body SendCartesiTransactionDeprecatedJSONRequestBody) (*http.Request, error) {
+	var bodyReader io.Reader
+	buf, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
+	bodyReader = bytes.NewReader(buf)
+	return NewSendCartesiTransactionDeprecatedRequestWithBody(server, "application/json", bodyReader)
 }
 
-func (c *Client) SendTransactionWithBody(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewSendTransactionRequestWithBody(c.Server, contentType, body)
-	if err != nil {
-		return nil, err
-	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
-		return nil, err
-	}
-	return c.Client.Do(req)
-}
+// NewSendCartesiTransactionDeprecatedRequestWithBody generates requests for SendCartesiTransactionDeprecated with any type of body
+func NewSendCartesiTransactionDeprecatedRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
+	var err error
 
-func (c *Client) SendTransaction(ctx context.Context, body SendTransactionJSONRequestBody, reqEditors ...RequestEditorFn) (*http.Response, error) {
-	req, err := NewSendTransactionRequest(c.Server, body)
+	serverURL, err := url.Parse(server)
 	if err != nil {
 		return nil, err
 	}
-	req = req.WithContext(ctx)
-	if err := c.applyEditors(ctx, req, reqEditors); err != nil {
+
+	operationPath := fmt.Sprintf("/submit")
+	if operationPath[0] == '/' {
+		operationPath = "." + operationPath
+	}
+
+	queryURL, err := serverURL.Parse(operationPath)
+	if err != nil {
 		return nil, err
 	}
-	return c.Client.Do(req)
+
+	req, err := http.NewRequest("POST", queryURL.String(), body)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Content-Type", contentType)
+
+	return req, nil
 }
 
 // NewGetNonceRequest calls the generic GetNonce builder with application/json body
@@ -465,7 +494,7 @@ func NewGetNonceRequestWithBody(server string, contentType string, body io.Reade
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/nonce")
+	operationPath := fmt.Sprintf("/transaction/nonce")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -505,87 +534,7 @@ func NewSendCartesiTransactionRequestWithBody(server string, contentType string,
 		return nil, err
 	}
 
-	operationPath := fmt.Sprintf("/submit")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", queryURL.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
-
-	return req, nil
-}
-
-// NewSaveTransactionRequest calls the generic SaveTransaction builder with application/json body
-func NewSaveTransactionRequest(server string, body SaveTransactionJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewSaveTransactionRequestWithBody(server, "application/json", bodyReader)
-}
-
-// NewSaveTransactionRequestWithBody generates requests for SaveTransaction with any type of body
-func NewSaveTransactionRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/transaction")
-	if operationPath[0] == '/' {
-		operationPath = "." + operationPath
-	}
-
-	queryURL, err := serverURL.Parse(operationPath)
-	if err != nil {
-		return nil, err
-	}
-
-	req, err := http.NewRequest("POST", queryURL.String(), body)
-	if err != nil {
-		return nil, err
-	}
-
-	req.Header.Add("Content-Type", contentType)
-
-	return req, nil
-}
-
-// NewSendTransactionRequest calls the generic SendTransaction builder with application/json body
-func NewSendTransactionRequest(server string, body SendTransactionJSONRequestBody) (*http.Request, error) {
-	var bodyReader io.Reader
-	buf, err := json.Marshal(body)
-	if err != nil {
-		return nil, err
-	}
-	bodyReader = bytes.NewReader(buf)
-	return NewSendTransactionRequestWithBody(server, "application/json", bodyReader)
-}
-
-// NewSendTransactionRequestWithBody generates requests for SendTransaction with any type of body
-func NewSendTransactionRequestWithBody(server string, contentType string, body io.Reader) (*http.Request, error) {
-	var err error
-
-	serverURL, err := url.Parse(server)
-	if err != nil {
-		return nil, err
-	}
-
-	operationPath := fmt.Sprintf("/transactions")
+	operationPath := fmt.Sprintf("/transaction/submit")
 	if operationPath[0] == '/' {
 		operationPath = "." + operationPath
 	}
@@ -648,6 +597,14 @@ func WithBaseURL(baseURL string) ClientOption {
 
 // ClientWithResponsesInterface is the interface specification for the client with responses above.
 type ClientWithResponsesInterface interface {
+	// GetNonceDeprecatedWithResponse request
+	GetNonceDeprecatedWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetNonceDeprecatedResponse, error)
+
+	// SendCartesiTransactionDeprecatedWithBodyWithResponse request with any body
+	SendCartesiTransactionDeprecatedWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendCartesiTransactionDeprecatedResponse, error)
+
+	SendCartesiTransactionDeprecatedWithResponse(ctx context.Context, body SendCartesiTransactionDeprecatedJSONRequestBody, reqEditors ...RequestEditorFn) (*SendCartesiTransactionDeprecatedResponse, error)
+
 	// GetNonceWithBodyWithResponse request with any body
 	GetNonceWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*GetNonceResponse, error)
 
@@ -657,16 +614,51 @@ type ClientWithResponsesInterface interface {
 	SendCartesiTransactionWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendCartesiTransactionResponse, error)
 
 	SendCartesiTransactionWithResponse(ctx context.Context, body SendCartesiTransactionJSONRequestBody, reqEditors ...RequestEditorFn) (*SendCartesiTransactionResponse, error)
+}
 
-	// SaveTransactionWithBodyWithResponse request with any body
-	SaveTransactionWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SaveTransactionResponse, error)
+type GetNonceDeprecatedResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON200      *NonceResponse
+}
 
-	SaveTransactionWithResponse(ctx context.Context, body SaveTransactionJSONRequestBody, reqEditors ...RequestEditorFn) (*SaveTransactionResponse, error)
+// Status returns HTTPResponse.Status
+func (r GetNonceDeprecatedResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
 
-	// SendTransactionWithBodyWithResponse request with any body
-	SendTransactionWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendTransactionResponse, error)
+// StatusCode returns HTTPResponse.StatusCode
+func (r GetNonceDeprecatedResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
+}
 
-	SendTransactionWithResponse(ctx context.Context, body SendTransactionJSONRequestBody, reqEditors ...RequestEditorFn) (*SendTransactionResponse, error)
+type SendCartesiTransactionDeprecatedResponse struct {
+	Body         []byte
+	HTTPResponse *http.Response
+	JSON201      *TransactionResponse
+	JSON400      *TransactionError
+}
+
+// Status returns HTTPResponse.Status
+func (r SendCartesiTransactionDeprecatedResponse) Status() string {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.Status
+	}
+	return http.StatusText(0)
+}
+
+// StatusCode returns HTTPResponse.StatusCode
+func (r SendCartesiTransactionDeprecatedResponse) StatusCode() int {
+	if r.HTTPResponse != nil {
+		return r.HTTPResponse.StatusCode
+	}
+	return 0
 }
 
 type GetNonceResponse struct {
@@ -714,49 +706,30 @@ func (r SendCartesiTransactionResponse) StatusCode() int {
 	return 0
 }
 
-type SaveTransactionResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON201      *TransactionResponse
-	JSON400      *TransactionError
-}
-
-// Status returns HTTPResponse.Status
-func (r SaveTransactionResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
+// GetNonceDeprecatedWithResponse request returning *GetNonceDeprecatedResponse
+func (c *ClientWithResponses) GetNonceDeprecatedWithResponse(ctx context.Context, reqEditors ...RequestEditorFn) (*GetNonceDeprecatedResponse, error) {
+	rsp, err := c.GetNonceDeprecated(ctx, reqEditors...)
+	if err != nil {
+		return nil, err
 	}
-	return http.StatusText(0)
+	return ParseGetNonceDeprecatedResponse(rsp)
 }
 
-// StatusCode returns HTTPResponse.StatusCode
-func (r SaveTransactionResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
+// SendCartesiTransactionDeprecatedWithBodyWithResponse request with arbitrary body returning *SendCartesiTransactionDeprecatedResponse
+func (c *ClientWithResponses) SendCartesiTransactionDeprecatedWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendCartesiTransactionDeprecatedResponse, error) {
+	rsp, err := c.SendCartesiTransactionDeprecatedWithBody(ctx, contentType, body, reqEditors...)
+	if err != nil {
+		return nil, err
 	}
-	return 0
+	return ParseSendCartesiTransactionDeprecatedResponse(rsp)
 }
 
-type SendTransactionResponse struct {
-	Body         []byte
-	HTTPResponse *http.Response
-	JSON200      *string
-}
-
-// Status returns HTTPResponse.Status
-func (r SendTransactionResponse) Status() string {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.Status
+func (c *ClientWithResponses) SendCartesiTransactionDeprecatedWithResponse(ctx context.Context, body SendCartesiTransactionDeprecatedJSONRequestBody, reqEditors ...RequestEditorFn) (*SendCartesiTransactionDeprecatedResponse, error) {
+	rsp, err := c.SendCartesiTransactionDeprecated(ctx, body, reqEditors...)
+	if err != nil {
+		return nil, err
 	}
-	return http.StatusText(0)
-}
-
-// StatusCode returns HTTPResponse.StatusCode
-func (r SendTransactionResponse) StatusCode() int {
-	if r.HTTPResponse != nil {
-		return r.HTTPResponse.StatusCode
-	}
-	return 0
+	return ParseSendCartesiTransactionDeprecatedResponse(rsp)
 }
 
 // GetNonceWithBodyWithResponse request with arbitrary body returning *GetNonceResponse
@@ -793,38 +766,63 @@ func (c *ClientWithResponses) SendCartesiTransactionWithResponse(ctx context.Con
 	return ParseSendCartesiTransactionResponse(rsp)
 }
 
-// SaveTransactionWithBodyWithResponse request with arbitrary body returning *SaveTransactionResponse
-func (c *ClientWithResponses) SaveTransactionWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SaveTransactionResponse, error) {
-	rsp, err := c.SaveTransactionWithBody(ctx, contentType, body, reqEditors...)
+// ParseGetNonceDeprecatedResponse parses an HTTP response from a GetNonceDeprecatedWithResponse call
+func ParseGetNonceDeprecatedResponse(rsp *http.Response) (*GetNonceDeprecatedResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
-	return ParseSaveTransactionResponse(rsp)
+
+	response := &GetNonceDeprecatedResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
+	}
+
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
+		var dest NonceResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON200 = &dest
+
+	}
+
+	return response, nil
 }
 
-func (c *ClientWithResponses) SaveTransactionWithResponse(ctx context.Context, body SaveTransactionJSONRequestBody, reqEditors ...RequestEditorFn) (*SaveTransactionResponse, error) {
-	rsp, err := c.SaveTransaction(ctx, body, reqEditors...)
+// ParseSendCartesiTransactionDeprecatedResponse parses an HTTP response from a SendCartesiTransactionDeprecatedWithResponse call
+func ParseSendCartesiTransactionDeprecatedResponse(rsp *http.Response) (*SendCartesiTransactionDeprecatedResponse, error) {
+	bodyBytes, err := io.ReadAll(rsp.Body)
+	defer func() { _ = rsp.Body.Close() }()
 	if err != nil {
 		return nil, err
 	}
-	return ParseSaveTransactionResponse(rsp)
-}
 
-// SendTransactionWithBodyWithResponse request with arbitrary body returning *SendTransactionResponse
-func (c *ClientWithResponses) SendTransactionWithBodyWithResponse(ctx context.Context, contentType string, body io.Reader, reqEditors ...RequestEditorFn) (*SendTransactionResponse, error) {
-	rsp, err := c.SendTransactionWithBody(ctx, contentType, body, reqEditors...)
-	if err != nil {
-		return nil, err
+	response := &SendCartesiTransactionDeprecatedResponse{
+		Body:         bodyBytes,
+		HTTPResponse: rsp,
 	}
-	return ParseSendTransactionResponse(rsp)
-}
 
-func (c *ClientWithResponses) SendTransactionWithResponse(ctx context.Context, body SendTransactionJSONRequestBody, reqEditors ...RequestEditorFn) (*SendTransactionResponse, error) {
-	rsp, err := c.SendTransaction(ctx, body, reqEditors...)
-	if err != nil {
-		return nil, err
+	switch {
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
+		var dest TransactionResponse
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON201 = &dest
+
+	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
+		var dest TransactionError
+		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
+			return nil, err
+		}
+		response.JSON400 = &dest
+
 	}
-	return ParseSendTransactionResponse(rsp)
+
+	return response, nil
 }
 
 // ParseGetNonceResponse parses an HTTP response from a GetNonceWithResponse call
@@ -886,84 +884,43 @@ func ParseSendCartesiTransactionResponse(rsp *http.Response) (*SendCartesiTransa
 	return response, nil
 }
 
-// ParseSaveTransactionResponse parses an HTTP response from a SaveTransactionWithResponse call
-func ParseSaveTransactionResponse(rsp *http.Response) (*SaveTransactionResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &SaveTransactionResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 201:
-		var dest TransactionResponse
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON201 = &dest
-
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 400:
-		var dest TransactionError
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON400 = &dest
-
-	}
-
-	return response, nil
-}
-
-// ParseSendTransactionResponse parses an HTTP response from a SendTransactionWithResponse call
-func ParseSendTransactionResponse(rsp *http.Response) (*SendTransactionResponse, error) {
-	bodyBytes, err := io.ReadAll(rsp.Body)
-	defer func() { _ = rsp.Body.Close() }()
-	if err != nil {
-		return nil, err
-	}
-
-	response := &SendTransactionResponse{
-		Body:         bodyBytes,
-		HTTPResponse: rsp,
-	}
-
-	switch {
-	case strings.Contains(rsp.Header.Get("Content-Type"), "json") && rsp.StatusCode == 200:
-		var dest string
-		if err := json.Unmarshal(bodyBytes, &dest); err != nil {
-			return nil, err
-		}
-		response.JSON200 = &dest
-
-	}
-
-	return response, nil
-}
-
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
 	// Get Nonce
 	// (POST /nonce)
-	GetNonce(ctx echo.Context) error
+	GetNonceDeprecated(ctx echo.Context) error
 
 	// (POST /submit)
+	SendCartesiTransactionDeprecated(ctx echo.Context) error
+	// Get Nonce
+	// (POST /transaction/nonce)
+	GetNonce(ctx echo.Context) error
+
+	// (POST /transaction/submit)
 	SendCartesiTransaction(ctx echo.Context) error
-	// Save transaction
-	// (POST /transaction)
-	SaveTransaction(ctx echo.Context) error
-	// Send Paio's transaction
-	// (POST /transactions)
-	SendTransaction(ctx echo.Context) error
 }
 
 // ServerInterfaceWrapper converts echo contexts to parameters.
 type ServerInterfaceWrapper struct {
 	Handler ServerInterface
+}
+
+// GetNonceDeprecated converts echo context to params.
+func (w *ServerInterfaceWrapper) GetNonceDeprecated(ctx echo.Context) error {
+	var err error
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.GetNonceDeprecated(ctx)
+	return err
+}
+
+// SendCartesiTransactionDeprecated converts echo context to params.
+func (w *ServerInterfaceWrapper) SendCartesiTransactionDeprecated(ctx echo.Context) error {
+	var err error
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.SendCartesiTransactionDeprecated(ctx)
+	return err
 }
 
 // GetNonce converts echo context to params.
@@ -981,24 +938,6 @@ func (w *ServerInterfaceWrapper) SendCartesiTransaction(ctx echo.Context) error 
 
 	// Invoke the callback with all the unmarshaled arguments
 	err = w.Handler.SendCartesiTransaction(ctx)
-	return err
-}
-
-// SaveTransaction converts echo context to params.
-func (w *ServerInterfaceWrapper) SaveTransaction(ctx echo.Context) error {
-	var err error
-
-	// Invoke the callback with all the unmarshaled arguments
-	err = w.Handler.SaveTransaction(ctx)
-	return err
-}
-
-// SendTransaction converts echo context to params.
-func (w *ServerInterfaceWrapper) SendTransaction(ctx echo.Context) error {
-	var err error
-
-	// Invoke the callback with all the unmarshaled arguments
-	err = w.Handler.SendTransaction(ctx)
 	return err
 }
 
@@ -1030,9 +969,9 @@ func RegisterHandlersWithBaseURL(router EchoRouter, si ServerInterface, baseURL 
 		Handler: si,
 	}
 
-	router.POST(baseURL+"/nonce", wrapper.GetNonce)
-	router.POST(baseURL+"/submit", wrapper.SendCartesiTransaction)
-	router.POST(baseURL+"/transaction", wrapper.SaveTransaction)
-	router.POST(baseURL+"/transactions", wrapper.SendTransaction)
+	router.POST(baseURL+"/nonce", wrapper.GetNonceDeprecated)
+	router.POST(baseURL+"/submit", wrapper.SendCartesiTransactionDeprecated)
+	router.POST(baseURL+"/transaction/nonce", wrapper.GetNonce)
+	router.POST(baseURL+"/transaction/submit", wrapper.SendCartesiTransaction)
 
 }
