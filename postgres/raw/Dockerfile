@@ -1,4 +1,4 @@
-FROM postgres:16-alpine
+FROM postgres:17.4-alpine3.21
 
 # Copy the SQL files to the container
 RUN mkdir -v /sql
