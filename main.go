@@ -545,6 +545,12 @@ func init() {
 
 	cmd.Flags().IntVar(&opts.EpochBlocks, "epoch-blocks", opts.EpochBlocks,
 		"Number of blocks in each epoch")
+
+	cmd.Flags().BoolVar(&opts.Coprocessor, "coprocessor", opts.Coprocessor,
+		"If set, enables coprocessor mode")
+
+	cmd.Flags().StringVar(&opts.MockCoprocessorAddress, "mock-coprocessor-address", devnet.MockCoprocessorAddress,
+		"Address of the MockCoprocessor contract to listen for events")
 }
 
 func run(cmd *cobra.Command, args []string) {

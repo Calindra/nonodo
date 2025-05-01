@@ -31,11 +31,12 @@ import (
 )
 
 const (
-	celestiaUrl         = "https://raw.githubusercontent.com/miltonjonat/rollups-celestia/main/onchain/deployments/sepolia/CelestiaRelay.json"
-	openzeppelin        = "https://registry.npmjs.org/@openzeppelin/contracts/-/contracts-5.1.0.tgz"
-	rollupsContractsUrl = "https://registry.npmjs.org/@cartesi/rollups/-/rollups-2.0.0-rc.12.tgz"
-	baseContractsPath   = "package/export/artifacts/contracts/"
-	bindingPkg          = "contracts"
+	celestiaUrl             = "https://raw.githubusercontent.com/miltonjonat/rollups-celestia/main/onchain/deployments/sepolia/CelestiaRelay.json"
+	openzeppelin            = "https://registry.npmjs.org/@openzeppelin/contracts/-/contracts-5.1.0.tgz"
+	rollupsContractsUrl     = "https://registry.npmjs.org/@cartesi/rollups/-/rollups-2.0.0-rc.12.tgz"
+	mockCoprocessorContractUrl = "https://raw.githubusercontent.com/henriquemarlon/cartesi-coprocessor/refs/heads/bindings/contracts/abis/MockCoprocessor.sol/MockCoprocessor.json"
+	baseContractsPath       = "package/export/artifacts/contracts/"
+	bindingPkg              = "contracts"
 )
 
 type contractBinding struct {
@@ -106,8 +107,11 @@ func main() {
 	checkErr("unzip contracts", err)
 	defer contractsTarOpenZeppelin.Close()
 
-	contractJson := downloadJsonContract(celestiaUrl)
-	defer contractJson.Close()
+	celestiaJson := downloadJsonContract(celestiaUrl)
+	defer celestiaJson.Close()
+
+	coprocessorJson := downloadJsonContract(mockCoprocessorContractUrl)
+	defer coprocessorJson.Close()
 
 	files := make(map[string]bool)
 	for _, b := range bindings {
@@ -127,13 +131,22 @@ func main() {
 		contents[contract] = content
 	}
 
-	content := readJson(contractJson)
-	contents[baseContractsPath+"sepolia/CelestiaRelay.json"] = content
+	celestiaContent := readJson(celestiaJson)
+	contents[baseContractsPath+"sepolia/CelestiaRelay.json"] = celestiaContent
 	bindings = append(bindings, contractBinding{
 		jsonPath: baseContractsPath + "sepolia/CelestiaRelay.json",
 		typeName: "CelestiaRelay",
 		outFile:  "celestia_relay.go",
 	})
+
+	coprocessorContent := readJson(coprocessorJson)
+	contents[baseContractsPath+"coprocessor/MockCoprocessor.json"] = coprocessorContent
+	bindings = append(bindings, contractBinding{
+		jsonPath: baseContractsPath + "coprocessor/MockCoprocessor.json",
+		typeName: "MockCoprocessor",
+		outFile:  "mock_coprocessor.go",
+	})
+
 	bindings = append(bindings, bindingsOpenZeppelin...)
 
 	for _, b := range bindings {
