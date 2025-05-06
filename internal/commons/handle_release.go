@@ -178,7 +178,8 @@ func (a AnvilRelease) FormatNameRelease(_, goos, goarch, _ string) string {
 		ext = ".zip"
 		myos = "win32"
 	}
-	return "foundry_nightly_" + myos + "_" + goarch + ext
+	// return "foundry_nightly_" + myos + "_" + goarch + ext
+	return "foundry_v1.1.0_" + myos + "_" + goarch + ext
 }
 
 // PlatformCompatible implements HandleRelease.
@@ -325,6 +326,7 @@ func (a *AnvilRelease) GetLatestReleaseCompatible(ctx context.Context) (*Release
 	}
 
 	for _, anvilAssets := range assets {
+		slog.Debug("Anvil asset", "filename", anvilAssets.Filename, "platform", platform)
 		if anvilAssets.Filename == platform {
 			target = &anvilAssets
 			break
