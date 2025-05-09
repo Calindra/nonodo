@@ -24,6 +24,7 @@ import (
 	"github.com/calindra/nonodo/internal/rollup"
 	"github.com/calindra/nonodo/internal/salsa"
 	"github.com/calindra/nonodo/internal/sequencers/avail"
+	"github.com/calindra/nonodo/internal/sequencers/coprocessor"
 	"github.com/calindra/nonodo/internal/sequencers/espresso"
 	"github.com/calindra/nonodo/internal/sequencers/inputter"
 	"github.com/calindra/nonodo/internal/sequencers/paiodecoder"
@@ -46,19 +47,21 @@ const (
 
 // Options to nonodo.
 type NonodoOpts struct {
-	AutoCount          bool
-	AnvilAddress       string
-	AnvilPort          int
-	AnvilVerbose       bool
-	AnvilCommand       string
-	AnvilStateFileName string
-	AnvilBlockTime     time.Duration
-	HttpAddress        string
-	HttpPort           int
-	HttpRollupsPort    int
-	InputBoxAddress    string
-	InputBoxBlock      uint64
-	ApplicationAddress string
+	AutoCount              bool
+	AnvilAddress           string
+	AnvilPort              int
+	AnvilVerbose           bool
+	AnvilCommand           string
+	AnvilStateFileName     string
+	AnvilBlockTime         time.Duration
+	CoprocessorPrivateKey  string
+	HttpAddress            string
+	HttpPort               int
+	HttpRollupsPort        int
+	InputBoxAddress        string
+	InputBoxBlock          uint64
+	ApplicationAddress     string
+	MockCoprocessorAddress string
 	// If RpcUrl is set, connect to it instead of anvil.
 	RpcUrl      string
 	EspressoUrl string
@@ -71,7 +74,8 @@ type NonodoOpts struct {
 	// If set, disables inspects.
 	DisableInspect bool
 	// If set, start application.
-	ApplicationArgs  []string
+	ApplicationArgs []string
+
 	SqliteFile       string
 	FromBlock        uint64
 	FromBlockL1      *uint64
@@ -87,6 +91,7 @@ type NonodoOpts struct {
 	SalsaUrl         string
 	AvailFromBlock   uint64
 	AvailEnabled     bool
+	Coprocessor      bool
 	PaioServerUrl    string
 	DbRawUrl         string
 	RawEnabled       bool
@@ -100,45 +105,47 @@ func NewNonodoOpts() NonodoOpts {
 	)
 
 	return NonodoOpts{
-		AnvilAddress:       devnet.AnvilDefaultAddress,
-		AnvilPort:          devnet.AnvilDefaultPort,
-		AnvilCommand:       "",
-		AnvilStateFileName: devnet.StateFileName,
-		AnvilBlockTime:     0,
-		AnvilVerbose:       false,
-		HttpAddress:        "127.0.0.1",
-		HttpPort:           DefaultHttpPort,
-		HttpRollupsPort:    DefaultRollupsPort,
-		InputBoxAddress:    devnet.InputBoxAddress,
-		InputBoxBlock:      0,
-		ApplicationAddress: devnet.ApplicationAddress,
-		RpcUrl:             "",
-		EspressoUrl:        "https://query.decaf.testnet.espresso.network",
-		EnableEcho:         false,
-		DisableDevnet:      false,
-		DisableAdvance:     false,
-		DisableInspect:     false,
-		ApplicationArgs:    nil,
-		SqliteFile:         "",
-		FromBlock:          0,
-		FromBlockL1:        nil,
-		DbImplementation:   "sqlite",
-		NodeVersion:        "v1",
-		Sequencer:          "inputbox",
-		LoadTestMode:       false,
-		Namespace:          DefaultNamespace,
-		TimeoutInspect:     defaultTimeout,
-		TimeoutAdvance:     defaultTimeout,
-		TimeoutWorker:      supervisor.DefaultSupervisorTimeout,
-		Salsa:              false,
-		SalsaUrl:           "127.0.0.1:5005",
-		AvailFromBlock:     0,
-		AvailEnabled:       false,
-		AutoCount:          false,
-		PaioServerUrl:      "https://cartesi-paio-avail-turing.fly.dev",
-		DbRawUrl:           "postgres://postgres:password@localhost:5432/rollupsdb?sslmode=disable",
-		RawEnabled:         false,
-		EpochBlocks:        claimer.DEFAULT_EPOCH_BLOCKS,
+		AnvilAddress:          devnet.AnvilDefaultAddress,
+		AnvilPort:             devnet.AnvilDefaultPort,
+		AnvilCommand:          "",
+		AnvilStateFileName:    devnet.StateFileName,
+		AnvilBlockTime:        0,
+		CoprocessorPrivateKey: "2a871d0798f97d79848a013d4936a73bf4cc922c825d33c1cf7073dff6d409c6",
+		AnvilVerbose:          false,
+		HttpAddress:           "127.0.0.1",
+		HttpPort:              DefaultHttpPort,
+		HttpRollupsPort:       DefaultRollupsPort,
+		InputBoxAddress:       devnet.InputBoxAddress,
+		InputBoxBlock:         0,
+		ApplicationAddress:    devnet.ApplicationAddress,
+		RpcUrl:                "",
+		EspressoUrl:           "https://query.decaf.testnet.espresso.network",
+		EnableEcho:            false,
+		DisableDevnet:         false,
+		DisableAdvance:        false,
+		DisableInspect:        false,
+		ApplicationArgs:       nil,
+		SqliteFile:            "",
+		FromBlock:             0,
+		FromBlockL1:           nil,
+		DbImplementation:      "sqlite",
+		NodeVersion:           "v1",
+		Sequencer:             "inputbox",
+		LoadTestMode:          false,
+		Namespace:             DefaultNamespace,
+		TimeoutInspect:        defaultTimeout,
+		TimeoutAdvance:        defaultTimeout,
+		TimeoutWorker:         supervisor.DefaultSupervisorTimeout,
+		Salsa:                 false,
+		SalsaUrl:              "127.0.0.1:5005",
+		AvailFromBlock:        0,
+		AvailEnabled:          false,
+		Coprocessor:           false,
+		AutoCount:             false,
+		PaioServerUrl:         "https://cartesi-paio-avail-turing.fly.dev",
+		DbRawUrl:              "postgres://postgres:password@localhost:5432/rollupsdb?sslmode=disable",
+		RawEnabled:            false,
+		EpochBlocks:           claimer.DEFAULT_EPOCH_BLOCKS,
 	}
 }
 
@@ -286,6 +293,24 @@ func NewSupervisor(opts NonodoOpts) supervisor.SupervisorWorker {
 			AnvilStateFileName: &opts.AnvilStateFileName,
 		})
 		opts.RpcUrl = fmt.Sprintf("ws://%s:%v", opts.AnvilAddress, opts.AnvilPort)
+	}
+
+	if opts.Coprocessor {
+		w.Workers = append(w.Workers, &coprocessor.TaskReaderWorker{
+			Model:                 modelInstance,
+			Provider:              opts.RpcUrl,
+			MockCoprocessor:       common.HexToAddress(opts.MockCoprocessorAddress),
+			Repository:            container.GetInputRepository(),
+			CoprocessorPrivateKey: opts.CoprocessorPrivateKey,
+		})
+
+		rollup.Register(re, modelInstance, model.NewInputBoxSequencer(modelInstance), common.HexToAddress(opts.MockCoprocessorAddress))
+		w.Workers = append(w.Workers, supervisor.HttpWorker{
+			Address: fmt.Sprintf("%v:%v", opts.HttpAddress, opts.HttpRollupsPort),
+			Handler: re,
+		})
+
+		return w
 	}
 
 	var sequencer model.Sequencer = nil

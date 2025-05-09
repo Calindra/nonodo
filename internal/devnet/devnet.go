@@ -19,6 +19,8 @@ const ApplicationContractName = "Application"
 // nonodo
 const ApplicationAddress = "0x75135d8ADb7180640d29d822D9AD59E83E8695b2"
 
+const MockCoprocessorAddress = "0xA51c1fc2f0D1a1b8494Ed1FE312d7C3a78Ed91C0"
+
 // Foundry test mnemonic.
 const TestMnemonic = "test test test test test test test test test test test junk"
 
