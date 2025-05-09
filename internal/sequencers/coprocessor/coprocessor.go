@@ -1,7 +1,7 @@
 // (c) Cartesi and individual authors (see AUTHORS)
 // SPDX-License-Identifier: Apache-2.0 (see LICENSE)
 
-package task_reader
+package coprocessor
 
 import (
 	"context"
@@ -40,15 +40,15 @@ type TaskReaderWorker struct {
 	MockCoprocessor       common.Address
 	MockCoprocessorBlock  uint64
 	CoprocessorPrivateKey string
-	Repository            cRepos.InputRepository
+	Repository            *cRepos.InputRepository
 	EthClient             *ethclient.Client
 }
 
-func (w TaskReaderWorker) String() string {
+func (w *TaskReaderWorker) String() string {
 	return "task_reader"
 }
 
-func (w TaskReaderWorker) Start(ctx context.Context, ready chan<- struct{}) error {
+func (w *TaskReaderWorker) Start(ctx context.Context, ready chan<- struct{}) error {
 	client, err := w.GetEthClient()
 	if err != nil {
 		return fmt.Errorf("task reader: dial: %w", err)
@@ -87,6 +87,7 @@ func (w *TaskReaderWorker) GetClientOpts() (*bind.TransactOpts, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to get chain id: %v", err)
 	}
+	// privateKeyStr := strings.TrimPrefix(w.CoprocessorPrivateKey, "0x")
 	privateKey, err := crypto.HexToECDSA(w.CoprocessorPrivateKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load private key: %v", err)
@@ -100,7 +101,7 @@ func (w *TaskReaderWorker) GetClientOpts() (*bind.TransactOpts, error) {
 
 // Watch new inputs added to the input box.
 // This function continues to run forever until there is an error or the context is canceled.
-func (w TaskReaderWorker) watchNewInputs(
+func (w *TaskReaderWorker) watchNewInputs(
 	ctx context.Context,
 	client *ethclient.Client,
 	mockCoprocessor *contracts.MockCoprocessor,
@@ -159,14 +160,13 @@ func (w TaskReaderWorker) watchNewInputs(
 	}
 }
 
-var inputRequestCounter int = 0
+var inputRequestCounter int = 0 // Counter for input indices. Incremented after processing each input.
 
-func (w TaskReaderWorker) processInput(
+func (w *TaskReaderWorker) processInput(
 	ctx context.Context,
 	client *ethclient.Client,
 	event *contracts.MockCoprocessorTaskIssued,
 ) error {
-	inputRequestCounter++
 	header, err := client.HeaderByHash(ctx, event.Raw.BlockHash)
 	if err != nil {
 		return fmt.Errorf("task_reader: failed to get tx header: %w", err)
@@ -178,14 +178,18 @@ func (w TaskReaderWorker) processInput(
 		return fmt.Errorf("failed to get chain ID: %w", err)
 	}
 
+	currentIndex := inputRequestCounter
+	slog.Info("Processing input", "index", currentIndex)
+
+	// Store the input first
 	err = w.Model.AddAdvanceInput(
 		event.Callback,
 		common.Bytes2Hex(event.Input),
 		event.Raw.BlockNumber,
 		timestamp,
-		inputRequestCounter, // since the coprocessor contracts don´t have an input index, we use the inputRequestCounter as the input index
-		common.Bytes2Hex(event.MachineHash[:]), // this field is now used to store the machine hash instead of the prevRandao value
-		event.Callback,
+		currentIndex,
+		common.Bytes2Hex(event.MachineHash[:]),
+		w.MockCoprocessor,
 		chainId.String(),
 	)
 
@@ -193,39 +197,65 @@ func (w TaskReaderWorker) processInput(
 		return err
 	}
 
-	acceptedInput, err := w.waitForInput(ctx, inputRequestCounter)
-	if err != nil {
-		return err
-	}
+	slog.Info("Input stored, starting processing goroutine", "index", currentIndex)
 
-	err = w.executeOutput(ctx, client, acceptedInput)
-	if err != nil {
-		if strings.Contains(err.Error(), "execution reverted") {
-			slog.Warn("Execution reverted, make sure the CoprocessorAdapter address is correct")
+	// Start a goroutine to wait for input processing and execute output
+	go func() {
+		slog.Info("Goroutine started for input", "index", currentIndex)
+		acceptedInput, err := w.waitForInput(ctx, currentIndex)
+		if err != nil {
+			slog.Error("Failed to wait for input", "error", err, "index", currentIndex)
+			return
 		}
-		slog.Error("Failed to call coprocessor callback", "error", err)
-		return err
-	}
 
-	slog.Debug("Input accepted", "input", acceptedInput)
+		slog.Info("Input accepted, executing callback", "index", currentIndex)
+		err = w.executeOutput(ctx, client, acceptedInput)
+		if err != nil {
+			if strings.Contains(err.Error(), "execution reverted") {
+				slog.Warn("Execution reverted, make sure the CoprocessorAdapter address is correct")
+			}
+			slog.Error("Failed to call coprocessor callback", "error", err, "index", currentIndex)
+			return
+		}
 
+		slog.Info("Input processed successfully", "index", currentIndex)
+	}()
+
+	inputRequestCounter++
 	return nil
 }
 
-func (w TaskReaderWorker) waitForInput(ctx context.Context, index int) (*model.AdvanceInput, error) {
+func (w *TaskReaderWorker) waitForInput(ctx context.Context, index int) (*model.AdvanceInput, error) {
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
+
+	slog.Info("Waiting for input", "index", index)
+
 	for {
 		input, err := w.Repository.FindByIndexAndAppContract(ctx, index, &w.MockCoprocessor)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get input status: %w", err)
 		}
+		if input == nil {
+			slog.Debug("Input not found yet, retrying", "index", index)
+			select {
+			case <-ticker.C:
+				continue
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			}
+		}
+
+		slog.Info("Found input", "index", index, "status", input.Status)
+
 		if input.Status == model.CompletionStatusAccepted {
+			slog.Info("Input accepted, proceeding with callback", "index", index)
 			return input, nil
 		}
 		if input.Status == model.CompletionStatusRejected {
 			return nil, fmt.Errorf("input rejected")
 		}
+
 		select {
 		case <-ticker.C:
 		case <-ctx.Done():
@@ -234,7 +264,7 @@ func (w TaskReaderWorker) waitForInput(ctx context.Context, index int) (*model.A
 	}
 }
 
-func (w TaskReaderWorker) executeOutput(ctx context.Context, client *ethclient.Client, input *model.AdvanceInput) error {
+func (w *TaskReaderWorker) executeOutput(ctx context.Context, client *ethclient.Client, input *model.AdvanceInput) error {
 	mockCoprocessor, err := contracts.NewMockCoprocessor(w.MockCoprocessor, client)
 	if err != nil {
 		return fmt.Errorf("task_reader: bind input box: %w", err)
@@ -257,6 +287,13 @@ func (w TaskReaderWorker) executeOutput(ctx context.Context, client *ethclient.C
 		outputs,
 		input.AppContract,
 	)
+	if err != nil {
+		return err
+	}
+	if tx == nil {
+		return fmt.Errorf("transaction is nil")
+	}
+
 	slog.Info("Outputs executed", "payload hash", crypto.Keccak256Hash(common.Hex2Bytes(input.Payload)), "tx", tx.Hash().Hex())
 	return nil
 }

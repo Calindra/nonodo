@@ -54,6 +54,11 @@ Lambada running at http://SALSA_URL
 Press Ctrl+C to stop the node
 `
 
+var coprocessorStartupMessage = `
+Http Coprocessor for development started at http://localhost:ROLLUPS_PORT
+Press Ctrl+C to stop the node
+`
+
 var tempFromBlockL1 uint64
 
 var cmd = &cobra.Command{
@@ -590,9 +595,16 @@ func run(cmd *cobra.Command, args []string) {
 	ctx, cancel := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
 	defer cancel()
 
+	// If coprocessor mode is enabled, automatically disable inspect
+	if opts.Coprocessor {
+		opts.DisableInspect = true
+	}
+
 	var startMessage string
 
-	if opts.Salsa {
+	if opts.Coprocessor {
+		startMessage = coprocessorStartupMessage
+	} else if opts.Salsa {
 		startMessage = startupMessageWithLambada
 	} else {
 		startMessage = startupMessage
